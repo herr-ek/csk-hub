@@ -2,6 +2,39 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Database & auth setup
+
+This project uses [Drizzle ORM](https://orm.drizzle.team/) against Postgres, and [Better Auth](https://www.better-auth.com/) for authentication (email & password).
+
+1. Copy the env file and generate a secret:
+
+   ```bash
+   cp .env.example .env.local
+   openssl rand -base64 32   # paste the result into BETTER_AUTH_SECRET
+   ```
+
+2. Start a local Postgres:
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. Apply the database schema:
+
+   ```bash
+   npm run db:migrate
+   ```
+
+If you change the auth config (e.g. add a plugin or provider), regenerate the schema and a new migration:
+
+```bash
+npm run auth:generate   # regenerates src/lib/db/schema/auth.ts from src/lib/auth.ts
+npm run db:generate     # creates a new SQL migration from the schema diff
+npm run db:migrate      # applies pending migrations
+```
+
+`npm run db:studio` opens [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) against the local database.
+
 First, run the development server:
 
 ```bash
