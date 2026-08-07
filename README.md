@@ -35,6 +35,14 @@ npm run db:migrate      # applies pending migrations
 
 `npm run db:studio` opens [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) against the local database.
 
+### Production (Vercel + Supabase)
+
+The Vercel project has a Supabase Postgres database linked, which sets `POSTGRES_URL` (pooled, via Supavisor) and `POSTGRES_URL_NON_POOLING` (direct) automatically. `src/lib/db/index.ts` and `drizzle.config.ts` prefer these over `DATABASE_URL` when present, so no extra config is needed in Vercel.
+
+Migrations run automatically on production deploys via `vercel-build` (`db:migrate` runs only when `VERCEL_ENV=production`, then `next build`), using the direct connection since migrations shouldn't go through the transaction pooler.
+
+> **Note:** `POSTGRES_URL`/`POSTGRES_URL_NON_POOLING` are currently scoped to both the Production and Preview environments in Vercel, i.e. there's no separate preview database yet — PR preview deployments read and write the same data as production.
+
 First, run the development server:
 
 ```bash
