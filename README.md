@@ -71,6 +71,28 @@ bun run typecheck     # tsc --noEmit
 bun run lint          # biome
 ```
 
+### Email
+
+`src/lib/email` is the only place the application sends mail. Import `sendEmail` (one
+recipient) or `sendEmails` (many, with bounded concurrency) from `@/lib/email`; nothing
+else should import `nodemailer` or know that SMTP exists. Neither function throws — both
+return a result that distinguishes success from a typed failure.
+
+Sending needs the Node.js runtime. That is the Next.js default, so a route that sends
+simply must not opt into the deprecated Edge runtime.
+
+**Locally, leave `SMTP_USER` and `SMTP_PASSWORD` unset.** Messages are then written to
+the server log with their full body, so invite and password-reset links can be followed
+without a live mailbox.
+
+In production they authenticate as the choir's Google Workspace account over
+`smtp.gmail.com:587` (STARTTLS). `SMTP_PASSWORD` is a Google
+[app password](https://support.google.com/accounts/answer/185833), which requires
+2-Step Verification on that account. See `.env.example` for every variable.
+
+> **Quota:** Google throttles per minute and caps sending at roughly 2,000 external
+> recipients per day. Use `sendEmails` rather than looping over `sendEmail`.
+
 ### Production (Vercel + Supabase)
 
 The Vercel project has a Supabase Postgres database linked, which sets `POSTGRES_URL` (pooled, via Supavisor) and `POSTGRES_URL_NON_POOLING` (direct) automatically. `src/lib/db/index.ts` and `drizzle.config.ts` prefer these over `DATABASE_URL` when present, so no extra config is needed in Vercel.

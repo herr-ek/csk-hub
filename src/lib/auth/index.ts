@@ -20,12 +20,28 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    async sendResetPassword({ user, url }) {
-      await sendEmail({
+    sendResetPassword: async ({ user, url }) => {
+      const result = await sendEmail({
         to: user.email,
-        subject: "Set your CSK Hub password",
-        body: `Set your password here: ${url}`,
+        subject: "Reset your CSK Hub password",
+        body: [
+          `Hi ${user.name || "there"},`,
+          "",
+          "Someone asked to reset your CSK Hub password. Open this link to choose a new one:",
+          "",
+          url,
+          "",
+          "If this wasn't you, ignore this email — your password stays as it is.",
+        ].join("\n"),
       });
+
+      // Better Auth answers the request identically whether or not the address
+      // exists, so a send failure can only be reported to the server log.
+      if (!result.ok) {
+        console.error(
+          `[auth] could not send password reset email: ${result.error.message}`,
+        );
+      }
     },
   },
   baseUrl: {
