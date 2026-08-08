@@ -14,13 +14,15 @@
       "!dist",
       "!build",
       "!next-env.d.ts",
-      "!*.md"
+      "!*.md",
+      "!drizzle"
     ]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "indentWidth": 2
+    "indentWidth": 2,
+    "lineEnding": "lf"
   },
   "css": {
     "parser": {
@@ -48,6 +50,16 @@
     "domains": {
       "next": "recommended",
       "react": "recommended"
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "quoteProperties": "asNeeded",
+      "semicolons": "asNeeded",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
     }
   },
   "assist": {
