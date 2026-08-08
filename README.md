@@ -85,7 +85,11 @@ simply must not opt into the deprecated Edge runtime.
 the server log with their full body, so invite and password-reset links can be followed
 without a live mailbox.
 
-In production they authenticate as the choir's Google Workspace account over
+Setting only *one* of them, or a malformed `SMTP_PORT`, is a misconfiguration rather
+than local development: sending then fails loudly with a typed error instead of falling
+back to the log, so a deployment typo cannot silently swallow every message.
+
+In production they authenticate as the Chalmers Choirs Google Workspace account over
 `smtp.gmail.com:587` (STARTTLS). `SMTP_PASSWORD` is a Google
 [app password](https://support.google.com/accounts/answer/185833), which requires
 2-Step Verification on that account. See `.env.example` for every variable.

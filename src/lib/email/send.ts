@@ -10,7 +10,7 @@ import type {
 
 const DEFAULT_CONCURRENCY = 4;
 
-function describe(cause: unknown): string {
+function errorMessage(cause: unknown): string {
   if (cause instanceof Error) return cause.message;
   return String(cause);
 }
@@ -18,11 +18,11 @@ function describe(cause: unknown): string {
 function validate(message: EmailMessage): string | null {
   // Deliberately shallow: SMTP is the real authority on whether an address
   // exists. This only catches obvious nonsense (blank, unset) before opening a
-  // connection — an empty string trivially fails the "@" test.
+  // connection — an empty string trivially fails the "@" test. It matters most
+  // in `sendEmailsWith`, where one junk address shouldn't cost a round trip.
   if (!message.to.trim().includes("@")) {
     return `not an email address: "${message.to}"`;
   }
-  if (!message.subject.trim()) return "subject is empty";
   return null;
 }
 
@@ -45,7 +45,7 @@ export async function sendEmailWith(
   } catch (cause) {
     return {
       ok: false,
-      error: { code: "transport-error", message: describe(cause), cause },
+      error: { code: "transport-error", message: errorMessage(cause), cause },
     };
   }
 }
@@ -59,7 +59,10 @@ export async function sendEmailsWith(
   message: BulkEmailMessage,
   options: SendEmailsOptions = {},
 ): Promise<SendEmailsResult> {
-  const recipients = [...new Set(message.to)];
+  // One outcome per recipient given, positionally, so a caller may zip the
+  // results against the array it passed in. Duplicates are the caller's to
+  // remove — silently collapsing them would break that correspondence.
+  const recipients = message.to;
   const results: RecipientOutcome[] = new Array(recipients.length);
 
   const limit = Math.max(

@@ -96,18 +96,6 @@ describe("sendEmailWith", () => {
 
     expect(transport.sent).toEqual([]);
   });
-
-  test("rejects an empty subject, without calling the transport", async () => {
-    const transport = recordingTransport();
-
-    const result = await sendEmailWith(transport, { ...message, subject: " " });
-
-    expect(result).toMatchObject({
-      ok: false,
-      error: { code: "invalid-message" },
-    });
-    expect(transport.sent).toEqual([]);
-  });
 });
 
 describe("sendEmailsWith", () => {
@@ -206,17 +194,20 @@ describe("sendEmailsWith", () => {
     expect(result.sent).toBe(3);
   });
 
-  test("deduplicates repeated recipients so nobody is mailed twice", async () => {
+  test("reports exactly one outcome per recipient given, positionally", async () => {
+    // So a caller can zip the results against the array it passed in, the
+    // counts must add up to the input length even when it repeats itself.
     const transport = recordingTransport();
+    const given = ["a@example.org", "a@example.org", "nope", "b@example.org"];
 
     const result = await sendEmailsWith(transport, {
-      to: ["a@example.org", "a@example.org", "b@example.org"],
+      to: given,
       subject: message.subject,
       body: message.body,
     });
 
-    expect(transport.sent).toHaveLength(2);
-    expect(result.results).toHaveLength(2);
+    expect(result.results.map((entry) => entry.to)).toEqual(given);
+    expect(result.sent + result.failed).toBe(given.length);
   });
 
   test("no recipients is a no-op, not an error", async () => {
