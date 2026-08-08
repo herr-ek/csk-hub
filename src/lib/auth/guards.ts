@@ -64,15 +64,3 @@ export async function requireAdmin(
   }
   return session;
 }
-
-/**
- * Asserts the caller is a signed-in Member of any role. Every Admin is also a
- * Member, so an Admin passes this too.
- */
-export async function requireMember(
-  requestHeaders?: Headers,
-): Promise<AuthSession> {
-  const session = await getCurrentSession(requestHeaders);
-  if (!session) throw new AuthorizationError("unauthenticated");
-  return session;
-}

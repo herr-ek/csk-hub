@@ -18,13 +18,15 @@ export type Role = typeof ADMIN_ROLE | typeof MEMBER_ROLE;
 export const DEFAULT_ROLE: Role = MEMBER_ROLE;
 
 /** Roles the `admin` plugin treats as administrative. */
-export const ADMIN_ROLES: Role[] = [ADMIN_ROLE];
+export const ADMIN_ROLES: string[] = [ADMIN_ROLE];
 
 const ac = createAccessControl(defaultStatements);
 
 /**
- * A Member holds no administrative permissions; `admin` inherits the plugin's
- * full statement set.
+ * Declares both roles to the plugin. `admin` inherits the plugin's full
+ * statement set; a Member holds none. Without the `member` entry the plugin's
+ * permission checks would resolve `defaultRole` to an unknown role, so this is
+ * what makes `DEFAULT_ROLE` coherent to it.
  */
 export const roles = {
   [ADMIN_ROLE]: adminAc,
@@ -32,5 +34,5 @@ export const roles = {
 };
 
 export function isAdminRole(role: string | null | undefined): boolean {
-  return role != null && (ADMIN_ROLES as string[]).includes(role);
+  return role != null && ADMIN_ROLES.includes(role);
 }

@@ -47,11 +47,6 @@ export async function findMemberByEmail(email: string): Promise<Member | null> {
   return row ? toMember(row) : null;
 }
 
-export async function findMemberById(id: string): Promise<Member | null> {
-  const [row] = await db.select().from(user).where(eq(user.id, id));
-  return row ? toMember(row) : null;
-}
-
 /**
  * Withdraws a Member's access: they can no longer sign in and drop out of the
  * default Member list, but the row — and everything referencing it — survives.

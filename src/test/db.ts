@@ -2,10 +2,17 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
 /**
- * The database tests run against. Derived from `DATABASE_URL` by suffixing the
- * database name, so a stray run can never touch development data. Override with
- * `TEST_DATABASE_URL` to point somewhere else entirely.
+ * The database tests run against. Prefers an explicit `TEST_DATABASE_URL`,
+ * otherwise derives one from `DATABASE_URL` by suffixing the database name.
+ *
+ * The suite creates databases, migrates them, and truncates every table in
+ * them, so deriving is only safe against a local server. A `DATABASE_URL`
+ * pointing anywhere else — a hosted database in `.env`, say — is refused rather
+ * than suffixed, because the derived name would be created on that same remote
+ * server. Point `TEST_DATABASE_URL` at a throwaway database to override.
  */
 export function testDatabaseUrl(): string {
   const explicit = process.env.TEST_DATABASE_URL;
@@ -19,12 +26,18 @@ export function testDatabaseUrl(): string {
   }
 
   const url = new URL(base);
+  if (!LOCAL_HOSTS.has(url.hostname)) {
+    throw new Error(
+      `Refusing to derive a test database from a non-local DATABASE_URL (${url.hostname}). ` +
+        "The suite creates and truncates databases on whatever server it is pointed at. " +
+        "Start the local Postgres with `docker compose up -d` and set TEST_DATABASE_URL, " +
+        "e.g. postgresql://csk_hub:csk_hub@localhost:5433/csk_hub_test",
+    );
+  }
+
   url.pathname = `${url.pathname.replace(/\/$/, "")}_test`;
   return url.toString();
 }
-
-/** Every table the auth schema owns, in no particular order — TRUNCATE cascades. */
-const TABLES = ["user", "session", "account", "verification"] as const;
 
 /**
  * Creates the test database if it is missing and brings it up to the latest
@@ -67,9 +80,20 @@ function testPool(): Pool {
   return pool;
 }
 
-/** Empties every table. Call in `beforeEach` so tests never inherit rows. */
+/**
+ * Empties every table. Call in `beforeEach` so tests never inherit rows. The
+ * table list is read from the database rather than hardcoded, so a new table
+ * does not silently start leaking state between tests. Drizzle's own migration
+ * bookkeeping is excluded — truncating it would strand the schema.
+ */
 export async function resetTestDatabase(): Promise<void> {
-  const list = TABLES.map((table) => `"${table}"`).join(", ");
+  const { rows } = await testPool().query<{ tablename: string }>(
+    `SELECT tablename FROM pg_tables
+     WHERE schemaname = 'public' AND tablename <> '__drizzle_migrations'`,
+  );
+  if (rows.length === 0) return;
+
+  const list = rows.map((row) => `"${row.tablename}"`).join(", ");
   await testPool().query(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE`);
 }
 

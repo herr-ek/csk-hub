@@ -1,8 +1,6 @@
-import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { ADMIN_ROLE, type Role } from "@/lib/auth/roles";
-import { db } from "@/lib/db";
-import { user } from "@/lib/db/schema/auth";
+import { findMemberByEmail, type Member, setMemberRole } from "@/lib/members";
 
 export const TEST_PASSWORD = "a-long-enough-password";
 
@@ -19,16 +17,16 @@ export async function createMember({
   name = email.split("@")[0] ?? email,
   password = TEST_PASSWORD,
   role,
-}: MemberInput) {
+}: MemberInput): Promise<Member> {
   await auth.api.signUpEmail({ body: { email, password, name } });
 
-  if (role) {
-    await db.update(user).set({ role }).where(eq(user.email, email));
-  }
-
-  const [created] = await db.select().from(user).where(eq(user.email, email));
+  const created = await findMemberByEmail(email);
   if (!created) throw new Error(`Member ${email} was not created`);
-  return created;
+
+  if (!role || role === created.role) return created;
+
+  await setMemberRole(created.id, role);
+  return { ...created, role };
 }
 
 export function createAdmin(input: Omit<MemberInput, "role">) {

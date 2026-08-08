@@ -11,7 +11,7 @@ import { ADMIN_ROLES, DEFAULT_ROLE, roles } from "./roles";
  * a ban; the domain calls it withdrawn access (see ADR-0003).
  */
 export const INACTIVE_MEMBER_MESSAGE =
-  "This account is no longer active. Contact an administrator if you think that is a mistake.";
+  "This account is no longer active. Contact an Admin if you think that is a mistake.";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
