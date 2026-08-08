@@ -1,8 +1,14 @@
 import type { SmtpConfig } from "./types";
 
+/**
+ * Three states, not two. `absent` is the ordinary local-development case and
+ * falls back to logging; `invalid` is a deployment mistake and must not be
+ * mistaken for it, or a typo would silently swallow every message.
+ */
 export type SmtpConfigResult =
-  | { configured: true; config: SmtpConfig }
-  | { configured: false; reason: string };
+  | { status: "configured"; config: SmtpConfig }
+  | { status: "absent"; reason: string }
+  | { status: "invalid"; reason: string };
 
 /** Google Workspace over STARTTLS — the only transport this project uses. */
 const DEFAULT_HOST = "smtp.gmail.com";
@@ -22,22 +28,22 @@ function parsePort(raw: string): number | null {
 }
 
 /**
- * Reads SMTP settings from the environment. Absent credentials are a supported
- * state, not an error — the caller falls back to logging.
+ * Reads SMTP settings from the environment. Having no credentials at all is a
+ * supported state; having half of them, or a malformed port, is not.
  */
 export function readSmtpConfig(env: Env = process.env): SmtpConfigResult {
   const user = read(env, "SMTP_USER");
   const password = read(env, "SMTP_PASSWORD");
 
-  const missing = [
-    user ? null : "SMTP_USER",
-    password ? null : "SMTP_PASSWORD",
-  ].filter((name) => name !== null);
-
+  if (!user && !password) {
+    return { status: "absent", reason: "SMTP_USER and SMTP_PASSWORD not set" };
+  }
   if (!user || !password) {
+    const missing = user ? "SMTP_USER" : "SMTP_PASSWORD";
+    const present = user ? "SMTP_PASSWORD" : "SMTP_USER";
     return {
-      configured: false,
-      reason: `${missing.join(" and ")} not set`,
+      status: "invalid",
+      reason: `${present} is set but ${missing} is not`,
     };
   }
 
@@ -45,13 +51,13 @@ export function readSmtpConfig(env: Env = process.env): SmtpConfigResult {
   const port = rawPort === undefined ? DEFAULT_PORT : parsePort(rawPort);
   if (port === null) {
     return {
-      configured: false,
-      reason: `SMTP_PORT is not a valid port number: ${rawPort}`,
+      status: "invalid",
+      reason: `SMTP_PORT is not a valid port number: "${rawPort}"`,
     };
   }
 
   return {
-    configured: true,
+    status: "configured",
     config: {
       host: read(env, "SMTP_HOST") ?? DEFAULT_HOST,
       port,

@@ -39,17 +39,24 @@ export function createLoggingTransport(
   };
 }
 
+/**
+ * Used when SMTP is configured but configured wrongly. Every send fails, which
+ * `sendEmailWith` reports as a transport error — deliberately not the logging
+ * transport, so a deployment typo can never masquerade as a successful send.
+ */
+export function createMisconfiguredTransport(reason: string): EmailTransport {
+  return {
+    // Never observed: `send` always throws, so no result carries this value.
+    delivery: "smtp",
+    async send() {
+      throw new Error(`SMTP is misconfigured: ${reason}`);
+    },
+  };
+}
+
 export function createSmtpTransport(
   config: SmtpConfig,
-  mailer: Mailer = nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    // Port 465 is implicit TLS; everything else (587) upgrades via STARTTLS,
-    // which `requireTLS` makes mandatory rather than opportunistic.
-    secure: config.port === 465,
-    requireTLS: config.port !== 465,
-    auth: { user: config.user, pass: config.password },
-  }),
+  mailer: Mailer = defaultMailer(config),
 ): EmailTransport {
   return {
     delivery: "smtp",
@@ -64,20 +71,44 @@ export function createSmtpTransport(
   };
 }
 
+function defaultMailer(config: SmtpConfig): Mailer {
+  // Port 465 is implicit TLS; everything else (587) upgrades via STARTTLS,
+  // which `requireTLS` makes mandatory rather than opportunistic.
+  const implicitTls = config.port === 465;
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: implicitTls,
+    requireTLS: !implicitTls,
+    auth: { user: config.user, pass: config.password },
+  });
+}
+
 /**
- * Picks a transport from the environment: SMTP when credentials are present,
- * logging otherwise.
+ * Picks a transport from the environment: SMTP when configured, logging when
+ * no credentials are set, and a failing transport when they are set wrongly.
  */
 export function createTransport(
-  options: { env?: Record<string, string | undefined>; log?: Log } = {},
+  options: {
+    env?: Record<string, string | undefined>;
+    log?: Log;
+    logError?: Log;
+  } = {},
 ): EmailTransport {
   const log = options.log ?? console.info;
+  const logError = options.logError ?? console.error;
   const result = readSmtpConfig(options.env ?? process.env);
 
-  if (!result.configured) {
-    log(`[email] SMTP disabled (${result.reason}) — messages will be logged.`);
-    return createLoggingTransport(log);
+  switch (result.status) {
+    case "configured":
+      return createSmtpTransport(result.config);
+    case "absent":
+      log(
+        `[email] SMTP disabled (${result.reason}) — messages will be logged.`,
+      );
+      return createLoggingTransport(log);
+    case "invalid":
+      logError(`[email] SMTP is misconfigured: ${result.reason}`);
+      return createMisconfiguredTransport(result.reason);
   }
-
-  return createSmtpTransport(result.config);
 }

@@ -14,6 +14,11 @@ const config: SmtpConfig = {
   from: "CSK Hub <webmaster@choir.chs.chalmers.se>",
 };
 
+const smtpEnv = {
+  SMTP_USER: config.user,
+  SMTP_PASSWORD: config.password,
+};
+
 const message = {
   to: "singer@example.org",
   subject: "Reset your password",
@@ -97,5 +102,40 @@ describe("createTransport", () => {
     });
 
     expect(transport.delivery).toBe("smtp");
+  });
+
+  test("a misconfiguration fails every send rather than quietly logging", async () => {
+    // The hazard this guards: a typo'd port must not look like local dev and
+    // report success while every message disappears into the log.
+    const transport = createTransport({
+      env: { ...smtpEnv, SMTP_PORT: "not-a-port" },
+      log: () => {},
+      logError: () => {},
+    });
+
+    expect(transport.send(message)).rejects.toThrow(/misconfigured/i);
+  });
+
+  test("half-set credentials are a misconfiguration, not local development", () => {
+    const transport = createTransport({
+      env: { SMTP_USER: config.user },
+      log: () => {},
+      logError: () => {},
+    });
+
+    expect(transport.send(message)).rejects.toThrow(/SMTP_PASSWORD/);
+  });
+
+  test("reports a misconfiguration to the error log, not the info log", () => {
+    const info: string[] = [];
+    const errors: string[] = [];
+    createTransport({
+      env: { ...smtpEnv, SMTP_PORT: "not-a-port" },
+      log: (line) => info.push(line),
+      logError: (line) => errors.push(line),
+    });
+
+    expect(errors.join("\n")).toContain("SMTP_PORT");
+    expect(info).toEqual([]);
   });
 });

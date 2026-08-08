@@ -24,8 +24,10 @@ export type {
 } from "./types";
 
 /**
- * Built once and reused: nodemailer pools connections, and the "SMTP disabled"
- * notice should appear once per process rather than once per message.
+ * Built once and reused, so the environment is read and reported on once per
+ * process rather than once per message. The transport is not connection-pooled
+ * (`pool` is left off deliberately: this deploys to serverless functions, where
+ * a held-open SMTP connection outlives its usefulness).
  */
 let transport: EmailTransport | undefined;
 
