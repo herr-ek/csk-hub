@@ -1,20 +1,13 @@
 #!/usr/bin/env bun
-import { describeOutcome, seedAdmin } from "@/lib/auth/seed-admin";
+import { auth } from '@/core/auth'
 
-const email = process.env.ADMIN_EMAIL?.trim();
+await auth.api.createUser({
+  body: {
+    email: 'admin@example.com',
+    password: 'password',
+    name: 'Admin',
+    role: 'admin',
+  },
+})
 
-if (!email) {
-  console.error(
-    "ADMIN_EMAIL is not set. Set it to the address of the first Admin and run again.",
-  );
-  process.exit(1);
-}
-
-try {
-  console.log(describeOutcome(await seedAdmin(email)));
-  // The connection pool keeps the event loop alive; nothing else is pending.
-  process.exit(0);
-} catch (error) {
-  console.error("Could not seed the first Admin:", error);
-  process.exit(1);
-}
+console.log('Created admin@example.com.')
