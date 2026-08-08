@@ -10,8 +10,6 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write",
-    "typecheck": "tsc --noEmit",
-    "test": "bun test",
     "auth:generate": "better-auth generate --config src/lib/auth/index.ts --output src/lib/db/schema/auth.ts -y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
