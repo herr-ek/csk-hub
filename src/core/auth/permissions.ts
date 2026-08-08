@@ -17,9 +17,6 @@ export type Role = typeof ADMIN_ROLE | typeof MEMBER_ROLE
  */
 export const DEFAULT_ROLE: Role = MEMBER_ROLE
 
-/** Roles the `admin` plugin treats as administrative. */
-export const ADMIN_ROLES: string[] = [ADMIN_ROLE]
-
 const ac = createAccessControl(defaultStatements)
 
 /**
@@ -33,6 +30,9 @@ export const roles = {
   [MEMBER_ROLE]: ac.newRole({ user: [], session: [] }),
 }
 
-export function isAdminRole(role: string | null | undefined): boolean {
-  return role != null && ADMIN_ROLES.includes(role)
-}
+export const adminPluginOptions = {
+  ac,
+  roles,
+  defaultRole: DEFAULT_ROLE,
+  adminRoles: ADMIN_ROLE,
+} as const
