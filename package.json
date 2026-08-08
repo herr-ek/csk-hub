@@ -31,15 +31,15 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
-    "@biomejs/biome": "2.4.2",
+    "@biomejs/biome": "2.5.7",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^7.0.2"
   }
 }
