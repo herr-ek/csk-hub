@@ -13,7 +13,12 @@ export interface SeedAdminOutcome {
   action: "created" | "updated" | "unchanged";
   /** Human-readable list of what the run altered. Empty when `unchanged`. */
   changes: string[];
-  setPasswordEmailSent: boolean;
+  /**
+   * Whether this run asked for a set-password email. Requested, not confirmed:
+   * Better Auth logs and swallows transport failures, so a `true` here means the
+   * dispatch was handed over, not that anything reached an inbox.
+   */
+  setPasswordEmailRequested: boolean;
 }
 
 /**
@@ -37,15 +42,22 @@ export async function seedAdmin(rawEmail: string): Promise<SeedAdminOutcome> {
     });
 
     // The account is created without a password; the Admin sets one from this
-    // email. Dispatch is best-effort — a failing transport must not leave the
-    // database half-seeded, since a re-run would then report `unchanged`.
-    await auth.api.requestPasswordReset({ body: { email } });
+    // email. If the request itself fails the row is already committed, so a
+    // re-run would report `unchanged` and never retry — surface that here
+    // rather than let the script exit as though the Admin were reachable.
+    let setPasswordEmailRequested = true;
+    try {
+      await auth.api.requestPasswordReset({ body: { email } });
+    } catch (error) {
+      setPasswordEmailRequested = false;
+      console.error("Could not request a set-password email:", error);
+    }
 
     return {
       email,
       action: "created",
       changes: ["created the account with the admin role"],
-      setPasswordEmailSent: true,
+      setPasswordEmailRequested,
     };
   }
 
@@ -65,7 +77,7 @@ export async function seedAdmin(rawEmail: string): Promise<SeedAdminOutcome> {
     email,
     action: changes.length > 0 ? "updated" : "unchanged",
     changes,
-    setPasswordEmailSent: false,
+    setPasswordEmailRequested: false,
   };
 }
 
@@ -76,7 +88,9 @@ function nameFromEmail(email: string): string {
 export function describeOutcome(outcome: SeedAdminOutcome): string {
   switch (outcome.action) {
     case "created":
-      return `Created ${outcome.email} as an Admin and sent a set-password email.`;
+      return outcome.setPasswordEmailRequested
+        ? `Created ${outcome.email} as an Admin and requested a set-password email.`
+        : `Created ${outcome.email} as an Admin, but the set-password email could not be requested. The account has no password yet — re-running this script will report it as already seeded, so trigger a password reset for the address instead.`;
     case "updated":
       return `${outcome.email} already existed — ${outcome.changes.join(", ")}.`;
     case "unchanged":

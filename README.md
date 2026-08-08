@@ -60,7 +60,9 @@ Withdrawing a Member's access is soft — see `docs/adr/0002` and `docs/adr/0003
 
 ### Tests
 
-`bun test` runs against a real Postgres. It uses a separate database — `DATABASE_URL` with `_test` appended, or `TEST_DATABASE_URL` if you set one — which it creates and migrates on first run, so `docker compose up -d` is the only prerequisite.
+`bun test` runs against a real Postgres. It uses a separate database — `TEST_DATABASE_URL` if you set one, otherwise `DATABASE_URL` with `_test` appended — which it creates and migrates on first run, so `docker compose up -d` is the only prerequisite.
+
+The suite creates databases and truncates every table between tests, so it refuses to derive a test database from a `DATABASE_URL` that points anywhere but `localhost`. If your `.env` points at the hosted Supabase database, set `TEST_DATABASE_URL` explicitly to the local one.
 
 ```bash
 bun test              # everything

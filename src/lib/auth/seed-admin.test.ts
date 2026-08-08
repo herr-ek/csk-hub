@@ -51,7 +51,7 @@ describe("seedAdmin against an empty database", () => {
   it("dispatches a set-password email", async () => {
     const outcome = await seedAdmin(ADMIN_EMAIL);
 
-    expect(outcome.setPasswordEmailSent).toBe(true);
+    expect(outcome.setPasswordEmailRequested).toBe(true);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.to).toBe(ADMIN_EMAIL);
   });
@@ -73,7 +73,7 @@ describe("seedAdmin run a second time", () => {
 
     expect(outcome.action).toBe("unchanged");
     expect(outcome.changes).toEqual([]);
-    expect(outcome.setPasswordEmailSent).toBe(false);
+    expect(outcome.setPasswordEmailRequested).toBe(false);
     expect(sent).toEqual([]);
     expect(await listMembers()).toHaveLength(1);
     expect(await findMemberByEmail(ADMIN_EMAIL)).toEqual(before);

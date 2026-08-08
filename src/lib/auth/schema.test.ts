@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { MEMBER_ROLE } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
 import { user } from "@/lib/db/schema/auth";
+import { findMemberByEmail } from "@/lib/members";
 import { closeTestDatabase, resetTestDatabase } from "@/test/db";
 
 beforeEach(resetTestDatabase);
@@ -33,6 +34,9 @@ describe("account creation", () => {
       },
     });
 
+    // Read the column, not `findMemberByEmail` — the latter falls back to
+    // `member` for a null role, which would hide the plugin failing to apply
+    // the default at all.
     const [created] = await db
       .select()
       .from(user)
@@ -50,11 +54,8 @@ describe("account creation", () => {
       },
     });
 
-    const [created] = await db
-      .select()
-      .from(user)
-      .where(eq(user.email, "aktiv@example.com"));
-
-    expect(created?.banned).toBe(false);
+    expect((await findMemberByEmail("aktiv@example.com"))?.isInactive).toBe(
+      false,
+    );
   });
 });
