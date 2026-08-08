@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins/admin";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema/auth";
-import { sendEmail } from "@/lib/email";
+import { EmailClient } from "@/lib/email";
 import { ADMIN_ROLES, DEFAULT_ROLE, roles } from "./roles";
 
 /**
@@ -21,10 +21,10 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      await sendEmail({
+      await EmailClient().send({
         to: user.email,
         subject: "Reset your CSK Hub password",
-        body: [
+        text: [
           `Hi ${user.name || "there"},`,
           "",
           "Someone asked to reset your CSK Hub password. Open this link to choose a new one:",

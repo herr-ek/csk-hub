@@ -1,63 +1,141 @@
-import "server-only";
+import nodemailer from "nodemailer";
 
-import { sendEmailsWith, sendEmailWith } from "./send";
-import { createTransport } from "./transport";
-import type {
-  BulkEmailMessage,
-  EmailMessage,
-  EmailTransport,
-  SendEmailResult,
-  SendEmailsOptions,
-  SendEmailsResult,
-} from "./types";
+export type EmailMode = "smtp" | "log";
 
-export type {
-  BulkEmailMessage,
-  EmailDelivery,
-  EmailError,
-  EmailErrorCode,
-  EmailMessage,
-  RecipientOutcome,
-  SendEmailResult,
-  SendEmailsOptions,
-  SendEmailsResult,
-} from "./types";
+export type SmtpConfig = {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+};
 
-/**
- * Built once and reused, so the environment is read and reported on once per
- * process rather than once per message. The transport is not connection-pooled
- * (`pool` is left off deliberately: this deploys to serverless functions, where
- * a held-open SMTP connection outlives its usefulness).
- */
-let transport: EmailTransport | undefined;
+export type EmailMessage = {
+  from?: string;
+  to: string | string[];
+  subject: string;
+  text?: string;
+  html?: string;
+  replyTo?: string;
+};
 
-function getTransport(): EmailTransport {
-  transport ??= createTransport();
-  return transport;
+export type EmailSendResult =
+  | {
+      mode: "smtp";
+      messageId: string;
+    }
+  | {
+      mode: "log";
+      messageId: string;
+    };
+
+export type EmailClientOptions = {
+  mode?: EmailMode;
+  smtp?: SmtpConfig;
+  logger?: Pick<Console, "log">;
+};
+
+export function createGmailSmtpConfig(): SmtpConfig {
+  const user = process.env.GMAIL_SMTP_USER;
+  const pass = process.env.GMAIL_SMTP_APP_PASSWORD;
+
+  if (!user || !pass) {
+    throw new Error(
+      "Production email is configured for SMTP, but Gmail SMTP credentials are incomplete. Set real GMAIL_SMTP_USER and GMAIL_SMTP_APP_PASSWORD values.",
+    );
+  }
+
+  return {
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    user,
+    pass,
+  };
 }
 
-/**
- * Sends a plain-text email. This is the only way the application sends mail —
- * nothing outside `src/lib/email` should know that SMTP exists.
- *
- * Never throws: a transport failure comes back as `{ ok: false, error }`. With
- * no SMTP credentials configured the message is logged and reported as sent.
- *
- * Requires the Node.js runtime (the Next.js default; do not opt a sending
- * route into the deprecated Edge runtime).
- */
-export function sendEmail(message: EmailMessage): Promise<SendEmailResult> {
-  return sendEmailWith(getTransport(), message);
+export function EmailClient(options: EmailClientOptions = {}) {
+  const mode = options.mode ?? getEmailModeFromEnv();
+  const logger = options.logger ?? console;
+
+  if (mode === "smtp" && !isProductionEmailEnvironment()) {
+    throw new Error(
+      "SMTP email is disabled outside production. Use EMAIL_MODE=log for local and preview environments.",
+    );
+  }
+
+  if (mode === "smtp" && !options.smtp) {
+    // Validate configuration during startup, before an auth callback can try to send mail.
+    createGmailSmtpConfig();
+  }
+
+  return {
+    async send(message: EmailMessage): Promise<EmailSendResult> {
+      validateEmailMessage(message);
+
+      if (mode === "log") {
+        const messageId = `log-${Date.now()}`;
+
+        logger.log("[email:log]", {
+          messageId,
+          from: message.from,
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+          replyTo: message.replyTo,
+        });
+
+        return {
+          mode: "log",
+          messageId,
+        };
+      }
+
+      const config = options.smtp ?? createGmailSmtpConfig();
+      const transporter = nodemailer.createTransport({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        auth: {
+          user: config.user,
+          pass: config.pass,
+        },
+      });
+
+      const result = await transporter.sendMail({
+        from: message.from ?? config.user,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+        replyTo: message.replyTo,
+      });
+
+      return {
+        mode: "smtp",
+        messageId: result.messageId,
+      };
+    },
+  };
 }
 
-/**
- * Sends the same message to many recipients with bounded concurrency, and
- * reports an outcome per recipient. Google throttles per minute and caps
- * external recipients per day, so prefer this over looping `sendEmail`.
- */
-export function sendEmails(
-  message: BulkEmailMessage,
-  options?: SendEmailsOptions,
-): Promise<SendEmailsResult> {
-  return sendEmailsWith(getTransport(), message, options);
+function getEmailModeFromEnv(): EmailMode {
+  const mode = process.env.EMAIL_MODE ?? "log";
+
+  if (mode === "smtp" || mode === "log") {
+    return mode;
+  }
+
+  throw new Error('Invalid EMAIL_MODE. Expected "smtp" or "log".');
+}
+
+function isProductionEmailEnvironment() {
+  return process.env.ENVIRONMENT === "production";
+}
+
+function validateEmailMessage(message: EmailMessage) {
+  if (!message.text && !message.html) {
+    throw new Error("Email must include either text or html content.");
+  }
 }
