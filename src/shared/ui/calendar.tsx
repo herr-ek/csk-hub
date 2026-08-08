@@ -12,8 +12,8 @@ import {
   getDefaultClassNames,
   type Locale,
 } from "react-day-picker";
-import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/shared/ui/button";
+import { cn } from "@/shared/utils";
 
 function Calendar({
   className,
