@@ -22,18 +22,52 @@ This project uses [Drizzle ORM](https://orm.drizzle.team/) against Postgres, and
 3. Apply the database schema:
 
    ```bash
-   npm run db:migrate
+   bun run db:migrate
    ```
+
+4. Create the first Admin (set `ADMIN_EMAIL` in your env file first):
+
+   ```bash
+   bun run db:seed-admin
+   ```
+
+   The account is created without a password and a set-password email is dispatched. Until a real email transport lands, that email is written to the server log — copy the link from there. The script is idempotent: run it again and it reports that there is nothing to do.
 
 If you change the auth config (e.g. add a plugin or provider), regenerate the schema and a new migration:
 
 ```bash
-npm run auth:generate   # regenerates src/lib/db/schema/auth.ts from src/lib/auth.ts
-npm run db:generate     # creates a new SQL migration from the schema diff
-npm run db:migrate      # applies pending migrations
+bun run auth:generate   # regenerates src/lib/db/schema/auth.ts from src/lib/auth/index.ts
+bun run db:generate     # creates a new SQL migration from the schema diff
+bun run db:migrate      # applies pending migrations
 ```
 
-`npm run db:studio` opens [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) against the local database.
+`bun run db:studio` opens [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) against the local database.
+
+### Members, Admins and access
+
+Every person with a login is a **Member**; an **Admin** is a Member with elevated rights. The roles live in `src/lib/auth/roles.ts`, and new accounts default to `member`. Guard server code with `requireAdmin()` from `src/lib/auth/guards.ts` — it works from both route handlers and server components, and throws an `AuthorizationError` carrying a `401`/`403` status:
+
+```ts
+import { requireAdmin } from "@/lib/auth/guards";
+
+export async function POST(request: Request) {
+  await requireAdmin();
+  // …
+}
+```
+
+Withdrawing a Member's access is soft — see `docs/adr/0002` and `docs/adr/0003`, and `deactivateMember()` in `src/lib/members.ts`.
+
+### Tests
+
+`bun test` runs against a real Postgres. It uses a separate database — `DATABASE_URL` with `_test` appended, or `TEST_DATABASE_URL` if you set one — which it creates and migrates on first run, so `docker compose up -d` is the only prerequisite.
+
+```bash
+bun test              # everything
+bun test src/lib      # one directory or file
+bun run typecheck     # tsc --noEmit
+bun run lint          # biome
+```
 
 ### Production (Vercel + Supabase)
 

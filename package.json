@@ -8,9 +8,12 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "auth:generate": "better-auth generate --config src/lib/auth.ts --output src/lib/db/schema/auth.ts -y",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "auth:generate": "better-auth generate --config src/lib/auth/index.ts --output src/lib/db/schema/auth.ts -y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed-admin": "bun run scripts/seed-admin.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
