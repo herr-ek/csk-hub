@@ -22,3 +22,7 @@ Default vocabulary — the five canonical roles, each label string equal to its 
 ### Domain docs
 
 Single-context layout: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Codebase structure
+
+Follow the structural preferences in `docs/codebase-structure.md` when adding modules, Drizzle schema files, React screens, shared UI, and health checks.
