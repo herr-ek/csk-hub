@@ -54,10 +54,10 @@
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "single",
+      "quoteStyle": "double",
       "quoteProperties": "asNeeded",
-      "semicolons": "asNeeded",
-      "trailingCommas": "all",
+      "semicolons": "always",
+      "trailingCommas": "es5",
       "arrowParentheses": "always",
       "bracketSpacing": true
     }
