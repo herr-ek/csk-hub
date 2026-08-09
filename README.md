@@ -36,7 +36,7 @@ This project uses [Drizzle ORM](https://orm.drizzle.team/) against Postgres, and
 If you change the auth config (e.g. add a plugin or provider), regenerate the schema and a new migration:
 
 ```bash
-bun run auth:generate   # regenerates src/lib/db/schema/auth.ts from src/lib/auth/index.ts
+bun run auth:generate   # regenerates src/core/db/schema/auth.ts from src/core/auth/index.ts
 bun run db:generate     # creates a new SQL migration from the schema diff
 bun run db:migrate      # applies pending migrations
 ```
@@ -48,14 +48,14 @@ bun run db:migrate      # applies pending migrations
 
 ```bash
 bun test              # everything
-bun test src/lib      # one directory or file
+bun test src/core      # one directory or file
 bun run typecheck     # tsc --noEmit
 bun run lint          # biome
 ```
 
 ### Production (Vercel + Supabase)
 
-The Vercel project has a Supabase Postgres database linked, which sets `POSTGRES_URL` (pooled, via Supavisor) and `POSTGRES_URL_NON_POOLING` (direct) automatically. `src/lib/db/index.ts` and `drizzle.config.ts` prefer these over `DATABASE_URL` when present, so no extra config is needed in Vercel.
+The Vercel project has a Supabase Postgres database linked, which sets `POSTGRES_URL` (pooled, via Supavisor) and `POSTGRES_URL_NON_POOLING` (direct) automatically. `src/core/db/index.ts` and `drizzle.config.ts` prefer these over `DATABASE_URL` when present, so no extra config is needed in Vercel.
 
 Migrations run automatically on production deploys via `vercel-build` (`db:migrate` runs only when `VERCEL_ENV=production`, then `next build`), using the direct connection since migrations shouldn't go through the transaction pooler.
 
