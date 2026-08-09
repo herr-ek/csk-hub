@@ -2,7 +2,7 @@
 
 The Hub sends mail by authenticating as the Chalmers Choirs Google Workspace account over
 `smtp.gmail.com:587` with a Google app password, rather than through a transactional email
-provider. The whole transport sits behind one module, `src/lib/email`, whose `sendEmail`
+provider. The whole transport sits behind one module, `src/core/email`, whose `sendEmail`
 and `sendEmails` are the only way anything in the application sends a message.
 
 ## Consequences
@@ -26,7 +26,7 @@ Because sending needs a Node runtime, a route that sends must not opt into the E
 runtime. In Next 16 that costs nothing: `nodejs` is already the default and Edge is
 deprecated, so the requirement is simply to not export `runtime`.
 
-Nothing outside `src/lib/email` imports `nodemailer` or knows SMTP exists, so replacing
+Nothing outside `src/core/email` imports `nodemailer` or knows SMTP exists, so replacing
 this with a transactional provider later is a change to one module. That is the point of
 the abstraction, and the reason this decision is cheap to revisit if the quota becomes the
 binding constraint.

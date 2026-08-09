@@ -10,7 +10,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write",
-    "auth:generate": "better-auth generate --config src/lib/auth/index.ts --output src/lib/db/schema/auth.ts -y",
+    "auth:generate": "better-auth generate --config src/core/auth/index.ts --output src/core/db/schema/auth.ts -y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed-admin": "bun run scripts/seed-admin.ts",

@@ -15,7 +15,8 @@
       "!build",
       "!next-env.d.ts",
       "!*.md",
-      "!drizzle"
+      "!drizzle",
+      "!types"
     ]
   },
   "formatter": {
@@ -38,13 +39,15 @@
         "useAriaPropsForRole": "off",
         "useFocusableInteractive": "off",
         "useKeyWithClickEvents": "off",
-        "useSemanticElements": "off"
+        "useSemanticElements": "off",
+        "noSvgWithoutTitle": "off"
       },
       "security": {
         "noDangerouslySetInnerHtml": "off"
       },
       "suspicious": {
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noDocumentCookie": "off"
       }
     },
     "domains": {
