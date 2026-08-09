@@ -1,10 +1,10 @@
-"use client";
+"use client"
 
-import { Questionnaire as QuestionnairePrimitive } from "@shadcn/react/questionnaire";
-import { CheckIcon } from "lucide-react";
-import type * as React from "react";
-import { type Button, buttonVariants } from "@/shared/ui/button";
-import { cn } from "@/shared/utils";
+import { Questionnaire as QuestionnairePrimitive } from "@shadcn/react/questionnaire"
+import { CheckIcon } from "lucide-react"
+import type * as React from "react"
+import { type Button, buttonVariants } from "@/shared/ui/button"
+import { cn } from "@/shared/utils"
 
 function Questionnaire({
   className,
@@ -16,7 +16,7 @@ function Questionnaire({
       className={cn("flex w-full min-w-0 flex-col gap-6", className)}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireProgress({
@@ -32,7 +32,7 @@ function QuestionnaireProgress({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireItem({
@@ -48,7 +48,7 @@ function QuestionnaireItem({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireTitle({
@@ -64,7 +64,7 @@ function QuestionnaireTitle({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireDescription({
@@ -77,7 +77,7 @@ function QuestionnaireDescription({
       className={cn("text-sm text-pretty text-muted-foreground", className)}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireChoices({
@@ -93,7 +93,7 @@ function QuestionnaireChoices({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireChoice({
@@ -140,7 +140,7 @@ function QuestionnaireChoice({
         className="pointer-events-none ms-auto hidden size-5 shrink-0 translate-y-[--spacing(0.45)] items-center justify-center rounded-full border border-primary/10 bg-background/80 font-mono text-[0.625rem] leading-none font-medium text-muted-foreground group-has-data-[slot=questionnaire-choice-description]/questionnaire-choice:translate-y-0.5 group-data-[shortcut]/questionnaire-choice:inline-flex"
       />
     </QuestionnairePrimitive.Choice>
-  );
+  )
 }
 
 function QuestionnaireChoiceDescription({
@@ -153,7 +153,7 @@ function QuestionnaireChoiceDescription({
       className={cn("text-muted-foreground", className)}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireInput({
@@ -175,7 +175,7 @@ function QuestionnaireInput({
         {...props}
       />
     </div>
-  );
+  )
 }
 
 function QuestionnaireError({
@@ -188,7 +188,7 @@ function QuestionnaireError({
       className={cn("mt-2 text-sm text-destructive", className)}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnaireActions({
@@ -204,7 +204,7 @@ function QuestionnaireActions({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function QuestionnairePrevious({
@@ -229,7 +229,7 @@ function QuestionnairePrevious({
     >
       {children ?? "Previous"}
     </QuestionnairePrimitive.Previous>
-  );
+  )
 }
 
 function QuestionnaireSkip({
@@ -254,7 +254,7 @@ function QuestionnaireSkip({
     >
       {children ?? "Skip"}
     </QuestionnairePrimitive.Skip>
-  );
+  )
 }
 
 function QuestionnaireNext({
@@ -279,7 +279,7 @@ function QuestionnaireNext({
     >
       {children ?? "Next"}
     </QuestionnairePrimitive.Next>
-  );
+  )
 }
 
 function QuestionnaireSubmit({
@@ -304,7 +304,7 @@ function QuestionnaireSubmit({
     >
       {children ?? "Submit"}
     </QuestionnairePrimitive.Submit>
-  );
+  )
 }
 
 export {
@@ -322,5 +322,5 @@ export {
   QuestionnaireProgress,
   QuestionnaireSkip,
   QuestionnaireSubmit,
-  QuestionnaireTitle,
-};
+  QuestionnaireTitle
+}

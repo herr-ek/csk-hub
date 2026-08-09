@@ -56,8 +56,8 @@
     "formatter": {
       "quoteStyle": "double",
       "quoteProperties": "asNeeded",
-      "semicolons": "always",
-      "trailingCommas": "es5",
+      "semicolons": "asNeeded",
+      "trailingCommas": "none",
       "arrowParentheses": "always",
       "bracketSpacing": true
     }
