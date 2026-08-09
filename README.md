@@ -43,26 +43,8 @@ bun run db:migrate      # applies pending migrations
 
 `bun run db:studio` opens [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) against the local database.
 
-### Members, Admins and access
-
-Every person with a login is a **Member**; an **Admin** is a Member with elevated rights. The roles live in `src/lib/auth/roles.ts`, and new accounts default to `member`. Guard server code with `requireAdmin()` from `src/lib/auth/guards.ts` — it works from both route handlers and server components, and throws an `AuthorizationError` carrying a `401`/`403` status:
-
-```ts
-import { requireAdmin } from "@/lib/auth/guards";
-
-export async function POST(request: Request) {
-  await requireAdmin();
-  // …
-}
-```
-
-Withdrawing a Member's access is soft — see `docs/adr/0002` and `docs/adr/0003`, and `deactivateMember()` in `src/lib/members.ts`.
 
 ### Tests
-
-`bun test` runs against a real Postgres. It uses a separate database — `TEST_DATABASE_URL` if you set one, otherwise `DATABASE_URL` with `_test` appended — which it creates and migrates on first run, so `docker compose up -d` is the only prerequisite.
-
-The suite creates databases and truncates every table between tests, so it refuses to derive a test database from a `DATABASE_URL` that points anywhere but `localhost`. If your `.env` points at the hosted Supabase database, set `TEST_DATABASE_URL` explicitly to the local one.
 
 ```bash
 bun test              # everything
@@ -70,32 +52,6 @@ bun test src/lib      # one directory or file
 bun run typecheck     # tsc --noEmit
 bun run lint          # biome
 ```
-
-### Email
-
-`src/lib/email` is the only place the application sends mail. Import `sendEmail` (one
-recipient) or `sendEmails` (many, with bounded concurrency) from `@/lib/email`; nothing
-else should import `nodemailer` or know that SMTP exists. Neither function throws — both
-return a result that distinguishes success from a typed failure.
-
-Sending needs the Node.js runtime. That is the Next.js default, so a route that sends
-simply must not opt into the deprecated Edge runtime.
-
-**Locally, leave `SMTP_USER` and `SMTP_PASSWORD` unset.** Messages are then written to
-the server log with their full body, so invite and password-reset links can be followed
-without a live mailbox.
-
-Setting only *one* of them, or a malformed `SMTP_PORT`, is a misconfiguration rather
-than local development: sending then fails loudly with a typed error instead of falling
-back to the log, so a deployment typo cannot silently swallow every message.
-
-In production they authenticate as the Chalmers Choirs Google Workspace account over
-`smtp.gmail.com:587` (STARTTLS). `SMTP_PASSWORD` is a Google
-[app password](https://support.google.com/accounts/answer/185833), which requires
-2-Step Verification on that account. See `.env.example` for every variable.
-
-> **Quota:** Google throttles per minute and caps sending at roughly 2,000 external
-> recipients per day. Use `sendEmails` rather than looping over `sendEmail`.
 
 ### Production (Vercel + Supabase)
 
