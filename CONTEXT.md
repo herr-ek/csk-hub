@@ -42,3 +42,15 @@ The permanent destruction of a Member's record at their request, under GDPR. Dis
 from becoming an Inactive Member: erasure is irreversible, takes the participation
 history with it, and is exercised rarely and deliberately.
 _Avoid_: Delete, purge, GDPR-delete
+
+**Post**:
+A piece of written information published to the whole organisation and addressed to no
+one in particular. Written by an Admin, it carries whatever the board or a conductor
+would otherwise have put in the monthly email — a vacancy, a rota, a reminder. A Post is
+a broadcast: the boundary against Chat, where messages are addressed to someone.
+_Avoid_: Article, message, bulletin, news item, announcement
+
+**News feed**:
+The surface where Posts are read, newest first, with a small number pinned above. The
+Hub's answer to "what is going on", as distinct from a calendar of what is scheduled.
+_Avoid_: Wall, timeline, blog

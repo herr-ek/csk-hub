@@ -17,3 +17,10 @@ targets information will gain a scope it does not have today.
 
 A flat `user` table in an organisation that visibly has many choirs reads as an
 oversight. It is not.
+
+The news feed is the first feature to pay this cost. Every Post goes to every Member,
+which matches the monthly email it grows out of, so a flat feed is parity rather than a
+regression. The bill comes due when a conductor wants to reach one Choir, or a
+rota concerns one voice section: adding a scope to Posts is additive, but until then
+Members will read notices that do not apply to them, and a feed people learn to skim is
+harder to fix than a schema.
