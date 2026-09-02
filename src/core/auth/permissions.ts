@@ -1,38 +1,49 @@
 import { createAccessControl } from "better-auth/plugins/access"
-import { adminAc, defaultStatements } from "better-auth/plugins/admin/access"
+import { defaultRoles, defaultStatements } from "better-auth/plugins/admin/access"
+import { type AccessRole, ADMIN_ROLE, MEMBER_ROLE } from "@/shared/roles"
 
-/**
- * The two roles a Member can hold. Every Admin is also a Member — `admin` is an
- * elevation of the same population, not a separate one (see CONTEXT.md).
- */
-export const ADMIN_ROLE = "admin"
-export const MEMBER_ROLE = "member"
+export type { AccessRole }
+export { ADMIN_ROLE, MEMBER_ROLE }
 
-export type Role = typeof ADMIN_ROLE | typeof MEMBER_ROLE
+// RESOURCES AND ACTIONS
 
-/**
- * Newly created accounts are Members. The `admin` plugin's own default is
- * `user`, which the glossary reserves for the Better Auth record behind a
- * Member, so it is overridden wherever the plugin is configured.
- */
-export const DEFAULT_ROLE: Role = MEMBER_ROLE
+/*
+const _customStatements = {
+  group: ["read", "create", "update", "delete"],
+  secret_resource: ["read"]
+} as const
+*/
 
-const ac = createAccessControl(defaultStatements)
+export const statements = {
+  ...defaultStatements // user, session, and their native actions
+  // ...customStatements, // application resources
+} as const
 
-/**
- * Declares both roles to the plugin. `admin` inherits the plugin's full
- * statement set; a Member holds none. Without the `member` entry the plugin's
- * permission checks would resolve `defaultRole` to an unknown role, so this is
- * what makes `DEFAULT_ROLE` coherent to it.
- */
-export const roles = {
-  [ADMIN_ROLE]: adminAc,
-  [MEMBER_ROLE]: ac.newRole({ user: [], session: [] })
-}
+const accessControl = createAccessControl(statements)
+
+// ROLES
+
+export const accessRoles = {
+  [MEMBER_ROLE]: accessControl.newRole({
+    ...defaultRoles.user.statements
+  }),
+  [ADMIN_ROLE]: accessControl.newRole({
+    ...defaultRoles.admin.statements
+    //...customStatements
+  })
+} as const
+
+export const DEFAULT_ROLE: AccessRole = MEMBER_ROLE
 
 export const adminPluginOptions = {
-  ac,
-  roles,
+  ac: accessControl,
+  roles: accessRoles,
   defaultRole: DEFAULT_ROLE,
   adminRoles: ADMIN_ROLE
 } as const
+
+// PERMISSIONS
+
+export type PermissionResource = keyof typeof statements
+
+export type PermissionAction<Resource extends PermissionResource> = (typeof statements)[Resource][number]

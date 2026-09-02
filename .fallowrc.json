@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "ignorePatterns": [
+    "src/shared/ui/**",
+    "src/core/db/**",
+    "src/app/globals.css",
+    "types/validator.ts",
+    "**/*.d.ts",
+    "**/*.generated.ts",
+    "**/*.generated.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/shared/hooks/use-mobile.ts"
+  ],
+  "ignoreDependencies": [
+    "@base-ui/react",
+    "@shadcn/react",
+    "class-variance-authority",
+    "cmdk",
+    "date-fns",
+    "embla-carousel-react",
+    "input-otp",
+    "react-day-picker",
+    "react-resizable-panels",
+    "pg",
+    "recharts",
+    "shadcn",
+    "tw-animate-css",
+    "@tanstack/react-form-nextjs"
+  ],
+  "typeAware": {
+    "enabled": true,
+    "projects": ["tsconfig.json"],
+    "require": "best-effort"
+  },
+  "duplicates": {
+    "mode": "semantic",
+    "minOccurrences": 2
+  },
+  "rules": {
+    "unused-dependencies": "warn",
+    "unlisted-dependencies": "off"
+  }
+}
