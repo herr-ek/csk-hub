@@ -1,10 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres"
-import { Pool } from "pg"
+import { env } from "@/core/config/env"
 
-const pool = new Pool({
-  // POSTGRES_URL is the pooled (Supavisor) connection Vercel injects when a
-  // Supabase project is linked; DATABASE_URL is used for local dev.
-  connectionString: process.env.POSTGRES_URL ?? process.env.DATABASE_URL
-})
+const databaseUrl = new URL(env.POSTGRES_URL)
 
-export const db = drizzle(pool)
+// TODO: Remove in prod!
+databaseUrl.searchParams.set("sslmode", "no-verify")
+
+export const db = drizzle(databaseUrl.toString())

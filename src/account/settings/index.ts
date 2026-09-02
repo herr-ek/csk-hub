@@ -1,0 +1,7 @@
+export { AccountSettings } from "./account-settings"
+export { AccountSettingsSkeleton } from "./account-settings-skeleton"
+export { PasskeySettings } from "./passkey-settings"
+export { PasswordSettings } from "./password-settings"
+export { ProfileSettings } from "./profile-settings"
+export { SessionsSettings } from "./sessions-settings"
+export { TwoFactorSettings } from "./two-factor-settings"

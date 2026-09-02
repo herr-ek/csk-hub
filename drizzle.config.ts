@@ -4,8 +4,7 @@ import { defineConfig } from "drizzle-kit"
 // Supabase project is linked; migrations should not run through the
 // transaction pooler. DATABASE_URL is used for local dev.
 // BUT ssl require does not work on Vercel Hobby plan!
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? process.env.POSTGRES_URL_NON_POOLING
+const DATABASE_URL = process.env.POSTGRES_URL ?? process.env.POSTGRES_URL_NON_POOLING
 
 if (!DATABASE_URL) {
   throw Error("DATABASE_URL is not set")

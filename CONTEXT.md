@@ -5,9 +5,13 @@ organisation's singers and keeps track of rehearsals, events and gigs.
 
 ## Language
 
-**Chalmers Choirs**:
-The umbrella organisation this application serves. It contains several distinct choirs
-and groups, which the application does not yet model.
+**CSK**:
+Chalmers Sångkör is the single student association served by the platform. CSK is also the name of the collective choir formed when singers from the association appear together.
+_Avoid_: Tenant, configurable organization
+
+**Choir**:
+One of CSK's three permanent ensembles: Manskören (MK), Kammarkören (KK), or Damkören (DK). New singers are placed in one of these Choirs; the Choirs usually rehearse separately but may take part in joint activities.
+_Avoid_: CSK, temporary project ensemble
 
 **Member**:
 A person who belongs to Chalmers Choirs and holds a login to the Hub. The unit of

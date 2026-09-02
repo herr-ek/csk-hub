@@ -1,95 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CSK Hub
 
-## Getting Started
+CSK Hub is the internal web application for Chalmers Sångkör. It is intended to
+be the organisation's digital hub for members, choirs, rehearsals, events, and
+gigs.
 
-### Database & auth setup
+## Current status
 
-This project uses [Drizzle ORM](https://orm.drizzle.team/) against Postgres, and [Better Auth](https://www.better-auth.com/) for authentication (email & password).
+The project currently provides the authentication and account-management
+foundation. The main member and admin pages are still placeholders; choir,
+member, rehearsal, event, and gig management have not been implemented yet.
 
-1. Copy the env file and generate a secret:
+Implemented account workflows include:
+
+- email- and username-based password sign-in
+- passkey sign-in and passkey management
+- two-factor authentication with TOTP, email OTP, and backup codes
+- account activation and password reset
+- profile username, password, passkey, two-factor, and session settings
+- authenticated and admin-only route protection
+
+## Stack
+
+- [Next.js](https://nextjs.org/) 16 with the App Router and React 19
+- [Better Auth](https://www.better-auth.com/) for authentication
+- [Drizzle ORM](https://orm.drizzle.team/) with PostgreSQL
+- [Bun](https://bun.sh/) for scripts and tests
+- TypeScript, Tailwind CSS, and Biome
+
+## Local development
+
+Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
+
+1. Install dependencies:
+
+   ```bash
+   bun install
+   ```
+
+2. Create the local environment file and generate an auth secret:
 
    ```bash
    cp .env.example .env.local
-   openssl rand -base64 32   # paste the result into BETTER_AUTH_SECRET
+   openssl rand -base64 32
    ```
 
-2. Start a local Postgres:
+   Put the generated value in `BETTER_AUTH_SECRET`. The example configuration
+   points at the PostgreSQL container defined in `docker-compose.yml` and uses
+   `EMAIL_MODE=log`, so auth emails are written to the server log during local
+   development.
+
+3. Start PostgreSQL:
 
    ```bash
    docker compose up -d
    ```
 
-3. Apply the database schema:
+4. Apply the existing database migrations:
 
    ```bash
    bun run db:migrate
    ```
 
-4. Create the first Admin (set `ADMIN_EMAIL` in your env file first):
+5. Start the development server:
 
    ```bash
-   bun run db:seed-admin
+   bun run dev
    ```
 
-   The account is created without a password and a set-password email is dispatched. Until a real email transport lands, that email is written to the server log — copy the link from there. The script is idempotent: run it again and it reports that there is nothing to do.
+Open [http://localhost:3000](http://localhost:3000).
 
-If you change the auth config (e.g. add a plugin or provider), regenerate the schema and a new migration:
+### Local admin account
 
-```bash
-bun run auth:generate   # regenerates src/core/db/schema/auth.ts from src/core/auth/index.ts
-bun run db:generate     # creates a new SQL migration from the schema diff
-bun run db:migrate      # applies pending migrations
-```
-
-`bun run db:studio` opens [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) against the local database.
-
-
-### Tests
+The development seed script currently creates `admin@example.com` with the
+password `password`:
 
 ```bash
-bun test              # everything
-bun test src/core      # one directory or file
-bun run typecheck     # tsc --noEmit
-bun run lint          # biome
+bun run db:seed-admin
 ```
 
-### Production (Vercel + Supabase)
+This is a local-development convenience only. Change the password immediately
+and do not use these credentials in a deployed environment.
 
-The Vercel project has a Supabase Postgres database linked, which sets `POSTGRES_URL` (pooled, via Supavisor) and `POSTGRES_URL_NON_POOLING` (direct) automatically. `src/core/db/index.ts` and `drizzle.config.ts` prefer these over `DATABASE_URL` when present, so no extra config is needed in Vercel.
+## Routes
 
-Migrations run automatically on production deploys via `vercel-build` (`db:migrate` runs only when `VERCEL_ENV=production`, then `next build`), using the direct connection since migrations shouldn't go through the transaction pooler.
+| Route | Purpose | Access |
+| --- | --- | --- |
+| `/` | Authenticated home page | Member |
+| `/me` | Account settings | Member |
+| `/admin` | Admin surface (currently a placeholder) | Admin |
+| `/login` | Password or passkey sign-in | Public |
+| `/activate` | Set the password for an activated account | Activation session |
+| `/forgot-password` | Request a password reset | Public |
+| `/reset-password` | Choose a new password from a reset link | Public |
+| `/two-factor` | Complete two-factor verification | Public |
 
-> **Note:** `POSTGRES_URL`/`POSTGRES_URL_NON_POOLING` are currently scoped to both the Production and Preview environments in Vercel, i.e. there's no separate preview database yet — PR preview deployments read and write the same data as production.
+There is no public sign-up flow. Accounts are created by server-side or admin
+workflows.
 
-First, run the development server:
+## Database and auth schema changes
+
+Auth models live in `src/core/db/schema/auth.ts`. If the Better Auth
+configuration changes, regenerate the auth schema, create a migration, and
+apply it:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun run auth:generate
+bun run db:generate
+bun run db:migrate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To open Drizzle Studio against the configured database:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+bun run db:studio
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Email configuration
 
-## Learn More
+Email delivery is controlled by `EMAIL_MODE`:
 
-To learn more about Next.js, take a look at the following resources:
+- `log` writes email contents to the server log. This is the local and preview
+  default.
+- `smtp` sends through Gmail SMTP. Configure `SMTP_HOST` (`smtp.gmail.com`),
+  `SMTP_PORT` (`587`), `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks and useful commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+bun run tst         # run the test suite
+bun run typecheck   # TypeScript checks
+bun run lint        # Biome checks
+bun run build       # production build
+bun run pr          # tests, lint, and build
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The project context and architectural conventions are documented in
+[`CONTEXT.md`](CONTEXT.md) and [`docs/codebase-structure.md`](docs/codebase-structure.md).

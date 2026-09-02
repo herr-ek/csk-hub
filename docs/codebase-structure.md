@@ -31,7 +31,7 @@ Use `src/[feature-name]` for durable product capabilities, not route groups or u
 
 Use `src/shared` only for genuinely cross-feature modules:
 
-- `src/shared/ui`: reusable design-system primitives and low-level controls.
+- `src/shared/ui/base`: reusable design-system primitives and low-level controls.
 - `src/shared/forms`: reusable form types and generic form presentation helpers.
 - `src/shared/hooks`: cross-feature client hooks.
 - `src/shared/utils.ts`: stable generic utilities such as `cn`, used by generated UI components.
@@ -122,7 +122,7 @@ Do not extract too early:
 
 Design mobile-first and responsive from the first implementation pass. Screens should work well on narrow viewports before desktop refinements are added.
 
-Prioritize existing shadcn/ui-style components from `src/shared/ui` for common controls, layout primitives, dialogs, menus, tables, forms, feedback, and navigation. Add or adapt reusable UI primitives there when the pattern is genuinely shared; keep feature-specific compositions inside the feature module.
+Prioritize existing shadcn/ui-style components from `src/shared/ui/base` for common controls, layout primitives, dialogs, menus, tables, forms, feedback, and navigation. Add or adapt reusable UI primitives there when the pattern is genuinely shared; keep feature-specific compositions inside the feature module.
 
 Prioritize fast perceived feedback:
 
