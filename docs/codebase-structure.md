@@ -19,15 +19,17 @@ Avoid shallow pass-through modules. A module earns its place when deleting it wo
 
 Prefer feature-oriented modules for product behavior. A future feature should keep its domain logic, write operations, read helpers, tests, and feature-specific UI close together instead of scattering them by technical layer.
 
-The source tree uses three architectural buckets plus Next.js and tooling-owned exceptions:
+The source tree uses four top-level areas plus Next.js and tooling-owned exceptions:
 
 - `src/core`: app infrastructure, app shell wiring, and external adapters.
 - `src/app`: Next.js route topology and framework route files.
 - `src/shared`: cross-feature presentation primitives and generic helpers.
+- `src/features/<feature-name>`: product and domain behavior.
 - `src/proxy.ts`: Next.js proxy convention file.
-- `src/[feature-name]`: product and domain behavior.
 
-Use `src/[feature-name]` for durable product capabilities, not route groups or user roles. For example, `admin` is a surface, not a feature.
+Use `src/features/<feature-name>` for durable product capabilities, not route groups or user roles. For example, `admin` is a surface, not a feature.
+
+Every feature lives under `src/features`; none sit at the `src` root. The grouping is not about the individual feature — the `features` segment says nothing `member-management` does not already say. It is about the root: it keeps the number of top-level areas fixed as the product grows, and it gives features a shared path prefix, which is what makes the rules under Dependency Direction expressible as tests rather than maintained by convention.
 
 Use `src/shared` only for genuinely cross-feature modules:
 
@@ -51,7 +53,7 @@ Keep a feature folder at its current level when it represents one coherent produ
 For example, a groups management feature may eventually be organized like this:
 
 ```text
-groups/
+src/features/groups/
   collection/
   detail/
   hierarchy/
@@ -71,7 +73,7 @@ Dependencies should point inward toward stable infrastructure and generic helper
 - `src/core` may import other `src/core` modules and `src/shared`, but not `src/features`.
 - Framework convention files, such as `src/proxy.ts`, stay where Next.js expects them and delegate inward when their logic grows.
 
-Prefer public entrypoints at feature and subfeature boundaries. Route files should import screens from entries such as `@/features/members`, not from deep implementation files like `@/features/members/screen`. Inside a feature or subfeature, local imports may target sibling implementation files directly.
+Prefer public entrypoints at feature and subfeature boundaries. Route files should import screens from entries such as `@/features/member-management`, not from deep implementation files like `@/features/member-management/members-screen`. Inside a feature or subfeature, local imports may target sibling implementation files directly.
 
 ## Drizzle Schema
 
