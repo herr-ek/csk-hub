@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { TwoFactorForm } from "@/account/two-factor"
+import { TwoFactorForm } from "@/features/account/two-factor"
 import { Spinner } from "@/shared/ui/base/spinner"
 
 export const metadata: Metadata = {

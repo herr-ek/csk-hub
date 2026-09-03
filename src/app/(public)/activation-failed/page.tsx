@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { ActivationFailed } from "@/account/activation"
+import { ActivationFailed } from "@/features/account/activation"
 
 export const metadata: Metadata = {
   title: "Activation link expired · CSK Hub"
