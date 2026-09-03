@@ -28,7 +28,8 @@ function featureOwning(file: string): string | null {
  * directory it names has an `index.ts`. Anything else is a deep implementation import.
  */
 function isEntrypoint(feature: string, subpath: string): boolean {
-  return existsSync(join("src/features", feature, subpath, "index.ts"))
+  const normalizedSubpath = subpath.replace(/^\/+/, "")
+  return existsSync(join("src/features", feature, normalizedSubpath, "index.ts"))
 }
 
 describe("Architecture Rules", () => {
