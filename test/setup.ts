@@ -9,6 +9,10 @@ Object.defineProperty(globalThis, "window", {
   configurable: true
 })
 
+// Server modules guard themselves with `server-only`, which throws outside a server
+// runtime. The guard protects the bundler, not the tests.
+mock.module("server-only", () => ({}))
+
 mock.module("@/core/logging", () => ({
   logger: {
     debug: mock(),
