@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { AccountSettings, AccountSettingsSkeleton } from "@/account/settings"
+import { AccountSettings, AccountSettingsSkeleton } from "@/features/account/settings"
 
 export default function Me() {
   return (

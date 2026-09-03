@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { ActivationForm } from "@/account/activation"
+import { ActivationForm } from "@/features/account/activation"
 import { Spinner } from "@/shared/ui/base/spinner"
 
 export const metadata: Metadata = {

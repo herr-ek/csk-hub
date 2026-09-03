@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { PasswordReset } from "@/account/password-reset"
+import { PasswordReset } from "@/features/account/password-reset"
 import { Spinner } from "@/shared/ui/base/spinner"
 
 export const metadata: Metadata = {

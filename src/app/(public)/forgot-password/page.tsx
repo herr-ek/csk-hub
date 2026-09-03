@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { PasswordResetRequest } from "@/account/password-reset"
+import { PasswordResetRequest } from "@/features/account/password-reset"
 
 export const metadata: Metadata = {
   title: "Reset your password · CSK Hub"
