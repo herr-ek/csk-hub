@@ -42,3 +42,31 @@ The permanent destruction of a Member's record at their request, under GDPR. Dis
 from becoming an Inactive Member: erasure is irreversible, takes the participation
 history with it, and is exercised rarely and deliberately.
 _Avoid_: Delete, purge, GDPR-delete
+
+**Post**:
+A written announcement an Admin publishes to the whole choir, appearing in the News feed
+and at its own permanent address. The stored text is Markdown (ADR-0004); what a Member
+reads is that Markdown rendered. A Post carries no audience of its own — publishing one
+means publishing it to every Member. A Post may carry the same announcement in more than
+one language in a single body, as the choir already writes anything important in both
+Swedish and English; the Hub neither detects nor splits them, and never translates a Post.
+_Avoid_: Article, news item, blog post, announcement email
+
+**News feed**:
+The single reverse-chronological list of published Posts at `/news`, identical for every
+Member. It is where information published in the Hub lives; it is not a copy of the
+monthly email, which keeps running separately until Notifications exists.
+_Avoid_: Timeline, wall, dashboard, newsletter
+
+**Language**:
+The written language a Member reads the Hub in — Swedish, English or German. It is a
+property of the Member, chosen once and thereafter owned by them, and it governs the
+interface only: the words the Hub itself puts on the screen, never the words a Member
+wrote.
+_Avoid_: Locale, i18n, translation, localisation
+
+**Locale**:
+The technical resolution of a Language into an identifier the code formats against —
+`sv`, `en`, `de` — carrying date, number and collation rules. It appears in code and
+never in anything a Member reads.
+_Avoid_: Language (in code), lang, culture
