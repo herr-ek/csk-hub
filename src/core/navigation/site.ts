@@ -6,6 +6,8 @@ export const ROUTES = {
   activate: "/activate",
   activationFailed: "/activation-failed",
   twoFactor: "/two-factor",
+  news: "/news",
+  newsCompose: "/news/new",
   admin: "/admin",
   adminMembers: "/admin/members",
   me: "/me"
