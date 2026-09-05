@@ -4,6 +4,8 @@ CSK Hub is the internal web application for Chalmers Sångkör. It is intended t
 be the organisation's digital hub for members, choirs, rehearsals, events, and
 gigs.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance and how we use ADRs.
+
 ## Current status
 
 The project currently provides the authentication and account-management
