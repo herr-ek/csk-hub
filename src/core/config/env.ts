@@ -19,7 +19,10 @@ const envSchema = z
     SMTP_PASSWORD: z.string().min(1).optional(),
     SMTP_FROM: z.email().optional(),
 
-    LOG_DATABASE: z.enum(["true", "false"]).default("false")
+    LOG_DATABASE: z.enum(["true", "false"]).default("false"),
+
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string(),
+    VAPID_PRIVATE_KEY: z.string()
   })
   .superRefine((data, context) => {
     if (data.EMAIL_MODE === "smtp") {

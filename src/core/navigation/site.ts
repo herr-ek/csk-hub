@@ -8,7 +8,9 @@ export const ROUTES = {
   twoFactor: "/two-factor",
   admin: "/admin",
   adminMembers: "/admin/members",
-  me: "/me"
+  adminNotifications: "/admin/notifications",
+  me: "/me",
+  accountSettings: "/me/settings"
 } as const
 
 export type RouteId = keyof typeof ROUTES

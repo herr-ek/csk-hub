@@ -1,4 +1,4 @@
-import { UserIcon } from "lucide-react"
+import { BellIcon, UserIcon } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { requireAdmin } from "@/core/auth/permissions.server"
@@ -7,16 +7,23 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/c
 import { Skeleton } from "@/shared/ui/base/skeleton"
 
 const ADMIN_RESOURCES = [
-  { href: ROUTES.adminMembers, title: "Members", description: "View and manage Hub members." }
+  { href: ROUTES.adminMembers, title: "Members", description: "View and manage Hub members.", icon: UserIcon },
+  {
+    href: ROUTES.adminNotifications,
+    title: "Notifications",
+    description: "Util for push notifications.",
+    icon: BellIcon
+  }
 ] as const
 type AdminResource = (typeof ADMIN_RESOURCES)[number]
 
 function AdminResourceCard({ resource }: { resource: AdminResource }) {
+  const Icon = resource.icon
   return (
     <Link href={resource.href} className="group focus-visible:outline-none">
       <Card className="h-full transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
         <CardHeader className="flex flex-row items-center gap-4">
-          <UserIcon className="size-12 text-muted-foreground" aria-hidden="true" />
+          <Icon className="size-12 text-muted-foreground" aria-hidden="true" />
           <div>
             <CardTitle>{resource.title}</CardTitle>
             <CardDescription>{resource.description}</CardDescription>
