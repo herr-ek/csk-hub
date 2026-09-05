@@ -2,6 +2,14 @@
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.
 
+## ADRs
+
+Follow [CONTRIBUTING.md](../../CONTRIBUTING.md): you may draft an ADR before
+team discussion. A merged ADR means the team has discussed and agreed on the
+decision; no separate record of that discussion is required. Do not treat a
+coding session or an agent's recommendation as team agreement. Until merged to `main`, keep references to
+the ADR within its introducing branch and PR. Keep future work plans in issues.
+
 ## Before exploring, read these
 
 - **`CONTEXT.md`** at the repo root, or

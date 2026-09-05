@@ -1,6 +1,6 @@
 # Codebase Structure
 
-This guide records the structural preferences for CSK Hub. Future changes should preserve these patterns unless a feature needs a deliberate exception, in which case record the reason in an ADR.
+This guide records the structural preferences for CSK Hub. Future changes should preserve these patterns unless a feature needs a deliberate exception. Explain exceptions in the PR; significant architectural decisions follow the ADR guidance in [CONTRIBUTING.md](../CONTRIBUTING.md#architectural-decision-records).
 
 ## Design Vocabulary
 
@@ -84,7 +84,7 @@ Keep Drizzle schema files split by ownership under `src/core/db/schema`.
 - Do not mix unrelated future module models into an existing schema file just because Drizzle allows it.
 - Generated Drizzle client must not be hand-edited.
 
-When a model decision is hard to reverse or surprising, record the decision in `docs/adr/`.
+When a model decision is hard to reverse or establishes an important domain rule, use an ADR in `docs/adr/`, following [CONTRIBUTING.md](../CONTRIBUTING.md#architectural-decision-records).
 
 ## Next.js And React
 

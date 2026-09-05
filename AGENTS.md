@@ -11,6 +11,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Agent skills
 
+Follow `CONTRIBUTING.md`: ADR drafts are welcome before team discussion; a merged
+ADR means the team has discussed and agreed on the decision. Keep ADR references within
+the introducing branch and PR until the ADR is on remote `main`; see
+`docs/agents/issue-tracker.md`.
+
 ### Issue tracker
 
 Issues live in GitHub Issues for herr-ek/csk-hub (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
