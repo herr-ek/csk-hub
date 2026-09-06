@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
@@ -10,24 +11,23 @@ import { PasswordResetForm } from "./password-reset-form"
 import { PasswordResetRequestForm } from "./password-reset-request-form"
 
 export function PasswordResetRequest() {
+  const t = useTranslations("Public.passwordReset")
   const [isComplete, setIsComplete] = useState(false)
 
   return (
     <>
       <header className="flex flex-col gap-1">
         <h1 id="password-reset-title" className="font-semibold text-2xl tracking-normal">
-          {isComplete ? "Check your email" : "Reset your password"}
+          {isComplete ? t("completeTitle") : t("requestTitle")}
         </h1>
         <p id="password-reset-description" className="text-muted-foreground text-sm">
-          {isComplete
-            ? "If an account exists for that email, you’ll receive a reset link shortly."
-            : "Enter your account email and we’ll send you a password reset link."}
+          {isComplete ? t("completeDescription") : t("requestDescription")}
         </p>
       </header>
       {isComplete ? (
         <div role="status">
           <Link href={ROUTES.login} className="text-sm underline underline-offset-4">
-            Return to sign in
+            {t("returnToSignIn")}
           </Link>
         </div>
       ) : (
@@ -38,6 +38,7 @@ export function PasswordResetRequest() {
 }
 
 export function PasswordReset() {
+  const t = useTranslations("Public.passwordReset")
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? undefined
@@ -49,15 +50,15 @@ export function PasswordReset() {
     return (
       <>
         <header className="flex flex-col gap-1">
-          <h1 className="font-semibold text-2xl tracking-normal">Choose a new password</h1>
-          <p className="text-muted-foreground text-sm">Enter and confirm your new password.</p>
+          <h1 className="font-semibold text-2xl tracking-normal">{t("newPasswordTitle")}</h1>
+          <p className="text-muted-foreground text-sm">{t("newPasswordDescription")}</p>
         </header>
         <Alert variant="destructive">
-          <AlertDescription>This reset link is invalid or has expired. Request a new one below.</AlertDescription>
+          <AlertDescription>{t("invalidLink")}</AlertDescription>
         </Alert>
         {freshRequested ? (
           <p role="status" className="text-sm text-muted-foreground">
-            If an account exists for that email, you’ll receive a reset link shortly.
+            {t("completeDescription")}
           </p>
         ) : (
           <PasswordResetRequestForm initialEmail={email} onSuccess={() => setFreshRequested(true)} />
@@ -70,10 +71,10 @@ export function PasswordReset() {
     <>
       <header className="flex flex-col gap-1">
         <h1 id="password-reset-title" className="font-semibold text-2xl tracking-normal">
-          Choose a new password
+          {t("newPasswordTitle")}
         </h1>
         <p id="password-reset-description" className="text-muted-foreground text-sm">
-          Enter your email and confirm your new password.
+          {t("resetDescription")}
         </p>
       </header>
       <PasswordResetForm

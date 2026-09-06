@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import type z from "zod"
+import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
@@ -17,6 +18,7 @@ import { loginSchema } from "./schemas"
 import { type LoginResult, signInWithIdentifier, signInWithPasskey } from "./service"
 
 export function LoginForm() {
+  const t = useTranslations("Public.login")
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get("returnTo") ?? undefined
@@ -85,7 +87,7 @@ export function LoginForm() {
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
             return (
               <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>Email or username</FieldLabel>
+                <FieldLabel htmlFor={field.name}>{t("identifier")}</FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -93,7 +95,7 @@ export function LoginForm() {
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   aria-invalid={isInvalid}
-                  placeholder="Email or username"
+                  placeholder={t("identifier")}
                   autoComplete="username"
                 />
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
@@ -106,7 +108,7 @@ export function LoginForm() {
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
             return (
               <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                <FieldLabel htmlFor={field.name}>{t("password")}</FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -115,7 +117,7 @@ export function LoginForm() {
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   aria-invalid={isInvalid}
-                  placeholder="Password"
+                  placeholder={t("password")}
                   autoComplete="current-password"
                 />
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
@@ -134,7 +136,7 @@ export function LoginForm() {
                   onCheckedChange={(checked) => field.handleChange(checked)}
                 />
                 <FieldLabel htmlFor={field.name} className="font-normal">
-                  Keep me signed in
+                  {t("rememberMe")}
                 </FieldLabel>
               </Field>
             )
@@ -150,15 +152,15 @@ export function LoginForm() {
         {isSubmitting ? (
           <>
             <Spinner />
-            Signing in...
+            {t("submitting")}
           </>
         ) : (
-          "Sign in"
+          t("submit")
         )}
       </Button>
       <div className="relative flex items-center justify-center">
         <span className="absolute inset-x-0 border-t" />
-        <span className="relative bg-background px-2 text-muted-foreground text-xs">or</span>
+        <span className="relative bg-background px-2 text-muted-foreground text-xs">{t("or")}</span>
       </div>
       <Button
         type="button"
@@ -166,10 +168,10 @@ export function LoginForm() {
         onClick={handlePasskeySignIn}
         disabled={isSubmitting || isPasskeySubmitting}
       >
-        {isPasskeySubmitting ? "Waiting for passkey..." : "Sign in with a passkey"}
+        {isPasskeySubmitting ? t("passkeyPending") : t("passkey")}
       </Button>
       <Link href={ROUTES.forgotPassword} className="text-center text-sm underline underline-offset-4">
-        Forgot your password?
+        {t("forgotPassword")}
       </Link>
     </form>
   )

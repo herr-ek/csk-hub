@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form"
 import Link from "next/link"
 import { useState } from "react"
 import type z from "zod"
+import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
@@ -20,6 +21,7 @@ export function PasswordResetRequestForm({
   onSuccess: () => void
   initialEmail?: string
 }) {
+  const t = useTranslations("Public.passwordReset")
   const [formError, setFormError] = useState<string | null>(null)
 
   async function onSubmit({ value }: { value: z.infer<typeof passwordResetRequestSchema> }) {
@@ -61,7 +63,7 @@ export function PasswordResetRequestForm({
 
           return (
             <Field data-invalid={isInvalid}>
-              <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+              <FieldLabel htmlFor={field.name}>{t("email")}</FieldLabel>
               <Input
                 id={field.name}
                 name={field.name}
@@ -86,14 +88,14 @@ export function PasswordResetRequestForm({
         {form.state.isSubmitting ? (
           <>
             <Spinner />
-            Sending...
+            {t("sending")}
           </>
         ) : (
-          "Send reset link"
+          t("sendLink")
         )}
       </Button>
       <Link href={ROUTES.login} className="text-center text-sm underline underline-offset-4">
-        Return to sign in
+        {t("returnToSignIn")}
       </Link>
     </form>
   )
