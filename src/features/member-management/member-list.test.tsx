@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import messages from "@messages/en.json"
-import { NextIntlClientProvider } from "next-intl"
 import { renderToStaticMarkup } from "react-dom/server"
 import { app } from "@/core/config/app"
+import { NextIntlClientProvider } from "@/core/i18n/client"
 import { MemberList } from "./member-list"
 
 describe("MemberList", () => {
