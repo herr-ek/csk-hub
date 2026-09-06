@@ -1,5 +1,6 @@
 export { AccountSettings } from "./account-settings"
 export { AccountSettingsSkeleton } from "./account-settings-skeleton"
+export { LanguageSettings } from "./language-settings"
 export { PasskeySettings } from "./passkey-settings"
 export { PasswordSettings } from "./password-settings"
 export { ProfileSettings } from "./profile-settings"

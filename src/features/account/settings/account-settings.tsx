@@ -1,5 +1,6 @@
 import { headers } from "next/headers"
 import { auth } from "@/core/auth/auth"
+import { LanguageSettings } from "./language-settings"
 import { PasskeySettings } from "./passkey-settings"
 import { PasswordSettings } from "./password-settings"
 import { ProfileSettings } from "./profile-settings"
@@ -18,6 +19,7 @@ export async function AccountSettings() {
   return (
     <>
       <ProfileSettings member={session.user} />
+      <LanguageSettings initialLocale={session.user.locale} />
       <PasswordSettings />
       <PasskeySettings />
       <TwoFactorSettings enabled={Boolean(session.user.twoFactorEnabled)} />
