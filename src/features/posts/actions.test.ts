@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
-const requirePostPublisher = mock(async () => ({ memberId: "admin-1" }))
+const requireCurrentUserPermission = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
 const revalidatePath = mock(() => undefined)
 const redirect = mock((location: string) => {
   throw new Error(`NEXT_REDIRECT:${location}`)
@@ -11,13 +11,13 @@ const insert = mock(() => ({ values }))
 const loggerError = mock(() => undefined)
 
 class DeniedError extends Error {
-  readonly code = "POST_PUBLISHING_DENIED"
+  readonly code = "AUTHORIZATION_DENIED"
 }
 
-mock.module("./permissions.server", () => ({
-  requirePostPublisher,
-  POST_PUBLISHING_DENIED: "POST_PUBLISHING_DENIED",
-  PostPublishingDeniedError: DeniedError
+mock.module("@/core/auth/permissions.server", () => ({
+  requireCurrentUserPermission,
+  AUTHORIZATION_DENIED: "AUTHORIZATION_DENIED",
+  AuthorizationDeniedError: DeniedError
 }))
 mock.module("@/core/db", () => ({ db: { insert } }))
 mock.module("@/core/logging", () => ({ logger: { error: loggerError } }))
@@ -37,8 +37,8 @@ function postFormData(title = TITLE, body = BODY) {
 }
 
 beforeEach(() => {
-  requirePostPublisher.mockClear()
-  requirePostPublisher.mockResolvedValue({ memberId: "admin-1" })
+  requireCurrentUserPermission.mockClear()
+  requireCurrentUserPermission.mockResolvedValue({ state: "authenticated", userId: "admin-1" })
   revalidatePath.mockClear()
   redirect.mockClear()
   insert.mockClear()
@@ -54,7 +54,8 @@ describe("publishing a Post", () => {
       "NEXT_REDIRECT:/news/11111111-1111-4111-8111-111111111111"
     )
 
-    expect(requirePostPublisher).toHaveBeenCalledTimes(1)
+    expect(requireCurrentUserPermission).toHaveBeenCalledTimes(1)
+    expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "create" })
     expect(values).toHaveBeenCalledWith({
       title: TITLE,
       body: BODY,
@@ -64,8 +65,8 @@ describe("publishing a Post", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/news")
   })
 
-  test("refuses a Member who may not publish, without writing anything", async () => {
-    requirePostPublisher.mockRejectedValue(new DeniedError())
+  test("refuses a Member without the post:create permission, without writing anything", async () => {
+    requireCurrentUserPermission.mockRejectedValue(new DeniedError())
 
     await expect(publishPost({ status: "idle" }, postFormData())).resolves.toEqual({
       status: "error",
@@ -77,7 +78,7 @@ describe("publishing a Post", () => {
   })
 
   test("treats a failed authorization lookup as retryable rather than a refusal", async () => {
-    requirePostPublisher.mockRejectedValue(new Error("connection refused"))
+    requireCurrentUserPermission.mockRejectedValue(new Error("connection refused"))
 
     await expect(publishPost({ status: "idle" }, postFormData())).resolves.toEqual({
       status: "error",
@@ -101,7 +102,7 @@ describe("publishing a Post", () => {
       draft: { title: TITLE, body: "  " }
     })
 
-    expect(requirePostPublisher).not.toHaveBeenCalled()
+    expect(requireCurrentUserPermission).not.toHaveBeenCalled()
     expect(insert).not.toHaveBeenCalled()
   })
 

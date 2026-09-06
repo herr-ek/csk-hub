@@ -1,4 +1,9 @@
-import { requireAdmin } from "@/core/auth/permissions.server"
+import {
+  type GlobalPermissionRequest,
+  type PermissionSession,
+  requireAdmin,
+  requireCurrentUserPermission
+} from "@/core/auth/permissions.server"
 import { getPostLoginPath, loginPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 
@@ -16,8 +21,17 @@ const AUTH_ENTRY_PATHS = new Set<string>([
   ROUTES.twoFactor
 ])
 
-export type RouteAccessPolicy = { kind: "public" } | { kind: "authenticated" } | { kind: "admin" }
-export type RouteSession = { user: { id: string; role?: string | null } }
+/** Routes that need a specific permission rather than a role. */
+const PERMISSION_PATHS = new Map<string, GlobalPermissionRequest>([
+  [ROUTES.newsCompose, { resource: "post", action: "create" }]
+])
+
+export type RouteAccessPolicy =
+  | { kind: "public" }
+  | { kind: "authenticated" }
+  | { kind: "admin" }
+  | { kind: "permission"; permission: GlobalPermissionRequest }
+export type RouteSession = PermissionSession
 export type AccessDecision = { kind: "allow" } | { kind: "redirect"; location: string } | { kind: "forbidden" }
 
 function isAuthEntryRoute(pathname: string, requestedPath: string): boolean {
@@ -31,6 +45,10 @@ function isAuthEntryRoute(pathname: string, requestedPath: string): boolean {
 // Identify what policy holds for *path*
 export function getRouteAccessPolicy(path: string): RouteAccessPolicy {
   if (PUBLIC_PATHS.has(path)) return { kind: "public" }
+
+  const permission = PERMISSION_PATHS.get(path)
+  if (permission) return { kind: "permission", permission }
+
   if (path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`)) return { kind: "admin" }
 
   return { kind: "authenticated" }
@@ -55,10 +73,11 @@ export async function getRouteAccessDecision(
   // 3. If you the requested path is not public, you need to login
   if (!session) return { kind: "redirect", location: loginPath(requestedPath) }
 
-  // 4. Admin pages requires admin access
-  if (policy.kind === "admin") {
+  // 4. Some pages ask for more than a session: the Admin area, or a named permission.
+  if (policy.kind === "admin" || policy.kind === "permission") {
     try {
-      await requireAdmin(session)
+      if (policy.kind === "admin") await requireAdmin(session)
+      else await requireCurrentUserPermission(policy.permission, session)
     } catch {
       return { kind: "forbidden" }
     }

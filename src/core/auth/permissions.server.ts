@@ -14,6 +14,19 @@ type RequestActor = {
   roles: AccessRole[]
 }
 
+/**
+ * The part of a Better Auth session an authorization decision reads. Callers that
+ * already hold a session — the proxy, a layout — pass it in rather than paying for a
+ * second lookup; passing `undefined` reads the session from the request headers, and
+ * passing `null` states there is no session.
+ */
+export type PermissionSession = { user: { id: string; role?: string | null } }
+
+/**
+ * One resource-and-action pair drawn from the access-control table, e.g.
+ * `{ resource: "post", action: "create" }`. The union is generated from `statements`,
+ * so an action that a resource does not declare will not typecheck.
+ */
 export type GlobalPermissionRequest = {
   [Resource in PermissionResource]: {
     resource: Resource
@@ -21,12 +34,18 @@ export type GlobalPermissionRequest = {
   }
 }[PermissionResource]
 
+/**
+ * A `GlobalPermissionRequest` with nothing extra on it. Object literals widen to the
+ * union too readily, so this pins the call site to exactly one resource-action pair.
+ */
 export type ExactGlobalPermissionRequest<Request extends GlobalPermissionRequest> = Request &
   Record<Exclude<keyof Request, keyof GlobalPermissionRequest>, never>
 
+/** Who was asking, as far as a denial needs to record it. */
 export type AuthorizationActorContext = { state: "authenticated"; userId: string } | { state: "unauthenticated" }
 export type AuthenticatedAuthorizationActorContext = Extract<AuthorizationActorContext, { state: "authenticated" }>
 
+/** What the actor failed to satisfy: a permission from the table, or a role outright. */
 export type AuthorizationRequirement =
   | { kind: "permission"; permission: GlobalPermissionRequest }
   | { kind: "accessRole"; role: AccessRole }
@@ -36,8 +55,11 @@ export type AuthorizationDeniedContext = {
   requirement: AuthorizationRequirement
 }
 
+export const AUTHORIZATION_DENIED = "AUTHORIZATION_DENIED"
+
+/** Thrown when an actor may not do the thing. Carries who asked and what they lacked. */
 export class AuthorizationDeniedError extends Error {
-  readonly code = "AUTHORIZATION_DENIED"
+  readonly code: typeof AUTHORIZATION_DENIED = AUTHORIZATION_DENIED
 
   constructor(readonly context: AuthorizationDeniedContext) {
     super("The current actor is not authorized to perform this operation.")
@@ -69,7 +91,7 @@ async function getCurrentActor(): Promise<RequestActor | null> {
   }
 }
 
-function getActorFromSession(session?: { user: { id: string; role?: string | null } } | null): RequestActor | null {
+function getActorFromSession(session: PermissionSession | null): RequestActor | null {
   if (!session) {
     return null
   }
@@ -78,6 +100,11 @@ function getActorFromSession(session?: { user: { id: string; role?: string | nul
     userId: session.user.id,
     roles: parseAccessRoles(session.user.role)
   }
+}
+
+/** Use the session the caller already has, or go and read one from the request. */
+async function resolveActor(session?: PermissionSession | null): Promise<RequestActor | null> {
+  return session === undefined ? await getCurrentActor() : getActorFromSession(session)
 }
 
 function actorContext(actor: RequestActor | null): AuthorizationActorContext {
@@ -102,16 +129,23 @@ async function actorHasPermission(actor: RequestActor | null, permission: Global
   return result.success
 }
 
+/** Whether the actor holds `permission`. Answers false rather than throwing. */
 export async function canCurrentUser<const Request extends GlobalPermissionRequest>(
-  permission: ExactGlobalPermissionRequest<Request>
+  permission: ExactGlobalPermissionRequest<Request>,
+  session?: PermissionSession | null
 ): Promise<boolean> {
-  return actorHasPermission(await getCurrentActor(), permission)
+  return actorHasPermission(await resolveActor(session), permission)
 }
 
+/**
+ * Assert `permission` and return the actor holding it, so the caller can attribute the
+ * write it is about to make. Throws `AuthorizationDeniedError` otherwise.
+ */
 export async function requireCurrentUserPermission<const Request extends GlobalPermissionRequest>(
-  permission: ExactGlobalPermissionRequest<Request>
+  permission: ExactGlobalPermissionRequest<Request>,
+  session?: PermissionSession | null
 ): Promise<AuthenticatedAuthorizationActorContext> {
-  const actor = await getCurrentActor()
+  const actor = await resolveActor(session)
 
   if (!actor || !(await actorHasPermission(actor, permission))) {
     denyAuthorization({
@@ -128,15 +162,14 @@ function actorIsAdmin(actor: RequestActor | null): boolean {
   return hasAdminRole(actor?.roles)
 }
 
-export async function isUserAdmin(session?: { user: { id: string; role?: string | null } } | null): Promise<boolean> {
-  const actor = session === undefined ? await getCurrentActor() : getActorFromSession(session)
-  return actorIsAdmin(actor)
+export async function isUserAdmin(session?: PermissionSession | null): Promise<boolean> {
+  return actorIsAdmin(await resolveActor(session))
 }
 
 export async function requireAdmin(
-  session?: { user: { id: string; role?: string | null } } | null
+  session?: PermissionSession | null
 ): Promise<AuthenticatedAuthorizationActorContext> {
-  const actor = session === undefined ? await getCurrentActor() : getActorFromSession(session)
+  const actor = await resolveActor(session)
 
   if (!actor || !actorIsAdmin(actor)) {
     denyAuthorization({

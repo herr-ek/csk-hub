@@ -1,11 +1,11 @@
 import Link from "next/link"
+import { canCurrentUser } from "@/core/auth/permissions.server"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
-import { canCurrentMemberPublishPost } from "./permissions.server"
 import { PublishedAt } from "./published-at"
 import { listNewsFeed } from "./service"
 
@@ -22,7 +22,10 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
 }
 
 export async function NewsScreen() {
-  const [entries, canPublish] = await Promise.all([listNewsFeed(), canCurrentMemberPublishPost()])
+  const [entries, canPublish] = await Promise.all([
+    listNewsFeed(),
+    canCurrentUser({ resource: "post", action: "create" })
+  ])
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">

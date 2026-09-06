@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { AUTHORIZATION_DENIED, requireCurrentUserPermission } from "@/core/auth/permissions.server"
 import { db } from "@/core/db"
 import { post } from "@/core/db/schema/posts"
 import { logger } from "@/core/logging"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
-import { POST_PUBLISHING_DENIED, requirePostPublisher } from "./permissions.server"
 import { publishPostSchema } from "./schemas"
 
 /** What the Admin typed, echoed back so a rejected submission does not lose the post. */
@@ -35,9 +35,9 @@ export async function publishPost(_state: PublishPostState, formData: FormData):
 
   let publisherId: string
   try {
-    publisherId = (await requirePostPublisher()).memberId
+    publisherId = (await requireCurrentUserPermission({ resource: "post", action: "create" })).userId
   } catch (error) {
-    if (getErrorCode(error) === POST_PUBLISHING_DENIED) {
+    if (getErrorCode(error) === AUTHORIZATION_DENIED) {
       return errorState(draft, "Only admins can publish posts.")
     }
 

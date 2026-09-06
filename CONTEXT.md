@@ -45,13 +45,12 @@ _Avoid_: Delete, purge, GDPR-delete
 
 **Post**:
 A written announcement an Admin publishes to the whole choir, appearing in the News feed
-and at its own permanent address. The stored text is Markdown (ADR-0004); what a Member
-reads is that Markdown rendered. A Post carries no audience of its own — publishing one
-means publishing it to every Member.
+and at its own permanent address. The stored text is Markdown (ADR-0004). A Post carries
+no audience of its own — publishing one means publishing it to every Member.
 _Avoid_: Article, news item, blog post, announcement email
 
 **News feed**:
 The single reverse-chronological list of published Posts at `/news`, identical for every
 Member. It is where information published in the Hub lives; it is not a copy of the
-monthly email, which keeps running separately until Notifications exists (ADR-0005).
+monthly email, which keeps running separately.
 _Avoid_: Timeline, wall, dashboard, newsletter

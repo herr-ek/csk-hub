@@ -7,18 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!node_modules",
-      "!.next",
-      "!dist",
-      "!build",
-      "!next-env.d.ts",
-      "!*.md",
-      "!drizzle",
-      "!types",
-      "!.claude/settings.local.json"
-    ]
+    "includes": ["**", "!node_modules", "!.next", "!dist", "!build", "!next-env.d.ts", "!*.md", "!drizzle", "!types"]
   },
   "formatter": {
     "enabled": true,
