@@ -13,3 +13,7 @@ export const localeNames = {
 export function isLocale(value: string | null | undefined): value is Locale {
   return typeof value === "string" && locales.includes(value as Locale)
 }
+
+export function getLocaleName(value: string | null | undefined): string {
+  return isLocale(value) ? localeNames[value] : localeNames[defaultLocale]
+}
