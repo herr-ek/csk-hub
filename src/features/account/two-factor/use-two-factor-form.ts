@@ -2,10 +2,12 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath } from "@/core/navigation/navigation-utils"
 import { getAvailableMethods, sendTwoFactorOtp, type TwoFactorMethod, verifyTwoFactorMethod } from "./service"
 
 export function useTwoFactorForm() {
+  const t = useTranslations("Public.twoFactor")
   const router = useRouter()
   const searchParams = useSearchParams()
   const methods = searchParams.get("methods")?.split(",") ?? ["totp", "otp"]
@@ -24,7 +26,7 @@ export function useTwoFactorForm() {
     setPending(true)
     const result = await sendTwoFactorOtp()
     setPending(false)
-    if (result.success) setMessage("A security code was sent to your email.")
+    if (result.success) setMessage(t("emailCodeSent"))
     else setError(result.error)
   }
 

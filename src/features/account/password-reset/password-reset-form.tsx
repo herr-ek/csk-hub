@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form"
 import Link from "next/link"
 import { useState } from "react"
 import type z from "zod"
+import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
@@ -22,6 +23,7 @@ export function PasswordResetForm({
   initialEmail: string
   onSuccess: (role?: string | null) => void
 }) {
+  const t = useTranslations("Public.passwordReset")
   const [formError, setFormError] = useState<string | null>(null)
 
   async function onSubmit({ value }: { value: z.infer<typeof passwordResetSchema> }) {
@@ -65,7 +67,7 @@ export function PasswordResetForm({
 
             return (
               <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                <FieldLabel htmlFor={field.name}>{t("email")}</FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -87,7 +89,7 @@ export function PasswordResetForm({
 
             return (
               <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>New password</FieldLabel>
+                <FieldLabel htmlFor={field.name}>{t("newPassword")}</FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -99,7 +101,7 @@ export function PasswordResetForm({
                   onChange={(event) => field.handleChange(event.target.value)}
                   aria-invalid={isInvalid}
                 />
-                <FieldDescription>{passwordPolicy.minPasswordLengthHint}</FieldDescription>
+                <FieldDescription>{t("passwordHint", { count: passwordPolicy.minPasswordLength })}</FieldDescription>
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
             )
@@ -111,7 +113,7 @@ export function PasswordResetForm({
 
             return (
               <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>Confirm new password</FieldLabel>
+                <FieldLabel htmlFor={field.name}>{t("confirmNewPassword")}</FieldLabel>
                 <Input
                   id={field.name}
                   name={field.name}
@@ -135,10 +137,10 @@ export function PasswordResetForm({
         </Alert>
       )}
       <Button type="submit" disabled={form.state.isSubmitting}>
-        {form.state.isSubmitting ? "Updating..." : "Update password"}
+        {form.state.isSubmitting ? t("updating") : t("updatePassword")}
       </Button>
       <Link href={ROUTES.login} className="text-center text-sm underline underline-offset-4">
-        Return to sign in
+        {t("returnToSignIn")}
       </Link>
     </form>
   )
