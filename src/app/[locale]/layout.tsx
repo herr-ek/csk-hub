@@ -8,7 +8,7 @@ import { NextIntlClientProvider } from "@/core/i18n/client"
 import { isLocale } from "@/core/i18n/locales"
 import { getMessages } from "@/core/i18n/messages"
 import { routing } from "@/core/i18n/routing"
-import { getTranslations } from "@/core/i18n/server"
+import { getLocale, getTranslations } from "@/core/i18n/server"
 import { Toaster } from "@/shared/ui/base/toast"
 import { cn } from "@/shared/utils"
 
@@ -24,11 +24,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"]
 })
 
-export async function generateMetadata({
-  params
-}: Readonly<{ params: Promise<{ locale: string }> }>): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Metadata" })
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata")
 
   return {
     title: {
@@ -76,11 +73,8 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
 }
 
-export default async function RootLayout({
-  children,
-  params
-}: Readonly<{ children: React.ReactNode; params: Promise<{ locale: string }> }>) {
-  const { locale } = await params
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale()
 
   if (!isLocale(locale)) {
     notFound()
@@ -95,6 +89,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider
           locale={locale}
+          // TODO: Split up per feature if perfomance gets bad
           messages={getMessages(locale)}
           formats={{}}
           now={new Date(0)}

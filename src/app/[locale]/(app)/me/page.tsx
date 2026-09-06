@@ -2,11 +2,8 @@ import { Suspense } from "react"
 import { getTranslations } from "@/core/i18n/server"
 import { AccountSettings, AccountSettingsSkeleton } from "@/features/account/settings"
 
-export const instant = false
-
-export default async function Me({ params }: PageProps<"/[locale]/me">) {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "AccountSettings" })
+export default async function Me() {
+  const t = await getTranslations("AccountSettings")
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
       <div>

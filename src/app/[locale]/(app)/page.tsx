@@ -3,11 +3,8 @@ import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
 import { buttonVariants } from "@/shared/ui/base/button"
 
-export const instant = false
-
-export default async function Home({ params }: PageProps<"/[locale]">) {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "HomePage" })
+export default async function Home() {
+  const t = await getTranslations("HomePage")
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col items-start gap-4 px-4 py-8 sm:px-6">

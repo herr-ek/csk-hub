@@ -1,3 +1,3 @@
 import "server-only"
 
-export { getTranslations } from "next-intl/server"
+export { getLocale, getTranslations } from "next-intl/server"

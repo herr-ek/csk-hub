@@ -4,16 +4,14 @@ import { getTranslations } from "@/core/i18n/server"
 import { TwoFactorForm } from "@/features/account/two-factor"
 import { Spinner } from "@/shared/ui/base/spinner"
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Public.twoFactor" })
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Public.twoFactor")
 
   return { title: t("pageTitle") }
 }
 
-export default async function TwoFactorPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Public.twoFactor" })
+export default async function TwoFactorPage() {
+  const t = await getTranslations("Public.twoFactor")
 
   return (
     <>

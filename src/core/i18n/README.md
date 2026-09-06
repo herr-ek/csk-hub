@@ -36,22 +36,35 @@ Use ICU parameters instead of concatenating translated fragments:
 
 ## Server Components
 
-Server Components are the default. For an async page, layout, or metadata function, use `getTranslations` from `next-intl/server` with the locale received from the route params:
+Server Components are the default. `[locale]` is a Next.js root parameter: [`request.ts`](./request.ts) reads and validates it once through `next/root-params`, then next-intl supplies it to all server translation APIs. Do not await `params.locale` or pass it to `getTranslations` / `getLocale` from a page, layout, or metadata function. Those manual reads block Cache Components' static shell validation, even for locales returned by `generateStaticParams`.
+
+For an async page, layout, or metadata function, use the server façade without a locale override:
 
 ```tsx
 import { getTranslations } from "@/core/i18n/server"
 
-export default async function ExamplePage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Example" })
+export default async function ExamplePage() {
+  const t = await getTranslations("Example")
 
   return <h1>{t("title")}</h1>
 }
 ```
 
-Use the same explicit-locale pattern in `generateMetadata`. It works with this project's generated locale params and Cache Components, preserving the static variants for known locales. Do not import JSON catalogs or `messages.ts` from a route or feature; the root layout and request configuration provide the translation context.
+Use the same pattern in `generateMetadata`. When a layout needs the locale itself—for example, for `<html lang>`—use `getLocale` from `@/core/i18n/server`:
 
-For a synchronous Server Component, `useTranslations` is supported by next-intl. Prefer an async component with `getTranslations` when adding new page-level copy, since the explicit locale makes the static-rendering dependency clear.
+```tsx
+import { getLocale } from "@/core/i18n/server"
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale()
+
+  return <html lang={locale}>{children}</html>
+}
+```
+
+`generateStaticParams` remains responsible for the supported static locale variants. Pass an explicit locale only in a Route Handler or Server Action, where `next/root-params` is unavailable, or when rendering messages from multiple locales deliberately. Do not import JSON catalogs or `messages.ts` from a route or feature; the root layout and request configuration provide the translation context.
+
+For a synchronous Server Component, `useTranslations` is supported by next-intl. Prefer an async component with `getTranslations` when adding new page-level copy, so translation resolution stays in the central root-parameter-aware request configuration.
 
 ## Client Components
 
