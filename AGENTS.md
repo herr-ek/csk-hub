@@ -13,7 +13,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Follow `CONTRIBUTING.md`: ADR drafts are welcome before team discussion; a merged
 ADR means the team has discussed and agreed on the decision. Keep ADR references within
-the introducing branch and PR until the ADR is on remote `main`; see
+the introducing branch and PR until the ADR is on remote `master`; see
 `docs/agents/issue-tracker.md`.
 
 ### Issue tracker

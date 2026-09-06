@@ -15,6 +15,6 @@ A conversation with your agent doesn't replace the team discussion.
 Keep ADRs short: explain what we decided, why, and any tradeoffs worth knowing
 about. Use issues for planning future work.
 
-Until the ADR is merged to `main`, keep references to it within the branch
+Until the ADR is merged to `master`, keep references to it within the branch
 and its PR. Elsewhere, including issues and other PRs, link to the discussion
-or introducing PR instead. Once merged, link directly to the ADR on `main`.
+or introducing PR instead. Once merged, link directly to the ADR on `master`.

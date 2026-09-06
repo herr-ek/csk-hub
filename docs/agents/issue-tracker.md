@@ -17,9 +17,9 @@ Infer the repo from `git remote -v` — `gh` does this automatically when run in
 
 Draft ADRs may be referenced within their introducing branch and PR, including
 review comments. Before referencing one elsewhere (such as an issue or another
-PR), verify that the file exists on remote `main` using `gh api` or a freshly fetched
-`origin/main`, and link to that version. A local file or an open PR isn't enough.
-If the ADR isn't on `main`, or you can't verify it, link to the discussion or
+PR), verify that the file exists on remote `master` using `gh api` or a freshly fetched
+`origin/master`, and link to that version. A local file or an open PR isn't enough.
+If the ADR isn't on `master`, or you can't verify it, link to the discussion or
 introducing PR instead. This also applies to issues created through skills.
 
 ## Pull requests as a triage surface
