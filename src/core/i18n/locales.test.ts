@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { getLocaleCookieValue, localeCookie, writeLocaleCookie } from "./locale-cookie"
 import { getSavedLocale, resolveLocalePreference } from "./locale-preference"
 import { localeSchema } from "./locale-validation"
-import { isLocale } from "./locales"
+import { getLocaleName, isLocale } from "./locales"
 
 describe("locale validation", () => {
   test("accepts configured locales", () => {
@@ -15,6 +15,13 @@ describe("locale validation", () => {
   test("rejects unsupported locales", () => {
     expect(isLocale("fr")).toBe(false)
     expect(localeSchema.safeParse("fr").success).toBe(false)
+  })
+
+  test("uses the full locale name for display", () => {
+    expect(getLocaleName("en")).toBe("English")
+    expect(getLocaleName("sv")).toBe("Svenska")
+    expect(getLocaleName("de")).toBe("Deutsch")
+    expect(getLocaleName("fr")).toBe("Svenska")
   })
 
   test("uses only supported saved member locales", () => {

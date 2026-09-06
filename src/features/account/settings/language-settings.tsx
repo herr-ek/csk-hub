@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
 import { writeBrowserLocaleCookie } from "@/core/i18n/locale-cookie"
-import { defaultLocale, isLocale, type Locale, localeNames, locales } from "@/core/i18n/locales"
+import { defaultLocale, getLocaleName, isLocale, type Locale, localeNames, locales } from "@/core/i18n/locales"
 import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -51,7 +51,7 @@ export function LanguageSettings({ initialLocale }: { initialLocale?: string | n
           <FieldLabel htmlFor="settings-language">{t("languageTitle")}</FieldLabel>
           <Select value={locale} onValueChange={(value) => void changeLocale(value as Locale)} disabled={isPending}>
             <SelectTrigger id="settings-language" className="mt-1 w-full sm:w-56">
-              <SelectValue />
+              <SelectValue>{getLocaleName}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {locales.map((supportedLocale) => (
