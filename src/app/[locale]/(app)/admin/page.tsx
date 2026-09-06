@@ -7,8 +7,6 @@ import { ROUTES } from "@/core/navigation/site"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 
-export const instant = false
-
 type AdminResource = { href: string; title: string; description: string }
 
 function AdminResourceCard({ resource }: { resource: AdminResource }) {
@@ -57,9 +55,8 @@ async function AdminResources({ resources }: { resources: AdminResource[] }) {
   )
 }
 
-export default async function AdminRoot({ params }: PageProps<"/[locale]/admin">) {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Admin" })
+export default async function AdminRoot() {
+  const t = await getTranslations("Admin")
   const resources = [{ href: ROUTES.adminMembers, title: t("members"), description: t("membersDescription") }]
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">

@@ -4,9 +4,8 @@ import { getTranslations } from "@/core/i18n/server"
 import { PasswordReset } from "@/features/account/password-reset"
 import { Spinner } from "@/shared/ui/base/spinner"
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Public.passwordReset" })
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Public.passwordReset")
 
   return { title: t("resetPageTitle") }
 }

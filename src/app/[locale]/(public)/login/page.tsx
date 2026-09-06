@@ -4,16 +4,14 @@ import { getTranslations } from "@/core/i18n/server"
 import { LoginForm } from "@/features/account/login"
 import { Spinner } from "@/shared/ui/base/spinner"
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Public.login" })
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Public.login")
 
   return { title: t("pageTitle") }
 }
 
-export default async function LoginPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-  const t = await getTranslations({ locale, namespace: "Public.login" })
+export default async function LoginPage() {
+  const t = await getTranslations("Public.login")
 
   return (
     <>
