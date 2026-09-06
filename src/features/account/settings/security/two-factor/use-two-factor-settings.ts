@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { disableTwoFactor, enableTwoFactor, verifyTwoFactorSetup } from "./two-factor-service"
 
 export function useTwoFactorSettings(enabled: boolean) {
+  const t = useTranslations("AccountSettings")
   const [isEnabled, setIsEnabled] = useState(enabled)
   const [requestedEnabled, setRequestedEnabled] = useState<boolean>()
   const [password, setPassword] = useState("")
@@ -43,7 +45,7 @@ export function useTwoFactorSettings(enabled: boolean) {
     setRequestedEnabled(undefined)
     setPassword("")
     setBackupCodes(undefined)
-    setMessage("Two-factor authentication disabled.")
+    setMessage(t("twoFactorDisabled"))
   }
 
   async function verifySetup(event: React.SubmitEvent<HTMLFormElement>) {
@@ -63,7 +65,7 @@ export function useTwoFactorSettings(enabled: boolean) {
     setTotpUri(undefined)
     setPassword("")
     setCode("")
-    setMessage("Authenticator app enabled.")
+    setMessage(t("authenticatorEnabled"))
   }
 
   function requestChange(nextEnabled: boolean) {

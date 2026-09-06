@@ -1,3 +1,4 @@
+import { useTranslations } from "@/core/i18n/translations"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,17 +21,19 @@ export function DeletePasskeyDialog({
   onDelete: (id: string) => void
   pending?: boolean
 }) {
+  const t = useTranslations("AccountSettings")
+  const common = useTranslations("Common")
   return (
     <AlertDialog open={Boolean(passkeyId)} onOpenChange={(open) => !open && !pending && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete passkey?</AlertDialogTitle>
-          <AlertDialogDescription>This passkey will no longer be available for signing in.</AlertDialogDescription>
+          <AlertDialogTitle>{t("deletePasskeyTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("deletePasskeyDescription")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{common("cancel")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" disabled={pending} onClick={() => passkeyId && onDelete(passkeyId)}>
-            {pending ? "Deleting passkey..." : "Delete passkey"}
+            {pending ? t("deletingPasskey") : t("deletePasskey")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
