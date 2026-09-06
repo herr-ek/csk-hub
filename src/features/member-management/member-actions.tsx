@@ -2,6 +2,8 @@
 
 import { MoreHorizontalIcon } from "lucide-react"
 import { useCallback, useEffect, useState, useTransition } from "react"
+import { app } from "@/core/config/app"
+import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { ADMIN_ROLE, hasAdminRole, MEMBER_ROLE } from "@/shared/roles"
 import {
@@ -55,56 +57,63 @@ type MemberActionConfig = DialogCopy & {
   success: (memberName: string) => { title: string; description: string }
 }
 
-const memberActionConfig: Record<MemberAction, MemberActionConfig> = {
-  activate: {
-    title: "Activate",
-    description: "This restores the member's access so they can sign in to CSK Hub again.",
-    submitLabel: "Activate",
-    submitVariant: "default",
-    requiresConfirmation: false,
-    submitClassName: activateButtonClassName,
-    command: activateMember,
-    success: (memberName) => ({ title: "Member activated", description: `${memberName} can sign in again.` })
-  },
-  deactivate: {
-    title: "Deactivate",
-    description:
-      "This prevents the member from signing in. Their account and history will be kept, and an admin can restore access later.",
-    submitLabel: "Deactivate",
-    submitVariant: "destructive",
-    requiresConfirmation: false,
-    command: deactivateMember,
-    success: (memberName) => ({ title: "Member deactivated", description: `${memberName} no longer has access.` })
-  },
-  delete: {
-    title: "Delete",
-    description: "This permanently deletes the member and all of their account data. This cannot be undone.",
-    submitLabel: "Delete",
-    submitVariant: "destructive",
-    requiresConfirmation: true,
-    command: eraseMember,
-    success: (memberName) => ({ title: "Member deleted", description: `${memberName} has been permanently deleted.` })
-  },
-  invite: {
-    title: "Send invitation to",
-    description: "This sends the member a link to activate their account and set their password.",
-    submitLabel: "Send invitation",
-    submitVariant: "default",
-    requiresConfirmation: false,
-    command: resendInvitation,
-    success: (memberName) => ({
-      title: "Invitation sent",
-      description: `An activation link was sent to ${memberName}.`
-    })
-  },
-  role: {
-    title: "Manage roles for",
-    description: "Choose any additional roles this member should have.",
-    submitLabel: "Save roles",
-    submitVariant: "default",
-    requiresConfirmation: false,
-    command: changeMemberRole,
-    success: (memberName) => ({ title: "Role updated", description: `${memberName}'s role has been updated.` })
+function getMemberActionConfig(t: ReturnType<typeof useTranslations>): Record<MemberAction, MemberActionConfig> {
+  return {
+    activate: {
+      title: t("activate"),
+      description: t("activateDescription", { appName: app.name }),
+      submitLabel: t("activate"),
+      submitVariant: "default",
+      requiresConfirmation: false,
+      submitClassName: activateButtonClassName,
+      command: activateMember,
+      success: (memberName) => ({ title: t("memberActivated"), description: t("memberCanSignIn", { memberName }) })
+    },
+    deactivate: {
+      title: t("deactivate"),
+      description: t("deactivateDescription"),
+      submitLabel: t("deactivate"),
+      submitVariant: "destructive",
+      requiresConfirmation: false,
+      command: deactivateMember,
+      success: (memberName) => ({
+        title: t("memberDeactivated"),
+        description: t("memberNoLongerHasAccess", { memberName })
+      })
+    },
+    delete: {
+      title: t("delete"),
+      description: t("deleteDescription"),
+      submitLabel: t("delete"),
+      submitVariant: "destructive",
+      requiresConfirmation: true,
+      command: eraseMember,
+      success: (memberName) => ({
+        title: t("memberDeleted"),
+        description: t("memberPermanentlyDeleted", { memberName })
+      })
+    },
+    invite: {
+      title: t("sendInvitationTo"),
+      description: t("sendInvitationDescription"),
+      submitLabel: t("sendInvitation"),
+      submitVariant: "default",
+      requiresConfirmation: false,
+      command: resendInvitation,
+      success: (memberName) => ({
+        title: t("invitationSent"),
+        description: t("inviteSentDescription", { email: memberName })
+      })
+    },
+    role: {
+      title: t("manageRolesFor"),
+      description: t("manageRolesDescription"),
+      submitLabel: t("saveRoles"),
+      submitVariant: "default",
+      requiresConfirmation: false,
+      command: changeMemberRole,
+      success: (memberName) => ({ title: t("roleUpdated"), description: t("roleUpdatedDescription", { memberName }) })
+    }
   }
 }
 
@@ -121,6 +130,9 @@ export function MemberActions({
   hasPassword: boolean
   role: string
 }) {
+  const t = useTranslations("Members")
+  const common = useTranslations("Common")
+  const memberActionConfig = getMemberActionConfig(t)
   const [state, setState] = useState<MemberCommandState>({ status: "idle" })
   const [pending, startTransition] = useTransition()
   const [dialogAction, setDialogAction] = useState<MemberAction | null>(null)
@@ -146,9 +158,9 @@ export function MemberActions({
       })
     }
     if (state.status === "error") {
-      toast.add({ type: "error", title: "Member action failed", description: state.error })
+      toast.add({ type: "error", title: t("memberActionFailed"), description: state.error })
     }
-  }, [closeDialog, memberName, state])
+  }, [closeDialog, memberActionConfig, memberName, state, t])
 
   const dialogCopy = memberActionConfig[dialogAction ?? "activate"]
 
@@ -164,14 +176,14 @@ export function MemberActions({
       if (result.status === "error") {
         toast.add({
           type: "error",
-          title: "Impersonation failed",
+          title: t("impersonationFailed"),
           description: result.error
         })
         return
       }
       window.location.assign(ROUTES.home)
     } catch {
-      toast.add({ type: "error", title: "Impersonation failed", description: "Unable to switch to this member." })
+      toast.add({ type: "error", title: t("impersonationFailed"), description: t("impersonationFailedDescription") })
     }
   }
 
@@ -186,7 +198,7 @@ export function MemberActions({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button type="button" variant="ghost" size="icon-sm" aria-label={`Actions for ${memberName}`}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actionsFor", { memberName })}>
               <MoreHorizontalIcon aria-hidden="true" />
             </Button>
           }
@@ -198,29 +210,29 @@ export function MemberActions({
               setDialogAction("role")
             }}
           >
-            Manage roles
+            {t("manageRoles")}
           </DropdownMenuItem>
           {!inactive && !hasAdminRole(role) ? (
-            <DropdownMenuItem onClick={impersonate}>Impersonate</DropdownMenuItem>
+            <DropdownMenuItem onClick={impersonate}>{t("impersonate")}</DropdownMenuItem>
           ) : null}
           {!hasPassword ? (
-            <DropdownMenuItem onClick={() => setDialogAction("invite")}>Send invitation</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDialogAction("invite")}>{t("sendInvitation")}</DropdownMenuItem>
           ) : null}
           {inactive ? (
             <DropdownMenuItem
               className="text-yellow-700 focus:text-yellow-800 dark:text-yellow-400 dark:focus:text-yellow-300"
               onClick={() => setDialogAction("activate")}
             >
-              Activate
+              {t("activate")}
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem className={destructiveMenuItemClassName} onClick={() => setDialogAction("deactivate")}>
-              Deactivate
+              {t("deactivate")}
             </DropdownMenuItem>
           )}
           {inactive ? (
             <DropdownMenuItem className={destructiveMenuItemClassName} onClick={() => setDialogAction("delete")}>
-              Delete
+              {t("delete")}
             </DropdownMenuItem>
           ) : null}
         </DropdownMenuContent>
@@ -233,15 +245,13 @@ export function MemberActions({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {dialogCopy.title} {memberName}?
-            </AlertDialogTitle>
+            <AlertDialogTitle>{t("dialogTitle", { action: dialogCopy.title, memberName })}</AlertDialogTitle>
             <AlertDialogDescription>{dialogCopy.description}</AlertDialogDescription>
           </AlertDialogHeader>
           {dialogCopy.requiresConfirmation ? (
             <div className="space-y-2">
               <label htmlFor={`delete-confirmation-${userId}`} className="text-sm font-medium">
-                Type <span className="font-mono">{requiredDeleteConfirmation}</span> to confirm
+                {t("typeToConfirm", { confirmation: requiredDeleteConfirmation })}
               </label>
               <Input
                 id={`delete-confirmation-${userId}`}
@@ -260,16 +270,14 @@ export function MemberActions({
               <div className="flex items-center gap-3">
                 <Checkbox id={`admin-role-${userId}`} checked={isAdmin} onCheckedChange={setIsAdmin} />
                 <label htmlFor={`admin-role-${userId}`} className="text-sm font-medium">
-                  Admin
-                  <span className="block text-muted-foreground text-xs font-normal">
-                    Can invite, manage, and impersonate Members.
-                  </span>
+                  {t("admin")}
+                  <span className="block text-muted-foreground text-xs font-normal">{t("adminDescription")}</span>
                 </label>
               </div>
             </div>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>{common("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               type="submit"
               form={formId}
