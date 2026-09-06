@@ -43,8 +43,21 @@ Use `src/core` for infrastructure and app shell modules:
 - `src/core/auth`: Better Auth setup, server/client auth objects, plugins, cookie integration, and auth infrastructure tests.
 - `src/core/db`: database client and schemas.
 - `src/core/email`: email delivery adapters.
+- `src/core/i18n`: locale definitions, locale-cookie handling, next-intl routing/request configuration, and translation loading. See `src/core/i18n/README.md` before adding translated UI.
 
 Do not promote code to shared space just because two files currently look similar. Promote only when the interface is stable and the shared module improves locality.
+
+### Internationalization
+
+CSK Hub uses `next-intl` with cookie-selected locales and internal `[locale]` routes. The public URL never contains a locale prefix; `src/proxy.ts` applies the rewrite and the selected locale is a root parameter for rendering.
+
+- `src/core/i18n/locales.ts` is the single source of truth for supported locales, their display names, and the default locale. Do not duplicate the locale list or default in features, routes, schemas, or UI.
+- Translation catalogs live at the repository root in `messages/<locale>.json`, not in `src`. Import them through `@messages/*`; the `@messages` alias deliberately marks these as application-wide content assets.
+- Keep one catalog per locale. Organize keys by durable feature or screen namespace inside the JSON, such as `Public.login` or `AccountSettings`; do not create a separate catalog file for every feature.
+- Add every user-facing string—including headings, controls, empty states, dialogs, metadata, and validation/error copy displayed to a member—to every supported catalog in the same change. The warning-level `style/noJsxLiterals` Biome rule is the migration inventory and should guide this work.
+- Preserve ICU placeholders and plural/select logic consistently across locales. Prefer parameterized messages to string concatenation.
+- Browser code must not write `NEXT_LOCALE` directly. Use the locale-cookie functions in `src/core/i18n`; the proxy, next-intl routing, public selector, and member settings share this one contract.
+- Route modules remain thin. They select the translation namespace and compose feature UI; they do not load or parse catalog files directly.
 
 ### Workflow-local structure
 
