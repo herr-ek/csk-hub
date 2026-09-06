@@ -36,6 +36,9 @@
       "security": {
         "noDangerouslySetInnerHtml": "off"
       },
+      "style": {
+        "noJsxLiterals": "error"
+      },
       "suspicious": {
         "noArrayIndexKey": "off",
         "noDocumentCookie": "off"
@@ -48,6 +51,18 @@
       "tailwind": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/shared/ui/base/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noJsxLiterals": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
