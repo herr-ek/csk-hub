@@ -3,21 +3,12 @@
 import { useDebouncedValue } from "@tanstack/react-pacer/debouncer"
 import { useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
+import { useTranslations } from "@/core/i18n/translations"
 
 export type UsernameAvailability = "idle" | "checking" | "available" | "unavailable"
 
-export function useUsernameSettings(
-  initialUsername: string,
-  t: (
-    key:
-      | "usernameChecking"
-      | "usernameAvailable"
-      | "usernameTaken"
-      | "usernameCheckFailed"
-      | "usernameUpdated"
-      | "usernameUpdateFailed"
-  ) => string
-) {
+export function useUsernameSettings(initialUsername: string) {
+  const t = useTranslations("AccountSettings")
   const [currentUsername, setCurrentUsername] = useState(initialUsername)
   const [username, setUsername] = useState(initialUsername)
   const [isEditing, setIsEditing] = useState(false)

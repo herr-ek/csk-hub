@@ -14,11 +14,9 @@ export default async function proxy(req: NextRequest) {
   const cookieLocale = getLocaleCookieValue(req.cookies.get(localeCookie.name)?.value)
   const savedLocale = getSavedLocale(session?.user)
   const resolvedLocale = resolveLocalePreference(cookieLocale, savedLocale)
-
-  // A member's saved locale initializes a browser that has no preference yet.
-  // A valid NEXT_LOCALE cookie remains a browser-specific override.
-  if (!cookieLocale && resolvedLocale) {
-    writeLocaleCookie(req.cookies, resolvedLocale)
+  const localeToInitialize = cookieLocale ? undefined : resolvedLocale
+  if (localeToInitialize) {
+    writeLocaleCookie(req.cookies, localeToInitialize)
   }
 
   const decision = await getRouteAccessDecision(pathname, session, requestedPath)
@@ -40,8 +38,8 @@ export default async function proxy(req: NextRequest) {
       break
   }
 
-  if (!cookieLocale && resolvedLocale) {
-    writeLocaleCookie(response.cookies, resolvedLocale)
+  if (localeToInitialize) {
+    writeLocaleCookie(response.cookies, localeToInitialize)
   }
 
   return response
