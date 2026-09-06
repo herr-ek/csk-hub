@@ -2,20 +2,14 @@ import { Bell, User } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { requireAdmin } from "@/core/auth/permissions.server"
+import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 
-const ADMIN_RESOURCES = [
-  { href: ROUTES.adminMembers, title: "Members", description: "View and manage Hub members.", icon: User },
-  {
-    href: ROUTES.adminNotifications,
-    title: "Notifications",
-    description: "Util for push notifications.",
-    icon: Bell
-  }
-] as const
-type AdminResource = (typeof ADMIN_RESOURCES)[number]
+export const instant = false
+
+type AdminResource = { href: string; title: string; description: string; icon: typeof User }
 
 function AdminResourceCard({ resource }: { resource: AdminResource }) {
   const ResourceIcon = resource.icon
@@ -34,10 +28,10 @@ function AdminResourceCard({ resource }: { resource: AdminResource }) {
   )
 }
 
-function AdminResourcesSkeleton() {
+function AdminResourcesSkeleton({ resources }: { resources: AdminResource[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
-      {ADMIN_RESOURCES.map((resource) => (
+      {resources.map((resource) => (
         <Card key={resource.href} className="h-full">
           <CardHeader className="flex flex-row items-center gap-4">
             <Skeleton className="size-12 rounded-full" />
@@ -52,28 +46,39 @@ function AdminResourcesSkeleton() {
   )
 }
 
-async function AdminResources() {
+async function AdminResources({ resources }: { resources: AdminResource[] }) {
   await requireAdmin()
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {ADMIN_RESOURCES.map((resource) => (
+      {resources.map((resource) => (
         <AdminResourceCard key={resource.href} resource={resource} />
       ))}
     </div>
   )
 }
 
-export default function AdminRoot() {
+export default async function AdminRoot({ params }: PageProps<"/[locale]/admin">) {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: "Admin" })
+  const resources = [
+    { href: ROUTES.adminMembers, title: t("members"), description: t("membersDescription"), icon: User },
+    {
+      href: ROUTES.adminNotifications,
+      title: "Notifications",
+      description: "Util for push notifications.",
+      icon: Bell
+    }
+  ]
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <div>
-        <h1 className="font-heading text-2xl font-semibold">Admin</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage CSK Hub resources.</p>
+        <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
       </div>
 
-      <Suspense fallback={<AdminResourcesSkeleton />}>
-        <AdminResources />
+      <Suspense fallback={<AdminResourcesSkeleton resources={resources} />}>
+        <AdminResources resources={resources} />
       </Suspense>
     </main>
   )

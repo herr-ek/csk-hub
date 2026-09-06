@@ -1,4 +1,5 @@
 import type { NextConfig } from "next"
+import createNextIntlPlugin from "next-intl/plugin"
 
 const headers = async () => [
   {
@@ -49,4 +50,6 @@ const nextConfig: NextConfig = {
   headers
 }
 
-export default nextConfig
+const withNextIntl = createNextIntlPlugin("./src/core/i18n/request.ts")
+
+export default withNextIntl(nextConfig)

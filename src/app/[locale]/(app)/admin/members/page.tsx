@@ -3,6 +3,7 @@ import { requireAdmin } from "@/core/auth/permissions.server"
 import { MembersScreen, MembersScreenSkeleton } from "@/features/member-management"
 
 export const maxDuration = 60
+export const instant = false
 
 async function AdminMembers() {
   await requireAdmin()

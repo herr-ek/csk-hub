@@ -33,8 +33,17 @@ function isEntrypoint(feature: string, subpath: string): boolean {
 }
 
 describe("Architecture Rules", () => {
+  test("only core i18n imports next-intl", () => {
+    const violations = sourceFiles("src")
+      .filter((file) => !file.startsWith("src/core/i18n/"))
+      .filter((file) => /from\s+["']next-intl(?:\/[^"']+)?["']/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(process.cwd(), file))
+
+    expect(violations).toEqual([])
+  })
+
   test("core should not depend on app", async () => {
-    const rule = projectFiles().inFolder("src/core/**").shouldNot().dependOnFiles().inFolder("src/app")
+    const rule = projectFiles().inFolder("src/core/**").shouldNot().dependOnFiles().inPath("src/app/**")
     await expect(rule).toPassAsync(options)
   })
 
