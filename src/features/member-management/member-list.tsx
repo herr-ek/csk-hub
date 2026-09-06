@@ -2,6 +2,7 @@
 
 import { CheckIcon, TriangleAlertIcon } from "lucide-react"
 import { useMemo, useState } from "react"
+import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
 import { MEMBER_ROLE, parseRoles } from "@/shared/roles"
 import { Badge } from "@/shared/ui/base/badge"
@@ -54,7 +55,7 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
 
       <div className="rounded-lg border bg-card">
         <Table>
-          <TableCaption className="sr-only">{t("description")}</TableCaption>
+          <TableCaption className="sr-only">{t("description", { appName: app.name })}</TableCaption>
           <TableHeader>
             <TableRow>
               <TableHead>{common("name")}</TableHead>
