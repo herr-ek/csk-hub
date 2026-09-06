@@ -3,6 +3,7 @@
 import { getAuthenticatorName } from "@better-auth/passkey"
 import { useCallback, useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
+import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -18,6 +19,8 @@ import {
 type Passkey = NonNullable<Awaited<ReturnType<typeof authClient.passkey.listUserPasskeys>>["data"]>[number]
 
 export function PasskeySettings() {
+  const t = useTranslations("AccountSettings")
+  const common = useTranslations("Common")
   const [passkeys, setPasskeys] = useState<Passkey[]>([])
   const [name, setName] = useState("")
   const [error, setError] = useState<string>()
@@ -50,10 +53,10 @@ export function PasskeySettings() {
         return
       }
       setName("")
-      setMessage("Passkey added.")
+      setMessage(t("passkeyAdded"))
       await loadPasskeys()
     } catch {
-      setError("Unable to add the passkey right now. Please try again.")
+      setError(t("passkeyAddFailed"))
     } finally {
       setPending(false)
     }
@@ -74,7 +77,7 @@ export function PasskeySettings() {
       setEditingName("")
       await loadPasskeys()
     } catch {
-      setError("Unable to rename the passkey right now. Please try again.")
+      setError(t("passkeyRenameFailed"))
     } finally {
       setPending(false)
     }
@@ -93,7 +96,7 @@ export function PasskeySettings() {
       setDeletingPasskeyId(undefined)
       await loadPasskeys()
     } catch {
-      setError("Unable to delete the passkey right now. Please try again.")
+      setError(t("passkeyDeleteFailed"))
     } finally {
       setPending(false)
     }
@@ -102,13 +105,13 @@ export function PasskeySettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Passkeys</CardTitle>
-        <CardDescription>Use a device passkey to sign in without a password.</CardDescription>
+        <CardTitle>{t("passkeysTitle")}</CardTitle>
+        <CardDescription>{t("passkeysDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           {passkeys.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No passkeys registered.</p>
+            <p className="text-sm text-muted-foreground">{t("noPasskeys")}</p>
           ) : (
             passkeys.map((passkey) => (
               <div
@@ -120,13 +123,13 @@ export function PasskeySettings() {
                     <Input
                       value={editingName}
                       onChange={(event) => setEditingName(event.target.value)}
-                      aria-label="Passkey name"
+                      aria-label={t("passkeyName")}
                       autoFocus
                       required
                       disabled={pending}
                     />
                     <Button type="submit" size="sm" disabled={pending}>
-                      {pending ? "Saving..." : "Save"}
+                      {pending ? t("saving") : common("save")}
                     </Button>
                     <Button
                       type="button"
@@ -135,15 +138,19 @@ export function PasskeySettings() {
                       disabled={pending}
                       onClick={() => setEditingPasskeyId(undefined)}
                     >
-                      Cancel
+                      {common("cancel")}
                     </Button>
                   </form>
                 ) : (
                   <>
                     <div>
-                      <p className="font-medium">{passkey.name || getAuthenticatorName(passkey.aaguid) || "Passkey"}</p>
+                      <p className="font-medium">
+                        {passkey.name || getAuthenticatorName(passkey.aaguid) || t("passkey")}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        Added {passkey.createdAt ? new Date(passkey.createdAt).toLocaleDateString() : "recently"}
+                        {t("added", {
+                          date: passkey.createdAt ? new Date(passkey.createdAt).toLocaleDateString() : t("recently")
+                        })}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -157,7 +164,7 @@ export function PasskeySettings() {
                         }}
                         disabled={pending}
                       >
-                        Rename
+                        {t("rename")}
                       </Button>
                       <Button
                         type="button"
@@ -166,7 +173,7 @@ export function PasskeySettings() {
                         onClick={() => setDeletingPasskeyId(passkey.id)}
                         disabled={pending}
                       >
-                        Delete
+                        {common("delete")}
                       </Button>
                     </div>
                   </>
@@ -178,17 +185,17 @@ export function PasskeySettings() {
         <form onSubmit={addPasskey}>
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="passkey-name">New passkey name (optional)</FieldLabel>
+              <FieldLabel htmlFor="passkey-name">{t("newPasskeyName")}</FieldLabel>
               <Input
                 id="passkey-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="My laptop"
+                placeholder={t("passkeyPlaceholder")}
                 disabled={pending}
               />
             </Field>
             <Button type="submit" disabled={pending}>
-              {pending ? "Waiting for passkey..." : "Add passkey"}
+              {pending ? t("waitingForPasskey") : t("addPasskey")}
             </Button>
           </FieldGroup>
         </form>
