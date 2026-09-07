@@ -138,3 +138,5 @@ bun run pr          # tests, lint, and build
 
 The project context and architectural conventions are documented in
 [`CONTEXT.md`](CONTEXT.md) and [`docs/codebase-structure.md`](docs/codebase-structure.md).
+See [`src/core/auth/permissions.md`](src/core/auth/permissions.md) for the current roles,
+authorization guards, and pattern for adding a future permission.

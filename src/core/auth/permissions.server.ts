@@ -14,21 +14,22 @@ type RequestActor = {
   roles: AccessRole[]
 }
 
-export type GlobalPermissionRequest = {
+// Keeps resource/action pairs valid and rejects extra fields at call sites.
+type PermissionRequest = {
   [Resource in PermissionResource]: {
     resource: Resource
     action: PermissionAction<Resource>
   }
 }[PermissionResource]
 
-export type ExactGlobalPermissionRequest<Request extends GlobalPermissionRequest> = Request &
-  Record<Exclude<keyof Request, keyof GlobalPermissionRequest>, never>
+type ExactPermissionRequest<Request extends PermissionRequest> = Request &
+  Record<Exclude<keyof Request, keyof PermissionRequest>, never>
 
 export type AuthorizationActorContext = { state: "authenticated"; userId: string } | { state: "unauthenticated" }
 export type AuthenticatedAuthorizationActorContext = Extract<AuthorizationActorContext, { state: "authenticated" }>
 
 export type AuthorizationRequirement =
-  | { kind: "permission"; permission: GlobalPermissionRequest }
+  | { kind: "permission"; permission: PermissionRequest }
   | { kind: "accessRole"; role: AccessRole }
 
 export type AuthorizationDeniedContext = {
@@ -85,7 +86,7 @@ function actorContext(actor: RequestActor | null): AuthorizationActorContext {
 }
 
 /* PERMISSIONS */
-async function actorHasPermission(actor: RequestActor | null, permission: GlobalPermissionRequest): Promise<boolean> {
+async function actorHasPermission(actor: RequestActor | null, permission: PermissionRequest): Promise<boolean> {
   if (!actor) {
     return false
   }
@@ -102,14 +103,26 @@ async function actorHasPermission(actor: RequestActor | null, permission: Global
   return result.success
 }
 
-export async function canCurrentUser<const Request extends GlobalPermissionRequest>(
-  permission: ExactGlobalPermissionRequest<Request>
+/**
+ * Checks the current request's Better Auth session without throwing.
+ *
+ * Use only for non-sensitive presentation decisions. Server mutations, route
+ * handlers, and protected server components must use the corresponding
+ * `requireCurrentUserPermission` guard instead.
+ */
+export async function canCurrentUser<const Request extends PermissionRequest>(
+  permission: ExactPermissionRequest<Request>
 ): Promise<boolean> {
   return actorHasPermission(await getCurrentActor(), permission)
 }
 
-export async function requireCurrentUserPermission<const Request extends GlobalPermissionRequest>(
-  permission: ExactGlobalPermissionRequest<Request>
+/**
+ * Enforces a permission for the current request. Returns the authenticated
+ * actor for workflows that need its user ID, otherwise throws
+ * `AuthorizationDeniedError`.
+ */
+export async function requireCurrentUserPermission<const Request extends PermissionRequest>(
+  permission: ExactPermissionRequest<Request>
 ): Promise<AuthenticatedAuthorizationActorContext> {
   const actor = await getCurrentActor()
 
@@ -128,11 +141,20 @@ function actorIsAdmin(actor: RequestActor | null): boolean {
   return hasAdminRole(actor?.roles)
 }
 
+/**
+ * Checks whether a session has the additional admin role. Suitable for display
+ * decisions such as showing admin navigation; it does not protect an action.
+ */
 export async function isUserAdmin(session?: { user: { id: string; role?: string | null } } | null): Promise<boolean> {
   const actor = session === undefined ? await getCurrentActor() : getActorFromSession(session)
   return actorIsAdmin(actor)
 }
 
+/**
+ * Enforces admin access for the current request (or the supplied session).
+ * Call this inside every admin server component, server action, and route
+ * handler, even when the route is also protected by `route-access.ts`.
+ */
 export async function requireAdmin(
   session?: { user: { id: string; role?: string | null } } | null
 ): Promise<AuthenticatedAuthorizationActorContext> {
