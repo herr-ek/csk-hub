@@ -2,6 +2,7 @@ import { ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ROUTES } from "@/core/navigation/site"
+import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PublishedAt } from "./published-at"
 import { getPublishedPost } from "./service"
@@ -18,14 +19,13 @@ function BackToNews() {
   )
 }
 
-export async function PostScreen({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const post = await getPublishedPost(id)
+export async function PostScreen({ postId }: { postId: string }) {
+  const post = await getPublishedPost(postId)
 
   if (!post) notFound()
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <ContentPage>
       <BackToNews />
       <article className="flex flex-col gap-4">
         <header>
@@ -36,13 +36,13 @@ export async function PostScreen({ params }: { params: Promise<{ id: string }> }
         </header>
         <div className="whitespace-pre-wrap break-words text-base leading-relaxed">{post.body}</div>
       </article>
-    </main>
+    </ContentPage>
   )
 }
 
 export function PostScreenSkeleton() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6" aria-busy="true">
+    <ContentPage busy>
       <BackToNews />
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-2/3" />
@@ -53,6 +53,6 @@ export function PostScreenSkeleton() {
           <Skeleton className="h-4 w-3/4" />
         </div>
       </div>
-    </main>
+    </ContentPage>
   )
 }

@@ -45,8 +45,8 @@ _Avoid_: Delete, purge, GDPR-delete
 
 **Post**:
 A written announcement an Admin publishes to the whole choir, appearing in the News feed
-and at its own permanent address. The stored text is Markdown (ADR-0004). A Post carries
-no audience of its own — publishing one means publishing it to every Member.
+and at its own permanent address. A Post carries no audience of its own — publishing one
+means publishing it to every Member.
 _Avoid_: Article, news item, blog post, announcement email
 
 **News feed**:

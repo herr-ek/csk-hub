@@ -6,8 +6,8 @@ export const post = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
-    // Markdown source. The compose form writes plain text today, which is already
-    // valid Markdown, so a Markdown editor can arrive without a migration.
+    // Plain text, written in a textarea and shown as written. A richer format is a
+    // later decision; nothing here presumes one.
     body: text("body").notNull(),
     // Erasing a Member takes their Posts with them, like every other record
     // hanging off `user`.

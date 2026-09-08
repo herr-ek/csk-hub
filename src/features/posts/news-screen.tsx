@@ -2,6 +2,7 @@ import Link from "next/link"
 import { canCurrentUser } from "@/core/auth/permissions.server"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { ContentPage } from "@/shared/layouts/content-page"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
@@ -28,7 +29,7 @@ export async function NewsScreen() {
   ])
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <ContentPage>
       <NewsHeader>
         {canPublish ? (
           <Link href={ROUTES.newsCompose} className={buttonVariants()}>
@@ -62,13 +63,13 @@ export async function NewsScreen() {
           ))}
         </ul>
       )}
-    </main>
+    </ContentPage>
   )
 }
 
 export function NewsScreenSkeleton() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6" aria-busy="true">
+    <ContentPage busy>
       <NewsHeader />
       <div className="flex flex-col gap-3">
         {Array.from({ length: 3 }, (_, index) => (
@@ -80,6 +81,6 @@ export function NewsScreenSkeleton() {
           </Card>
         ))}
       </div>
-    </main>
+    </ContentPage>
   )
 }
