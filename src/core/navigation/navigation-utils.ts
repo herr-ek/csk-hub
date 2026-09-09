@@ -19,3 +19,8 @@ export function twoFactorPath(methods: string[], returnTo?: string) {
   if (isSafeInternalPath(returnTo)) params.set("returnTo", returnTo)
   return `${ROUTES.twoFactor}?${params.toString()}`
 }
+
+/** Posts are reached by opaque id: Swedish titles change, permalinks must not. */
+export function newsPostPath(postId: string) {
+  return `${ROUTES.news}/${encodeURIComponent(postId)}`
+}
