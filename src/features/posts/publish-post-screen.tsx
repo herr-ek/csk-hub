@@ -2,9 +2,7 @@ import { ContentPage } from "@/shared/layouts/content-page"
 import { PublishPostForm } from "./publish-post-form"
 
 /**
- * Reaching this screen already means the route allowed it — `/news/new` is gated on the
- * `post: create` permission before the page renders. The action re-checks anyway, so a
- * hand-rolled POST is refused on its own merits rather than on having found the page.
+ * The screen for publishing a post. It contains the form and some explanatory text.
  */
 export function PublishPostScreen() {
   return (

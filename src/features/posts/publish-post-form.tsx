@@ -10,6 +10,9 @@ import { Textarea } from "@/shared/ui/base/textarea"
 import { type PublishPostState, publishPost } from "./actions"
 import { POST_TITLE_MAX_LENGTH } from "./schemas"
 
+/**
+ * The form for publishing a post. It is used in the `PublishPostScreen`
+ */
 export function PublishPostForm() {
   const [state, action, pending] = useActionState<PublishPostState, FormData>(publishPost, { status: "idle" })
   // React resets the form once the action settles, so a rejected post survives only
