@@ -8,6 +8,7 @@ export const ROUTES = {
   twoFactor: "/two-factor",
   admin: "/admin",
   adminMembers: "/admin/members",
+  messages: "/messages",
   me: "/me"
 } as const
 
