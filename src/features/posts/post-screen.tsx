@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
-import { PublishedAt } from "./published-at"
+import { PostByline } from "./post-byline"
 import { getPublishedPost } from "./service"
 
 function BackToNews() {
@@ -31,7 +31,7 @@ export async function PostScreen({ postId }: { postId: string }) {
         <header>
           <h1 className="font-heading text-2xl font-semibold break-words">{post.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {post.authorName} · <PublishedAt date={post.publishedAt} />
+            <PostByline authorName={post.authorName} publishedAt={post.publishedAt} />
           </p>
         </header>
         <div className="whitespace-pre-wrap break-words text-base leading-relaxed">{post.body}</div>

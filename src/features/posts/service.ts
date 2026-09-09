@@ -9,7 +9,8 @@ import { post } from "@/core/db/schema/posts"
 export type NewsFeedEntry = {
   id: string
   title: string
-  authorName: string
+  /** Null once the author has been erased; the Post itself survives them. */
+  authorName: string | null
   publishedAt: Date
 }
 
@@ -27,7 +28,9 @@ export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
       publishedAt: post.publishedAt
     })
     .from(post)
-    .innerJoin(user, eq(post.authorId, user.id))
+    // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
+    // in the feed.
+    .leftJoin(user, eq(post.authorId, user.id))
     .where(isNotNull(post.publishedAt))
     .orderBy(desc(post.publishedAt))
 
@@ -47,7 +50,7 @@ export async function getPublishedPost(postId: string): Promise<PublishedPost | 
       publishedAt: post.publishedAt
     })
     .from(post)
-    .innerJoin(user, eq(post.authorId, user.id))
+    .leftJoin(user, eq(post.authorId, user.id))
     .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
     .limit(1)
 

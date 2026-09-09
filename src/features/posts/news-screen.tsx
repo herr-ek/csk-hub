@@ -7,7 +7,7 @@ import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
-import { PublishedAt } from "./published-at"
+import { PostByline } from "./post-byline"
 import { listNewsFeed } from "./service"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
@@ -54,7 +54,7 @@ export async function NewsScreen() {
                   <CardHeader>
                     <CardTitle className="text-lg break-words">{entry.title}</CardTitle>
                     <CardDescription>
-                      {entry.authorName} · <PublishedAt date={entry.publishedAt} />
+                      <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
                     </CardDescription>
                   </CardHeader>
                 </Card>
