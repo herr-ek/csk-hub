@@ -22,6 +22,20 @@
       "when": 1786656355003,
       "tag": "0002_free_sunset_bain",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788805793592,
+      "tag": "0003_loving_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788806319585,
+      "tag": "0004_eager_bushwacker",
+      "breakpoints": true
     }
   ]
 }

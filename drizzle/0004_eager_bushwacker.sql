@@ -1,0 +1,2 @@
+DROP INDEX "message_conversation_author_idempotency_key_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "message_author_idempotency_key_unique" ON "message" USING btree ("author_user_id","idempotency_key");

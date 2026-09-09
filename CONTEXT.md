@@ -39,6 +39,43 @@ _Avoid_: Deleted, banned, archived, disabled
 
 **Erasure**:
 The permanent destruction of a Member's record at their request, under GDPR. Distinct
-from becoming an Inactive Member: erasure is irreversible, takes the participation
-history with it, and is exercised rarely and deliberately.
+from becoming an Inactive Member: erasure is irreversible, removes the Member's
+identity from retained Messages while preserving shared Conversation history.
 _Avoid_: Delete, purge, GDPR-delete
+
+## Messaging
+
+**Conversation**:
+A private exchange between Members. A Conversation is either a Direct Conversation or,
+when that capability is introduced, a Group Conversation.
+_Avoid_: Chat, thread
+
+**Direct Conversation**:
+A Conversation formed by exactly two distinct active Members. There is at most one
+Direct Conversation for a pair of Members; after Erasure, its retained history is
+read-only for the remaining Member.
+_Avoid_: DM, private message
+
+**Group Conversation**:
+A named Conversation between multiple Members. Group Conversations are represented in
+the model before their user-facing capability is introduced.
+_Avoid_: Group chat
+
+**Conversation Membership**:
+A Member's active or former participation in a Conversation. It is the source of
+authority to view and send Messages in that Conversation.
+_Avoid_: Participant, recipient
+
+**Message**:
+Text sent by an active Conversation Member within a Conversation.
+_Avoid_: Chat, DM
+
+**Unread State**:
+A Member's per-Conversation position before its latest visible Message. It is a cursor,
+not a receipt for individual Messages.
+_Avoid_: Read receipt, seen state
+
+**Erased Authorship**:
+The identity-free authorship state of a retained Message after its author exercises
+Erasure.
+_Avoid_: Deleted message, anonymous Member
