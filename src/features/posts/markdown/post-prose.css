@@ -1,0 +1,178 @@
+/*
+ * The one prose stylesheet for a Post body.
+ *
+ * A Post is rendered twice: by the editor while an Admin writes it, and by the server
+ * once it is published. ADR-0004 requires a reader to be unable to tell the two apart,
+ * which is why this file is imported by `PostProse` rather than applied by each surface
+ * — the shared wrapper is what makes drift impossible, not discipline.
+ *
+ * Plain CSS against the design tokens, deliberately: it carries no Tailwind build
+ * context of its own, so it styles whatever markup either renderer produces.
+ */
+
+.post-prose {
+  font-size: 1rem;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+/*
+ * Block spacing, written once for both surfaces. The editor keeps its content one
+ * level deeper, inside ProseMirror's own element, so the selector has to name that
+ * level — but the declarations behind it must never become a second copy.
+ */
+.post-prose > * + *,
+.post-prose > .ProseMirror > * + * {
+  margin-top: 1rem;
+}
+
+.post-prose h2,
+.post-prose h3 {
+  font-family: var(--font-heading), var(--font-sans);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.post-prose > h2 + *,
+.post-prose > h3 + *,
+.post-prose > .ProseMirror > h2 + *,
+.post-prose > .ProseMirror > h3 + * {
+  margin-top: 0.5rem;
+}
+
+.post-prose > * + h2,
+.post-prose > * + h3,
+.post-prose > .ProseMirror > * + h2,
+.post-prose > .ProseMirror > * + h3 {
+  margin-top: 1.75rem;
+}
+
+.post-prose h2 {
+  font-size: 1.375rem;
+}
+
+.post-prose h3 {
+  font-size: 1.125rem;
+}
+
+.post-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.post-prose a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.post-prose ul,
+.post-prose ol {
+  padding-inline-start: 1.5rem;
+}
+
+.post-prose ul {
+  list-style: disc;
+}
+
+.post-prose ol {
+  list-style: decimal;
+}
+
+.post-prose li::marker {
+  color: var(--muted-foreground);
+}
+
+/*
+ * Both renderers wrap list-item and table-cell content in a paragraph, so the
+ * paragraph spacing that separates blocks has to stand down inside them.
+ */
+.post-prose li > p,
+.post-prose td > p,
+.post-prose th > p {
+  margin: 0;
+}
+
+.post-prose li + li,
+.post-prose li > ul,
+.post-prose li > ol {
+  margin-top: 0.25rem;
+}
+
+.post-prose blockquote {
+  border-inline-start: 3px solid var(--border);
+  padding-inline-start: 1rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.post-prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 1.75rem;
+}
+
+/*
+ * A rota is the reason tables exist here, and a rota is read on a phone. The wrapper
+ * scrolls so a wide table never widens the page around it.
+ */
+.post-prose .post-prose-table-scroll {
+  overflow-x: auto;
+}
+
+.post-prose table {
+  /*
+   * Fixed layout on both surfaces, driven by the colgroup both of them emit. Auto
+   * layout would size columns from content, and the editor's content is a caret's
+   * width away from the published Post's.
+   */
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.post-prose th,
+.post-prose td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: start;
+  vertical-align: top;
+  min-width: 6rem;
+}
+
+.post-prose th {
+  background-color: var(--muted);
+  font-weight: 600;
+}
+
+/*
+ * The editor's own surface. ProseMirror adds these hooks; the rules above have already
+ * styled the content itself, so nothing here repeats a typographic decision.
+ */
+.post-prose .ProseMirror {
+  outline: none;
+}
+
+/* The placeholder an empty editor shows, so the writing surface is never a blank void. */
+.post-prose .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: inline-start;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ProseMirror's own cell-selection affordance, which has no published counterpart. */
+.post-prose .ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--accent);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.post-prose .ProseMirror th,
+.post-prose .ProseMirror td {
+  position: relative;
+}
