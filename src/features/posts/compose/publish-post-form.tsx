@@ -4,11 +4,13 @@ import Link from "next/link"
 import { useActionState } from "react"
 import { ROUTES } from "@/core/navigation/site"
 import { Button, buttonVariants } from "@/shared/ui/base/button"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
+import { Field, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
-import { Textarea } from "@/shared/ui/base/textarea"
 import { type PublishPostState, publishPost } from "./actions"
+import { PostEditor } from "./post-editor"
 import { POST_TITLE_MAX_LENGTH } from "./schemas"
+
+const POST_BODY_LABEL_ID = "post-body-label"
 
 /**
  * The form for publishing a post. It is used in the `PublishPostScreen`
@@ -34,8 +36,13 @@ export function PublishPostForm() {
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor="post-body">Post</FieldLabel>
-          <Textarea id="post-body" name="body" rows={12} defaultValue={draft?.body} className="min-h-56" required />
+          {/*
+            A `<label for>` only binds to a form control, and the writing surface is a
+            contenteditable. FieldTitle carries the same look, and the editor points
+            back at it so screen readers announce the same word a sighted Admin reads.
+          */}
+          <FieldTitle id={POST_BODY_LABEL_ID}>Post</FieldTitle>
+          <PostEditor name="body" defaultValue={draft?.body} labelledBy={POST_BODY_LABEL_ID} />
         </Field>
         <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
       </FieldGroup>

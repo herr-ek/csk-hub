@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { PostContent } from "./markdown"
 import { PostByline } from "./post-byline"
 import { getPublishedPost } from "./service"
 
@@ -34,7 +35,7 @@ export async function PostScreen({ postId }: { postId: string }) {
             <PostByline authorName={post.authorName} publishedAt={post.publishedAt} />
           </p>
         </header>
-        <div className="whitespace-pre-wrap break-words text-base leading-relaxed">{post.body}</div>
+        <PostContent markdown={post.body} />
       </article>
     </ContentPage>
   )

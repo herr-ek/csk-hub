@@ -6,8 +6,8 @@ export const post = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
-    // Plain text, written in a textarea and shown as written. A richer format is a
-    // later decision; nothing here presumes one.
+    // Markdown, not the editor's document JSON and not HTML (ADR-0004). The column
+    // stays legible and searchable on its own, and outlives whichever editor wrote it.
     body: text("body").notNull(),
     // A Post outlives its author. Erasing a Member drops the attribution and leaves the
     // announcement standing: the News feed is the record of what the choir was told, not
