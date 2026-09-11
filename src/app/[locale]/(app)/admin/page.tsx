@@ -62,8 +62,8 @@ export default async function AdminRoot() {
     { href: ROUTES.adminMembers, title: t("members"), description: t("membersDescription"), icon: User },
     {
       href: ROUTES.adminNotifications,
-      title: "Notifications",
-      description: "Util for push notifications.",
+      title: t("notifications"),
+      description: t("notificationsDescription"),
       icon: Bell
     }
   ]
