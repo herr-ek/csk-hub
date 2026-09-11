@@ -31,7 +31,8 @@
         "useFocusableInteractive": "off",
         "useKeyWithClickEvents": "off",
         "useSemanticElements": "off",
-        "noSvgWithoutTitle": "off"
+        "noSvgWithoutTitle": "off",
+        "useButtonType": "info"
       },
       "security": {
         "noDangerouslySetInnerHtml": "off"

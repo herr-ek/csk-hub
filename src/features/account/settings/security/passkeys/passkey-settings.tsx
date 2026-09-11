@@ -8,7 +8,7 @@ import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Field, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
-import { DeletePasskeyDialog } from "./components/delete-passkey-dialog"
+import { DeletePasskeyDialog } from "./delete-passkey-dialog"
 import {
   addPasskey as addPasskeyOperation,
   deletePasskey as deletePasskeyOperation,

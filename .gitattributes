@@ -1,0 +1,9 @@
+# Normalize to LF in the repository and check out LF on every platform.
+# Biome enforces `formatter.lineEnding: "lf"`, so LF is the canonical form;
+# without eol=lf, Git for Windows' default core.autocrlf=true checks files out
+# as CRLF and every `bun run format` rewrites the whole tree.
+* text=auto eol=lf
+
+# Binary assets: never touch.
+*.png binary
+*.ico binary
