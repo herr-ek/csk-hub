@@ -10,7 +10,9 @@ export const ROUTES = {
   newsCompose: "/news/new",
   admin: "/admin",
   adminMembers: "/admin/members",
-  me: "/me"
+  adminNotifications: "/admin/notifications",
+  account: "/me",
+  accountSettings: "/me/settings"
 } as const
 
 export type RouteId = keyof typeof ROUTES

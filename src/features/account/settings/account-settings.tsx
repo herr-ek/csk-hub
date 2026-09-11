@@ -1,10 +1,9 @@
 import { headers } from "next/headers"
 import { auth } from "@/core/auth/auth"
-import { PasskeySettings } from "./passkey-settings"
-import { PasswordSettings } from "./password-settings"
-import { ProfileSettings } from "./profile-settings"
-import { SessionsSettings } from "./sessions-settings"
-import { TwoFactorSettings } from "./two-factor-settings"
+import { AccountSettingsTabs } from "./account-settings-tabs"
+import { PushNotificationSettings } from "./notifications"
+import { ProfileSettings } from "./profile"
+import { PasskeySettings, PasswordSettings, SessionsSettings, TwoFactorSettings } from "./security"
 
 export async function AccountSettings() {
   const session = await auth.api.getSession({
@@ -16,12 +15,17 @@ export async function AccountSettings() {
   }
 
   return (
-    <>
-      <ProfileSettings member={session.user} />
-      <PasswordSettings />
-      <PasskeySettings />
-      <TwoFactorSettings enabled={Boolean(session.user.twoFactorEnabled)} />
-      <SessionsSettings currentSessionToken={session.session.token} />
-    </>
+    <AccountSettingsTabs
+      profile={<ProfileSettings member={session.user} />}
+      security={
+        <>
+          <PasswordSettings />
+          <PasskeySettings />
+          <TwoFactorSettings enabled={Boolean(session.user.twoFactorEnabled)} />
+          <SessionsSettings currentSessionToken={session.session.token} />
+        </>
+      }
+      notifications={<PushNotificationSettings />}
+    />
   )
 }

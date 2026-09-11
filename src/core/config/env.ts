@@ -19,7 +19,12 @@ const envSchema = z
     SMTP_PASSWORD: z.string().min(1).optional(),
     SMTP_FROM: z.email().optional(),
 
-    LOG_DATABASE: z.enum(["true", "false"]).default("false")
+    LOG_DATABASE: z.enum(["true", "false"]).default("false"),
+
+    // TODO: Validate these more precisely
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string(),
+    VAPID_PRIVATE_KEY: z.string(),
+    CONTACT_EMAIL: z.email().default("webmaster@choir.chs.chalmers.se")
   })
   .superRefine((data, context) => {
     if (data.EMAIL_MODE === "smtp") {

@@ -18,7 +18,7 @@ export type NavigationRoute = {
 const AUTHENTICATED_NAVIGATION_ROUTES = [
   { id: "news", section: "member", label: "News" },
   { id: "admin", section: "admin", label: "Admin" },
-  { id: "me", section: "member", label: "My account" }
+  { id: "account", section: "member", label: "My account" }
 ] as const satisfies readonly NavigationRoute[]
 
 const LOGIN_NAVIGATION_ROUTE = {
