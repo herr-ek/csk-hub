@@ -3,7 +3,7 @@
 import { CheckIcon, TriangleAlertIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { app } from "@/core/config/app"
-import { useTranslations } from "@/core/i18n/translations"
+import { useFormatter, useTranslations } from "@/core/i18n/translations"
 import { MEMBER_ROLE, parseRoles } from "@/shared/roles"
 import { Badge } from "@/shared/ui/base/badge"
 import { Input } from "@/shared/ui/base/input"
@@ -24,6 +24,7 @@ function roleLabel(role: MemberListItem["role"]) {
 export function MemberList({ members }: { members: MemberListItem[] }) {
   const t = useTranslations("Members")
   const common = useTranslations("Common")
+  const format = useFormatter()
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState<MemberStatusFilter>("active")
   const visibleMembers = useMemo(() => {
@@ -105,7 +106,9 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
                         {member.inactive ? t("inactiveStatus") : hasPassword ? t("activeStatus") : t("pending")}
                       </Badge>
                     </TableCell>
-                    <TableCell>{member.createdAt.toLocaleDateString("en-GB")}</TableCell>
+                    <TableCell>
+                      {format.dateTime(member.createdAt, { year: "numeric", month: "2-digit", day: "2-digit" })}
+                    </TableCell>
                     <TableCell className="text-right">
                       <MemberActions
                         userId={member.id}

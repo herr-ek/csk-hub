@@ -156,9 +156,11 @@ export function MemberActions({
         title,
         description
       })
+      setState({ status: "idle" })
     }
     if (state.status === "error") {
       toast.add({ type: "error", title: t("memberActionFailed"), description: state.error })
+      setState({ status: "idle" })
     }
   }, [closeDialog, memberActionConfig, memberName, state, t])
 

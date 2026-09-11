@@ -1,44 +1,16 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { authClient } from "@/core/auth/auth-client"
-import { writeBrowserLocaleCookie } from "@/core/i18n/locale-cookie"
-import { defaultLocale, getLocaleName, isLocale, type Locale, localeNames, locales } from "@/core/i18n/locales"
+import { getLocaleName, isLocale, localeNames, locales } from "@/core/i18n/locales"
 import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
+import { useLanguageSettings } from "./use-language-settings"
 
 export function LanguageSettings({ initialLocale }: { initialLocale?: string | null }) {
   const t = useTranslations("AccountSettings")
-  const router = useRouter()
-  const [locale, setLocale] = useState<Locale>(isLocale(initialLocale) ? initialLocale : defaultLocale)
-  const [error, setError] = useState<string>()
-  const [isPending, setIsPending] = useState(false)
-
-  async function changeLocale(nextLocale: Locale) {
-    if (nextLocale === locale || isPending) return
-
-    setError(undefined)
-    setIsPending(true)
-    try {
-      const result = await authClient.updateUser({ locale: nextLocale })
-      if (result.error) {
-        setError(result.error.message ?? t("languageUpdateFailed"))
-        return
-      }
-
-      writeBrowserLocaleCookie(nextLocale)
-      setLocale(nextLocale)
-      router.refresh()
-    } catch {
-      setError(t("languageUpdateFailed"))
-    } finally {
-      setIsPending(false)
-    }
-  }
+  const { changeLocale, error, isPending, locale } = useLanguageSettings(initialLocale)
 
   return (
     <Card>
@@ -49,7 +21,13 @@ export function LanguageSettings({ initialLocale }: { initialLocale?: string | n
       <CardContent>
         <Field>
           <FieldLabel htmlFor="settings-language">{t("languageTitle")}</FieldLabel>
-          <Select value={locale} onValueChange={(value) => void changeLocale(value as Locale)} disabled={isPending}>
+          <Select
+            value={locale}
+            onValueChange={(value) => {
+              if (isLocale(value)) void changeLocale(value)
+            }}
+            disabled={isPending}
+          >
             <SelectTrigger id="settings-language" className="mt-1 w-full sm:w-56">
               <SelectValue>{getLocaleName}</SelectValue>
             </SelectTrigger>

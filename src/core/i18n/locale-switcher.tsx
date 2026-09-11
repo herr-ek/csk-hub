@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl"
 import { writeBrowserLocaleCookie } from "./locale-cookie"
 import { defaultLocale, isLocale, localeNames, locales } from "./locales"
 
+/** Renders the locale control and refreshes the current route after an explicit selection. */
 export function LocaleSwitcher() {
   const router = useRouter()
   const locale = useLocale()

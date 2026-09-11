@@ -89,10 +89,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider
           locale={locale}
-          // TODO: Split up per feature if perfomance gets bad
+          // TODO: Split up per feature if performance gets bad
           messages={getMessages(locale)}
           formats={{}}
-          now={new Date(0)}
           timeZone="UTC"
         >
           <ThemeProvider>

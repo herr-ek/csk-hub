@@ -19,10 +19,10 @@ export type NavigationRoute = {
 
 export function getNavigationItems(
   config: NavigationConfig | null,
-  t: (key: "admin" | "myAccount" | "login") => string
+  t: (key: "admin" | "myAccount" | "login" | "news") => string
 ): NavigationRoute[] {
   const authenticatedRoutes = [
-    { id: "news" as const, section: "member" as const, label: "News" as const },
+    { id: "news" as const, section: "member" as const, label: t("news") },
     { id: "admin" as const, section: "admin" as const, label: t("admin") },
     { id: "account" as const, section: "member" as const, label: t("myAccount") }
   ]

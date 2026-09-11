@@ -1,1 +1,1 @@
-export { useTranslations } from "next-intl"
+export { useFormatter, useTranslations } from "next-intl"

@@ -1,6 +1,8 @@
 {
   "HomePage": {
-    "title": "Välkommen till CSK Hub"
+    "title": "Välkommen till CSK Hub",
+    "description": "Allt kören publicerar har nu ett hem här.",
+    "readNews": "Läs nyheterna"
   },
   "Metadata": {
     "description": "Chalmers Sångkörs digitala nav"
@@ -105,6 +107,7 @@
   "Navigation": {
     "admin": "Administratör",
     "myAccount": "Mitt konto",
+    "news": "Nyheter",
     "login": "Logga in",
     "primary": "Primär navigering",
     "impersonating": "Imiterar {name}",
@@ -113,6 +116,24 @@
     "stopImpersonating": "Sluta imitera",
     "stoppingImpersonation": "Avslutar imitiering…",
     "language": "Språk"
+  },
+  "Posts": {
+    "title": "Nyheter",
+    "description": "Det som händer i kören.",
+    "writePost": "Skriv ett inlägg",
+    "emptyTitle": "Inget har publicerats ännu",
+    "emptyDescription": "Inlägg från styrelsen visas här.",
+    "formerMember": "Tidigare medlem",
+    "bylineSeparator": "·",
+    "allNews": "Alla nyheter",
+    "publishDescription": "När du publicerar visas inlägget genast för alla medlemmar.",
+    "titleLabel": "Titel",
+    "bodyLabel": "Inlägg",
+    "publishing": "Publicerar…",
+    "publish": "Publicera",
+    "formInvalid": "Kontrollera formuläret och försök igen.",
+    "publishUnauthorized": "Endast administratörer kan publicera inlägg.",
+    "publishFailed": "Det går inte att publicera inlägget just nu. Försök igen."
   },
   "Theme": { "toggle": "Växla tema", "light": "Ljust", "dark": "Mörkt", "system": "System" },
   "Admin": {

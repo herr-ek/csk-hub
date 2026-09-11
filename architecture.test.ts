@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs"
-import { join, relative } from "node:path"
+import { join, relative, sep } from "node:path"
 import { projectFiles } from "archunit"
 import { describe, expect, it, test } from "vitest"
 
@@ -18,9 +18,13 @@ function sourceFiles(dir: string): string[] {
   })
 }
 
+function projectPath(file: string): string {
+  return relative(process.cwd(), file).split(sep).join("/")
+}
+
 /** The feature a file belongs to, or null when it sits outside `src/features`. */
 function featureOwning(file: string): string | null {
-  return relative(process.cwd(), file).match(/^src\/features\/([\w.-]+)\//)?.[1] ?? null
+  return projectPath(file).match(/^src\/features\/([\w.-]+)\//)?.[1] ?? null
 }
 
 /**
@@ -35,9 +39,9 @@ function isEntrypoint(feature: string, subpath: string): boolean {
 describe("Architecture Rules", () => {
   test("only core i18n imports next-intl", () => {
     const violations = sourceFiles("src")
-      .filter((file) => !file.startsWith("src/core/i18n/"))
+      .filter((file) => !projectPath(file).startsWith("src/core/i18n/"))
       .filter((file) => /from\s+["']next-intl(?:\/[^"']+)?["']/.test(readFileSync(file, "utf8")))
-      .map((file) => relative(process.cwd(), file))
+      .map(projectPath)
 
     expect(violations).toEqual([])
   })
@@ -77,7 +81,7 @@ describe("Architecture Rules", () => {
       const owner = featureOwning(file)
       return [...readFileSync(file, "utf8").matchAll(/from\s+"@\/features\/([\w.-]+)(\/[^"]+)?"/g)]
         .filter(([, feature, subpath]) => feature !== owner && subpath && !isEntrypoint(feature, subpath))
-        .map(([, feature, subpath]) => `${relative(process.cwd(), file)} -> @/features/${feature}${subpath}`)
+        .map(([, feature, subpath]) => `${projectPath(file)} -> @/features/${feature}${subpath}`)
     })
 
     expect(violations).toEqual([])

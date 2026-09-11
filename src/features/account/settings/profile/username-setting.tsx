@@ -11,7 +11,7 @@ import { type UsernameAvailability, useUsernameSettings } from "./use-username-s
 export function UsernameSetting({ initialUsername }: { initialUsername: string }) {
   const t = useTranslations("AccountSettings")
   const common = useTranslations("Common")
-  const state = useUsernameSettings(initialUsername, t)
+  const state = useUsernameSettings(initialUsername)
 
   return (
     <div>

@@ -1,6 +1,8 @@
 {
   "HomePage": {
-    "title": "Willkommen bei CSK Hub"
+    "title": "Willkommen bei CSK Hub",
+    "description": "Alles, was der Chor veröffentlicht, hat jetzt hier ein Zuhause.",
+    "readNews": "Neuigkeiten lesen"
   },
   "Metadata": {
     "description": "Das digitale Zentrum von Chalmers Sångkör"
@@ -105,6 +107,7 @@
   "Navigation": {
     "admin": "Verwaltung",
     "myAccount": "Mein Konto",
+    "news": "Neuigkeiten",
     "login": "Anmelden",
     "primary": "Hauptnavigation",
     "impersonating": "Imitieren von {name}",
@@ -113,6 +116,24 @@
     "stopImpersonating": "Imitierung beenden",
     "stoppingImpersonation": "Imitierung wird beendet…",
     "language": "Sprache"
+  },
+  "Posts": {
+    "title": "Neuigkeiten",
+    "description": "Was im Chor passiert.",
+    "writePost": "Beitrag schreiben",
+    "emptyTitle": "Noch keine Beiträge",
+    "emptyDescription": "Beiträge des Vorstands werden hier angezeigt.",
+    "formerMember": "Ehemaliges Mitglied",
+    "bylineSeparator": "·",
+    "allNews": "Alle Neuigkeiten",
+    "publishDescription": "Durch das Veröffentlichen wird der Beitrag sofort allen Mitgliedern angezeigt.",
+    "titleLabel": "Titel",
+    "bodyLabel": "Beitrag",
+    "publishing": "Wird veröffentlicht…",
+    "publish": "Veröffentlichen",
+    "formInvalid": "Bitte überprüfe das Formular und versuche es erneut.",
+    "publishUnauthorized": "Nur Administratoren können Beiträge veröffentlichen.",
+    "publishFailed": "Der Beitrag kann gerade nicht veröffentlicht werden. Bitte versuche es erneut."
   },
   "Theme": { "toggle": "Design wechseln", "light": "Hell", "dark": "Dunkel", "system": "System" },
   "Admin": {
