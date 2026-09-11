@@ -1,6 +1,7 @@
 import { ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
@@ -8,13 +9,14 @@ import { PostByline } from "./post-byline"
 import { getPublishedPost } from "./service"
 
 function BackToNews() {
+  const t = useTranslations("Posts")
   return (
     <Link
       href={ROUTES.news}
       className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
     >
       <ArrowLeftIcon className="size-4" aria-hidden="true" />
-      All news
+      {t("allNews")}
     </Link>
   )
 }

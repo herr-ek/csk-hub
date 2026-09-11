@@ -70,7 +70,7 @@ describe("publishing a Post", () => {
 
     await expect(publishPost({ status: "idle" }, postFormData())).resolves.toEqual({
       status: "error",
-      error: "Only admins can publish posts.",
+      error: "publishUnauthorized",
       draft: { title: TITLE, body: BODY }
     })
 
@@ -82,7 +82,7 @@ describe("publishing a Post", () => {
 
     await expect(publishPost({ status: "idle" }, postFormData())).resolves.toEqual({
       status: "error",
-      error: "Unable to publish that post right now. Please try again.",
+      error: "publishFailed",
       draft: { title: TITLE, body: BODY }
     })
 
@@ -93,12 +93,12 @@ describe("publishing a Post", () => {
   test("requires a title and a body before authorizing anything", async () => {
     await expect(publishPost({ status: "idle" }, postFormData("   ", BODY))).resolves.toEqual({
       status: "error",
-      error: "Title is required.",
+      error: "formInvalid",
       draft: { title: "   ", body: BODY }
     })
     await expect(publishPost({ status: "idle" }, postFormData(TITLE, "  "))).resolves.toEqual({
       status: "error",
-      error: "Body is required.",
+      error: "formInvalid",
       draft: { title: TITLE, body: "  " }
     })
 
@@ -111,7 +111,7 @@ describe("publishing a Post", () => {
 
     await expect(publishPost({ status: "idle" }, postFormData())).resolves.toEqual({
       status: "error",
-      error: "Unable to publish that post right now. Please try again.",
+      error: "publishFailed",
       draft: { title: TITLE, body: BODY }
     })
 

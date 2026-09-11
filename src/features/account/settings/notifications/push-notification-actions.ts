@@ -2,11 +2,15 @@
 
 import { headers } from "next/headers"
 import { auth } from "@/core/auth"
+import { getTranslations } from "@/core/i18n/server"
 import { type NotificationSubscription, sendToUser, subscribe, unsubscribe } from "@/core/notifications"
 
 async function requireMemberId() {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) throw new Error("You must be signed in to manage notifications")
+  if (!session) {
+    const t = await getTranslations("PushNotifications")
+    throw new Error(t("signInRequired"))
+  }
   return session.user.id
 }
 

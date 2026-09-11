@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import {
   Dialog,
@@ -20,22 +21,9 @@ import { type ImportMemberRow, MAX_IMPORT_FILE_SIZE_BYTES, parseMemberCsv, valid
 const initialState: ImportMembersState = { status: "idle" }
 type PreviewRow = ImportMemberRow & { discarded: boolean; error?: string }
 
-function validateRows(rows: PreviewRow[], existingEmails: Set<string>): PreviewRow[] {
-  const emails = new Set<string>()
-  return rows.map((row) => {
-    if (row.discarded) return { ...row, error: undefined }
-    const result = validateImportMember(row)
-    if (!result.success) return { ...row, name: result.name, email: result.email, error: result.error }
-    if (existingEmails.has(result.member.email))
-      return { ...row, ...result.member, error: "A member with that email already exists." }
-    if (emails.has(result.member.email))
-      return { ...row, ...result.member, error: "The email address is repeated in this CSV." }
-    emails.add(result.member.email)
-    return { ...row, ...result.member, error: undefined }
-  })
-}
-
 export function ImportMembersDialog() {
+  const t = useTranslations("Members")
+  const common = useTranslations("Common")
   const [open, setOpen] = useState(false)
   const [state, setState] = useState<ImportMembersState>(initialState)
   const [rows, setRows] = useState<PreviewRow[] | null>(null)
@@ -45,14 +33,27 @@ export function ImportMembersDialog() {
   const [pending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
 
+  function validateRows(rows: PreviewRow[], existingEmails: Set<string>): PreviewRow[] {
+    const emails = new Set<string>()
+    return rows.map((row) => {
+      if (row.discarded) return { ...row, error: undefined }
+      const result = validateImportMember(row)
+      if (!result.success) return { ...row, name: result.name, email: result.email, error: result.error }
+      if (existingEmails.has(result.member.email)) return { ...row, ...result.member, error: t("emailExists") }
+      if (emails.has(result.member.email)) return { ...row, ...result.member, error: t("emailRepeated") }
+      emails.add(result.member.email)
+      return { ...row, ...result.member, error: undefined }
+    })
+  }
+
   async function chooseFile(file: File | undefined) {
     setState(initialState)
     setRows(null)
     setParseError(undefined)
     setFileName(file?.name ?? "")
     if (!file) return
-    if (!file.name.toLowerCase().endsWith(".csv")) return setParseError("Please choose a file with a .csv extension.")
-    if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) return setParseError("The CSV must be 1 MB or smaller.")
+    if (!file.name.toLowerCase().endsWith(".csv")) return setParseError(t("csvExtensionRequired"))
+    if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) return setParseError(t("csvTooLarge"))
     const parsed = parseMemberCsv(await file.text())
     if ("error" in parsed) return setParseError(parsed.error)
     const sourceRows = [...parsed.rows, ...parsed.skipped].sort((left, right) => left.row - right.row)
@@ -112,21 +113,19 @@ export function ImportMembersDialog() {
       <DialogTrigger
         render={
           <Button type="button" variant="outline">
-            Import users
+            {t("importUsers")}
           </Button>
         }
       />
       <DialogContent className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Import users</DialogTitle>
-          <DialogDescription>
-            Upload a CSV with name and email columns, then review each row before inviting.
-          </DialogDescription>
+          <DialogTitle>{t("importUsers")}</DialogTitle>
+          <DialogDescription>{t("importDescription")}</DialogDescription>
         </DialogHeader>
         <form ref={formRef} action={submit} className="space-y-6">
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="member-csv">CSV file</FieldLabel>
+              <FieldLabel htmlFor="member-csv">{t("csvFile")}</FieldLabel>
               <Input
                 id="member-csv"
                 name="file"
@@ -135,9 +134,7 @@ export function ImportMembersDialog() {
                 required
                 onChange={(event) => void chooseFile(event.target.files?.[0])}
               />
-              <FieldDescription>
-                {fileName || "Required columns: name, email. Other columns are ignored."}
-              </FieldDescription>
+              <FieldDescription>{fileName || t("csvColumns")}</FieldDescription>
             </Field>
             <FieldError>{error}</FieldError>
           </FieldGroup>
@@ -147,18 +144,19 @@ export function ImportMembersDialog() {
               <div>
                 {state.status === "success" ? (
                   <>
-                    <p className="font-medium">Import report</p>
+                    <p className="font-medium">{t("importReport")}</p>
                     <p className="text-muted-foreground">
-                      {state.created.length} sent, {state.emailFailed.length} created but not sent,{" "}
-                      {state.failed.length} failed.
+                      {t("importSummary", {
+                        sent: state.created.length,
+                        emailFailed: state.emailFailed.length,
+                        failed: state.failed.length
+                      })}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="font-medium">{readyRows.length} invite(s) ready to send</p>
-                    <p className="text-muted-foreground">
-                      Edit rows to fix problems, or discard any row before confirming.
-                    </p>
+                    <p className="font-medium">{t("invitesReady", { count: readyRows.length })}</p>
+                    <p className="text-muted-foreground">{t("editRows")}</p>
                   </>
                 )}
               </div>
@@ -166,10 +164,10 @@ export function ImportMembersDialog() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Row</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>{t("row")}</TableHead>
+                      <TableHead>{common("name")}</TableHead>
+                      <TableHead>{common("email")}</TableHead>
+                      <TableHead>{common("status")}</TableHead>
                       <TableHead />
                     </TableRow>
                   </TableHeader>
@@ -178,15 +176,15 @@ export function ImportMembersDialog() {
                       const result =
                         state.status === "success"
                           ? state.created.some((item) => item.row === member.row)
-                            ? { label: "Sent", className: "text-green-700 dark:text-green-400" }
+                            ? { label: t("sent"), className: "text-green-700 dark:text-green-400" }
                             : state.emailFailed.some((item) => item.row === member.row)
                               ? {
-                                  label: "Created — invite not sent",
+                                  label: t("createdInviteNotSent"),
                                   className: "text-yellow-600 dark:text-yellow-400"
                                 }
                               : state.failed.find((item) => item.row === member.row)
                                 ? {
-                                    label: state.failed.find((item) => item.row === member.row)?.error ?? "Failed",
+                                    label: state.failed.find((item) => item.row === member.row)?.error ?? t("failed"),
                                     className: "text-destructive"
                                   }
                                 : null
@@ -220,7 +218,7 @@ export function ImportMembersDialog() {
                                     : "text-green-700 dark:text-green-400"
                             }
                           >
-                            {member.discarded ? "Discarded" : (result?.label ?? member.error ?? "Ready")}
+                            {member.discarded ? t("discarded") : (result?.label ?? member.error ?? t("ready"))}
                           </TableCell>
                           <TableCell className="text-right">
                             {state.status !== "success" ? (
@@ -230,7 +228,7 @@ export function ImportMembersDialog() {
                                 variant={member.discarded ? "outline" : "ghost"}
                                 onClick={() => updateRow(member.row, { discarded: !member.discarded })}
                               >
-                                {member.discarded ? "Restore" : "Discard"}
+                                {member.discarded ? t("restore") : t("discard")}
                               </Button>
                             ) : null}
                           </TableCell>
@@ -244,16 +242,16 @@ export function ImportMembersDialog() {
           ) : null}
           {state.status === "success" ? (
             <Button type="button" onClick={() => changeOpen(false)}>
-              Close
+              {common("close")}
             </Button>
           ) : (
             <Button type="submit" disabled={!canConfirm}>
               {pending ? (
                 <>
-                  <Spinner /> Sending invites
+                  <Spinner /> {t("sendingInvites")}
                 </>
               ) : (
-                "Confirm and send invites"
+                t("confirmAndSendInvites")
               )}
             </Button>
           )}

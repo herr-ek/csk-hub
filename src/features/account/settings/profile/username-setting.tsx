@@ -1,6 +1,7 @@
 "use client"
 
 import { CircleCheckIcon, CircleXIcon, Loader2Icon } from "lucide-react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Field, FieldError, FieldLabel } from "@/shared/ui/base/field"
@@ -8,18 +9,20 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/shared/ui/base/i
 import { type UsernameAvailability, useUsernameSettings } from "./use-username-settings"
 
 export function UsernameSetting({ initialUsername }: { initialUsername: string }) {
+  const t = useTranslations("AccountSettings")
+  const common = useTranslations("Common")
   const state = useUsernameSettings(initialUsername)
 
   return (
     <div>
-      <dt className="text-sm font-medium">Username</dt>
+      <dt className="text-sm font-medium">{t("username")}</dt>
       <dd className="mt-1">
         {state.isEditing ? (
           <form onSubmit={state.save}>
             <div className="mt-1 flex flex-col gap-2">
               <Field>
                 <FieldLabel className="sr-only" htmlFor="settings-username">
-                  Username
+                  {t("username")}
                 </FieldLabel>
                 <InputGroup>
                   <InputGroupInput
@@ -37,24 +40,26 @@ export function UsernameSetting({ initialUsername }: { initialUsername: string }
               </Field>
               <div className="flex items-center gap-3">
                 <Button type="submit" disabled={!state.canSave}>
-                  {state.isPending ? "Saving..." : "Save username"}
+                  {state.isPending ? t("saving") : t("saveUsername")}
                 </Button>
                 <Button type="button" variant="outline" onClick={state.cancel} disabled={state.isPending}>
-                  Cancel
+                  {common("cancel")}
                 </Button>
               </div>
             </div>
           </form>
         ) : state.currentUsername ? (
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">@{state.currentUsername}</span>
+            <span className="text-sm text-muted-foreground">
+              {t("usernameHandle", { username: state.currentUsername })}
+            </span>
             <Button type="button" variant="outline" size="sm" onClick={state.edit}>
-              Edit
+              {common("edit")}
             </Button>
           </div>
         ) : (
           <Button type="button" variant="outline" size="sm" onClick={state.edit}>
-            Add a username
+            {t("addUsername")}
           </Button>
         )}
         {state.message ? (

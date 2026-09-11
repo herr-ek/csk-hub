@@ -14,11 +14,11 @@ import { publishPostSchema } from "./schemas"
 /** What the Admin typed, echoed back so a rejected submission does not lose the post. */
 export type PostDraft = { title: string; body: string }
 
-export type PublishPostState = { status: "idle" } | { status: "error"; error: string; draft: PostDraft }
+export type PublishPostError = "formInvalid" | "publishUnauthorized" | "publishFailed"
 
-const RETRY_MESSAGE = "Unable to publish that post right now. Please try again."
+export type PublishPostState = { status: "idle" } | { status: "error"; error: PublishPostError; draft: PostDraft }
 
-function errorState(draft: PostDraft, error: string): PublishPostState {
+function errorState(draft: PostDraft, error: PublishPostError): PublishPostState {
   return { status: "error", error, draft }
 }
 
@@ -30,7 +30,7 @@ export async function publishPost(_state: PublishPostState, formData: FormData):
 
   const input = publishPostSchema.safeParse(draft)
   if (!input.success) {
-    return errorState(draft, input.error.issues[0]?.message ?? "Please check the form and try again.")
+    return errorState(draft, "formInvalid")
   }
 
   let publisherId: string
@@ -38,7 +38,7 @@ export async function publishPost(_state: PublishPostState, formData: FormData):
     publisherId = (await requireCurrentUserPermission({ resource: "post", action: "create" })).userId
   } catch (error) {
     if (getErrorCode(error) === AUTHORIZATION_DENIED) {
-      return errorState(draft, "Only admins can publish posts.")
+      return errorState(draft, "publishUnauthorized")
     }
 
     // Reading the session touches the database, so a failure here is not a verdict.
@@ -47,7 +47,7 @@ export async function publishPost(_state: PublishPostState, formData: FormData):
       errorName: getErrorName(error),
       status: getErrorStatus(error)
     })
-    return errorState(draft, RETRY_MESSAGE)
+    return errorState(draft, "publishFailed")
   }
 
   let publishedId: string
@@ -70,7 +70,7 @@ export async function publishPost(_state: PublishPostState, formData: FormData):
       errorName: getErrorName(error),
       status: getErrorStatus(error)
     })
-    return errorState(draft, RETRY_MESSAGE)
+    return errorState(draft, "publishFailed")
   }
 
   revalidatePath(ROUTES.news)

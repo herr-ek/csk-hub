@@ -2,6 +2,8 @@
 
 import { CheckIcon, TriangleAlertIcon } from "lucide-react"
 import { useMemo, useState } from "react"
+import { app } from "@/core/config/app"
+import { useFormatter, useTranslations } from "@/core/i18n/translations"
 import { MEMBER_ROLE, parseRoles } from "@/shared/roles"
 import { Badge } from "@/shared/ui/base/badge"
 import { Input } from "@/shared/ui/base/input"
@@ -20,6 +22,9 @@ function roleLabel(role: MemberListItem["role"]) {
 }
 
 export function MemberList({ members }: { members: MemberListItem[] }) {
+  const t = useTranslations("Members")
+  const common = useTranslations("Common")
+  const format = useFormatter()
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState<MemberStatusFilter>("active")
   const visibleMembers = useMemo(() => {
@@ -36,31 +41,31 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="grid gap-1.5 text-sm font-medium sm:w-80">
-          Search members
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name or email" />
+          {t("search")}
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("search")} />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
-          Status
+          {t("status")}
           <NativeSelect value={status} onChange={(event) => setStatus(event.target.value as MemberStatusFilter)}>
-            <NativeSelectOption value="active">Active members</NativeSelectOption>
-            <NativeSelectOption value="inactive">Inactive members</NativeSelectOption>
-            <NativeSelectOption value="all">All members</NativeSelectOption>
+            <NativeSelectOption value="active">{t("active")}</NativeSelectOption>
+            <NativeSelectOption value="inactive">{t("inactive")}</NativeSelectOption>
+            <NativeSelectOption value="all">{t("all")}</NativeSelectOption>
           </NativeSelect>
         </label>
       </div>
 
       <div className="rounded-lg border bg-card">
         <Table>
-          <TableCaption className="sr-only">Members with access to CSK Hub</TableCaption>
+          <TableCaption className="sr-only">{t("description", { appName: app.name })}</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Roles</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Joined</TableHead>
+              <TableHead>{common("name")}</TableHead>
+              <TableHead>{common("email")}</TableHead>
+              <TableHead>{t("roles")}</TableHead>
+              <TableHead>{t("status")}</TableHead>
+              <TableHead>{t("joined")}</TableHead>
               <TableHead className="text-right">
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{t("actions")}</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -73,7 +78,11 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
                   <TableRow key={member.id}>
                     <TableCell>
                       <div className="font-medium">{member.name}</div>
-                      {member.username ? <div className="text-sm text-muted-foreground">@{member.username}</div> : null}
+                      {member.username ? (
+                        <div className="text-sm text-muted-foreground">
+                          {t("usernameHandle", { username: member.username })}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -81,12 +90,12 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
                         {member.emailVerified ? (
                           <CheckIcon
                             className="size-4 text-green-600 dark:text-green-400"
-                            aria-label="Email verified"
+                            aria-label={t("emailVerified")}
                           />
                         ) : (
                           <TriangleAlertIcon
                             className="size-4 text-yellow-600 dark:text-yellow-400"
-                            aria-label="Email not verified"
+                            aria-label={t("emailNotVerified")}
                           />
                         )}
                       </div>
@@ -94,10 +103,12 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
                     <TableCell>{roleLabel(member.role) || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={member.inactive ? "secondary" : hasPassword ? "default" : "outline"}>
-                        {member.inactive ? "Inactive" : hasPassword ? "Active" : "Pending"}
+                        {member.inactive ? t("inactiveStatus") : hasPassword ? t("activeStatus") : t("pending")}
                       </Badge>
                     </TableCell>
-                    <TableCell>{member.createdAt.toLocaleDateString("en-GB")}</TableCell>
+                    <TableCell>
+                      {format.dateTime(member.createdAt, { year: "numeric", month: "2-digit", day: "2-digit" })}
+                    </TableCell>
                     <TableCell className="text-right">
                       <MemberActions
                         userId={member.id}
@@ -113,7 +124,7 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No members match these filters.
+                  {t("noMatches")}
                 </TableCell>
               </TableRow>
             )}

@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 import { auth } from "@/core/auth/auth"
 import { AccountSettingsTabs } from "./account-settings-tabs"
 import { PushNotificationSettings } from "./notifications"
-import { ProfileSettings } from "./profile"
+import { LanguageSettings, ProfileSettings } from "./profile"
 import { PasskeySettings, PasswordSettings, SessionsSettings, TwoFactorSettings } from "./security"
 
 export async function AccountSettings() {
@@ -16,7 +16,12 @@ export async function AccountSettings() {
 
   return (
     <AccountSettingsTabs
-      profile={<ProfileSettings member={session.user} />}
+      profile={
+        <div className="flex flex-col gap-6">
+          <ProfileSettings member={session.user} />
+          <LanguageSettings initialLocale={session.user.locale} />
+        </div>
+      }
       security={
         <>
           <PasswordSettings />
