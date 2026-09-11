@@ -43,6 +43,13 @@
       "when": 1789017837674,
       "tag": "0005_bizarre_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789109793346,
+      "tag": "0006_flimsy_champions",
+      "breakpoints": true
     }
   ]
 }
