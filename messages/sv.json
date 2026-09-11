@@ -307,6 +307,16 @@
     "turnOffTwoFactor": "Stäng av 2FA",
     "backupCodes": "Spara dessa reservkoder på en säker plats. Varje kod kan användas en gång om du förlorar åtkomsten till din autentiseringsapp.",
     "twoFactorDisabled": "Tvåfaktorsautentisering har stängts av.",
-    "authenticatorEnabled": "Autentiseringsapp har aktiverats."
+    "authenticatorEnabled": "Autentiseringsapp har aktiverats.",
+    "profileTab": "Profil",
+    "securityTab": "Säkerhet",
+    "notificationsTab": "Notiser"
+  },
+  "AccountProfile": {
+    "title": "Mitt konto",
+    "description": "Din CSK Hub-profil.",
+    "name": "Namn",
+    "email": "E-post",
+    "settings": "Kontoinställningar"
   }
 }

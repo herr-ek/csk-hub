@@ -307,6 +307,16 @@
     "turnOffTwoFactor": "2FA deaktivieren",
     "backupCodes": "Bewahre diese Wiederherstellungscodes an einem sicheren Ort auf. Jeder Code kann einmal verwendet werden, wenn du den Zugriff auf deine Authenticator-App verlierst.",
     "twoFactorDisabled": "Zwei-Faktor-Authentifizierung deaktiviert.",
-    "authenticatorEnabled": "Authenticator-App aktiviert."
+    "authenticatorEnabled": "Authenticator-App aktiviert.",
+    "profileTab": "Profil",
+    "securityTab": "Sicherheit",
+    "notificationsTab": "Benachrichtigungen"
+  },
+  "AccountProfile": {
+    "title": "Mein Konto",
+    "description": "Dein CSK Hub-Profil.",
+    "name": "Name",
+    "email": "E-Mail",
+    "settings": "Kontoeinstellungen"
   }
 }

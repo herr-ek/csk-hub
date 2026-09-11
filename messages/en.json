@@ -312,6 +312,16 @@
     "turnOffTwoFactor": "Turn off 2FA",
     "backupCodes": "Save these backup codes somewhere safe. Each code can be used once if you lose access to your authenticator app.",
     "twoFactorDisabled": "Two-factor authentication disabled.",
-    "authenticatorEnabled": "Authenticator app enabled."
+    "authenticatorEnabled": "Authenticator app enabled.",
+    "profileTab": "Profile",
+    "securityTab": "Security",
+    "notificationsTab": "Notifications"
+  },
+  "AccountProfile": {
+    "title": "My account",
+    "description": "Your CSK Hub profile.",
+    "name": "Name",
+    "email": "Email",
+    "settings": "Account settings"
   }
 }

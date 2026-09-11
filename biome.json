@@ -62,6 +62,20 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "src/app/\\[locale\\]/(app)/admin/page.tsx",
+        "src/features/account/settings/notifications/**",
+        "src/features/notification-broadcast/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noJsxLiterals": "off"
+          }
+        }
+      }
     }
   ],
   "javascript": {
