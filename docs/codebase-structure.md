@@ -44,6 +44,7 @@ Use `src/core` for infrastructure and app shell modules:
 - `src/core/db`: database client and schemas.
 - `src/core/email`: email delivery adapters.
 - `src/core/i18n`: locale definitions, locale-cookie handling, next-intl routing/request configuration, and translation loading. See `src/core/i18n/README.md` before adding translated UI.
+- `src/core/preferences`: the application-wide user-preferences contract, including storage, runtime validation, backward-compatible defaults, and atomic partial updates used by app-shell and feature modules.
 
 Do not promote code to shared space just because two files currently look similar. Promote only when the interface is stable and the shared module improves locality.
 

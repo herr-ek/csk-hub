@@ -1,16 +1,15 @@
 import { z } from "zod"
 import { localeSchema } from "@/core/i18n/locale-validation"
-import { defaultLocale } from "@/core/i18n/locales"
 
 const preferenceValuesSchema = z.object({
-  locale: localeSchema
+  locale: localeSchema.nullable()
 })
 
 export type UserPreferences = z.infer<typeof preferenceValuesSchema>
 
 /** Complete application defaults for users with missing or older stored preferences. */
 export const userPreferencesDefaults = {
-  locale: defaultLocale
+  locale: null
 } satisfies UserPreferences
 
 /**

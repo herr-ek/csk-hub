@@ -32,6 +32,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
 /**
  * Validates and atomically merges fields into a user's preferences JSON.
  * Existing fields omitted from the update are preserved, and a preferences row is created when needed.
+ * A malformed stored document is replaced by the validated update instead of being merged into another invalid value.
  *
  * @param userId - The Better Auth user whose preferences should be updated.
  * @param input - A partial preferences object validated by `userPreferencesUpdateSchema`.
@@ -45,6 +46,12 @@ export async function updateUserPreferences(userId: string, input: UserPreferenc
     .values({ userId, preferences })
     .onConflictDoUpdate({
       target: userPreferences.userId,
-      set: { preferences: sql`${userPreferences.preferences} || excluded.preferences` }
+      set: {
+        preferences: sql`CASE
+          WHEN jsonb_typeof(${userPreferences.preferences}) = 'object'
+            THEN ${userPreferences.preferences} || excluded.preferences
+          ELSE excluded.preferences
+        END`
+      }
     })
 }

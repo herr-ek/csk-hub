@@ -30,6 +30,10 @@ describe("locale validation", () => {
     expect(resolveLocalePreference(getLocaleCookieValue("fr"), "de")).toBe("de")
   })
 
+  test("leaves locale resolution to the browser when the saved locale is unset", () => {
+    expect(resolveLocalePreference(getLocaleCookieValue(undefined), null)).toBeUndefined()
+  })
+
   test("uses only supported browser locale cookies", () => {
     expect(getLocaleCookieValue("de")).toBe("de")
     expect(getLocaleCookieValue("fr")).toBeUndefined()

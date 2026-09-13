@@ -8,7 +8,8 @@ backward-compatible reads, defaults, and atomic partial updates behind two serve
   falls back to the complete default value instead of breaking a request.
 - `updateUserPreferences(userId, update)` validates a partial update and merges it into the JSONB document in the
   database. It does not replace fields omitted by the caller, including fields an older application version does not
-  know about.
+  know about. If the stored document is not a JSON object, the validated update replaces it so the write repairs the
+  malformed value.
 
 The server-only interface is exported from `index.ts`. `schema.ts` is intentionally universal so schemas and types can
 be imported directly by code that does not need database access.
@@ -29,6 +30,9 @@ Keep compatibility with users whose rows predate the new field:
 `userPreferencesSchema` merges partial stored data with the defaults for backward-compatible reads.
 `userPreferencesUpdateSchema` is derived from the non-defaulted value schema, so an empty update remains empty instead
 of writing default values over existing preferences.
+
+The default `locale` is `null`, which means the member has not saved a locale preference. This leaves locale selection
+to the current browser until the member saves a supported locale.
 
 Adding an optional stored field without a read-time default would leak storage history into every caller. Prefer a
 required field in `UserPreferences` plus a default at this module's seam. If a preference genuinely has an explicit

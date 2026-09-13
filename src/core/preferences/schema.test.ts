@@ -7,8 +7,13 @@ describe("user preferences validation", () => {
   })
 
   test("uses defaults for missing rows and fields", () => {
+    expect(userPreferencesDefaults).toEqual({ locale: null })
     expect(userPreferencesSchema.parse(undefined)).toEqual(userPreferencesDefaults)
     expect(userPreferencesSchema.parse({})).toEqual(userPreferencesDefaults)
+  })
+
+  test("preserves an explicitly unset locale", () => {
+    expect(userPreferencesSchema.parse({ locale: null })).toEqual({ locale: null })
   })
 
   test("keeps known values from rows written by a newer application version", () => {
@@ -23,6 +28,7 @@ describe("user preferences validation", () => {
   test("validates partial updates independently", () => {
     expect(userPreferencesUpdateSchema.parse({})).toEqual({})
     expect(userPreferencesUpdateSchema.safeParse({ locale: "de" }).success).toBe(true)
+    expect(userPreferencesUpdateSchema.safeParse({ locale: null }).success).toBe(true)
     expect(userPreferencesUpdateSchema.safeParse({ locale: "fr" }).success).toBe(false)
     expect(userPreferencesUpdateSchema.safeParse({ unknownPreference: true }).success).toBe(false)
   })
