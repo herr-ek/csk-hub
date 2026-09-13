@@ -8,7 +8,6 @@ import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
-import { localeSchema } from "@/core/i18n/locale-validation"
 import { adminPluginOptions } from "./permissions"
 
 const authPlugins = [
@@ -59,17 +58,6 @@ export const authOptions = {
     provider: "pg",
     schema
   }),
-  user: {
-    additionalFields: {
-      locale: {
-        type: "string",
-        required: false,
-        validator: {
-          input: localeSchema
-        }
-      }
-    }
-  },
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,

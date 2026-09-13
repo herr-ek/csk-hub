@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { getLocaleCookieValue, localeCookie, writeLocaleCookie } from "./locale-cookie"
-import { getSavedLocale, resolveLocalePreference } from "./locale-preference"
+import { resolveLocalePreference } from "./locale-preference"
 import { localeSchema } from "./locale-validation"
 import { getLocaleName, isLocale } from "./locales"
 
@@ -24,16 +24,10 @@ describe("locale validation", () => {
     expect(getLocaleName("fr")).toBe("Svenska")
   })
 
-  test("uses only supported saved member locales", () => {
-    expect(getSavedLocale({ locale: "sv" })).toBe("sv")
-    expect(getSavedLocale({ locale: "fr" })).toBeUndefined()
-    expect(getSavedLocale(null)).toBeUndefined()
-  })
-
   test("gives a valid browser cookie precedence over a saved member locale", () => {
-    expect(resolveLocalePreference(getLocaleCookieValue("de"), getSavedLocale({ locale: "sv" }))).toBe("de")
-    expect(resolveLocalePreference(getLocaleCookieValue(undefined), getSavedLocale({ locale: "sv" }))).toBe("sv")
-    expect(resolveLocalePreference(getLocaleCookieValue("fr"), getSavedLocale({ locale: "de" }))).toBe("de")
+    expect(resolveLocalePreference(getLocaleCookieValue("de"), "sv")).toBe("de")
+    expect(resolveLocalePreference(getLocaleCookieValue(undefined), "sv")).toBe("sv")
+    expect(resolveLocalePreference(getLocaleCookieValue("fr"), "de")).toBe("de")
   })
 
   test("uses only supported browser locale cookies", () => {

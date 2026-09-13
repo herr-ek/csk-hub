@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { authClient } from "@/core/auth/auth-client"
 import { writeBrowserLocaleCookie } from "@/core/i18n/locale-cookie"
 import { defaultLocale, isLocale, type Locale } from "@/core/i18n/locales"
 import { useTranslations } from "@/core/i18n/translations"
+import { updateLocalePreference } from "./actions"
 
 export function useLanguageSettings(initialLocale?: string | null) {
   const t = useTranslations("AccountSettings")
@@ -24,9 +24,9 @@ export function useLanguageSettings(initialLocale?: string | null) {
     setError(undefined)
     setIsPending(true)
     try {
-      const result = await authClient.updateUser({ locale: nextLocale })
-      if (result.error) {
-        setError(result.error.message ?? t("languageUpdateFailed"))
+      const result = await updateLocalePreference(nextLocale)
+      if (!result.success) {
+        setError(t("languageUpdateFailed"))
         return
       }
 

@@ -1,7 +1,7 @@
 # A Member locale is a default with per-browser overrides
 
 CSK Hub supports English, Swedish, and German. A Member may save a preferred locale
-on their account, but a valid `NEXT_LOCALE` cookie is an explicit choice for the
+in their preferences, but a valid `NEXT_LOCALE` cookie is an explicit choice for the
 current browser and takes precedence over that saved value. When a browser has no
 valid locale cookie, the Member's saved locale initializes one.
 

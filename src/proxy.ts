@@ -3,8 +3,9 @@ import { NextResponse } from "next/server"
 import { auth } from "@/core/auth/auth"
 import { getRouteAccessDecision } from "@/core/auth/route-access"
 import { getLocaleCookieValue, localeCookie, writeLocaleCookie } from "@/core/i18n/locale-cookie"
-import { getSavedLocale, resolveLocalePreference } from "@/core/i18n/locale-preference"
+import { resolveLocalePreference } from "@/core/i18n/locale-preference"
 import { handleLocaleRouting } from "@/core/i18n/middleware"
+import { getUserPreferences } from "@/core/preferences"
 
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname
@@ -12,8 +13,8 @@ export default async function proxy(req: NextRequest) {
 
   const session = await auth.api.getSession({ headers: req.headers })
   const cookieLocale = getLocaleCookieValue(req.cookies.get(localeCookie.name)?.value)
-  const savedLocale = getSavedLocale(session?.user)
-  const resolvedLocale = resolveLocalePreference(cookieLocale, savedLocale)
+  const preferences = session && !cookieLocale ? await getUserPreferences(session.user.id) : undefined
+  const resolvedLocale = resolveLocalePreference(cookieLocale, preferences?.locale)
   const localeToInitialize = resolvedLocale === cookieLocale ? undefined : resolvedLocale
   if (localeToInitialize) {
     writeLocaleCookie(req.cookies, localeToInitialize)

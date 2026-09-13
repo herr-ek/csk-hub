@@ -123,6 +123,14 @@ Focused reads improve locality, make data dependencies explicit, reduce accident
 
 Server Components are the default. Use Client Components only for interaction, browser APIs, optimistic state, or controlled UI state. Put `"use client"` as low in the tree as practical.
 
+### Server-only modules
+
+Add `import "server-only"` to modules that must never enter a client bundle, including database access, private environment variables, filesystem access, privileged server SDKs, and data-access operations that expose sensitive records. Put the guard on the leaf module that contains the server-only behavior so a deep import cannot bypass it.
+
+A public entrypoint may also import `server-only` when the entire module is deliberately a server-side capability. Do not re-export otherwise universal schemas, types, constants, or pure validation through that entrypoint. Give universal code a separate import path so Client Components can use it without crossing a server-only boundary.
+
+Do not add `server-only` to universal modules merely because their current callers happen to run on the server. Files marked with `"use server"` are already compiled in the server layer; they may additionally import `server-only`, but do not need it solely to establish that boundary. Keep Server Actions thin and delegate database access to a guarded server-only data-access module.
+
 ## Reuse And Duplication
 
 Avoid duplicate business rules, validation rules, Drizzle query shapes, and UI interaction patterns. Extract a module when reuse creates a stable interface and reduces future edits.
