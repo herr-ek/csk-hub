@@ -1,6 +1,7 @@
 import { headers } from "next/headers"
 import Link from "next/link"
 import { auth } from "@/core/auth/auth"
+import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardContent } from "@/shared/ui/base/card"
@@ -11,26 +12,28 @@ export async function MemberProfileScreen() {
 
   if (!session) return null
 
+  const t = await getTranslations("AccountProfile")
+
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
       <div>
-        <h1 className="font-heading text-2xl font-semibold">My account</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Your CSK Hub profile.</p>
+        <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
       </div>
       <Card>
         <CardContent className="flex flex-col items-start gap-5">
           <dl className="grid gap-4 text-sm">
             <div>
-              <dt className="font-medium">Name</dt>
+              <dt className="font-medium">{t("name")}</dt>
               <dd className="mt-1 text-muted-foreground">{session.user.name}</dd>
             </div>
             <div>
-              <dt className="font-medium">Email</dt>
+              <dt className="font-medium">{t("email")}</dt>
               <dd className="mt-1 text-muted-foreground">{session.user.email}</dd>
             </div>
           </dl>
           <Link href={ROUTES.accountSettings} className={buttonVariants()}>
-            Account settings
+            {t("settings")}
           </Link>
         </CardContent>
       </Card>

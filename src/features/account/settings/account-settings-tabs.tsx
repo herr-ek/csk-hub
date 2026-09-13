@@ -1,6 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/base/tabs"
 
 export function AccountSettingsTabs({
@@ -12,12 +13,13 @@ export function AccountSettingsTabs({
   security: ReactNode
   notifications: ReactNode
 }) {
+  const t = useTranslations("AccountSettings")
   return (
     <Tabs defaultValue="profile">
-      <TabsList aria-label="Account settings">
-        <TabsTrigger value="profile">Profile</TabsTrigger>
-        <TabsTrigger value="security">Security</TabsTrigger>
-        <TabsTrigger value="notifications">Notifications</TabsTrigger>
+      <TabsList aria-label={t("pageTitle")}>
+        <TabsTrigger value="profile">{t("profileTab")}</TabsTrigger>
+        <TabsTrigger value="security">{t("securityTab")}</TabsTrigger>
+        <TabsTrigger value="notifications">{t("notificationsTab")}</TabsTrigger>
       </TabsList>
       <TabsContent value="profile">{profile}</TabsContent>
       <TabsContent value="security" className="flex flex-col gap-6">

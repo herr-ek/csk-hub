@@ -3,10 +3,12 @@
 import { LogOutIcon } from "lucide-react"
 import { useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
+import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import { ROUTES } from "./site"
 
 export function LogoutButton({ isImpersonating = false }: { isImpersonating?: boolean }) {
+  const t = useTranslations("Navigation")
   const [isPending, setIsPending] = useState(false)
 
   async function handleLogout() {
@@ -24,11 +26,11 @@ export function LogoutButton({ isImpersonating = false }: { isImpersonating?: bo
       <LogOutIcon data-icon="inline-start" />
       {isPending
         ? isImpersonating
-          ? "Stopping impersonation…"
-          : "Logging out…"
+          ? t("stoppingImpersonation")
+          : t("loggingOut")
         : isImpersonating
-          ? "Stop impersonating"
-          : "Logout"}
+          ? t("stopImpersonating")
+          : t("logout")}
     </Button>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import {
@@ -21,6 +22,7 @@ import { type NotificationFeedback, NotificationFeedbackMessage } from "./notifi
 type SubscribedUser = Awaited<ReturnType<typeof searchUsersWithSubscriptions>>[number]
 
 export function SendToSelectedUsersCard() {
+  const t = useTranslations("PushNotifications")
   const [message, setMessage] = useState("")
   const [feedback, setFeedback] = useState<NotificationFeedback | null>(null)
   const [search, setSearch] = useState("")
@@ -63,11 +65,11 @@ export function SendToSelectedUsersCard() {
         const result = await sendTestNotificationToUsers(selectedUserIds, message)
         setFeedback({
           success: result.success,
-          message: result.success ? "Notification sent to the selected users." : result.error
+          message: result.success ? t("sentToSelected") : result.error
         })
         if (result.success) setMessage("")
       } catch {
-        setFeedback({ success: false, message: "Unable to send the notification right now." })
+        setFeedback({ success: false, message: t("sendSelectedFailed") })
       }
     })
   }
@@ -75,8 +77,8 @@ export function SendToSelectedUsersCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Send to selected users</CardTitle>
-        <CardDescription>Only users with at least one active subscription are listed.</CardDescription>
+        <CardTitle>{t("selectedTitle")}</CardTitle>
+        <CardDescription>{t("selectedDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <Combobox
@@ -101,14 +103,14 @@ export function SendToSelectedUsersCard() {
               }
             </ComboboxValue>
             <ComboboxChipsInput
-              placeholder="Search by name or email"
-              aria-label="Search subscribed users"
+              placeholder={t("searchPlaceholder")}
+              aria-label={t("searchLabel")}
               disabled={isPending}
             />
           </ComboboxChips>
           <ComboboxContent>
             <ComboboxList>
-              <ComboboxEmpty>{isSearching ? "Searching..." : "No subscribed users found"}</ComboboxEmpty>
+              <ComboboxEmpty>{isSearching ? t("searching") : t("noSubscribedUsers")}</ComboboxEmpty>
               {users.map((user) => (
                 <ComboboxItem key={user.id} value={user.id}>
                   <span>{user.name}</span>
@@ -121,7 +123,7 @@ export function SendToSelectedUsersCard() {
         <Textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder="Enter the notification message"
+          placeholder={t("messagePlaceholder")}
           disabled={isPending}
         />
         <Button
@@ -130,7 +132,7 @@ export function SendToSelectedUsersCard() {
           onClick={sendToSelectedUsers}
           disabled={isPending || selectedUserIds.length === 0 || !message.trim()}
         >
-          {isPending ? "Sending..." : "Send to selected user"}
+          {isPending ? t("sending") : t("sendToSelected")}
         </Button>
         {feedback ? <NotificationFeedbackMessage feedback={feedback} /> : null}
       </CardContent>

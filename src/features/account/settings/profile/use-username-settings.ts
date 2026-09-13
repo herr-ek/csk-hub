@@ -3,10 +3,12 @@
 import { useDebouncedValue } from "@tanstack/react-pacer/debouncer"
 import { useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
+import { useTranslations } from "@/core/i18n/translations"
 
 export type UsernameAvailability = "idle" | "checking" | "available" | "unavailable"
 
 export function useUsernameSettings(initialUsername: string) {
+  const t = useTranslations("AccountSettings")
   const [currentUsername, setCurrentUsername] = useState(initialUsername)
   const [username, setUsername] = useState(initialUsername)
   const [isEditing, setIsEditing] = useState(false)
@@ -27,8 +29,8 @@ export function useUsernameSettings(initialUsername: string) {
     }
 
     setAvailability("checking")
-    setAvailabilityMessage("Checking username availability.")
-  }, [currentUsername, isEditing, username])
+    setAvailabilityMessage(t("usernameChecking"))
+  }, [currentUsername, isEditing, t, username])
 
   useEffect(() => {
     if (!isEditing || username === currentUsername || username !== debouncedUsername) return
@@ -47,11 +49,11 @@ export function useUsernameSettings(initialUsername: string) {
         }
 
         setAvailability(result.data?.available ? "available" : "unavailable")
-        setAvailabilityMessage(result.data?.available ? "Username is available." : "Username is already taken.")
+        setAvailabilityMessage(result.data?.available ? t("usernameAvailable") : t("usernameTaken"))
       } catch {
         if (cancelled) return
         setAvailability("unavailable")
-        setAvailabilityMessage("Unable to check username availability.")
+        setAvailabilityMessage(t("usernameCheckFailed"))
       }
     }
 
@@ -60,7 +62,7 @@ export function useUsernameSettings(initialUsername: string) {
     return () => {
       cancelled = true
     }
-  }, [currentUsername, debouncedUsername, isEditing, username])
+  }, [currentUsername, debouncedUsername, isEditing, t, username])
 
   function edit() {
     setUsername(currentUsername)
@@ -100,9 +102,9 @@ export function useUsernameSettings(initialUsername: string) {
       setCurrentUsername(username)
       setIsEditing(false)
       setAvailability("idle")
-      setMessage("Username updated.")
+      setMessage(t("usernameUpdated"))
     } catch {
-      setError("Unable to update your username right now. Please try again.")
+      setError(t("usernameUpdateFailed"))
     } finally {
       setIsPending(false)
     }

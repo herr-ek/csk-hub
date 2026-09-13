@@ -1,3 +1,5 @@
+import { app } from "@/core/config/app"
+import { getTranslations } from "@/core/i18n/server"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import { AddMemberDialog } from "./add/add-member-dialog"
@@ -7,14 +9,15 @@ import { listMembers } from "./service"
 
 export async function MembersScreen() {
   const members = await listMembers()
+  const t = await getTranslations("Members")
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-heading text-2xl font-semibold">Members</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Manage everyone with access to CSK Hub.</p>
+            <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t("description", { appName: app.name })}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <AddMemberDialog />
@@ -28,12 +31,14 @@ export async function MembersScreen() {
   )
 }
 
-export function MembersScreenSkeleton() {
+export async function MembersScreenSkeleton() {
+  const t = await getTranslations("Members")
+  const common = await getTranslations("Common")
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
       <div>
-        <h1 className="font-heading text-2xl font-semibold">Members</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage everyone with access to CSK Hub.</p>
+        <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("description", { appName: app.name })}</p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -49,14 +54,14 @@ export function MembersScreenSkeleton() {
 
       <div className="rounded-lg border bg-card">
         <Table>
-          <TableCaption className="sr-only">Loading members</TableCaption>
+          <TableCaption className="sr-only">{t("loading")}</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Joined</TableHead>
+              <TableHead>{common("name")}</TableHead>
+              <TableHead>{common("email")}</TableHead>
+              <TableHead>{t("role")}</TableHead>
+              <TableHead>{t("status")}</TableHead>
+              <TableHead>{t("joined")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

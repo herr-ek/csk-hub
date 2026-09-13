@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import {
   Dialog,
@@ -13,15 +14,16 @@ import {
 import { AddMemberForm } from "./add-member-form"
 
 export function AddMemberDialog() {
+  const t = useTranslations("Members")
   const [open, setOpen] = useState(false)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button type="button">Add member</Button>} />
+      <DialogTrigger render={<Button type="button">{t("add")}</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add member</DialogTitle>
-          <DialogDescription>Create a new account for a CSK member.</DialogDescription>
+          <DialogTitle>{t("add")}</DialogTitle>
+          <DialogDescription>{t("addDescription")}</DialogDescription>
         </DialogHeader>
         <AddMemberForm />
       </DialogContent>

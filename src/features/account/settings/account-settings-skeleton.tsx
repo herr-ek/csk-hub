@@ -50,6 +50,10 @@ export function AccountSettingsSkeleton() {
       </SettingsCardSkeleton>
 
       <SettingsCardSkeleton>
+        <Skeleton className="h-9 w-full sm:w-56" />
+      </SettingsCardSkeleton>
+
+      <SettingsCardSkeleton>
         <div className="flex flex-col gap-5">
           <Skeleton className="h-4 w-44" />
           <div>

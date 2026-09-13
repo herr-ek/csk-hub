@@ -1,3 +1,4 @@
+import { app } from "@/core/config/app"
 import type { EmailMessage } from "../types"
 
 export function resetPasswordTemplate({
@@ -8,11 +9,11 @@ export function resetPasswordTemplate({
   url: string
 }): Pick<EmailMessage, "subject" | "body"> {
   return {
-    subject: "Reset your CSK Hub password",
+    subject: `Reset your ${app.name} password`,
     body: [
       `Hi ${name || "there"},`,
       "",
-      "Someone asked to reset your CSK Hub password. Open this link to choose a new one:",
+      `Someone asked to reset your ${app.name} password. Open this link to choose a new one:`,
       "",
       url,
       "",

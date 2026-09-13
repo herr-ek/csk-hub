@@ -1,8 +1,10 @@
+import { i18n, locales } from "@better-auth/i18n"
 import { passkey } from "@better-auth/passkey"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { nextCookies } from "better-auth/next-js"
 import { admin, emailOTP, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
+import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
@@ -13,7 +15,7 @@ const authPlugins = [
   admin(adminPluginOptions),
   openAPI(),
   twoFactor({
-    issuer: "CSK Hub",
+    issuer: app.name,
     otpOptions: {
       async sendOTP({ user, otp }) {
         const { sendTwoFactorOtpEmail } = await import("@/core/email")
@@ -36,11 +38,18 @@ const authPlugins = [
       const { sendMagicLinkEmail } = await import("@/core/email")
       await sendMagicLinkEmail({ email, url })
     }
+  }),
+  i18n({
+    translations: {
+      en: locales.en,
+      sv: locales.sv,
+      de: locales.de
+    }
   })
 ] as const
 
 export const authOptions = {
-  appName: "CSK Hub",
+  appName: app.name,
   baseURL: {
     allowedHosts: ["*.vercel.app"],
     fallback: env.BETTER_AUTH_URL

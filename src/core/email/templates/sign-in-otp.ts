@@ -1,3 +1,4 @@
+import { app } from "@/core/config/app"
 import type { EmailMessage } from "../types"
 
 export function signInOtpTemplate(otp: string): Pick<EmailMessage, "subject" | "body"> {
@@ -5,5 +6,5 @@ export function signInOtpTemplate(otp: string): Pick<EmailMessage, "subject" | "
 }
 
 export function twoFactorOtpTemplate(otp: string): Pick<EmailMessage, "subject" | "body"> {
-  return { subject: "Your CSK Hub security code", body: `Your CSK Hub security code is: ${otp}` }
+  return { subject: `Your ${app.name} security code`, body: `Your ${app.name} security code is: ${otp}` }
 }

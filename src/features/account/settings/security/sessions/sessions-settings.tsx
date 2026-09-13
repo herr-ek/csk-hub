@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
+import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Badge } from "@/shared/ui/base/badge"
 import { Button } from "@/shared/ui/base/button"
@@ -19,6 +20,8 @@ function formatSessionDate(value: Date | string) {
 }
 
 export function SessionsSettings({ currentSessionToken }: { currentSessionToken: string }) {
+  const t = useTranslations("AccountSettings")
+  const common = useTranslations("Common")
   const [sessions, setSessions] = useState<Session[]>([])
   const [error, setError] = useState<string>()
   const [pendingToken, setPendingToken] = useState<string>()
@@ -27,8 +30,8 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
     setError(undefined)
     const result = await authClient.listSessions()
     if (result.data) setSessions(result.data)
-    if (result.error) setError(result.error.message ?? "Unable to load active sessions.")
-  }, [])
+    if (result.error) setError(result.error.message ?? t("sessionsLoadFailed"))
+  }, [t])
 
   useEffect(() => {
     void loadSessions()
@@ -38,7 +41,7 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
     setPendingToken(token)
     const result = await authClient.revokeSession({ token })
     setPendingToken(undefined)
-    if (result.error) setError(result.error.message ?? "Unable to revoke the session.")
+    if (result.error) setError(result.error.message ?? t("sessionRevokeFailed"))
     else if (token === currentSessionToken) window.location.assign("/login")
     else await loadSessions()
   }
@@ -46,8 +49,8 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Active sessions</CardTitle>
-        <CardDescription>Devices currently signed in to your account.</CardDescription>
+        <CardTitle>{t("sessionsTitle")}</CardTitle>
+        <CardDescription>{t("sessionsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {sessions.map((session) => {
@@ -56,8 +59,8 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
             <div key={session.token} className="flex flex-col gap-4 rounded-2xl border p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="wrap-break-word font-medium">{session.userAgent || "Unknown device"}</p>
-                  {current ? <Badge variant="secondary">This device</Badge> : null}
+                  <p className="wrap-break-word font-medium">{session.userAgent || t("unknownDevice")}</p>
+                  {current ? <Badge variant="secondary">{t("thisDevice")}</Badge> : null}
                 </div>
                 <Button
                   type="button"
@@ -66,21 +69,23 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
                   onClick={() => void revoke(session.token)}
                   disabled={pendingToken === session.token}
                 >
-                  {pendingToken === session.token ? "Signing out..." : current ? "Sign out" : "Delete"}
+                  {pendingToken === session.token ? t("signingOut") : current ? t("signOut") : common("delete")}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-x-6 gap-y-2 border-t pt-3 text-sm text-muted-foreground">
                 <p>
-                  <span className="font-medium text-foreground">IP address:</span> {session.ipAddress || "Unknown"}
+                  <span className="font-medium text-foreground">{t("ipAddress")}</span>{" "}
+                  {session.ipAddress || t("unknown")}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Expires:</span> {formatSessionDate(session.expiresAt)}
+                  <span className="font-medium text-foreground">{t("expires")}</span>{" "}
+                  {formatSessionDate(session.expiresAt)}
                 </p>
               </div>
             </div>
           )
         })}
-        {sessions.length === 0 ? <p className="text-sm text-muted-foreground">No active sessions found.</p> : null}
+        {sessions.length === 0 ? <p className="text-sm text-muted-foreground">{t("noSessions")}</p> : null}
         {error ? (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>

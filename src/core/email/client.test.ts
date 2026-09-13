@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test"
+import { app } from "@/core/config/app"
 
 mock.module("server-only", () => ({}))
 
@@ -10,7 +11,7 @@ const smtp = {
   secure: false,
   user: "mailer@example.com",
   pass: "app-password",
-  from: "CSK Hub <mailer@example.com>"
+  from: `${app.name} <mailer@example.com>`
 }
 
 describe("email client", () => {

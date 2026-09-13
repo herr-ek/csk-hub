@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useActionState, useEffect } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { passwordPolicy } from "@/shared/policy"
 import { Button } from "@/shared/ui/base/button"
@@ -11,6 +12,7 @@ import { Input } from "@/shared/ui/base/input"
 import { type ActivationState, activateAccount } from "./actions"
 
 export function ActivationForm() {
+  const t = useTranslations("Public.activation")
   const router = useRouter()
   const searchParams = useSearchParams()
   const [state, action, pending] = useActionState<ActivationState, FormData>(activateAccount, { status: "idle" })
@@ -25,11 +27,11 @@ export function ActivationForm() {
     return (
       <>
         <header>
-          <h1 className="text-2xl font-semibold">Account activated</h1>
-          <p>Taking you to CSK Hub…</p>
+          <h1 className="text-2xl font-semibold">{t("completeTitle")}</h1>
+          <p>{t("completeDescription")}</p>
         </header>
         <Link className="underline" href={state.redirectTo}>
-          Continue to CSK Hub
+          {t("continue")}
         </Link>
       </>
     )
@@ -37,21 +39,21 @@ export function ActivationForm() {
   return (
     <>
       <header>
-        <h1 className="text-2xl font-semibold">Activate your CSK account</h1>
-        <p className="text-muted-foreground">Set a password to finish creating your account.</p>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("description")}</p>
       </header>
       {invalidLink ? (
         <div className="space-y-2">
-          <p className="text-destructive">This activation link is invalid or has expired.</p>
+          <p className="text-destructive">{t("invalidLink")}</p>
           <Link className="underline" href={ROUTES.forgotPassword}>
-            Request a fresh password link
+            {t("requestFreshLink")}
           </Link>
         </div>
       ) : (
         <form action={action} className="space-y-4">
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="activation-password">Password</FieldLabel>
+              <FieldLabel htmlFor="activation-password">{t("password")}</FieldLabel>
               <Input
                 id="activation-password"
                 name="password"
@@ -61,7 +63,7 @@ export function ActivationForm() {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="activation-confirm-password">Confirm password</FieldLabel>
+              <FieldLabel htmlFor="activation-confirm-password">{t("confirmPassword")}</FieldLabel>
               <Input
                 id="activation-confirm-password"
                 name="confirmPassword"
@@ -73,7 +75,7 @@ export function ActivationForm() {
             <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
           </FieldGroup>
           <Button type="submit" disabled={pending}>
-            {pending ? "Activating" : "Activate account"}
+            {pending ? t("submitting") : t("submit")}
           </Button>
         </form>
       )}

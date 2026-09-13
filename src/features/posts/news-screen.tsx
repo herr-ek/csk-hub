@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { canCurrentUser } from "@/core/auth/permissions.server"
+import { getTranslations } from "@/core/i18n/server"
+import { useTranslations } from "@/core/i18n/translations"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
@@ -11,11 +13,12 @@ import { PostByline } from "./post-byline"
 import { listNewsFeed } from "./service"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
+  const t = useTranslations("Posts")
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="font-heading text-2xl font-semibold">News</h1>
-        <p className="mt-1 text-sm text-muted-foreground">What is happening in the choir.</p>
+        <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
       </div>
       {children}
     </div>
@@ -23,9 +26,10 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
 }
 
 export async function NewsScreen() {
-  const [entries, canPublish] = await Promise.all([
+  const [entries, canPublish, t] = await Promise.all([
     listNewsFeed(),
-    canCurrentUser({ resource: "post", action: "create" })
+    canCurrentUser({ resource: "post", action: "create" }),
+    getTranslations("Posts")
   ])
 
   return (
@@ -33,7 +37,7 @@ export async function NewsScreen() {
       <NewsHeader>
         {canPublish ? (
           <Link href={ROUTES.newsCompose} className={buttonVariants()}>
-            Write a post
+            {t("writePost")}
           </Link>
         ) : null}
       </NewsHeader>
@@ -41,8 +45,8 @@ export async function NewsScreen() {
       {entries.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>Nothing posted yet</EmptyTitle>
-            <EmptyDescription>Posts from the board will show up here.</EmptyDescription>
+            <EmptyTitle>{t("emptyTitle")}</EmptyTitle>
+            <EmptyDescription>{t("emptyDescription")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (

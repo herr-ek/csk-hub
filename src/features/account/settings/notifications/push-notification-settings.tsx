@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -16,6 +17,7 @@ function vapidKeyToUint8Array(base64String: string) {
 }
 
 export function PushNotificationSettings() {
+  const t = useTranslations("PushNotifications")
   const [isSupported, setIsSupported] = useState(false)
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
   const [message, setMessage] = useState("")
@@ -34,18 +36,18 @@ export function PushNotificationSettings() {
   useEffect(() => {
     if (!("serviceWorker" in navigator && "PushManager" in window && "Notification" in window)) return
     setIsSupported(true)
-    registerServiceWorker().catch(() => setError("The app could not enable push notifications on this device."))
-  }, [registerServiceWorker])
+    registerServiceWorker().catch(() => setError(t("deviceEnableFailed")))
+  }, [registerServiceWorker, t])
 
   async function subscribeToPush() {
     if (isPending) return
     const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     if (!vapidPublicKey) {
-      setError("Push notifications are not configured yet.")
+      setError(t("notConfigured"))
       return
     }
     if (Notification.permission === "denied") {
-      setError("Notifications are blocked for this site. Allow them in your browser settings to subscribe.")
+      setError(t("blocked"))
       return
     }
 
@@ -55,7 +57,7 @@ export function PushNotificationSettings() {
     try {
       const permission = await Notification.requestPermission()
       if (permission !== "granted") {
-        setError("Notifications were not allowed. You can enable them later in your browser settings.")
+        setError(t("notAllowed"))
         return
       }
       const registration = await navigator.serviceWorker.ready
@@ -65,12 +67,12 @@ export function PushNotificationSettings() {
       })
       await subscribeMemberToPush(JSON.parse(JSON.stringify(nextSubscription)))
       setSubscription(nextSubscription)
-      setStatus("Push notifications are enabled on this device.")
+      setStatus(t("enabled"))
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "NotAllowedError") {
-        setError("Notifications were not allowed. You can enable them later in your browser settings.")
+        setError(t("notAllowed"))
       } else {
-        setError("Unable to subscribe to push notifications right now.")
+        setError(t("subscribeFailed"))
       }
     } finally {
       setIsPending(false)
@@ -87,9 +89,9 @@ export function PushNotificationSettings() {
       await subscription.unsubscribe()
       await unsubscribeMemberFromPush(endpoint)
       setSubscription(null)
-      setStatus("Push notifications are disabled on this device.")
+      setStatus(t("disabled"))
     } catch {
-      setError("Unable to unsubscribe from push notifications right now.")
+      setError(t("unsubscribeFailed"))
     } finally {
       setIsPending(false)
     }
@@ -101,56 +103,55 @@ export function PushNotificationSettings() {
     setStatus(null)
     setIsPending(true)
     try {
-      const result = await sendPushNotificationTest(message.trim() || "This is a test notification from CSK Hub.")
+      const result = await sendPushNotificationTest(message.trim() || t("defaultTestMessage"))
       if (result.success) {
         setMessage("")
-        setStatus("Test notification sent.")
+        setStatus(t("testSent"))
       } else {
         setError(result.error)
       }
     } catch {
-      setError("Unable to send a test notification right now.")
+      setError(t("testSendFailed"))
     } finally {
       setIsPending(false)
     }
   }
 
-  if (!isSupported)
-    return <p className="text-sm text-muted-foreground">Push notifications are not supported in this browser.</p>
+  if (!isSupported) return <p className="text-sm text-muted-foreground">{t("notSupported")}</p>
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Push notifications</CardTitle>
-        <CardDescription>Receive updates from CSK Hub, even when the app is not open.</CardDescription>
+        <CardTitle>{t("settingsTitle")}</CardTitle>
+        <CardDescription>{t("settingsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {subscription ? (
           <>
-            <p className="text-sm text-muted-foreground">Push notifications are enabled on this device.</p>
+            <p className="text-sm text-muted-foreground">{t("enabled")}</p>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={unsubscribeFromPush} disabled={isPending}>
-                {isPending ? "Saving..." : "Disable notifications"}
+                {isPending ? t("saving") : t("disable")}
               </Button>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
-                placeholder="Enter a test message"
+                placeholder={t("testMessagePlaceholder")}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
                 disabled={isPending}
               />
               <Button type="button" onClick={sendTest} disabled={isPending}>
-                {isPending ? "Sending..." : "Send test"}
+                {isPending ? t("sending") : t("sendTest")}
               </Button>
             </div>
           </>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">Push notifications are disabled on this device.</p>
+            <p className="text-sm text-muted-foreground">{t("disabled")}</p>
             <Button type="button" onClick={subscribeToPush} className="w-fit" disabled={isPending}>
               {isPending ? <Spinner aria-hidden="true" /> : null}
-              {isPending ? "Enabling..." : "Enable notifications"}
+              {isPending ? t("enabling") : t("enable")}
             </Button>
           </>
         )}

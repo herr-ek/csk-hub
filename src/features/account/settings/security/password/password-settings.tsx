@@ -4,6 +4,7 @@ import { type AnyFieldApi, useForm } from "@tanstack/react-form"
 import { useState } from "react"
 import type z from "zod"
 import { authClient } from "@/core/auth/auth-client"
+import { useTranslations } from "@/core/i18n/translations"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
@@ -13,6 +14,7 @@ import { Input } from "@/shared/ui/base/input"
 import { changePasswordSchema } from "./schemas"
 
 export function PasswordSettings() {
+  const t = useTranslations("AccountSettings")
   const [formError, setFormError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -27,12 +29,12 @@ export function PasswordSettings() {
     })
 
     if (result.error) {
-      setFormError(result.error.message ?? "Unable to change your password.")
+      setFormError(result.error.message ?? t("passwordChangeFailed"))
       return
     }
 
     form.reset()
-    setMessage("Password changed. Other sessions were signed out.")
+    setMessage(t("passwordChanged"))
   }
 
   const form = useForm({
@@ -50,8 +52,8 @@ export function PasswordSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Password</CardTitle>
-        <CardDescription>Change your password and sign out other sessions.</CardDescription>
+        <CardTitle>{t("passwordTitle")}</CardTitle>
+        <CardDescription>{t("passwordDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -64,13 +66,13 @@ export function PasswordSettings() {
         >
           <FieldGroup>
             <form.Field name="currentPassword">
-              {(field) => <PasswordField field={field} label="Current password" autoComplete="current-password" />}
+              {(field) => <PasswordField field={field} label={t("currentPassword")} autoComplete="current-password" />}
             </form.Field>
             <form.Field name="newPassword">
               {(field) => (
                 <PasswordField
                   field={field}
-                  label="New password"
+                  label={t("newPassword")}
                   autoComplete="new-password"
                   minLength={passwordPolicy.minPasswordLength}
                 />
@@ -80,7 +82,7 @@ export function PasswordSettings() {
               {(field) => (
                 <PasswordField
                   field={field}
-                  label="Confirm new password"
+                  label={t("confirmNewPassword")}
                   autoComplete="new-password"
                   minLength={passwordPolicy.minPasswordLength}
                 />
@@ -93,7 +95,7 @@ export function PasswordSettings() {
             ) : null}
             <div className="flex items-center gap-3">
               <Button type="submit" disabled={form.state.isSubmitting}>
-                {form.state.isSubmitting ? "Changing..." : "Change password"}
+                {form.state.isSubmitting ? t("changingPassword") : t("changePassword")}
               </Button>
               {message ? (
                 <Alert className="py-2">

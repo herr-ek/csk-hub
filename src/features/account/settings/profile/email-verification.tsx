@@ -2,6 +2,7 @@
 
 import { CircleCheckIcon, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import {
@@ -17,6 +18,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/ui/base/input-ot
 import { sendEmailVerificationOtp, verifyEmailOtp } from "./email-verification-service"
 
 export function EmailVerification({ email, initialVerified }: { email: string; initialVerified: boolean }) {
+  const t = useTranslations("AccountSettings")
   const [verified, setVerified] = useState(initialVerified)
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState("")
@@ -37,10 +39,10 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
         return false
       }
 
-      setMessage(`A verification code was sent to ${email}. It expires in 5 minutes.`)
+      setMessage(t("verificationSent", { email }))
       return true
     } catch {
-      setError("Unable to send a verification code right now. Please try again.")
+      setError(t("sendVerificationFailed"))
       return false
     } finally {
       setIsSending(false)
@@ -68,7 +70,7 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
       setOpen(false)
       setCode("")
     } catch {
-      setError("Unable to verify this code right now. Please try again.")
+      setError(t("verifyCodeFailed"))
     } finally {
       setIsVerifying(false)
     }
@@ -78,7 +80,7 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
     return (
       <div className="flex items-center gap-2">
         <span className="break-all">{email}</span>
-        <CircleCheckIcon className="size-4 shrink-0 text-green-600" aria-label="Email verified" />
+        <CircleCheckIcon className="size-4 shrink-0 text-green-600" aria-label={t("emailVerified")} />
       </div>
     )
   }
@@ -87,11 +89,11 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
     <>
       <div className="flex items-center gap-2">
         <span className="break-all">{email}</span>
-        <TriangleAlertIcon className="size-4 shrink-0 text-yellow-500" aria-label="Email not verified" />
+        <TriangleAlertIcon className="size-4 shrink-0 text-yellow-500" aria-label={t("emailNotVerified")} />
       </div>
       <div className="mt-2">
         <Button type="button" variant="outline" size="sm" onClick={() => void startVerification()} disabled={isSending}>
-          {isSending ? "Sending..." : "Verify"}
+          {isSending ? t("sending") : t("verify")}
         </Button>
       </div>
       <Dialog
@@ -102,12 +104,12 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
       >
         <DialogContent showCloseButton={!isVerifying}>
           <DialogHeader>
-            <DialogTitle>Verify your email</DialogTitle>
-            <DialogDescription>Enter the six-digit code sent to {email}.</DialogDescription>
+            <DialogTitle>{t("verifyEmailTitle")}</DialogTitle>
+            <DialogDescription>{t("verifyEmailDescription", { email })}</DialogDescription>
           </DialogHeader>
           <form onSubmit={verify}>
             <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="email-verification-code">Verification code</FieldLabel>
+              <FieldLabel htmlFor="email-verification-code">{t("verificationCode")}</FieldLabel>
               <div className="flex justify-center">
                 <InputOTP
                   id="email-verification-code"
@@ -140,10 +142,10 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
                 onClick={() => void sendCode()}
                 disabled={isSending || isVerifying}
               >
-                {isSending ? "Sending..." : "Resend code"}
+                {isSending ? t("sending") : t("resendCode")}
               </Button>
               <Button type="submit" disabled={code.length !== 6 || isVerifying}>
-                {isVerifying ? "Verifying..." : "Verify email"}
+                {isVerifying ? t("verifying") : t("verifyEmail")}
               </Button>
             </DialogFooter>
           </form>

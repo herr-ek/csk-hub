@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Checkbox } from "@/shared/ui/base/checkbox"
@@ -8,19 +9,19 @@ import { Input } from "@/shared/ui/base/input"
 import type { TwoFactorMethod } from "./service"
 import { useTwoFactorForm } from "./use-two-factor-form"
 
-const methodDescription: Record<TwoFactorMethod, string> = {
-  totp: "Enter the code from your authenticator app.",
-  otp: "Enter the code sent to your email.",
-  backup: "Enter one of your unused recovery codes."
-}
-
 export function TwoFactorForm() {
+  const t = useTranslations("Public.twoFactor")
   const state = useTwoFactorForm()
+  const methodDescription: Record<TwoFactorMethod, string> = {
+    totp: t("totpDescription"),
+    otp: t("otpDescription"),
+    backup: t("backupDescription")
+  }
 
   if (state.availableMethods.length === 0) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>No supported two-factor method is available.</AlertDescription>
+        <AlertDescription>{t("noMethod")}</AlertDescription>
       </Alert>
     )
   }
@@ -35,7 +36,11 @@ export function TwoFactorForm() {
             variant={state.method === availableMethod ? "default" : "outline"}
             onClick={() => state.selectMethod(availableMethod)}
           >
-            {availableMethod === "totp" ? "Authenticator app" : availableMethod === "otp" ? "Email" : "Recovery code"}
+            {availableMethod === "totp"
+              ? t("authenticator")
+              : availableMethod === "otp"
+                ? t("email")
+                : t("recoveryCode")}
           </Button>
         ))}
       </div>
@@ -44,11 +49,11 @@ export function TwoFactorForm() {
           <p className="text-sm text-muted-foreground">{methodDescription[state.method]}</p>
           {state.method === "otp" ? (
             <Button type="button" variant="outline" onClick={() => void state.sendEmailCode()} disabled={state.pending}>
-              {state.pending ? "Sending..." : "Send email code"}
+              {state.pending ? t("sending") : t("sendEmailCode")}
             </Button>
           ) : null}
           <Field>
-            <FieldLabel htmlFor="two-factor-code">Security code</FieldLabel>
+            <FieldLabel htmlFor="two-factor-code">{t("securityCode")}</FieldLabel>
             <Input
               id="two-factor-code"
               inputMode={state.method === "backup" ? "text" : "numeric"}
@@ -62,11 +67,11 @@ export function TwoFactorForm() {
           <Field orientation="horizontal">
             <Checkbox id="trust-device" checked={state.trustDevice} onCheckedChange={state.setTrustDevice} />
             <FieldLabel htmlFor="trust-device" className="font-normal">
-              Trust this device for 30 days
+              {t("trustDevice")}
             </FieldLabel>
           </Field>
           <Button type="submit" disabled={state.pending}>
-            {state.pending ? "Verifying..." : "Verify"}
+            {state.pending ? t("verifying") : t("verify")}
           </Button>
           {state.message ? (
             <Alert>

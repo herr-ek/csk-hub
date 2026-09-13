@@ -43,8 +43,22 @@ Use `src/core` for infrastructure and app shell modules:
 - `src/core/auth`: Better Auth setup, server/client auth objects, plugins, cookie integration, and auth infrastructure tests.
 - `src/core/db`: database client and schemas.
 - `src/core/email`: email delivery adapters.
+- `src/core/i18n`: locale definitions, locale-cookie handling, next-intl routing/request configuration, and translation loading. See `src/core/i18n/README.md` before adding translated UI.
+- `src/core/preferences`: the application-wide user-preferences contract, including storage, runtime validation, backward-compatible defaults, and atomic partial updates used by app-shell and feature modules.
 
 Do not promote code to shared space just because two files currently look similar. Promote only when the interface is stable and the shared module improves locality.
+
+### Internationalization
+
+CSK Hub uses `next-intl` with cookie-selected locales and internal `[locale]` routes. The public URL never contains a locale prefix; `src/proxy.ts` applies the rewrite and the selected locale is a root parameter for rendering.
+
+- `src/core/i18n/locales.ts` is the single source of truth for supported locales, their display names, and the default locale. Do not duplicate the locale list or default in features, routes, schemas, or UI.
+- Translation catalogs live at the repository root in `messages/<locale>.json`, not in `src`. Import them through `@messages/*`; the `@messages` alias deliberately marks these as application-wide content assets.
+- Keep one catalog per locale. Organize keys by durable feature or screen namespace inside the JSON, such as `Public.login` or `AccountSettings`; do not create a separate catalog file for every feature.
+- Add every user-facing string—including headings, controls, empty states, dialogs, metadata, and validation/error copy displayed to a member—to every supported catalog in the same change. Biome enforces `style/noJsxLiterals` as an **error** (except in `src/shared/ui/base/**`); it must not be treated as a warning. Use it as the migration inventory for this work.
+- Preserve ICU placeholders and plural/select logic consistently across locales. Prefer parameterized messages to string concatenation.
+- Browser code must not write `NEXT_LOCALE` directly. Use the locale-cookie functions in `src/core/i18n`; the proxy, next-intl routing, public selector, and member settings share this one contract.
+- Route modules remain thin. They select the translation namespace with `getTranslations("Namespace")` and compose feature UI; they do not load or parse catalog files directly, await `[locale]` route params, or pass a locale override to next-intl. `src/core/i18n/request.ts` resolves the root parameter centrally so Cache Components can retain a static shell.
 
 ### Workflow-local structure
 
@@ -109,6 +123,14 @@ Each read function should serve one caller or one coherent workflow and return a
 Focused reads improve locality, make data dependencies explicit, reduce accidental over-fetching, keep return types understandable, and give each workflow a stable testable seam. Avoid a single query function or return type that combines the needs of collection, detail, hierarchy, and other unrelated screens.
 
 Server Components are the default. Use Client Components only for interaction, browser APIs, optimistic state, or controlled UI state. Put `"use client"` as low in the tree as practical.
+
+### Server-only modules
+
+Add `import "server-only"` to modules that must never enter a client bundle, including database access, private environment variables, filesystem access, privileged server SDKs, and data-access operations that expose sensitive records. Put the guard on the leaf module that contains the server-only behavior so a deep import cannot bypass it.
+
+A public entrypoint may also import `server-only` when the entire module is deliberately a server-side capability. Do not re-export otherwise universal schemas, types, constants, or pure validation through that entrypoint. Give universal code a separate import path so Client Components can use it without crossing a server-only boundary.
+
+Do not add `server-only` to universal modules merely because their current callers happen to run on the server. Files marked with `"use server"` are already compiled in the server layer; they may additionally import `server-only`, but do not need it solely to establish that boundary. Keep Server Actions thin and delegate database access to a guarded server-only data-access module.
 
 ## Reuse And Duplication
 
