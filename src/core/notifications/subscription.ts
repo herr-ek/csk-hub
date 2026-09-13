@@ -7,7 +7,7 @@ import { pushSubscription } from "@/core/db/schema/notifications"
 import type { NotificationSubscription } from "./types"
 
 /**
- * Stores a Member's browser subscription by endpoint, reactivating and refreshing
+ * Stores a User's browser subscription by endpoint, reactivating and refreshing
  * lifecycle metadata when that endpoint already exists.
  */
 export async function subscribe(userId: string, subscription: NotificationSubscription) {
@@ -34,7 +34,7 @@ export async function subscribe(userId: string, subscription: NotificationSubscr
     .onConflictDoUpdate({ target: pushSubscription.endpoint, set: values })
 }
 
-/** Removes a browser subscription only when it belongs to the specified Member. */
+/** Removes a browser subscription only when it belongs to the specified User. */
 export async function unsubscribe(userId: string, endpoint: string) {
   await db
     .delete(pushSubscription)

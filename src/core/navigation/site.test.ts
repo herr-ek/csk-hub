@@ -11,7 +11,7 @@ describe("site navigation", () => {
   })
 
   test("sends admins with several roles to the admin area", () => {
-    expect(getPostLoginPath("member,admin")).toBe("/admin")
+    expect(getPostLoginPath("user,admin")).toBe("/admin")
   })
 
   test("preserves a safe destination through the two-factor step", () => {

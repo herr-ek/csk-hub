@@ -2,13 +2,13 @@ import { app } from "@/core/config/app"
 import { getTranslations } from "@/core/i18n/server"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
-import { AddMemberDialog } from "./add/add-member-dialog"
-import { ImportMembersDialog } from "./import/import-members-dialog"
-import { MemberList } from "./member-list"
-import { listMembers } from "./service"
+import { AddUserDialog } from "./add/add-user-dialog"
+import { ImportUsersDialog } from "./import/import-users-dialog"
+import { listUsers } from "./service"
+import { UserList } from "./user-list"
 
-export async function MembersScreen() {
-  const members = await listMembers()
+export async function UsersScreen() {
+  const users = await listUsers()
   const t = await getTranslations("Members")
 
   return (
@@ -20,18 +20,18 @@ export async function MembersScreen() {
             <p className="mt-1 text-sm text-muted-foreground">{t("description", { appName: app.name })}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <AddMemberDialog />
-            <ImportMembersDialog />
+            <AddUserDialog />
+            <ImportUsersDialog />
           </div>
         </div>
       </div>
 
-      <MemberList members={members} />
+      <UserList users={users} />
     </main>
   )
 }
 
-export async function MembersScreenSkeleton() {
+export async function UsersScreenSkeleton() {
   const t = await getTranslations("Members")
   const common = await getTranslations("Common")
   return (

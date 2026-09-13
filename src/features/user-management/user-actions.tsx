@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState, useTransition } from "react"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
-import { ADMIN_ROLE, hasAdminRole, MEMBER_ROLE } from "@/shared/roles"
+import { ADMIN_ROLE, hasAdminRole, USER_ROLE } from "@/shared/roles"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,16 +27,16 @@ import {
 import { Input } from "@/shared/ui/base/input"
 import { toast } from "@/shared/ui/base/toast"
 import {
-  activateMember,
-  changeMemberRole,
-  deactivateMember,
-  eraseMember,
-  impersonateMember,
-  type MemberCommandState,
-  resendInvitation
+  activateUser,
+  changeUserRole,
+  deactivateUser,
+  eraseUser,
+  impersonateUser,
+  resendInvitation,
+  type UserCommandState
 } from "./actions"
 
-type MemberAction = "activate" | "deactivate" | "delete" | "invite" | "role"
+type UserAction = "activate" | "deactivate" | "delete" | "invite" | "role"
 const destructiveMenuItemClassName =
   "!text-destructive hover:!bg-destructive/20 focus:!bg-destructive/20 data-highlighted:!bg-destructive/20 focus:!text-destructive"
 const activateButtonClassName =
@@ -51,13 +51,13 @@ type DialogCopy = {
   submitClassName?: string
 }
 
-type MemberCommand = (state: MemberCommandState, formData: FormData) => Promise<MemberCommandState>
-type MemberActionConfig = DialogCopy & {
-  command: MemberCommand
-  success: (memberName: string) => { title: string; description: string }
+type UserCommand = (state: UserCommandState, formData: FormData) => Promise<UserCommandState>
+type UserActionConfig = DialogCopy & {
+  command: UserCommand
+  success: (userName: string) => { title: string; description: string }
 }
 
-function getMemberActionConfig(t: ReturnType<typeof useTranslations>): Record<MemberAction, MemberActionConfig> {
+function getUserActionConfig(t: ReturnType<typeof useTranslations>): Record<UserAction, UserActionConfig> {
   return {
     activate: {
       title: t("activate"),
@@ -66,8 +66,11 @@ function getMemberActionConfig(t: ReturnType<typeof useTranslations>): Record<Me
       submitVariant: "default",
       requiresConfirmation: false,
       submitClassName: activateButtonClassName,
-      command: activateMember,
-      success: (memberName) => ({ title: t("memberActivated"), description: t("memberCanSignIn", { memberName }) })
+      command: activateUser,
+      success: (userName) => ({
+        title: t("memberActivated"),
+        description: t("memberCanSignIn", { memberName: userName })
+      })
     },
     deactivate: {
       title: t("deactivate"),
@@ -75,10 +78,10 @@ function getMemberActionConfig(t: ReturnType<typeof useTranslations>): Record<Me
       submitLabel: t("deactivate"),
       submitVariant: "destructive",
       requiresConfirmation: false,
-      command: deactivateMember,
-      success: (memberName) => ({
+      command: deactivateUser,
+      success: (userName) => ({
         title: t("memberDeactivated"),
-        description: t("memberNoLongerHasAccess", { memberName })
+        description: t("memberNoLongerHasAccess", { memberName: userName })
       })
     },
     delete: {
@@ -87,10 +90,10 @@ function getMemberActionConfig(t: ReturnType<typeof useTranslations>): Record<Me
       submitLabel: t("delete"),
       submitVariant: "destructive",
       requiresConfirmation: true,
-      command: eraseMember,
-      success: (memberName) => ({
+      command: eraseUser,
+      success: (userName) => ({
         title: t("memberDeleted"),
-        description: t("memberPermanentlyDeleted", { memberName })
+        description: t("memberPermanentlyDeleted", { memberName: userName })
       })
     },
     invite: {
@@ -100,9 +103,9 @@ function getMemberActionConfig(t: ReturnType<typeof useTranslations>): Record<Me
       submitVariant: "default",
       requiresConfirmation: false,
       command: resendInvitation,
-      success: (memberName) => ({
+      success: (userName) => ({
         title: t("invitationSent"),
-        description: t("inviteSentDescription", { email: memberName })
+        description: t("inviteSentDescription", { email: userName })
       })
     },
     role: {
@@ -111,35 +114,38 @@ function getMemberActionConfig(t: ReturnType<typeof useTranslations>): Record<Me
       submitLabel: t("saveRoles"),
       submitVariant: "default",
       requiresConfirmation: false,
-      command: changeMemberRole,
-      success: (memberName) => ({ title: t("roleUpdated"), description: t("roleUpdatedDescription", { memberName }) })
+      command: changeUserRole,
+      success: (userName) => ({
+        title: t("roleUpdated"),
+        description: t("roleUpdatedDescription", { memberName: userName })
+      })
     }
   }
 }
 
-export function MemberActions({
+export function UserActions({
   userId,
-  memberName,
+  userName,
   inactive,
   hasPassword,
   role
 }: {
   userId: string
-  memberName: string
+  userName: string
   inactive: boolean
   hasPassword: boolean
   role: string
 }) {
   const t = useTranslations("Members")
   const common = useTranslations("Common")
-  const memberActionConfig = getMemberActionConfig(t)
-  const [state, setState] = useState<MemberCommandState>({ status: "idle" })
+  const userActionConfig = getUserActionConfig(t)
+  const [state, setState] = useState<UserCommandState>({ status: "idle" })
   const [pending, startTransition] = useTransition()
-  const [dialogAction, setDialogAction] = useState<MemberAction | null>(null)
+  const [dialogAction, setDialogAction] = useState<UserAction | null>(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
   const [isAdmin, setIsAdmin] = useState(() => hasAdminRole(role))
-  const requiredDeleteConfirmation = `delete ${memberName}`
-  const formId = `member-action-${userId}`
+  const requiredDeleteConfirmation = `delete ${userName}`
+  const formId = `user-action-${userId}`
 
   const closeDialog = useCallback(() => {
     setDialogAction(null)
@@ -149,7 +155,7 @@ export function MemberActions({
   useEffect(() => {
     if (state.status === "success") {
       closeDialog()
-      const { title, description } = memberActionConfig[state.action].success(memberName)
+      const { title, description } = userActionConfig[state.action].success(userName)
 
       toast.add({
         type: "success",
@@ -162,19 +168,19 @@ export function MemberActions({
       toast.add({ type: "error", title: t("memberActionFailed"), description: state.error })
       setState({ status: "idle" })
     }
-  }, [closeDialog, memberActionConfig, memberName, state, t])
+  }, [closeDialog, userActionConfig, userName, state, t])
 
-  const dialogCopy = memberActionConfig[dialogAction ?? "activate"]
+  const dialogCopy = userActionConfig[dialogAction ?? "activate"]
 
   function submit(formData: FormData) {
     if (!dialogAction) return
-    const { command } = memberActionConfig[dialogAction]
+    const { command } = userActionConfig[dialogAction]
     startTransition(() => void command({ status: "idle" }, formData).then(setState))
   }
 
   async function impersonate() {
     try {
-      const result = await impersonateMember(userId)
+      const result = await impersonateUser(userId)
       if (result.status === "error") {
         toast.add({
           type: "error",
@@ -194,13 +200,13 @@ export function MemberActions({
       <form id={formId} action={submit}>
         <input type="hidden" name="userId" value={userId} />
         <input type="hidden" name="action" value={dialogAction ?? "deactivate"} />
-        <input type="hidden" name="roles" value={MEMBER_ROLE} />
+        <input type="hidden" name="roles" value={USER_ROLE} />
         {isAdmin ? <input type="hidden" name="roles" value={ADMIN_ROLE} /> : null}
       </form>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actionsFor", { memberName })}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actionsFor", { memberName: userName })}>
               <MoreHorizontalIcon aria-hidden="true" />
             </Button>
           }
@@ -247,7 +253,7 @@ export function MemberActions({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("dialogTitle", { action: dialogCopy.title, memberName })}</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialogTitle", { action: dialogCopy.title, memberName: userName })}</AlertDialogTitle>
             <AlertDialogDescription>{dialogCopy.description}</AlertDialogDescription>
           </AlertDialogHeader>
           {dialogCopy.requiresConfirmation ? (

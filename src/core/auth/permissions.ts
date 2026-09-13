@@ -1,9 +1,9 @@
 import { createAccessControl } from "better-auth/plugins/access"
 import { defaultRoles, defaultStatements } from "better-auth/plugins/admin/access"
-import { type AccessRole, ADMIN_ROLE, MEMBER_ROLE } from "@/shared/roles"
+import { type AccessRole, ADMIN_ROLE, USER_ROLE } from "@/shared/roles"
 
 export type { AccessRole }
-export { ADMIN_ROLE, MEMBER_ROLE }
+export { ADMIN_ROLE, USER_ROLE }
 
 // RESOURCES AND ACTIONS
 
@@ -34,7 +34,7 @@ const accessControl = createAccessControl(statements)
  * never a role check bolted onto a feature.
  */
 export const accessRoles = {
-  [MEMBER_ROLE]: accessControl.newRole({
+  [USER_ROLE]: accessControl.newRole({
     ...defaultRoles.user.statements,
     post: ["read"]
   }),
@@ -44,12 +44,11 @@ export const accessRoles = {
   })
 } as const
 
-export const DEFAULT_ROLE: AccessRole = MEMBER_ROLE
+export const DEFAULT_ROLE: AccessRole = USER_ROLE
 
 export const adminPluginOptions = {
   ac: accessControl,
   roles: accessRoles,
-  defaultRole: DEFAULT_ROLE,
   adminRoles: ADMIN_ROLE
 } as const
 

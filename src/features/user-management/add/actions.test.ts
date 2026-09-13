@@ -14,9 +14,9 @@ mock.module("@/core/logging", () => ({ logger: { error: loggerError, warn: logge
 mock.module("next/headers", () => ({ headers: requestHeaders }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
-import { addMember } from "./actions"
+import { addUser } from "./actions"
 
-function memberFormData() {
+function userFormData() {
   const formData = new FormData()
   formData.set("name", "Ada Lovelace")
   formData.set("email", "ada@example.com")
@@ -35,11 +35,11 @@ beforeEach(() => {
   loggerWarn.mockClear()
 })
 
-describe("add member", () => {
-  test("reports a created member when invite delivery fails", async () => {
+describe("add user", () => {
+  test("reports a created user when invite delivery fails", async () => {
     signInMagicLink.mockRejectedValue(new Error("smtp unavailable"))
 
-    await expect(addMember({ status: "idle" }, memberFormData())).resolves.toMatchObject({
+    await expect(addUser({ status: "idle" }, userFormData())).resolves.toMatchObject({
       status: "email-failed",
       name: "Ada Lovelace",
       email: "ada@example.com"
@@ -49,12 +49,12 @@ describe("add member", () => {
     expect(revalidatePath).toHaveBeenCalledTimes(1)
   })
 
-  test("does not claim that a member was created when creation fails", async () => {
+  test("does not claim that a user was created when creation fails", async () => {
     createUser.mockRejectedValue({ code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" })
 
-    await expect(addMember({ status: "idle" }, memberFormData())).resolves.toEqual({
+    await expect(addUser({ status: "idle" }, userFormData())).resolves.toEqual({
       status: "error",
-      error: "A member with that email already exists."
+      error: "A user with that email already exists."
     })
 
     expect(signInMagicLink).not.toHaveBeenCalled()

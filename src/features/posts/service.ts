@@ -18,7 +18,7 @@ export type PublishedPost = NewsFeedEntry & { body: string }
 
 const postIdSchema = z.uuid()
 
-/** The whole feed, newest first. Every signed-in Member sees the same one. */
+/** The whole feed, newest first. Every signed-in User sees the same one. */
 export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
   const rows = await db
     .select({

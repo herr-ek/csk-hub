@@ -59,7 +59,7 @@ async function AdminResources({ resources }: { resources: AdminResource[] }) {
 export default async function AdminRoot() {
   const t = await getTranslations("Admin")
   const resources = [
-    { href: ROUTES.adminMembers, title: t("members"), description: t("membersDescription"), icon: User },
+    { href: ROUTES.adminUsers, title: t("members"), description: t("membersDescription"), icon: User },
     {
       href: ROUTES.adminNotifications,
       title: t("notifications"),

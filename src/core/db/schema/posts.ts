@@ -9,9 +9,9 @@ export const post = pgTable(
     // Plain text, written in a textarea and shown as written. A richer format is a
     // later decision; nothing here presumes one.
     body: text("body").notNull(),
-    // A Post outlives its author. Erasing a Member drops the attribution and leaves the
+    // A Post outlives its author. Erasing a User drops the attribution and leaves the
     // announcement standing: the News feed is the record of what the choir was told, not
-    // part of the erased Member's own history. Null therefore means "author erased", not
+    // part of the erased User's own history. Null therefore means "author erased", not
     // "not written by anyone" — every insert sets it.
     authorId: text("author_id").references(() => user.id, { onDelete: "set null" }),
     // Null until published; drafts are a later issue's job. Stored with a zone so

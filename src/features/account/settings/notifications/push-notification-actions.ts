@@ -5,7 +5,7 @@ import { auth } from "@/core/auth"
 import { getTranslations } from "@/core/i18n/server"
 import { type NotificationSubscription, sendToUser, subscribe, unsubscribe } from "@/core/notifications"
 
-async function requireMemberId() {
+async function requireUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) {
     const t = await getTranslations("PushNotifications")
@@ -14,16 +14,16 @@ async function requireMemberId() {
   return session.user.id
 }
 
-export async function subscribeMemberToPush(subscription: NotificationSubscription) {
-  await subscribe(await requireMemberId(), subscription)
+export async function subscribeUserToPush(subscription: NotificationSubscription) {
+  await subscribe(await requireUserId(), subscription)
   return { success: true }
 }
 
-export async function unsubscribeMemberFromPush(endpoint: string) {
-  await unsubscribe(await requireMemberId(), endpoint)
+export async function unsubscribeUserFromPush(endpoint: string) {
+  await unsubscribe(await requireUserId(), endpoint)
   return { success: true }
 }
 
 export async function sendPushNotificationTest(message: string) {
-  return sendToUser(await requireMemberId(), message)
+  return sendToUser(await requireUserId(), message)
 }

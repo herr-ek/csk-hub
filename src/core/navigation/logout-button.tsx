@@ -15,7 +15,7 @@ export function LogoutButton({ isImpersonating = false }: { isImpersonating?: bo
     setIsPending(true)
     try {
       const result = isImpersonating ? await authClient.admin.stopImpersonating() : await authClient.signOut()
-      if (!result.error) window.location.assign(isImpersonating ? ROUTES.adminMembers : ROUTES.login)
+      if (!result.error) window.location.assign(isImpersonating ? ROUTES.adminUsers : ROUTES.login)
     } finally {
       setIsPending(false)
     }

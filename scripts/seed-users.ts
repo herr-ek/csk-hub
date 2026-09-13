@@ -7,22 +7,22 @@ const password = "password"
 
 const randomItem = <T>(items: readonly T[]) => items[Math.floor(Math.random() * items.length)]
 
-const members = Array.from({ length: 10 }, () => {
+const users = Array.from({ length: 10 }, () => {
   const name = `${randomItem(firstNames)} ${randomItem(lastNames)}`
   const identifier = crypto.randomUUID().slice(0, 8)
 
-  return { email: `member-${identifier}@example.com`, name }
+  return { email: `user-${identifier}@example.com`, name }
 })
 
-for (const member of members) {
+for (const user of users) {
   await auth.api.createUser({
     body: {
-      ...member,
+      ...user,
       password,
-      role: "member"
+      role: "user"
     }
   })
 }
 
-console.log("Created 10 members:")
-for (const member of members) console.log(`${member.name} <${member.email}> (password: ${password})`)
+console.log("Created 10 users:")
+for (const user of users) console.log(`${user.name} <${user.email}> (password: ${password})`)

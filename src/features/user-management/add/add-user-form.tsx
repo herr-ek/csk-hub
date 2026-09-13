@@ -7,12 +7,12 @@ import { DialogClose } from "@/shared/ui/base/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { toast } from "@/shared/ui/base/toast"
-import { type AddMemberState, addMember } from "./actions"
+import { type AddUserState, addUser } from "./actions"
 
-export function AddMemberForm() {
+export function AddUserForm() {
   const t = useTranslations("Members")
   const common = useTranslations("Common")
-  const [state, action, pending] = useActionState<AddMemberState, FormData>(addMember, { status: "idle" })
+  const [state, action, pending] = useActionState<AddUserState, FormData>(addUser, { status: "idle" })
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
@@ -38,12 +38,12 @@ export function AddMemberForm() {
     <form ref={formRef} action={action} className="space-y-6">
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor="member-name">{common("name")}</FieldLabel>
-          <Input id="member-name" name="name" type="text" autoComplete="name" required />
+          <FieldLabel htmlFor="user-name">{common("name")}</FieldLabel>
+          <Input id="user-name" name="name" type="text" autoComplete="name" required />
         </Field>
         <Field>
-          <FieldLabel htmlFor="member-email">{common("email")}</FieldLabel>
-          <Input id="member-email" name="email" type="email" autoComplete="email" required />
+          <FieldLabel htmlFor="user-email">{common("email")}</FieldLabel>
+          <Input id="user-email" name="email" type="email" autoComplete="email" required />
         </Field>
         <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
       </FieldGroup>

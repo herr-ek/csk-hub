@@ -11,19 +11,19 @@ type MockSignInResponse = {
 
 const signInEmail = mock(
   async (): Promise<MockSignInResponse> => ({
-    data: { user: { id: "user-member", role: "user" } },
+    data: { user: { id: "user-1", role: "user" } },
     error: null
   })
 )
 const signInUsername = mock(
   async (): Promise<MockSignInResponse> => ({
-    data: { user: { id: "user-member", role: "user" } },
+    data: { user: { id: "user-1", role: "user" } },
     error: null
   })
 )
 const signInPasskey = mock(
   async (): Promise<MockSignInResponse> => ({
-    data: { user: { id: "user-member", role: "user" } },
+    data: { user: { id: "user-1", role: "user" } },
     error: null
   })
 )
@@ -41,53 +41,53 @@ beforeEach(() => {
 
 describe("login service", () => {
   test("signs in with a username when the identifier is not an email", async () => {
-    signInUsername.mockResolvedValue({ data: { user: { id: "user-member", role: "user" } }, error: null })
+    signInUsername.mockResolvedValue({ data: { user: { id: "user-1", role: "user" } }, error: null })
 
     await expect(
       signInWithIdentifier({
-        identifier: "member_name",
+        identifier: "user_name",
         password: "correct horse battery staple",
         rememberMe: true
       })
     ).resolves.toEqual({ success: true, role: "user" })
 
     expect(signInUsername).toHaveBeenCalledWith({
-      username: "member_name",
+      username: "user_name",
       password: "correct horse battery staple",
       rememberMe: true
     })
   })
 
   test("signs in with an email when the identifier contains an at sign", async () => {
-    signInEmail.mockResolvedValue({ data: { user: { id: "user-member", role: "user" } }, error: null })
+    signInEmail.mockResolvedValue({ data: { user: { id: "user-1", role: "user" } }, error: null })
 
     await expect(
       signInWithIdentifier({
-        identifier: "member@example.com",
+        identifier: "user@example.com",
         password: "correct horse battery staple",
         rememberMe: false
       })
     ).resolves.toEqual({ success: true, role: "user" })
 
     expect(signInEmail).toHaveBeenCalledWith({
-      email: "member@example.com",
+      email: "user@example.com",
       password: "correct horse battery staple",
       rememberMe: false
     })
   })
 
-  test("returns the member role after sign-in", async () => {
-    signInEmail.mockResolvedValue({ data: { user: { id: "user-member", role: "user" } }, error: null })
+  test("returns the user role after sign-in", async () => {
+    signInEmail.mockResolvedValue({ data: { user: { id: "user-1", role: "user" } }, error: null })
     await expect(
       signInWithEmailPassword({
-        email: "member@example.com",
+        email: "user@example.com",
         password: "correct horse battery staple",
         rememberMe: true
       })
     ).resolves.toEqual({ success: true, role: "user" })
 
     expect(signInEmail).toHaveBeenCalledWith({
-      email: "member@example.com",
+      email: "user@example.com",
       password: "correct horse battery staple",
       rememberMe: true
     })
@@ -112,12 +112,12 @@ describe("login service", () => {
 
   test("returns the email sign-in error from the auth client", async () => {
     signInEmail.mockResolvedValue({
-      data: { user: { id: "user-member", role: "user" } },
+      data: { user: { id: "user-1", role: "user" } },
       error: { message: "Invalid email or password." }
     })
     await expect(
       signInWithEmailPassword({
-        email: "member@example.com",
+        email: "user@example.com",
         password: "wrong password",
         rememberMe: false
       })
@@ -129,13 +129,13 @@ describe("login service", () => {
 
   test("returns the username sign-in error from the auth client", async () => {
     signInUsername.mockResolvedValue({
-      data: { user: { id: "user-member", role: "user" } },
+      data: { user: { id: "user-1", role: "user" } },
       error: { message: "Invalid username or password." }
     })
 
     await expect(
       signInWithUsernamePassword({
-        username: "member_name",
+        username: "user_name",
         password: "wrong password",
         rememberMe: false
       })
@@ -150,7 +150,7 @@ describe("login service", () => {
 
     await expect(
       signInWithEmailPassword({
-        email: "member@example.com",
+        email: "user@example.com",
         password: "correct horse battery staple",
         rememberMe: false
       })
@@ -165,7 +165,7 @@ describe("login service", () => {
 
     await expect(
       signInWithUsernamePassword({
-        username: "member_name",
+        username: "user_name",
         password: "correct horse battery staple",
         rememberMe: false
       })
@@ -183,7 +183,7 @@ describe("login service", () => {
 
     await expect(
       signInWithEmailPassword({
-        email: "member@example.com",
+        email: "user@example.com",
         password: "correct horse battery staple",
         rememberMe: false
       })
@@ -202,7 +202,7 @@ describe("login service", () => {
 
     await expect(
       signInWithUsernamePassword({
-        username: "member_name",
+        username: "user_name",
         password: "correct horse battery staple",
         rememberMe: false
       })
@@ -213,8 +213,8 @@ describe("login service", () => {
     })
   })
 
-  test("returns the member role after passkey sign-in", async () => {
-    signInPasskey.mockResolvedValue({ data: { user: { id: "user-member", role: "user" } }, error: null })
+  test("returns the user role after passkey sign-in", async () => {
+    signInPasskey.mockResolvedValue({ data: { user: { id: "user-1", role: "user" } }, error: null })
 
     await expect(signInWithPasskey()).resolves.toEqual({
       success: true,
@@ -226,7 +226,7 @@ describe("login service", () => {
 
   test("returns the passkey error from the auth client", async () => {
     signInPasskey.mockResolvedValue({
-      data: { user: { id: "user-member", role: "user" } },
+      data: { user: { id: "user-1", role: "user" } },
       error: { message: "Passkey not found." }
     })
 

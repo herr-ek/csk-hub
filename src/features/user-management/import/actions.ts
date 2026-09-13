@@ -7,13 +7,13 @@ import { requireAdmin } from "@/core/auth/permissions.server"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { ROUTES } from "@/core/navigation/site"
-import { inviteMembers } from "../invite-member"
+import { inviteUsers } from "../invite-user"
 import {
-  type ImportMemberRow,
-  type ImportMemberSkipped,
+  type ImportUserRow,
+  type ImportUserSkipped,
   MAX_IMPORT_FILE_SIZE_BYTES,
-  MAX_IMPORT_MEMBERS,
-  parseMemberCsv
+  MAX_IMPORT_USERS,
+  parseUserCsv
 } from "./schemas"
 
 const importRowsSchema = z
@@ -21,18 +21,18 @@ const importRowsSchema = z
     z.object({ row: z.number().int().positive(), name: z.string().trim().min(1), email: z.string().trim().email() })
   )
   .min(1)
-  .max(MAX_IMPORT_MEMBERS)
+  .max(MAX_IMPORT_USERS)
 
-export async function findExistingMemberEmails(emails: string[]): Promise<string[]> {
+export async function findExistingUserEmails(emails: string[]): Promise<string[]> {
   await requireAdmin()
   const normalizedEmails = [...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean))]
   if (normalizedEmails.length === 0) return []
 
-  const members = await db.select({ email: user.email }).from(user).where(inArray(user.email, normalizedEmails))
-  return members.map((member) => member.email.toLowerCase())
+  const users = await db.select({ email: user.email }).from(user).where(inArray(user.email, normalizedEmails))
+  return users.map((user) => user.email.toLowerCase())
 }
 
-export type ImportMembersState =
+export type ImportUsersState =
   | { status: "idle" }
   | { status: "error"; error: string }
   | {
@@ -40,14 +40,14 @@ export type ImportMembersState =
       created: Array<{ row: number; name: string; email: string }>
       emailFailed: Array<{ row: number; name: string; email: string }>
       failed: Array<{ row: number; error: string }>
-      skipped: ImportMemberSkipped[]
+      skipped: ImportUserSkipped[]
     }
 
-export async function importMembers(_state: ImportMembersState, formData: FormData): Promise<ImportMembersState> {
+export async function importUsers(_state: ImportUsersState, formData: FormData): Promise<ImportUsersState> {
   await requireAdmin()
-  const submittedRows = formData.get("members")
-  let rows: ImportMemberRow[]
-  let skipped: ImportMemberSkipped[]
+  const submittedRows = formData.get("users")
+  let rows: ImportUserRow[]
+  let skipped: ImportUserSkipped[]
   if (typeof submittedRows === "string") {
     try {
       rows = importRowsSchema.parse(JSON.parse(submittedRows))
@@ -67,7 +67,7 @@ export async function importMembers(_state: ImportMembersState, formData: FormDa
       return { status: "error", error: "The CSV must be 1 MB or smaller." }
     }
 
-    const parsed = parseMemberCsv(await file.text())
+    const parsed = parseUserCsv(await file.text())
     if ("error" in parsed) {
       return { status: "error", error: parsed.error }
     }
@@ -79,22 +79,19 @@ export async function importMembers(_state: ImportMembersState, formData: FormDa
   const failed: Array<{ row: number; error: string }> = []
   const created: Array<{ row: number; name: string; email: string }> = []
   const emailFailed: Array<{ row: number; name: string; email: string }> = []
-  const results = await inviteMembers(rows)
+  const results = await inviteUsers(rows)
   for (const [index, result] of results.entries()) {
-    const member = rows[index]
-    if (result.kind === "sent") created.push({ row: member.row, name: member.name, email: member.email })
-    else if (result.kind === "email-failed")
-      emailFailed.push({ row: member.row, name: member.name, email: member.email })
+    const user = rows[index]
+    if (result.kind === "sent") created.push({ row: user.row, name: user.name, email: user.email })
+    else if (result.kind === "email-failed") emailFailed.push({ row: user.row, name: user.name, email: user.email })
     else
       failed.push({
-        row: member.row,
+        row: user.row,
         error:
-          result.kind === "already-exists"
-            ? "A member with that email already exists."
-            : "Unable to create this member."
+          result.kind === "already-exists" ? "A user with that email already exists." : "Unable to create this user."
       })
   }
 
-  revalidatePath(ROUTES.adminMembers)
+  revalidatePath(ROUTES.adminUsers)
   return { status: "success", created, emailFailed, failed, skipped }
 }

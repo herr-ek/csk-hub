@@ -14,12 +14,12 @@ mock.module("@/core/logging", () => ({ logger: { error: loggerError, warn: logge
 mock.module("next/headers", () => ({ headers: requestHeaders }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
-import { importMembers } from "./actions"
+import { importUsers } from "./actions"
 import { MAX_IMPORT_FILE_SIZE_BYTES } from "./schemas"
 
 function importFormData() {
   const formData = new FormData()
-  formData.set("file", new File(["name,email\nAda Lovelace,ada@example.com"], "members.csv", { type: "text/csv" }))
+  formData.set("file", new File(["name,email\nAda Lovelace,ada@example.com"], "users.csv", { type: "text/csv" }))
   return formData
 }
 
@@ -35,11 +35,11 @@ beforeEach(() => {
   loggerWarn.mockClear()
 })
 
-describe("member import", () => {
-  test("reports members created when invite delivery fails", async () => {
+describe("user import", () => {
+  test("reports users created when invite delivery fails", async () => {
     signInMagicLink.mockRejectedValue(new Error("smtp unavailable"))
 
-    await expect(importMembers({ status: "idle" }, importFormData())).resolves.toEqual({
+    await expect(importUsers({ status: "idle" }, importFormData())).resolves.toEqual({
       status: "success",
       created: [],
       emailFailed: [{ row: 2, name: "Ada Lovelace", email: "ada@example.com" }],
@@ -52,9 +52,9 @@ describe("member import", () => {
 
   test("rejects files larger than the import limit before parsing them", async () => {
     const formData = new FormData()
-    formData.set("file", new File([new Uint8Array(MAX_IMPORT_FILE_SIZE_BYTES + 1)], "members.csv"))
+    formData.set("file", new File([new Uint8Array(MAX_IMPORT_FILE_SIZE_BYTES + 1)], "users.csv"))
 
-    await expect(importMembers({ status: "idle" }, formData)).resolves.toEqual({
+    await expect(importUsers({ status: "idle" }, formData)).resolves.toEqual({
       status: "error",
       error: "The CSV must be 1 MB or smaller."
     })

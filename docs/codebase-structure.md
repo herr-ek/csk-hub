@@ -29,7 +29,7 @@ The source tree uses four top-level areas plus Next.js and tooling-owned excepti
 
 Use `src/features/<feature-name>` for durable product capabilities, not route groups or user roles. For example, `admin` is a surface, not a feature.
 
-Every feature lives under `src/features`; none sit at the `src` root. The grouping is not about the individual feature — the `features` segment says nothing `member-management` does not already say. It is about the root: it keeps the number of top-level areas fixed as the product grows, and it gives features a shared path prefix, which is what makes the rules under Dependency Direction expressible as tests rather than maintained by convention.
+Every feature lives under `src/features`; none sit at the `src` root. The grouping is not about the individual feature — the `features` segment says nothing `user-management` does not already say. It is about the root: it keeps the number of top-level areas fixed as the product grows, and it gives features a shared path prefix, which is what makes the rules under Dependency Direction expressible as tests rather than maintained by convention.
 
 Use `src/shared` only for genuinely cross-feature modules:
 
@@ -87,7 +87,7 @@ Dependencies should point inward toward stable infrastructure and generic helper
 - `src/core` may import other `src/core` modules and `src/shared`, but not `src/features`.
 - Framework convention files, such as `src/proxy.ts`, stay where Next.js expects them and delegate inward when their logic grows.
 
-Prefer public entrypoints at feature and subfeature boundaries. Route files should import screens from entries such as `@/features/member-management`, not from deep implementation files like `@/features/member-management/members-screen`. Inside a feature or subfeature, local imports may target sibling implementation files directly.
+Prefer public entrypoints at feature and subfeature boundaries. Route files should import screens from entries such as `@/features/user-management`, not from deep implementation files like `@/features/user-management/users-screen`. Inside a feature or subfeature, local imports may target sibling implementation files directly.
 
 ## Drizzle Schema
 
