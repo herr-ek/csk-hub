@@ -8,9 +8,9 @@ import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
 import { useLanguageSettings } from "./use-language-settings"
 
-export function LanguageSettings({ initialLocale }: { initialLocale?: string | null }) {
+export function LanguageSettings() {
   const t = useTranslations("AccountSettings")
-  const { changeLocale, error, isPending, locale } = useLanguageSettings(initialLocale)
+  const { changeLocale, error, isPending, locale } = useLanguageSettings()
 
   return (
     <Card>
