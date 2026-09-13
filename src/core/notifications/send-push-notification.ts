@@ -56,13 +56,13 @@ async function sendToSubscriptions(
     : { success: false, error: t("deliveryFailed") }
 }
 
-/** Delivers a message to every active push subscription belonging to one Member. */
+/** Delivers a message to every active push subscription belonging to one User. */
 export async function sendToUser(userId: string, message: string) {
   return sendToUsers([userId], message)
 }
 
 /**
- * Delivers a message to active subscriptions for the selected Members.
+ * Delivers a message to active subscriptions for the selected Users.
  * A successful result means at least one subscription accepted the delivery.
  */
 export async function sendToUsers(userIds: string[], message: string) {

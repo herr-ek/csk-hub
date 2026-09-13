@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
-const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "member-1" }))
-const requireCurrentUserPermission = mock(async () => ({ state: "authenticated" as const, userId: "member-1" }))
+const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "user-1" }))
+const requireCurrentUserPermission = mock(async () => ({ state: "authenticated" as const, userId: "user-1" }))
 
 mock.module("@/core/auth/permissions.server", () => ({ requireAdmin, requireCurrentUserPermission }))
 
 import { getRouteAccessDecision } from "./route-access"
 
-const memberSession = { user: { id: "member-1", role: "member" } }
+const userSession = { user: { id: "user-1", role: "user" } }
 const adminSession = { user: { id: "admin-1", role: "admin" } }
 
 beforeEach(() => {
   requireAdmin.mockReset()
-  requireAdmin.mockResolvedValue({ state: "authenticated", userId: "member-1" })
+  requireAdmin.mockResolvedValue({ state: "authenticated", userId: "user-1" })
   requireCurrentUserPermission.mockReset()
-  requireCurrentUserPermission.mockResolvedValue({ state: "authenticated", userId: "member-1" })
+  requireCurrentUserPermission.mockResolvedValue({ state: "authenticated", userId: "user-1" })
 })
 
 describe("route access", () => {
@@ -24,11 +24,11 @@ describe("route access", () => {
     expect(requireAdmin).not.toHaveBeenCalled()
   })
 
-  test("allows authenticated members to access member routes", async () => {
-    await expect(getRouteAccessDecision("/me", memberSession)).resolves.toEqual({ kind: "allow" })
+  test("allows authenticated users to access user routes", async () => {
+    await expect(getRouteAccessDecision("/me", userSession)).resolves.toEqual({ kind: "allow" })
   })
 
-  test("redirects unauthenticated members to sign in with the requested path", async () => {
+  test("redirects unauthenticated users to sign in with the requested path", async () => {
     await expect(getRouteAccessDecision("/me", null)).resolves.toEqual({
       kind: "redirect",
       location: "/login?returnTo=%2Fme"
@@ -42,21 +42,21 @@ describe("route access", () => {
     })
   })
 
-  test("redirects signed-in members away from authentication entry pages", async () => {
-    await expect(getRouteAccessDecision("/login", memberSession)).resolves.toEqual({ kind: "redirect", location: "/" })
-    await expect(getRouteAccessDecision("/forgot-password", memberSession)).resolves.toEqual({
+  test("redirects signed-in users away from authentication entry pages", async () => {
+    await expect(getRouteAccessDecision("/login", userSession)).resolves.toEqual({ kind: "redirect", location: "/" })
+    await expect(getRouteAccessDecision("/forgot-password", userSession)).resolves.toEqual({
       kind: "redirect",
       location: "/"
     })
-    await expect(getRouteAccessDecision("/activation-failed", memberSession)).resolves.toEqual({
+    await expect(getRouteAccessDecision("/activation-failed", userSession)).resolves.toEqual({
       kind: "redirect",
       location: "/"
     })
-    await expect(getRouteAccessDecision("/two-factor", memberSession)).resolves.toEqual({
+    await expect(getRouteAccessDecision("/two-factor", userSession)).resolves.toEqual({
       kind: "redirect",
       location: "/"
     })
-    await expect(getRouteAccessDecision("/reset-password", memberSession)).resolves.toEqual({
+    await expect(getRouteAccessDecision("/reset-password", userSession)).resolves.toEqual({
       kind: "redirect",
       location: "/"
     })
@@ -67,30 +67,30 @@ describe("route access", () => {
     })
   })
 
-  test("allows signed-in members to use a password reset link", async () => {
+  test("allows signed-in users to use a password reset link", async () => {
     await expect(
-      getRouteAccessDecision("/reset-password", memberSession, "/reset-password?token=valid-token")
+      getRouteAccessDecision("/reset-password", userSession, "/reset-password?token=valid-token")
     ).resolves.toEqual({
       kind: "allow"
     })
   })
 
-  test("forbids members from admin routes when authorization fails", async () => {
+  test("forbids users from admin routes when authorization fails", async () => {
     requireAdmin.mockRejectedValue(new Error("not an admin"))
 
-    await expect(getRouteAccessDecision("/admin/members", memberSession)).resolves.toEqual({ kind: "forbidden" })
-    expect(requireAdmin).toHaveBeenCalledWith(memberSession)
+    await expect(getRouteAccessDecision("/admin/users", userSession)).resolves.toEqual({ kind: "forbidden" })
+    expect(requireAdmin).toHaveBeenCalledWith(userSession)
   })
 
-  test("keeps members without the post:create permission off the compose page", async () => {
+  test("keeps users without the post:create permission off the compose page", async () => {
     requireCurrentUserPermission.mockRejectedValue(new Error("not permitted"))
 
-    await expect(getRouteAccessDecision("/news/new", memberSession)).resolves.toEqual({ kind: "forbidden" })
-    expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "create" }, memberSession)
+    await expect(getRouteAccessDecision("/news/new", userSession)).resolves.toEqual({ kind: "forbidden" })
+    expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "create" }, userSession)
     expect(requireAdmin).not.toHaveBeenCalled()
   })
 
-  test("lets a member holding post:create reach the compose page", async () => {
+  test("lets a user holding post:create reach the compose page", async () => {
     await expect(getRouteAccessDecision("/news/new", adminSession)).resolves.toEqual({ kind: "allow" })
     expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "create" }, adminSession)
   })
@@ -103,13 +103,13 @@ describe("route access", () => {
     expect(requireCurrentUserPermission).not.toHaveBeenCalled()
   })
 
-  test("leaves reading the news feed open to every member", async () => {
-    await expect(getRouteAccessDecision("/news", memberSession)).resolves.toEqual({ kind: "allow" })
+  test("leaves reading the news feed open to every user", async () => {
+    await expect(getRouteAccessDecision("/news", userSession)).resolves.toEqual({ kind: "allow" })
     expect(requireCurrentUserPermission).not.toHaveBeenCalled()
   })
 
-  test("allows authorized members to access admin routes", async () => {
-    await expect(getRouteAccessDecision("/admin/members", adminSession)).resolves.toEqual({ kind: "allow" })
+  test("allows authorized users to access admin routes", async () => {
+    await expect(getRouteAccessDecision("/admin/users", adminSession)).resolves.toEqual({ kind: "allow" })
     expect(requireAdmin).toHaveBeenCalledWith(adminSession)
   })
 })

@@ -4,7 +4,7 @@ import { and, asc, eq, exists, isNotNull } from "drizzle-orm"
 import { db } from "@/core/db"
 import { account, user } from "@/core/db/schema/auth"
 
-export async function listMembers() {
+export async function listUsers() {
   return db
     .select({
       id: user.id,
@@ -26,4 +26,4 @@ export async function listMembers() {
     .orderBy(asc(user.name), asc(user.email))
 }
 
-export type MemberListItem = Awaited<ReturnType<typeof listMembers>>[number]
+export type UserListItem = Awaited<ReturnType<typeof listUsers>>[number]

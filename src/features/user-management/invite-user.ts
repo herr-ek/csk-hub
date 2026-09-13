@@ -4,10 +4,10 @@ import { requireAdmin } from "@/core/auth/permissions.server"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
-import { MEMBER_ROLE } from "@/shared/roles"
+import { USER_ROLE } from "@/shared/roles"
 
-export type InviteMemberInput = { name: string; email: string }
-export type InviteMemberResult =
+export type InviteUserInput = { name: string; email: string }
+export type InviteUserResult =
   | { kind: "sent" }
   | { kind: "email-failed" }
   | { kind: "already-exists" }
@@ -15,33 +15,33 @@ export type InviteMemberResult =
 
 const INVITE_CONCURRENCY = 5
 
-export async function inviteMember(input: InviteMemberInput): Promise<InviteMemberResult> {
+export async function inviteUser(input: InviteUserInput): Promise<InviteUserResult> {
   await requireAdmin()
-  return inviteMemberAsAdmin(input)
+  return inviteUserAsAdmin(input)
 }
 
-export async function inviteMembers(inputs: InviteMemberInput[]): Promise<InviteMemberResult[]> {
+export async function inviteUsers(inputs: InviteUserInput[]): Promise<InviteUserResult[]> {
   await requireAdmin()
-  const results: InviteMemberResult[] = []
+  const results: InviteUserResult[] = []
 
   for (let index = 0; index < inputs.length; index += INVITE_CONCURRENCY) {
-    const batch = await Promise.all(inputs.slice(index, index + INVITE_CONCURRENCY).map(inviteMemberAsAdmin))
+    const batch = await Promise.all(inputs.slice(index, index + INVITE_CONCURRENCY).map(inviteUserAsAdmin))
     results.push(...batch)
   }
 
   return results
 }
 
-async function inviteMemberAsAdmin(input: InviteMemberInput): Promise<InviteMemberResult> {
+async function inviteUserAsAdmin(input: InviteUserInput): Promise<InviteUserResult> {
   try {
     await auth.api.createUser({
       headers: await headers(),
-      body: { name: input.name, email: input.email, role: MEMBER_ROLE }
+      body: { name: input.name, email: input.email, role: USER_ROLE }
     })
   } catch (error) {
     if (getErrorCode(error) === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") return { kind: "already-exists" }
 
-    logger.error("admin.members.create-failed", {
+    logger.error("admin.users.create-failed", {
       errorCode: getErrorCode(error),
       errorName: getErrorName(error),
       status: getErrorStatus(error)
@@ -61,7 +61,7 @@ async function inviteMemberAsAdmin(input: InviteMemberInput): Promise<InviteMemb
     })
     return { kind: "sent" }
   } catch (error) {
-    logger.error("admin.members.invite-dispatch-failed", {
+    logger.error("admin.users.invite-dispatch-failed", {
       email: input.email,
       errorCode: getErrorCode(error),
       errorName: getErrorName(error),

@@ -11,9 +11,9 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/shared/ui/base/dialog"
-import { AddMemberForm } from "./add-member-form"
+import { AddUserForm } from "./add-user-form"
 
-export function AddMemberDialog() {
+export function AddUserDialog() {
   const t = useTranslations("Members")
   const [open, setOpen] = useState(false)
 
@@ -25,7 +25,7 @@ export function AddMemberDialog() {
           <DialogTitle>{t("add")}</DialogTitle>
           <DialogDescription>{t("addDescription")}</DialogDescription>
         </DialogHeader>
-        <AddMemberForm />
+        <AddUserForm />
       </DialogContent>
     </Dialog>
   )

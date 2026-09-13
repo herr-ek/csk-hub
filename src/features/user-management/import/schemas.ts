@@ -1,16 +1,16 @@
 import Papa from "papaparse"
 import type { z } from "zod"
-import { addMemberSchema } from "../add/schemas"
+import { addUserSchema } from "../add/schemas"
 
-export const MAX_IMPORT_MEMBERS = 50
+export const MAX_IMPORT_USERS = 50
 export const MAX_IMPORT_FILE_SIZE_BYTES = 1_000_000
 
-export type ImportMemberRow = z.infer<typeof addMemberSchema> & { row: number }
-export type ImportMemberSkipped = { row: number; name: string; email: string; error: string }
+export type ImportUserRow = z.infer<typeof addUserSchema> & { row: number }
+export type ImportUserSkipped = { row: number; name: string; email: string; error: string }
 
-export function validateImportMember(input: { name: string; email: string }) {
-  const result = addMemberSchema.safeParse(input)
-  if (result.success) return { success: true as const, member: result.data }
+export function validateImportUser(input: { name: string; email: string }) {
+  const result = addUserSchema.safeParse(input)
+  if (result.success) return { success: true as const, user: result.data }
 
   return {
     success: false as const,
@@ -20,9 +20,9 @@ export function validateImportMember(input: { name: string; email: string }) {
   }
 }
 
-export function parseMemberCsv(
+export function parseUserCsv(
   text: string
-): { rows: ImportMemberRow[]; skipped: ImportMemberSkipped[] } | { error: string } {
+): { rows: ImportUserRow[]; skipped: ImportUserSkipped[] } | { error: string } {
   const parsed = Papa.parse<string[]>(text, { skipEmptyLines: "greedy" })
   if (parsed.errors.length > 0) return { error: "The CSV could not be parsed. Please check its quoted values." }
 
@@ -41,16 +41,16 @@ export function parseMemberCsv(
   if (dataRows.length === 0) {
     return { error: "The CSV does not contain any users." }
   }
-  if (dataRows.length > MAX_IMPORT_MEMBERS) {
-    return { error: `You can import up to ${MAX_IMPORT_MEMBERS} users at a time.` }
+  if (dataRows.length > MAX_IMPORT_USERS) {
+    return { error: `You can import up to ${MAX_IMPORT_USERS} users at a time.` }
   }
 
   const emails = new Set<string>()
-  const rows: ImportMemberRow[] = []
-  const skipped: ImportMemberSkipped[] = []
+  const rows: ImportUserRow[] = []
+  const skipped: ImportUserSkipped[] = []
   for (const [index, values] of dataRows.entries()) {
     const rowNumber = index + 2
-    const result = validateImportMember({ name: values[nameIndex] ?? "", email: values[emailIndex] ?? "" })
+    const result = validateImportUser({ name: values[nameIndex] ?? "", email: values[emailIndex] ?? "" })
     if (!result.success) {
       skipped.push({
         row: rowNumber,
@@ -60,17 +60,17 @@ export function parseMemberCsv(
       })
       continue
     }
-    if (emails.has(result.member.email)) {
+    if (emails.has(result.user.email)) {
       skipped.push({
         row: rowNumber,
-        name: result.member.name,
-        email: result.member.email,
+        name: result.user.name,
+        email: result.user.email,
         error: "The email address is repeated in this CSV."
       })
       continue
     }
-    emails.add(result.member.email)
-    rows.push({ ...result.member, row: rowNumber })
+    emails.add(result.user.email)
+    rows.push({ ...result.user, row: rowNumber })
   }
 
   return { rows, skipped }

@@ -65,7 +65,7 @@ describe("publishing a Post", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/news")
   })
 
-  test("refuses a Member without the post:create permission, without writing anything", async () => {
+  test("refuses a User without the post:create permission, without writing anything", async () => {
     requireCurrentUserPermission.mockRejectedValue(new DeniedError())
 
     await expect(publishPost({ status: "idle" }, postFormData())).resolves.toEqual({

@@ -15,17 +15,17 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/s
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
-import { findExistingMemberEmails, type ImportMembersState, importMembers } from "./actions"
-import { type ImportMemberRow, MAX_IMPORT_FILE_SIZE_BYTES, parseMemberCsv, validateImportMember } from "./schemas"
+import { findExistingUserEmails, type ImportUsersState, importUsers } from "./actions"
+import { type ImportUserRow, MAX_IMPORT_FILE_SIZE_BYTES, parseUserCsv, validateImportUser } from "./schemas"
 
-const initialState: ImportMembersState = { status: "idle" }
-type PreviewRow = ImportMemberRow & { discarded: boolean; error?: string }
+const initialState: ImportUsersState = { status: "idle" }
+type PreviewRow = ImportUserRow & { discarded: boolean; error?: string }
 
-export function ImportMembersDialog() {
+export function ImportUsersDialog() {
   const t = useTranslations("Members")
   const common = useTranslations("Common")
   const [open, setOpen] = useState(false)
-  const [state, setState] = useState<ImportMembersState>(initialState)
+  const [state, setState] = useState<ImportUsersState>(initialState)
   const [rows, setRows] = useState<PreviewRow[] | null>(null)
   const [parseError, setParseError] = useState<string>()
   const [fileName, setFileName] = useState("")
@@ -37,12 +37,12 @@ export function ImportMembersDialog() {
     const emails = new Set<string>()
     return rows.map((row) => {
       if (row.discarded) return { ...row, error: undefined }
-      const result = validateImportMember(row)
+      const result = validateImportUser(row)
       if (!result.success) return { ...row, name: result.name, email: result.email, error: result.error }
-      if (existingEmails.has(result.member.email)) return { ...row, ...result.member, error: t("emailExists") }
-      if (emails.has(result.member.email)) return { ...row, ...result.member, error: t("emailRepeated") }
-      emails.add(result.member.email)
-      return { ...row, ...result.member, error: undefined }
+      if (existingEmails.has(result.user.email)) return { ...row, ...result.user, error: t("emailExists") }
+      if (emails.has(result.user.email)) return { ...row, ...result.user, error: t("emailRepeated") }
+      emails.add(result.user.email)
+      return { ...row, ...result.user, error: undefined }
     })
   }
 
@@ -54,10 +54,10 @@ export function ImportMembersDialog() {
     if (!file) return
     if (!file.name.toLowerCase().endsWith(".csv")) return setParseError(t("csvExtensionRequired"))
     if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) return setParseError(t("csvTooLarge"))
-    const parsed = parseMemberCsv(await file.text())
+    const parsed = parseUserCsv(await file.text())
     if ("error" in parsed) return setParseError(parsed.error)
     const sourceRows = [...parsed.rows, ...parsed.skipped].sort((left, right) => left.row - right.row)
-    const existing = new Set(await findExistingMemberEmails(sourceRows.map((row) => row.email)))
+    const existing = new Set(await findExistingUserEmails(sourceRows.map((row) => row.email)))
     setExistingEmails(existing)
     setRows(
       validateRows(
@@ -77,7 +77,7 @@ export function ImportMembersDialog() {
         )
     )
     if (change.email) {
-      void findExistingMemberEmails([change.email])
+      void findExistingUserEmails([change.email])
         .then((matches) => {
           if (matches.length === 0) return
           setExistingEmails((current) => {
@@ -91,7 +91,7 @@ export function ImportMembersDialog() {
   }
 
   function submit(formData: FormData) {
-    startTransition(() => void importMembers(initialState, formData).then(setState))
+    startTransition(() => void importUsers(initialState, formData).then(setState))
   }
 
   function changeOpen(nextOpen: boolean) {
@@ -125,9 +125,9 @@ export function ImportMembersDialog() {
         <form ref={formRef} action={submit} className="space-y-6">
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="member-csv">{t("csvFile")}</FieldLabel>
+              <FieldLabel htmlFor="user-csv">{t("csvFile")}</FieldLabel>
               <Input
-                id="member-csv"
+                id="user-csv"
                 name="file"
                 type="file"
                 accept=".csv,text/csv"
@@ -138,7 +138,7 @@ export function ImportMembersDialog() {
             </Field>
             <FieldError>{error}</FieldError>
           </FieldGroup>
-          {rows ? <input type="hidden" name="members" value={JSON.stringify(readyRows)} /> : null}
+          {rows ? <input type="hidden" name="users" value={JSON.stringify(readyRows)} /> : null}
           {rows ? (
             <div className="space-y-3 text-sm">
               <div>
@@ -172,63 +172,63 @@ export function ImportMembersDialog() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((member) => {
+                    {rows.map((user) => {
                       const result =
                         state.status === "success"
-                          ? state.created.some((item) => item.row === member.row)
+                          ? state.created.some((item) => item.row === user.row)
                             ? { label: t("sent"), className: "text-green-700 dark:text-green-400" }
-                            : state.emailFailed.some((item) => item.row === member.row)
+                            : state.emailFailed.some((item) => item.row === user.row)
                               ? {
                                   label: t("createdInviteNotSent"),
                                   className: "text-yellow-600 dark:text-yellow-400"
                                 }
-                              : state.failed.find((item) => item.row === member.row)
+                              : state.failed.find((item) => item.row === user.row)
                                 ? {
-                                    label: state.failed.find((item) => item.row === member.row)?.error ?? t("failed"),
+                                    label: state.failed.find((item) => item.row === user.row)?.error ?? t("failed"),
                                     className: "text-destructive"
                                   }
                                 : null
                           : null
 
                       return (
-                        <TableRow key={member.row} className={member.discarded ? "opacity-50" : undefined}>
-                          <TableCell>{member.row}</TableCell>
+                        <TableRow key={user.row} className={user.discarded ? "opacity-50" : undefined}>
+                          <TableCell>{user.row}</TableCell>
                           <TableCell>
                             <Input
-                              value={member.name}
-                              disabled={member.discarded || state.status === "success"}
-                              onChange={(event) => updateRow(member.row, { name: event.target.value })}
+                              value={user.name}
+                              disabled={user.discarded || state.status === "success"}
+                              onChange={(event) => updateRow(user.row, { name: event.target.value })}
                             />
                           </TableCell>
                           <TableCell>
                             <Input
-                              value={member.email}
-                              disabled={member.discarded || state.status === "success"}
-                              onChange={(event) => updateRow(member.row, { email: event.target.value })}
+                              value={user.email}
+                              disabled={user.discarded || state.status === "success"}
+                              onChange={(event) => updateRow(user.row, { email: event.target.value })}
                             />
                           </TableCell>
                           <TableCell
                             className={
                               result
                                 ? result.className
-                                : member.error
+                                : user.error
                                   ? "text-destructive"
-                                  : member.discarded
+                                  : user.discarded
                                     ? "text-muted-foreground"
                                     : "text-green-700 dark:text-green-400"
                             }
                           >
-                            {member.discarded ? t("discarded") : (result?.label ?? member.error ?? t("ready"))}
+                            {user.discarded ? t("discarded") : (result?.label ?? user.error ?? t("ready"))}
                           </TableCell>
                           <TableCell className="text-right">
                             {state.status !== "success" ? (
                               <Button
                                 type="button"
                                 size="xs"
-                                variant={member.discarded ? "outline" : "ghost"}
-                                onClick={() => updateRow(member.row, { discarded: !member.discarded })}
+                                variant={user.discarded ? "outline" : "ghost"}
+                                onClick={() => updateRow(user.row, { discarded: !user.discarded })}
                               >
-                                {member.discarded ? t("restore") : t("discard")}
+                                {user.discarded ? t("restore") : t("discard")}
                               </Button>
                             ) : null}
                           </TableCell>

@@ -7,7 +7,7 @@ import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
-import { sendPushNotificationTest, subscribeMemberToPush, unsubscribeMemberFromPush } from "./push-notification-actions"
+import { sendPushNotificationTest, subscribeUserToPush, unsubscribeUserFromPush } from "./push-notification-actions"
 
 function vapidKeyToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
@@ -65,7 +65,7 @@ export function PushNotificationSettings() {
         userVisibleOnly: true,
         applicationServerKey: vapidKeyToUint8Array(vapidPublicKey)
       })
-      await subscribeMemberToPush(JSON.parse(JSON.stringify(nextSubscription)))
+      await subscribeUserToPush(JSON.parse(JSON.stringify(nextSubscription)))
       setSubscription(nextSubscription)
       setStatus(t("enabled"))
     } catch (caught) {
@@ -87,7 +87,7 @@ export function PushNotificationSettings() {
     try {
       const endpoint = subscription.endpoint
       await subscription.unsubscribe()
-      await unsubscribeMemberFromPush(endpoint)
+      await unsubscribeUserFromPush(endpoint)
       setSubscription(null)
       setStatus(t("disabled"))
     } catch {

@@ -4,38 +4,38 @@ import { CheckIcon, TriangleAlertIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { app } from "@/core/config/app"
 import { useFormatter, useTranslations } from "@/core/i18n/translations"
-import { MEMBER_ROLE, parseRoles } from "@/shared/roles"
+import { parseRoles, USER_ROLE } from "@/shared/roles"
 import { Badge } from "@/shared/ui/base/badge"
 import { Input } from "@/shared/ui/base/input"
 import { NativeSelect, NativeSelectOption } from "@/shared/ui/base/native-select"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
-import { MemberActions } from "./member-actions"
-import type { MemberListItem } from "./service"
+import type { UserListItem } from "./service"
+import { UserActions } from "./user-actions"
 
-type MemberStatusFilter = "active" | "inactive" | "all"
+type UserStatusFilter = "active" | "inactive" | "all"
 
-function roleLabel(role: MemberListItem["role"]) {
+function roleLabel(role: UserListItem["role"]) {
   return parseRoles(role)
-    .filter((value) => value !== MEMBER_ROLE)
+    .filter((value) => value !== USER_ROLE)
     .map((value) => `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`)
     .join(", ")
 }
 
-export function MemberList({ members }: { members: MemberListItem[] }) {
+export function UserList({ users }: { users: UserListItem[] }) {
   const t = useTranslations("Members")
   const common = useTranslations("Common")
   const format = useFormatter()
   const [query, setQuery] = useState("")
-  const [status, setStatus] = useState<MemberStatusFilter>("active")
-  const visibleMembers = useMemo(() => {
+  const [status, setStatus] = useState<UserStatusFilter>("active")
+  const visibleUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase()
 
-    return members.filter((member) => {
-      if (status === "active" && member.inactive) return false
-      if (status === "inactive" && !member.inactive) return false
-      return !normalizedQuery || `${member.name} ${member.email}`.toLocaleLowerCase().includes(normalizedQuery)
+    return users.filter((user) => {
+      if (status === "active" && user.inactive) return false
+      if (status === "inactive" && !user.inactive) return false
+      return !normalizedQuery || `${user.name} ${user.email}`.toLocaleLowerCase().includes(normalizedQuery)
     })
-  }, [members, query, status])
+  }, [users, query, status])
 
   return (
     <>
@@ -46,7 +46,7 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
           {t("status")}
-          <NativeSelect value={status} onChange={(event) => setStatus(event.target.value as MemberStatusFilter)}>
+          <NativeSelect value={status} onChange={(event) => setStatus(event.target.value as UserStatusFilter)}>
             <NativeSelectOption value="active">{t("active")}</NativeSelectOption>
             <NativeSelectOption value="inactive">{t("inactive")}</NativeSelectOption>
             <NativeSelectOption value="all">{t("all")}</NativeSelectOption>
@@ -70,24 +70,24 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visibleMembers.length > 0 ? (
-              visibleMembers.map((member) => {
-                const hasPassword = Boolean(member.hasPassword)
+            {visibleUsers.length > 0 ? (
+              visibleUsers.map((user) => {
+                const hasPassword = Boolean(user.hasPassword)
 
                 return (
-                  <TableRow key={member.id}>
+                  <TableRow key={user.id}>
                     <TableCell>
-                      <div className="font-medium">{member.name}</div>
-                      {member.username ? (
+                      <div className="font-medium">{user.name}</div>
+                      {user.username ? (
                         <div className="text-sm text-muted-foreground">
-                          {t("usernameHandle", { username: member.username })}
+                          {t("usernameHandle", { username: user.username })}
                         </div>
                       ) : null}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span>{member.email}</span>
-                        {member.emailVerified ? (
+                        <span>{user.email}</span>
+                        {user.emailVerified ? (
                           <CheckIcon
                             className="size-4 text-green-600 dark:text-green-400"
                             aria-label={t("emailVerified")}
@@ -100,22 +100,22 @@ export function MemberList({ members }: { members: MemberListItem[] }) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{roleLabel(member.role) || "—"}</TableCell>
+                    <TableCell>{roleLabel(user.role) || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={member.inactive ? "secondary" : hasPassword ? "default" : "outline"}>
-                        {member.inactive ? t("inactiveStatus") : hasPassword ? t("activeStatus") : t("pending")}
+                      <Badge variant={user.inactive ? "secondary" : hasPassword ? "default" : "outline"}>
+                        {user.inactive ? t("inactiveStatus") : hasPassword ? t("activeStatus") : t("pending")}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {format.dateTime(member.createdAt, { year: "numeric", month: "2-digit", day: "2-digit" })}
+                      {format.dateTime(user.createdAt, { year: "numeric", month: "2-digit", day: "2-digit" })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <MemberActions
-                        userId={member.id}
-                        memberName={member.name}
-                        inactive={member.inactive ?? false}
+                      <UserActions
+                        userId={user.id}
+                        userName={user.name}
+                        inactive={user.inactive ?? false}
                         hasPassword={hasPassword}
-                        role={member.role ?? MEMBER_ROLE}
+                        role={user.role ?? USER_ROLE}
                       />
                     </TableCell>
                   </TableRow>

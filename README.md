@@ -9,8 +9,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance and how we use 
 ## Current status
 
 The project currently provides the authentication and account-management
-foundation. The main member and admin pages are still placeholders; choir,
-member, rehearsal, event, and gig management have not been implemented yet.
+foundation. The main user and admin pages are still placeholders; choir,
+user, rehearsal, event, and gig management have not been implemented yet.
 
 Implemented account workflows include:
 
@@ -87,8 +87,8 @@ and do not use these credentials in a deployed environment.
 
 | Route | Purpose | Access |
 | --- | --- | --- |
-| `/` | Authenticated home page | Member |
-| `/me` | Account settings | Member |
+| `/` | Authenticated home page | User |
+| `/me` | Account settings | User |
 | `/admin` | Admin surface (currently a placeholder) | Admin |
 | `/login` | Password or passkey sign-in | Public |
 | `/activate` | Set the password for an activated account | Activation session |

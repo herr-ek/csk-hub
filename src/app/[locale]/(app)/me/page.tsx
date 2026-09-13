@@ -1,10 +1,10 @@
 import { Suspense } from "react"
-import { MemberProfileScreen, MemberProfileScreenSkeleton } from "@/features/account"
+import { UserProfileScreen, UserProfileScreenSkeleton } from "@/features/account"
 
 export default function Me() {
   return (
-    <Suspense fallback={<MemberProfileScreenSkeleton />}>
-      <MemberProfileScreen />
+    <Suspense fallback={<UserProfileScreenSkeleton />}>
+      <UserProfileScreen />
     </Suspense>
   )
 }

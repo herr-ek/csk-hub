@@ -19,15 +19,15 @@ describe("email client", () => {
     const log = mock(() => undefined)
     const client = createEmailClient({ mode: "log", logger: { log, error: mock(() => undefined) } })
 
-    await expect(
-      client.send({ to: "member@example.com", subject: "Welcome", body: "Your link" })
-    ).resolves.toMatchObject({
-      ok: true,
-      delivery: "logged"
-    })
+    await expect(client.send({ to: "user@example.com", subject: "Welcome", body: "Your link" })).resolves.toMatchObject(
+      {
+        ok: true,
+        delivery: "logged"
+      }
+    )
     expect(log).toHaveBeenCalledWith(
       "[email:log]",
-      expect.objectContaining({ to: "member@example.com", subject: "Welcome", body: "Your link" })
+      expect.objectContaining({ to: "user@example.com", subject: "Welcome", body: "Your link" })
     )
   })
 
@@ -39,7 +39,7 @@ describe("email client", () => {
       sendMail: async () => Promise.reject(new Error("SMTP unavailable"))
     })
 
-    await expect(client.send({ to: "member@example.com", subject: "Welcome", body: "Your link" })).resolves.toEqual({
+    await expect(client.send({ to: "user@example.com", subject: "Welcome", body: "Your link" })).resolves.toEqual({
       ok: false,
       reason: "transport-error",
       error: "Email could not be delivered."

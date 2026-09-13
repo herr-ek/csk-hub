@@ -1,7 +1,7 @@
-export const MEMBER_ROLE = "member"
+export const USER_ROLE = "user"
 export const ADMIN_ROLE = "admin"
 
-export const accessRoleNames = [MEMBER_ROLE, ADMIN_ROLE] as const
+export const accessRoleNames = [USER_ROLE, ADMIN_ROLE] as const
 export type AccessRole = (typeof accessRoleNames)[number]
 
 export function parseRoles(value: unknown): string[] {

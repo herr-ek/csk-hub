@@ -3,8 +3,8 @@ import { hasAdminRole, hasRole, parseRoles } from "./roles"
 
 describe("roles", () => {
   test("parses comma-delimited and array role values consistently", () => {
-    expect(parseRoles(" member, admin , , editor ")).toEqual(["member", "admin", "editor"])
-    expect(parseRoles([" member ", null, "admin", 1])).toEqual(["member", "admin"])
+    expect(parseRoles(" user, admin , , editor ")).toEqual(["user", "admin", "editor"])
+    expect(parseRoles([" user ", null, "admin", 1])).toEqual(["user", "admin"])
   })
 
   test("does not treat absent or malformed role values as a role", () => {
@@ -13,7 +13,7 @@ describe("roles", () => {
   })
 
   test("recognizes admin among multiple stored roles", () => {
-    expect(hasAdminRole("member, admin")).toBe(true)
-    expect(hasAdminRole("member")).toBe(false)
+    expect(hasAdminRole("user, admin")).toBe(true)
+    expect(hasAdminRole("user")).toBe(false)
   })
 })

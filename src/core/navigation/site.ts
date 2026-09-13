@@ -9,7 +9,7 @@ export const ROUTES = {
   news: "/news",
   newsCompose: "/news/new",
   admin: "/admin",
-  adminMembers: "/admin/members",
+  adminUsers: "/admin/users",
   adminNotifications: "/admin/notifications",
   account: "/me",
   accountSettings: "/me/settings"

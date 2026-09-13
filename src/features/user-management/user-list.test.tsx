@@ -4,14 +4,14 @@ import swedishMessages from "@messages/sv.json"
 import { renderToStaticMarkup } from "react-dom/server"
 import { app } from "@/core/config/app"
 import { NextIntlClientProvider } from "@/core/i18n/client"
-import { MemberList } from "./member-list"
-import type { MemberListItem } from "./service"
+import type { UserListItem } from "./service"
+import { UserList } from "./user-list"
 
-describe("MemberList", () => {
+describe("UserList", () => {
   test("formats the table caption with the application name", () => {
     const markup = renderToStaticMarkup(
       <NextIntlClientProvider locale="en" messages={messages}>
-        <MemberList members={[]} />
+        <UserList users={[]} />
       </NextIntlClientProvider>
     )
 
@@ -29,10 +29,10 @@ describe("MemberList", () => {
       role: "member",
       inactive: false,
       createdAt: new Date("2026-09-08T23:30:00-02:00")
-    } satisfies MemberListItem
+    } satisfies UserListItem
     const markup = renderToStaticMarkup(
       <NextIntlClientProvider locale="sv" messages={swedishMessages} timeZone="UTC">
-        <MemberList members={[member]} />
+        <UserList users={[member]} />
       </NextIntlClientProvider>
     )
 
