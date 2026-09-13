@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
 const enable = mock(async () => ({
-  data: { totpURI: "otpauth://totp/CSK", backupCodes: ["backup-1"] },
+  data: { method: "totp" as const, totpURI: "otpauth://totp/CSK", backupCodes: ["backup-1"] },
   error: null as null | { message: string }
 }))
 const disable = mock(async () => ({ error: null as null | { message: string } }))
@@ -22,7 +22,7 @@ beforeEach(() => {
 describe("two-factor settings", () => {
   test("starts setup and returns the authenticator data", async () => {
     enable.mockResolvedValue({
-      data: { totpURI: "otpauth://totp/CSK", backupCodes: ["backup-1"] },
+      data: { method: "totp", totpURI: "otpauth://totp/CSK", backupCodes: ["backup-1"] },
       error: null
     })
 
@@ -32,6 +32,12 @@ describe("two-factor settings", () => {
       backupCodes: ["backup-1"]
     })
     expect(enable).toHaveBeenCalledWith({ password: "correct horse battery staple" })
+  })
+
+  test("handles OTP setup responses without TOTP credentials", async () => {
+    enable.mockResolvedValue({ data: { method: "otp" }, error: null } as never)
+
+    await expect(enableTwoFactor("correct horse battery staple")).resolves.toEqual({ success: true })
   })
 
   test("disables two-factor authentication", async () => {
@@ -50,7 +56,7 @@ describe("two-factor settings", () => {
 
   test("returns auth errors for setup operations", async () => {
     enable.mockResolvedValue({
-      data: { totpURI: "otpauth://totp/CSK", backupCodes: ["backup-1"] },
+      data: { method: "totp", totpURI: "otpauth://totp/CSK", backupCodes: ["backup-1"] },
       error: { message: "Password is incorrect." }
     })
     disable.mockResolvedValue({ error: { message: "Password is incorrect." } })
