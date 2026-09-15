@@ -1,10 +1,12 @@
 import { Suspense } from "react"
-import { NewsScreen, NewsScreenSkeleton } from "@/features/posts"
+import { NewsPageTransition, NewsScreen, NewsScreenSkeleton } from "@/features/posts"
 
 export default function NewsPage() {
   return (
-    <Suspense fallback={<NewsScreenSkeleton />}>
-      <NewsScreen />
-    </Suspense>
+    <NewsPageTransition>
+      <Suspense fallback={<NewsScreenSkeleton />}>
+        <NewsScreen />
+      </Suspense>
+    </NewsPageTransition>
   )
 }

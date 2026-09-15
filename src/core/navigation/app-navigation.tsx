@@ -47,7 +47,7 @@ export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
   const items = getNavigationItems(config, t)
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background">
+    <header className="sticky top-0 z-50 border-b bg-background" style={{ viewTransitionName: "persistent-nav" }}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link href={ROUTES.home} className="font-semibold text-base tracking-normal">

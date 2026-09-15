@@ -46,7 +46,7 @@ export function PublishPostForm() {
         <Button type="submit" disabled={pending}>
           {pending ? t("publishing") : t("publish")}
         </Button>
-        <Link href={ROUTES.news} className={buttonVariants({ variant: "ghost" })}>
+        <Link href={ROUTES.news} transitionTypes={["nav-back"]} className={buttonVariants({ variant: "ghost" })}>
           {common("cancel")}
         </Link>
       </div>

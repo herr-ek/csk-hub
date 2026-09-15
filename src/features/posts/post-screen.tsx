@@ -1,6 +1,7 @@
 import { ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { ViewTransition } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
@@ -13,7 +14,10 @@ function BackToNews() {
   return (
     <Link
       href={ROUTES.news}
+      prefetch={true}
+      transitionTypes={["nav-back"]}
       className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      style={{ viewTransitionName: "news-back-link" }}
     >
       <ArrowLeftIcon className="size-4" aria-hidden="true" />
       {t("allNews")}
@@ -31,10 +35,14 @@ export async function PostScreen({ postId }: { postId: string }) {
       <BackToNews />
       <article className="flex flex-col gap-4">
         <header>
-          <h1 className="font-heading text-2xl font-semibold break-words">{post.title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <PostByline authorName={post.authorName} publishedAt={post.publishedAt} />
-          </p>
+          <ViewTransition name={`news-post-title-${post.id}`} share="morph" default="none">
+            <h1 className="font-heading text-2xl font-semibold break-words">{post.title}</h1>
+          </ViewTransition>
+          <ViewTransition name={`news-post-byline-${post.id}`} share="text-morph" default="none">
+            <p className="mt-1 text-sm text-muted-foreground">
+              <PostByline authorName={post.authorName} publishedAt={post.publishedAt} />
+            </p>
+          </ViewTransition>
         </header>
         <div className="whitespace-pre-wrap break-words text-base leading-relaxed">{post.body}</div>
       </article>

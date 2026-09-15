@@ -1,5 +1,9 @@
-import { PublishPostScreen } from "@/features/posts"
+import { NewsPageTransition, PublishPostScreen } from "@/features/posts"
 
 export default function PublishPostPage() {
-  return <PublishPostScreen />
+  return (
+    <NewsPageTransition>
+      <PublishPostScreen />
+    </NewsPageTransition>
+  )
 }

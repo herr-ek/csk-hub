@@ -1,12 +1,14 @@
 import { Suspense } from "react"
-import { PostScreen, PostScreenSkeleton } from "@/features/posts"
+import { NewsPageTransition, PostScreen, PostScreenSkeleton } from "@/features/posts"
 
 export default function NewsPostPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<PostScreenSkeleton />}>
-      {params.then(({ id }) => (
-        <PostScreen postId={id} />
-      ))}
-    </Suspense>
+    <NewsPageTransition>
+      <Suspense fallback={<PostScreenSkeleton />}>
+        {params.then(({ id }) => (
+          <PostScreen postId={id} />
+        ))}
+      </Suspense>
+    </NewsPageTransition>
   )
 }

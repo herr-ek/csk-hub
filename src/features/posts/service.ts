@@ -1,6 +1,7 @@
 import "server-only"
 
 import { and, desc, eq, isNotNull } from "drizzle-orm"
+import { cacheLife, cacheTag } from "next/cache"
 import { z } from "zod"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
@@ -20,6 +21,11 @@ const postIdSchema = z.uuid()
 
 /** The whole feed, newest first. Every signed-in User sees the same one. */
 export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
+  "use cache"
+
+  cacheLife("minutes")
+  cacheTag("news-feed")
+
   const rows = await db
     .select({
       id: post.id,
@@ -39,6 +45,11 @@ export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
 
 /** One Post by its opaque id, or null when it does not exist or is not published. */
 export async function getPublishedPost(postId: string): Promise<PublishedPost | null> {
+  "use cache"
+
+  cacheLife("minutes")
+  cacheTag(`news-post-${postId}`)
+
   if (!postIdSchema.safeParse(postId).success) return null
 
   const [row] = await db
