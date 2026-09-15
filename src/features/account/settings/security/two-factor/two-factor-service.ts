@@ -11,10 +11,12 @@ export async function enableTwoFactor(password: string): Promise<EnableTwoFactor
   if (result.error)
     return { success: false, error: result.error.message ?? "Unable to enable two-factor authentication." }
 
+  if (result.data?.method !== "totp") return { success: true }
+
   return {
     success: true,
-    totpUri: result.data?.totpURI,
-    backupCodes: result.data?.backupCodes
+    totpUri: result.data.totpURI,
+    backupCodes: result.data.backupCodes
   }
 }
 
