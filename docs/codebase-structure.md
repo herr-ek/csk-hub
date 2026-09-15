@@ -15,6 +15,20 @@ Use the `codebase-design` vocabulary when discussing structure:
 
 Avoid shallow pass-through modules. A module earns its place when deleting it would push complexity back into multiple callers.
 
+## Public API Documentation
+
+Document functions exported from a module with TSDoc when callers need guidance
+beyond what a clear name and type signature provide. Describe how to use the
+function, its important inputs and outputs, and any invariants, side effects,
+error modes, or authorization expectations a caller must respect. This keeps
+the module interface discoverable at the call site instead of requiring callers
+to inspect its implementation.
+
+During implementation and review, add missing TSDoc to exported functions whose
+correct use is not already obvious from their signature. Keep comments focused
+on the caller-facing contract; do not restate types or document private helpers
+solely for completeness.
+
 ## Feature Modules
 
 Prefer feature-oriented modules for product behavior. A future feature should keep its domain logic, write operations, read helpers, tests, and feature-specific UI close together instead of scattering them by technical layer.
