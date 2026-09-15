@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Suspense, ViewTransition } from "react"
 import { canCurrentUser } from "@/core/auth/permissions.server"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
@@ -25,48 +26,70 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
   )
 }
 
-export async function NewsScreen() {
-  const [entries, canPublish, t] = await Promise.all([
-    listNewsFeed(),
+async function PublishPostLink() {
+  const [canPublish, t] = await Promise.all([
     canCurrentUser({ resource: "post", action: "create" }),
     getTranslations("Posts")
   ])
 
+  return canPublish ? (
+    <Link href={ROUTES.newsCompose} transitionTypes={["nav-forward"]} className={buttonVariants()}>
+      {t("writePost")}
+    </Link>
+  ) : null
+}
+
+export async function NewsScreen() {
+  const [entries, t] = await Promise.all([listNewsFeed(), getTranslations("Posts")])
+
   return (
     <ContentPage>
       <NewsHeader>
-        {canPublish ? (
-          <Link href={ROUTES.newsCompose} className={buttonVariants()}>
-            {t("writePost")}
-          </Link>
-        ) : null}
+        <Suspense fallback={null}>
+          <ViewTransition enter="content-reveal" default="none">
+            <PublishPostLink />
+          </ViewTransition>
+        </Suspense>
       </NewsHeader>
 
-      {entries.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>{t("emptyTitle")}</EmptyTitle>
-            <EmptyDescription>{t("emptyDescription")}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
-                <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                  <CardHeader>
-                    <CardTitle className="text-lg break-words">{entry.title}</CardTitle>
-                    <CardDescription>
-                      <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ViewTransition update="auto" default="none">
+        {entries.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>{t("emptyTitle")}</EmptyTitle>
+              <EmptyDescription>{t("emptyDescription")}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {entries.map((entry) => (
+              <ViewTransition key={entry.id} update="auto" default="none">
+                <li>
+                  <Link
+                    href={newsPostPath(entry.id)}
+                    prefetch={true}
+                    transitionTypes={["nav-forward"]}
+                    className="group block focus-visible:outline-none"
+                  >
+                    <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                      <CardHeader>
+                        <ViewTransition name={`news-post-title-${entry.id}`} share="morph" default="none">
+                          <CardTitle className="text-lg break-words">{entry.title}</CardTitle>
+                        </ViewTransition>
+                        <ViewTransition name={`news-post-byline-${entry.id}`} share="text-morph" default="none">
+                          <CardDescription>
+                            <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
+                          </CardDescription>
+                        </ViewTransition>
+                      </CardHeader>
+                    </Card>
+                  </Link>
+                </li>
+              </ViewTransition>
+            ))}
+          </ul>
+        )}
+      </ViewTransition>
     </ContentPage>
   )
 }

@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { redirect } from "next/navigation"
 import { AUTHORIZATION_DENIED, requireCurrentUserPermission } from "@/core/auth/permissions.server"
 import { db } from "@/core/db"
@@ -73,6 +73,8 @@ export async function publishPost(_state: PublishPostState, formData: FormData):
     return errorState(draft, "publishFailed")
   }
 
+  updateTag("news-feed")
+  updateTag(`news-post-${publishedId}`)
   revalidatePath(ROUTES.news)
   redirect(newsPostPath(publishedId))
 }
