@@ -115,7 +115,8 @@
     "loggingOut": "Abmeldung läuft…",
     "stopImpersonating": "Imitierung beenden",
     "stoppingImpersonation": "Imitierung wird beendet…",
-    "language": "Sprache"
+    "language": "Sprache",
+    "messages": "Nachrichten"
   },
   "Posts": {
     "title": "Neuigkeiten",
@@ -367,5 +368,50 @@
     "notificationTitle": "Testbenachrichtigung",
     "deliveryFailed": "Benachrichtigung konnte nicht gesendet werden.",
     "noRecipients": "Keine Empfänger ausgewählt."
+  },
+  "Messages": {
+    "title": "Nachrichten",
+    "description": "Deine privaten Unterhaltungen.",
+    "directConversations": "Direkte Unterhaltungen",
+    "formerMember": "Ehemaliges Mitglied",
+    "readOnly": "Diese Unterhaltung ist schreibgeschützt.",
+    "unread": "{count} ungelesen",
+    "empty": "Noch keine Unterhaltungen.",
+    "startTitle": "Unterhaltung beginnen",
+    "startDescription": "Finde ein aktives Mitglied, dem du eine private Nachricht senden kannst.",
+    "searchPlaceholder": "Name oder Benutzername suchen",
+    "searchLabel": "Mitglieder suchen",
+    "search": "Suchen",
+    "usernameHandle": "@{username}",
+    "noMembers": "Keine aktiven Mitglieder entsprechen der Suche.",
+    "backToHome": "Zurück zur Startseite",
+    "firstMessageLabel": "Erste Nachricht",
+    "messageLabel": "Nachricht",
+    "messagePlaceholder": "Nachricht schreiben…",
+    "starting": "Wird gestartet…",
+    "sending": "Wird gesendet…",
+    "sendMessage": "Nachricht senden",
+    "otherMemberInactive": "Das andere Mitglied ist nicht mehr aktiv.",
+    "loadOlder": "Ältere Nachrichten laden",
+    "sentAt": "Gesendet {date}",
+    "errors": {
+      "blank-message": "Gib eine Nachricht ein.",
+      "message-too-long": "Nachrichten dürfen höchstens 4.000 Zeichen lang sein.",
+      "sign-in-required": "Melde dich an, um Nachrichten zu verwenden.",
+      "impersonation-unavailable": "Nachrichten sind während der Identitätsübernahme nicht verfügbar.",
+      "inactive-member": "Nur aktive Mitglieder können Nachrichten verwenden.",
+      "recipient-required": "Wähle einen Empfänger.",
+      "idempotency-key-required": "Deine Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.",
+      "self-recipient": "Du kannst keine Unterhaltung mit dir selbst beginnen.",
+      "recipient-inactive": "Dieser Empfänger ist nicht mehr aktiv.",
+      "conversation-send-forbidden": "Du kannst in dieser Unterhaltung keine Nachrichten senden.",
+      "conversation-unavailable": "Diese Unterhaltung kann keine Nachrichten empfangen.",
+      "conversation-read-only": "Diese Unterhaltung ist schreibgeschützt.",
+      "conversation-recipient-inactive": "Diese Unterhaltung ist schreibgeschützt, weil das andere Mitglied inaktiv ist.",
+      "conversation-view-forbidden": "Du kannst diese Unterhaltung nicht ansehen.",
+      "conversation-not-found": "Diese Unterhaltung wurde nicht gefunden.",
+      "read-position-invalid": "Diese Leseposition ist ungültig.",
+      "unexpected": "Deine Nachricht konnte nicht gesendet werden. Bitte versuche es erneut."
+    }
   }
 }
