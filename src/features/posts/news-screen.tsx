@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { canCurrentUser } from "@/core/auth/permissions.server"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
@@ -25,21 +26,28 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
   )
 }
 
-export async function NewsScreen() {
-  const [entries, canPublish, t] = await Promise.all([
-    listNewsFeed(),
+async function PublishPostLink() {
+  const [canPublish, t] = await Promise.all([
     canCurrentUser({ resource: "post", action: "create" }),
     getTranslations("Posts")
   ])
 
+  return canPublish ? (
+    <Link href={ROUTES.newsCompose} transitionTypes={["nav-forward"]} className={buttonVariants()}>
+      {t("writePost")}
+    </Link>
+  ) : null
+}
+
+export async function NewsScreen() {
+  const [entries, t] = await Promise.all([listNewsFeed(), getTranslations("Posts")])
+
   return (
     <ContentPage>
       <NewsHeader>
-        {canPublish ? (
-          <Link href={ROUTES.newsCompose} className={buttonVariants()}>
-            {t("writePost")}
-          </Link>
-        ) : null}
+        <Suspense fallback={null}>
+          <PublishPostLink />
+        </Suspense>
       </NewsHeader>
 
       {entries.length === 0 ? (
@@ -53,7 +61,7 @@ export async function NewsScreen() {
         <ul className="flex flex-col gap-3">
           {entries.map((entry) => (
             <li key={entry.id}>
-              <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
+              <Link href={newsPostPath(entry.id)} prefetch={true} className="group block focus-visible:outline-none">
                 <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
                   <CardHeader>
                     <CardTitle className="text-lg break-words">{entry.title}</CardTitle>
