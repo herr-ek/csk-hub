@@ -17,6 +17,7 @@ import {
   UnlinkIcon
 } from "lucide-react"
 import { type ReactNode, useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import { Input } from "@/shared/ui/base/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/base/popover"
@@ -86,6 +87,7 @@ function ToolbarAction({
 
 /** The link popover, which also edits a link that is already there. */
 function LinkControl({ editor, active, href }: { editor: Editor; active: boolean; href: string }) {
+  const t = useTranslations("Posts.editor")
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState("")
 
@@ -114,8 +116,8 @@ function LinkControl({ editor, active, href }: { editor: Editor; active: boolean
           <Toggle
             type="button"
             size="sm"
-            aria-label="Link"
-            title="Link"
+            aria-label={t("link")}
+            title={t("link")}
             pressed={active}
             onMouseDown={(event) => event.preventDefault()}
           >
@@ -126,7 +128,7 @@ function LinkControl({ editor, active, href }: { editor: Editor; active: boolean
       <PopoverContent align="start" className="gap-3">
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium" htmlFor="post-link-href">
-            Link address
+            {t("linkAddress")}
           </label>
           <Input
             id="post-link-href"
@@ -144,12 +146,12 @@ function LinkControl({ editor, active, href }: { editor: Editor; active: boolean
         </div>
         <div className="flex items-center gap-2">
           <Button type="button" size="sm" onClick={apply} disabled={!safePostLinkHref(value)}>
-            Apply
+            {t("apply")}
           </Button>
           {active ? (
             <Button type="button" size="sm" variant="ghost" onClick={remove}>
               <UnlinkIcon />
-              Remove
+              {t("removeLink")}
             </Button>
           ) : null}
         </div>
@@ -160,22 +162,24 @@ function LinkControl({ editor, active, href }: { editor: Editor; active: boolean
 
 /** Table controls, shown only while the caret is inside a table. */
 function TableControls({ editor }: { editor: Editor }) {
+  const t = useTranslations("Posts.editor")
+
   return (
     <>
       <Separator orientation="vertical" className="mx-1 h-6" />
-      <ToolbarAction label="Add row" onAction={() => editor.chain().focus().addRowAfter().run()}>
-        Row +
+      <ToolbarAction label={t("addRow")} onAction={() => editor.chain().focus().addRowAfter().run()}>
+        {t("addRowShort")}
       </ToolbarAction>
-      <ToolbarAction label="Add column" onAction={() => editor.chain().focus().addColumnAfter().run()}>
-        Col +
+      <ToolbarAction label={t("addColumn")} onAction={() => editor.chain().focus().addColumnAfter().run()}>
+        {t("addColumnShort")}
       </ToolbarAction>
-      <ToolbarAction label="Delete row" onAction={() => editor.chain().focus().deleteRow().run()}>
-        Row −
+      <ToolbarAction label={t("deleteRow")} onAction={() => editor.chain().focus().deleteRow().run()}>
+        {t("deleteRowShort")}
       </ToolbarAction>
-      <ToolbarAction label="Delete column" onAction={() => editor.chain().focus().deleteColumn().run()}>
-        Col −
+      <ToolbarAction label={t("deleteColumn")} onAction={() => editor.chain().focus().deleteColumn().run()}>
+        {t("deleteColumnShort")}
       </ToolbarAction>
-      <ToolbarAction label="Delete table" onAction={() => editor.chain().focus().deleteTable().run()}>
+      <ToolbarAction label={t("deleteTable")} onAction={() => editor.chain().focus().deleteTable().run()}>
         <Trash2Icon />
       </ToolbarAction>
     </>
@@ -184,6 +188,7 @@ function TableControls({ editor }: { editor: Editor }) {
 
 /** Every operation the enabled node set allows, for an Admin who does not write Markdown. */
 export function PostEditorToolbar({ editor }: { editor: Editor }) {
+  const t = useTranslations("Posts.editor")
   // The toolbar re-renders on every selection change; the selector keeps that to what it shows.
   const state = useEditorState({
     editor,
@@ -204,19 +209,19 @@ export function PostEditorToolbar({ editor }: { editor: Editor }) {
   return (
     <div
       role="toolbar"
-      aria-label="Formatting"
+      aria-label={t("formatting")}
       aria-controls="post-body-editor"
       className="flex shrink-0 flex-wrap items-center gap-1 rounded-t-md border border-b-0 border-input bg-muted/40 p-1"
     >
       <ToolbarToggle
-        label="Heading"
+        label={t("heading")}
         pressed={state.heading2}
         onPressed={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
       >
         <Heading2Icon />
       </ToolbarToggle>
       <ToolbarToggle
-        label="Subheading"
+        label={t("subheading")}
         pressed={state.heading3}
         onPressed={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
       >
@@ -225,11 +230,11 @@ export function PostEditorToolbar({ editor }: { editor: Editor }) {
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <ToolbarToggle label="Bold" pressed={state.bold} onPressed={() => editor.chain().focus().toggleBold().run()}>
+      <ToolbarToggle label={t("bold")} pressed={state.bold} onPressed={() => editor.chain().focus().toggleBold().run()}>
         <BoldIcon />
       </ToolbarToggle>
       <ToolbarToggle
-        label="Italic"
+        label={t("italic")}
         pressed={state.italic}
         onPressed={() => editor.chain().focus().toggleItalic().run()}
       >
@@ -240,21 +245,21 @@ export function PostEditorToolbar({ editor }: { editor: Editor }) {
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       <ToolbarToggle
-        label="Bullet list"
+        label={t("bulletList")}
         pressed={state.bulletList}
         onPressed={() => editor.chain().focus().toggleBulletList().run()}
       >
         <ListIcon />
       </ToolbarToggle>
       <ToolbarToggle
-        label="Numbered list"
+        label={t("orderedList")}
         pressed={state.orderedList}
         onPressed={() => editor.chain().focus().toggleOrderedList().run()}
       >
         <ListOrderedIcon />
       </ToolbarToggle>
       <ToolbarToggle
-        label="Quote"
+        label={t("quote")}
         pressed={state.blockquote}
         onPressed={() => editor.chain().focus().toggleBlockquote().run()}
       >
@@ -264,12 +269,12 @@ export function PostEditorToolbar({ editor }: { editor: Editor }) {
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       <ToolbarAction
-        label="Table"
+        label={t("table")}
         onAction={() => editor.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run()}
       >
         <TableIcon />
       </ToolbarAction>
-      <ToolbarAction label="Divider" onAction={() => editor.chain().focus().setHorizontalRule().run()}>
+      <ToolbarAction label={t("divider")} onAction={() => editor.chain().focus().setHorizontalRule().run()}>
         <MinusIcon />
       </ToolbarAction>
 

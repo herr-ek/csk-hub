@@ -4,6 +4,7 @@ import { ListKeymap } from "@tiptap/extension-list"
 import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from "@tiptap/extensions"
 import { EditorContent, useEditor } from "@tiptap/react"
 import { useState } from "react"
+import { useTranslations } from "@/core/i18n/translations"
 import { cn } from "@/shared/utils"
 import { postBodyExtensions } from "../markdown/extensions"
 import { parsePostMarkdown, serializePostMarkdown } from "../markdown/markdown"
@@ -14,14 +15,7 @@ import { PostEditorToolbar } from "./post-editor-toolbar"
 const EDITOR_ID = "post-body-editor"
 
 /** Editing behaviour only: none of these add a node or mark, so the storage format is untouched. */
-const editingAffordances = [
-  UndoRedo,
-  Dropcursor,
-  Gapcursor,
-  ListKeymap,
-  ExitEmptyHeading,
-  Placeholder.configure({ placeholder: "Write the post. Type ## for a heading, - for a list." })
-]
+const editingAffordances = [UndoRedo, Dropcursor, Gapcursor, ListKeymap, ExitEmptyHeading]
 
 /**
  * The writing surface for a Post body. The surrounding `<form>` still posts plain
@@ -37,10 +31,15 @@ export function PostEditor({
   /** Id of the element holding the field's visible label. */
   labelledBy: string
 }) {
+  const t = useTranslations("Posts.editor")
   const [markdown, setMarkdown] = useState(defaultValue)
 
   const editor = useEditor({
-    extensions: [...postBodyExtensions, ...editingAffordances],
+    extensions: [
+      ...postBodyExtensions,
+      ...editingAffordances,
+      Placeholder.configure({ placeholder: t("placeholder") })
+    ],
     content: defaultValue ? parsePostMarkdown(defaultValue) : undefined,
     // Rendered on the server first; an editor rendered there would mismatch on hydration.
     immediatelyRender: false,
