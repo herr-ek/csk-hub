@@ -31,3 +31,11 @@ Single-context layout: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/ag
 ### Codebase structure
 
 Follow the structural preferences in `docs/codebase-structure.md` when adding modules, Drizzle schema files, React screens, shared UI, and health checks.
+
+## Code comments
+
+Let the code carry the explanation, and comment what it cannot say.
+
+- Write an inline comment where a reader would otherwise get it wrong: a constraint that is not visible locally, an ordering requirement, a workaround and its reason. One line, two at most.
+- Keep TSDoc to one sentence saying what the export is for. Add a second only for a contract the caller must know — an invariant, an error mode, a gotcha.
+- Rules that hold across a feature belong in its `README.md` or in `docs/`, named once instead of restated above each declaration.

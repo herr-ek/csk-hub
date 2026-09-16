@@ -28,8 +28,7 @@ export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
       publishedAt: post.publishedAt
     })
     .from(post)
-    // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
-    // in the feed.
+    // Left, not inner: an erased author leaves `author_id` null, and the Post stays in the feed.
     .leftJoin(user, eq(post.authorId, user.id))
     .where(isNotNull(post.publishedAt))
     .orderBy(desc(post.publishedAt))

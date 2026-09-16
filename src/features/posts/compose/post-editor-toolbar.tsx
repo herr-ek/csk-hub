@@ -25,11 +25,8 @@ import { Toggle } from "@/shared/ui/base/toggle"
 import { safePostLinkHref } from "../markdown/markdown"
 
 /**
- * A toolbar button that reflects and toggles a formatting state.
- *
- * `onMouseDown` is where the click is cancelled rather than `onClick`: pressing a
- * toolbar button must not take the caret out of the editor, or the command would
- * apply to nothing.
+ * A toolbar button that reflects and toggles a formatting state. The click is cancelled
+ * on `onMouseDown` so pressing it leaves the caret in the editor.
  */
 function ToolbarToggle({
   label,
@@ -87,7 +84,7 @@ function ToolbarAction({
   )
 }
 
-/** The link popover, which doubles as the editor for a link that is already there. */
+/** The link popover, which also edits a link that is already there. */
 function LinkControl({ editor, active, href }: { editor: Editor; active: boolean; href: string }) {
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState("")
@@ -161,7 +158,7 @@ function LinkControl({ editor, active, href }: { editor: Editor; active: boolean
   )
 }
 
-/** The table controls, which only mean anything while the caret is inside a table. */
+/** Table controls, shown only while the caret is inside a table. */
 function TableControls({ editor }: { editor: Editor }) {
   return (
     <>
@@ -185,14 +182,9 @@ function TableControls({ editor }: { editor: Editor }) {
   )
 }
 
-/**
- * Every operation the enabled node set allows, for an Admin who does not write
- * Markdown. The same operations happen by typing Markdown characters — the input
- * rules the extensions bring — so the toolbar is a second way in, not the only one.
- */
+/** Every operation the enabled node set allows, for an Admin who does not write Markdown. */
 export function PostEditorToolbar({ editor }: { editor: Editor }) {
-  // A toolbar reflects the caret, so it has to re-render on selection as well as on
-  // content. Selecting the state keeps that to the handful of values shown.
+  // The toolbar re-renders on every selection change; the selector keeps that to what it shows.
   const state = useEditorState({
     editor,
     selector: ({ editor: current }) => ({
@@ -214,7 +206,7 @@ export function PostEditorToolbar({ editor }: { editor: Editor }) {
       role="toolbar"
       aria-label="Formatting"
       aria-controls="post-body-editor"
-      className="flex flex-wrap items-center gap-1 rounded-t-md border border-b-0 border-input bg-muted/40 p-1"
+      className="flex shrink-0 flex-wrap items-center gap-1 rounded-t-md border border-b-0 border-input bg-muted/40 p-1"
     >
       <ToolbarToggle
         label="Heading"

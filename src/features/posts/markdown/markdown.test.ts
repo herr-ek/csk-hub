@@ -8,8 +8,7 @@ const schema = getSchema(postBodyExtensions)
 
 /**
  * Markdown → editor → Markdown, the round trip ADR-0004 obliges every enabled node to
- * survive. The document is rebuilt through the ProseMirror schema on the way past, so
- * a node the editor could not actually hold fails here rather than in a browser.
+ * survive. The document passes through the ProseMirror schema on the way.
  */
 function roundTrip(markdown: string): string {
   const parsed = parsePostMarkdown(markdown)
@@ -64,9 +63,8 @@ describe("a Post body survives the round trip", () => {
   })
 
   test("table", () => {
-    // Tables are the one node the serialiser rewrites rather than reproduces: it pads
-    // the cells to a fixed width. The obligation is that no content moves and that the
-    // rewrite settles, which is what a second trip through proves.
+    // The serialiser pads table cells rather than reproducing them; a second trip shows
+    // that the rewrite settles and no content moved.
     const markdown = "| Week | Choir |\n| --- | --- |\n| 36 | MK |\n| 37 | KK |"
     const once = roundTrip(markdown)
 

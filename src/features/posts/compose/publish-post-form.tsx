@@ -13,20 +13,15 @@ import { POST_TITLE_MAX_LENGTH } from "./schemas"
 
 const POST_BODY_LABEL_ID = "post-body-label"
 
-/**
- * The form for publishing a post. It is used in the `PublishPostScreen`
- */
 export function PublishPostForm() {
   const t = useTranslations("Posts")
   const common = useTranslations("Common")
   const [state, action, pending] = useActionState<PublishPostState, FormData>(publishPost, { status: "idle" })
-  // React resets the form once the action settles, so a rejected post survives only
-  // if the action hands back what was typed.
   const draft = state.status === "error" ? state.draft : undefined
 
   return (
-    <form action={action} className="space-y-6">
-      <FieldGroup>
+    <form action={action} className="flex flex-col gap-6 md:min-h-0 md:flex-1">
+      <FieldGroup className="md:min-h-0">
         <Field>
           <FieldLabel htmlFor="post-title">{t("titleLabel")}</FieldLabel>
           <Input
@@ -38,12 +33,7 @@ export function PublishPostForm() {
             required
           />
         </Field>
-        <Field>
-          {/*
-            A `<label for>` only binds to a form control, and the writing surface is a
-            contenteditable. FieldTitle carries the same look, and the editor points
-            back at it so screen readers announce the same word a sighted Admin reads.
-          */}
+        <Field className="md:min-h-0">
           <FieldTitle id={POST_BODY_LABEL_ID}>{t("bodyLabel")}</FieldTitle>
           <PostEditor name="body" defaultValue={draft?.body} labelledBy={POST_BODY_LABEL_ID} />
         </Field>

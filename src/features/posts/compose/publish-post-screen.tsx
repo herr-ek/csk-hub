@@ -17,10 +17,8 @@ async function ComposeHeader() {
 }
 
 /**
- * Tiptap gives each editor instance an id from `Math.random()` as it is constructed,
- * which a prerendered shell would freeze into the build. Deferring the form to request
- * time is the right shape regardless: only an Admin ever reaches this screen, and the
- * heading above it is the only part of it worth prerendering.
+ * Tiptap ids each editor with `Math.random()`, which a prerendered shell would freeze
+ * into the build, so the form is composed at request time.
  */
 async function PostComposer() {
   await connection()
@@ -44,12 +42,9 @@ function PostComposerSkeleton() {
   )
 }
 
-/**
- * The screen for publishing a post. It contains the form and some explanatory text.
- */
 export function PublishPostScreen() {
   return (
-    <ContentPage>
+    <ContentPage fill>
       <ComposeHeader />
       <Suspense fallback={<PostComposerSkeleton />}>
         <PostComposer />

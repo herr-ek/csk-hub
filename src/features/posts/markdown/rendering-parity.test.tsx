@@ -7,22 +7,13 @@ import { parsePostMarkdown } from "./markdown"
 import { renderPostBody } from "./post-content"
 
 /**
- * A Post is rendered twice — by the editor while an Admin writes it, and by the server
- * once it is published — and ADR-0004 requires a reader to be unable to tell which one
- * they are looking at. One prose stylesheet is half of that; the other half is that
- * both surfaces hand that stylesheet the same elements to style.
- *
- * These tests compare the elements the editor's own schema produces with the elements
- * the server renderer produces, so a change to either side that breaks the likeness
- * fails here rather than in front of a Member.
+ * ADR-0004 requires a reader to be unable to tell the editor's rendering of a Post from
+ * the server's, which holds only while both hand the prose stylesheet the same elements.
+ * These tests compare the two for the same Markdown.
  */
 const schema = getSchema(postBodyExtensions)
 
-/**
- * The server renderer wraps a table so a wide rota can scroll on a phone instead of
- * widening the page. It is a layout box around the table, not a change to the table,
- * and the editor has no equivalent — the only element either side may hold alone.
- */
+/** The server's scroll box around a table — the only element either side may hold alone. */
 const SCROLL_WRAPPER = "div"
 
 /** Every tag name in a ProseMirror DOM output spec, holes and attributes skipped. */

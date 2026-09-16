@@ -6,16 +6,11 @@ export const post = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
-    // Markdown, not the editor's document JSON and not HTML (ADR-0004). The column
-    // stays legible and searchable on its own, and outlives whichever editor wrote it.
+    // Markdown, not the editor's document JSON and not HTML (ADR-0004).
     body: text("body").notNull(),
-    // A Post outlives its author. Erasing a User drops the attribution and leaves the
-    // announcement standing: the News feed is the record of what the choir was told, not
-    // part of the erased User's own history. Null therefore means "author erased", not
-    // "not written by anyone" — every insert sets it.
+    // Every insert sets it, so null means the author was erased, not that nobody wrote it.
     authorId: text("author_id").references(() => user.id, { onDelete: "set null" }),
-    // Null until published; drafts are a later issue's job. Stored with a zone so
-    // a Post keeps the same publication instant whatever the server runs in.
+    // Null until published; drafts are a later issue's job.
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
