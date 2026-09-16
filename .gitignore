@@ -46,3 +46,6 @@ next-env.d.ts
 /.claude/
 
 /.vscode/
+
+# local database overrides (see package.json `:local` scripts)
+!.env.localdb.example

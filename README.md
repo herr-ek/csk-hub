@@ -71,6 +71,38 @@ Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Running against a local database without docker
+
+When `.env` points at a deployed database (for example a Supabase project), the
+`:local` script variants run the same commands against a PostgreSQL instance on
+this machine instead, leaving the default scripts untouched:
+
+```bash
+cp .env.localdb.example .env.localdb   # adjust POSTGRES_URL for your instance
+bun run db:migrate:local
+bun run dev:local
+bun run tst:local
+```
+
+Each variant layers `.env.localdb` on top of `.env`, so only the variables that
+differ locally — the connection string in practice — need to be listed there.
+Anything else, such as `BETTER_AUTH_SECRET`, still comes from `.env`.
+
+The file is deliberately *not* called `.env.local`: Bun and Next.js load that
+name automatically and it takes precedence over `.env`, which would redirect the
+plain `dev` and `db:migrate` scripts as well. For the same reason the variants
+delegate through `bun run <script>` rather than `bun x <binary>` — `bun x`
+re-reads `.env` in the child process and discards the override.
+
+A native install works as well as the Docker container; point `POSTGRES_URL` at
+whichever is listening (`docker-compose.yml` uses port 5433, a default native
+install 5432) and create the role and database once:
+
+```sql
+CREATE ROLE csk_hub LOGIN PASSWORD 'csk_hub' CREATEDB;
+CREATE DATABASE csk_hub OWNER csk_hub;
+```
+
 ### Local admin account
 
 The development seed script currently creates `admin@example.com` with the
