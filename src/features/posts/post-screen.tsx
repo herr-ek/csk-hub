@@ -13,6 +13,7 @@ function BackToNews() {
   return (
     <Link
       href={ROUTES.news}
+      prefetch={true}
       className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
     >
       <ArrowLeftIcon className="size-4" aria-hidden="true" />
