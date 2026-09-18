@@ -115,7 +115,8 @@
     "loggingOut": "Logging out…",
     "stopImpersonating": "Stop impersonating",
     "stoppingImpersonation": "Stopping impersonation…",
-    "language": "Language"
+    "language": "Language",
+    "messages": "Messages"
   },
   "Posts": {
     "title": "News",
@@ -372,5 +373,52 @@
     "notificationTitle": "Test notification",
     "deliveryFailed": "Failed to send notification.",
     "noRecipients": "No recipients selected."
+  },
+  "Messages": {
+    "title": "Messages",
+    "description": "Your private conversations.",
+    "directConversations": "Direct conversations",
+    "formerMember": "Former member",
+    "readOnly": "This conversation is read-only.",
+    "unread": "{count} unread",
+    "empty": "No conversations yet.",
+    "startTitle": "Start a conversation",
+    "startDescription": "Find an active member to send a private message.",
+    "searchPlaceholder": "Search name or username",
+    "searchLabel": "Search members",
+    "search": "Search",
+    "usernameHandle": "@{username}",
+    "noMembers": "No active members match that search.",
+    "typeToSearch": "Type to search active members.",
+    "searching": "Searching…",
+    "backToHome": "Back to home",
+    "firstMessageLabel": "First message",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Write a message…",
+    "starting": "Starting…",
+    "sending": "Sending…",
+    "sendMessage": "Send message",
+    "otherMemberInactive": "The other member is no longer active.",
+    "loadOlder": "Load older messages",
+    "sentAt": "Sent {date}",
+    "errors": {
+      "blank-message": "Enter a message.",
+      "message-too-long": "Messages can be at most 4,000 characters.",
+      "sign-in-required": "Sign in to use Messages.",
+      "inactive-member": "Only active members can use Messages.",
+      "recipient-required": "Choose a recipient.",
+      "idempotency-key-required": "Unable to send your message. Please try again.",
+      "idempotency-key-reused": "This send request was already used for a different message. Please try again.",
+      "self-recipient": "You cannot start a conversation with yourself.",
+      "recipient-inactive": "That recipient is no longer active.",
+      "conversation-send-forbidden": "You cannot send messages in this conversation.",
+      "conversation-unavailable": "This conversation cannot receive messages.",
+      "conversation-read-only": "This conversation is read-only.",
+      "conversation-recipient-inactive": "This conversation is read-only while the other member is inactive.",
+      "conversation-view-forbidden": "You cannot view this conversation.",
+      "conversation-not-found": "That conversation could not be found.",
+      "read-position-invalid": "That read position is invalid.",
+      "unexpected": "Unable to send your message. Please try again."
+    }
   }
 }
