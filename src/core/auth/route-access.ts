@@ -29,6 +29,7 @@ const PERMISSION_PATHS = new Map<string, GlobalPermissionRequest>([
 export type RouteAccessPolicy =
   | { kind: "public" }
   | { kind: "authenticated" }
+  | { kind: "impersonation-unavailable" }
   | { kind: "admin" }
   | { kind: "permission"; permission: GlobalPermissionRequest }
 export type RouteSession = PermissionSession
@@ -50,6 +51,8 @@ export function getRouteAccessPolicy(path: string): RouteAccessPolicy {
   if (permission) return { kind: "permission", permission }
 
   if (path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`)) return { kind: "admin" }
+
+  if (path === ROUTES.messages || path.startsWith(`${ROUTES.messages}/`)) return { kind: "impersonation-unavailable" }
 
   return { kind: "authenticated" }
 }
@@ -73,7 +76,12 @@ export async function getRouteAccessDecision(
   // 3. If you the requested path is not public, you need to login
   if (!session) return { kind: "redirect", location: loginPath(requestedPath) }
 
-  // 4. Some pages ask for more than a session: the Admin area, or a named permission.
+  // 4. Impersonated sessions cannot enter workflows that must be performed as the real member.
+  if (policy.kind === "impersonation-unavailable" && session.session?.impersonatedBy) {
+    return { kind: "forbidden" }
+  }
+
+  // 5. Some pages ask for more than a session: the Admin area, or a named permission.
   if (policy.kind === "admin" || policy.kind === "permission") {
     try {
       if (policy.kind === "admin") await requireAdmin(session)
@@ -83,6 +91,6 @@ export async function getRouteAccessDecision(
     }
   }
 
-  // 5. All other pages are open to authenticated users
+  // 6. All other pages are open to authenticated users
   return { kind: "allow" }
 }
