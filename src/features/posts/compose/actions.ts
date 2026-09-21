@@ -11,7 +11,10 @@ import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import { publishPostSchema } from "./schemas"
 
-/** What the Admin typed, echoed back so a rejected submission does not lose the post. */
+/**
+ * What the Admin typed, echoed back so a rejected submission does not lose the post.
+ * `body` is the editor's document as JSON, exactly as the hidden field carried it.
+ */
 export type PostDraft = { title: string; body: string }
 
 export type PublishPostError = "formInvalid" | "publishUnauthorized" | "publishFailed"
