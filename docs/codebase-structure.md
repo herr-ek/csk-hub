@@ -76,6 +76,12 @@ src/features/groups/
 
 The subfolders are illustrative workflow boundaries, not a required template. Shared group-specific actions, schemas, helpers, or types may remain at the `groups/` root when they genuinely serve multiple workflows. A folder should earn its place by keeping related changes together and reducing the knowledge required by callers.
 
+### Feature guides
+
+A feature may carry a `README.md` at its root for rules a reader cannot infer from the code around them — usually an obligation imposed from outside the feature, such as an ADR the feature has to keep satisfying. Keep it to what the code cannot say for itself; conventions that hold across the whole tree belong in this guide instead.
+
+- [`src/features/rich-text/README.md`](../src/features/rich-text/README.md): how a feature consumes the editor, and how to add a node or mark to it — three lists and a stylesheet, no consumer changes.
+
 ## Dependency Direction
 
 Dependencies should point inward toward stable infrastructure and generic helpers:

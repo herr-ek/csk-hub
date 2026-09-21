@@ -57,6 +57,13 @@
       "when": 1789307395533,
       "tag": "0007_member-role-to-user",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790015551353,
+      "tag": "0008_post-body-as-document",
+      "breakpoints": true
     }
   ]
 }

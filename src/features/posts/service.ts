@@ -5,6 +5,7 @@ import { z } from "zod"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { post } from "@/core/db/schema/posts"
+import type { RichTextDocument } from "@/features/rich-text"
 
 export type NewsFeedEntry = {
   id: string
@@ -14,7 +15,7 @@ export type NewsFeedEntry = {
   publishedAt: Date
 }
 
-export type PublishedPost = NewsFeedEntry & { body: string }
+export type PublishedPost = NewsFeedEntry & { body: RichTextDocument }
 
 const postIdSchema = z.uuid()
 

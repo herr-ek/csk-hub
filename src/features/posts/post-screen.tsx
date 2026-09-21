@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
+import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostByline } from "./post-byline"
@@ -36,7 +37,7 @@ export async function PostScreen({ postId }: { postId: string }) {
             <PostByline authorName={post.authorName} publishedAt={post.publishedAt} />
           </p>
         </header>
-        <div className="whitespace-pre-wrap break-words text-base leading-relaxed">{post.body}</div>
+        <RichTextContent document={post.body} />
       </article>
     </ContentPage>
   )

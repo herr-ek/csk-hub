@@ -129,6 +129,7 @@
     "publishDescription": "Durch das Veröffentlichen wird der Beitrag sofort allen Mitgliedern angezeigt.",
     "titleLabel": "Titel",
     "bodyLabel": "Beitrag",
+    "bodyPlaceholder": "Schreibe den Beitrag. Tippe ## für eine Überschrift, - für eine Liste.",
     "publishing": "Wird veröffentlicht…",
     "publish": "Veröffentlichen",
     "formInvalid": "Bitte überprüfe das Formular und versuche es erneut.",
@@ -367,5 +368,31 @@
     "notificationTitle": "Testbenachrichtigung",
     "deliveryFailed": "Benachrichtigung konnte nicht gesendet werden.",
     "noRecipients": "Keine Empfänger ausgewählt."
+  },
+  "RichText": {
+    "editor": {
+      "formatting": "Formatierung",
+      "heading": "Überschrift {level}",
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "link": "Link",
+      "linkAddress": "Linkadresse",
+      "apply": "Übernehmen",
+      "removeLink": "Entfernen",
+      "bulletList": "Aufzählung",
+      "orderedList": "Nummerierte Liste",
+      "quote": "Zitat",
+      "table": "Tabelle",
+      "divider": "Trennlinie",
+      "addRow": "Zeile hinzufügen",
+      "addColumn": "Spalte hinzufügen",
+      "deleteRow": "Zeile löschen",
+      "deleteColumn": "Spalte löschen",
+      "deleteTable": "Tabelle löschen",
+      "addRowShort": "Zeile +",
+      "addColumnShort": "Spalte +",
+      "deleteRowShort": "Zeile −",
+      "deleteColumnShort": "Spalte −"
+    }
   }
 }

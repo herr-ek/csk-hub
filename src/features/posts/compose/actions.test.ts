@@ -27,7 +27,12 @@ mock.module("next/navigation", () => ({ redirect }))
 import { publishPost } from "./actions"
 
 const TITLE = "Höstkonsert"
-const BODY = "Vi sjunger i Vasakyrkan."
+/** The document as the editor's hidden field carries it. */
+const BODY_DOCUMENT = {
+  type: "doc",
+  content: [{ type: "paragraph", content: [{ type: "text", text: "Vi sjunger i Vasakyrkan." }] }]
+}
+const BODY = JSON.stringify(BODY_DOCUMENT)
 
 function postFormData(title = TITLE, body = BODY) {
   const data = new FormData()
@@ -58,7 +63,7 @@ describe("publishing a Post", () => {
     expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "create" })
     expect(values).toHaveBeenCalledWith({
       title: TITLE,
-      body: BODY,
+      body: BODY_DOCUMENT,
       authorId: "admin-1",
       publishedAt: expect.any(Date)
     })
@@ -87,6 +92,46 @@ describe("publishing a Post", () => {
     })
 
     expect(loggerError).toHaveBeenCalledTimes(1)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  test("stores what the Post schema allows, not what the browser sent", async () => {
+    const smuggled = JSON.stringify({
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Not a title" }] },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "click", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }]
+        }
+      ]
+    })
+
+    await expect(publishPost({ status: "idle" }, postFormData(TITLE, smuggled))).rejects.toThrow("NEXT_REDIRECT")
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          type: "doc",
+          content: [
+            { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Not a title" }] },
+            { type: "paragraph", content: [{ type: "text", text: "click" }] }
+          ]
+        }
+      })
+    )
+  })
+
+  test("refuses a body that is not a Post document, without authorizing anything", async () => {
+    const plainText = "Plain text from the old textarea"
+
+    await expect(publishPost({ status: "idle" }, postFormData(TITLE, plainText))).resolves.toEqual({
+      status: "error",
+      error: "formInvalid",
+      draft: { title: TITLE, body: plainText }
+    })
+
+    expect(requireCurrentUserPermission).not.toHaveBeenCalled()
     expect(insert).not.toHaveBeenCalled()
   })
 
