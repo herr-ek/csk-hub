@@ -20,7 +20,10 @@ type RequestActor = {
  * second lookup; passing `undefined` reads the session from the request headers, and
  * passing `null` states there is no session.
  */
-export type PermissionSession = { user: { id: string; role?: string | null } }
+export type PermissionSession = {
+  user: { id: string; role?: string | null }
+  session?: { impersonatedBy?: string | null }
+}
 
 /**
  * One resource-and-action pair drawn from the access-control table, e.g.
