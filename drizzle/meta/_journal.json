@@ -71,6 +71,13 @@
       "when": 1791061365683,
       "tag": "0009_post-body-search",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791062240058,
+      "tag": "0010_messaging",
+      "breakpoints": true
     }
   ]
 }

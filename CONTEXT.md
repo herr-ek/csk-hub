@@ -33,8 +33,8 @@ _Avoid_: Deleted, banned, archived, disabled
 
 **Erasure**:
 The permanent destruction of a User's record at their request, under GDPR. Distinct
-from becoming an Inactive User: erasure is irreversible, takes the participation
-history with it, and is exercised rarely and deliberately.
+from becoming an Inactive User: erasure is irreversible, removes the User's identity
+from retained Messages while preserving shared Conversation history.
 _Avoid_: Delete, purge, GDPR-delete
 
 **Post**:
@@ -48,3 +48,43 @@ The single reverse-chronological list of published Posts at `/news`, identical f
 User. It is where information published in the Hub lives; it is not a copy of the
 monthly email, which keeps running separately.
 _Avoid_: Timeline, wall, dashboard, newsletter
+
+## Messaging
+
+**Conversation**:
+A private exchange between Users. A Conversation is either a Direct Conversation or,
+when that capability is introduced, a Group Conversation.
+_Avoid_: Chat, thread
+
+**Direct Conversation**:
+A Conversation formed by exactly two distinct active Users. There is at most one
+Direct Conversation for a pair of Users; after Erasure, its retained history is
+read-only for the remaining User.
+_Avoid_: DM, private message
+
+**Group Conversation**:
+A named Conversation between multiple Users. A User joining or rejoining a Group
+Conversation can view its retained history from the beginning; after leaving, they
+retain read-only access to the history visible when they left. Group Conversations are
+represented in the model before their user-facing capability is introduced.
+_Avoid_: Group chat
+
+**Conversation Membership**:
+A User's active or former participation in a Conversation. It is the source of
+authority to view and send Messages in that Conversation.
+_Avoid_: Participant, recipient
+
+**Message**:
+Text sent by an active Conversation User within a Conversation.
+_Avoid_: Chat, DM
+
+**Unread State**:
+A User's per-Conversation position before its latest visible Message. It is a cursor;
+when sender-visible read status is introduced, it means the User opened the Conversation,
+not that they viewed each individual Message.
+_Avoid_: Read receipt, seen state
+
+**Erased Authorship**:
+The identity-free authorship state of a retained Message after its author exercises
+Erasure.
+_Avoid_: Deleted message, anonymous User

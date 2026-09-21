@@ -9,6 +9,10 @@ import { getRouteAccessDecision } from "./route-access"
 
 const userSession = { user: { id: "user-1", role: "user" } }
 const adminSession = { user: { id: "admin-1", role: "admin" } }
+const impersonatingSession = {
+  user: { id: "member-1", role: "user" },
+  session: { impersonatedBy: "admin-1" }
+}
 
 beforeEach(() => {
   requireAdmin.mockReset()
@@ -26,6 +30,14 @@ describe("route access", () => {
 
   test("allows authenticated users to access user routes", async () => {
     await expect(getRouteAccessDecision("/me", userSession)).resolves.toEqual({ kind: "allow" })
+  })
+
+  test("keeps impersonated sessions out of messaging routes", async () => {
+    await expect(getRouteAccessDecision("/messages", impersonatingSession)).resolves.toEqual({ kind: "forbidden" })
+    await expect(getRouteAccessDecision("/messages/conversation-1", impersonatingSession)).resolves.toEqual({
+      kind: "forbidden"
+    })
+    await expect(getRouteAccessDecision("/messages", userSession)).resolves.toEqual({ kind: "allow" })
   })
 
   test("redirects unauthenticated users to sign in with the requested path", async () => {
