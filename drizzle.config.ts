@@ -1,4 +1,5 @@
 import { defineConfig } from "drizzle-kit"
+import { sslOptionsFor } from "./scripts/ops/ssl"
 import { announceTarget, resolveOrExit } from "./scripts/ops/target"
 
 // Relative imports: drizzle-kit bundles this config without reading tsconfig paths.
@@ -14,6 +15,9 @@ export default defineConfig({
   schema: "./src/core/db/schema",
   out: "./drizzle",
   dbCredentials: {
-    url: database.url
+    url: database.url,
+    // The same TLS policy the ops status check uses, so migrations and the status that
+    // reports on them verify on identical terms.
+    ssl: sslOptionsFor(database.url)
   }
 })

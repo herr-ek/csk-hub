@@ -163,9 +163,11 @@ When a command resolves to production:
 - writes ask you to type `prod` to continue — `--yes` skips the prompt for CI
 - seeding refuses outright and exits non-zero
 
-Certificate verification is always on. If a platform's CA is not in your system
-trust store, point `DB_SSL_CA` at the certificate file; there is deliberately no
-switch to skip verification.
+Certificate verification is always on. Supabase signs with its own root rather
+than a public CA, so that certificate is committed at
+`src/core/config/prod-ca-2021.crt` and used by default — connecting to
+production needs no certificate setup. `DB_SSL_CA` overrides it for any other
+managed database. There is deliberately no switch to skip verification.
 
 ## Email configuration
 

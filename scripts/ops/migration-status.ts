@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { Client } from "pg"
 import { type DatabaseTarget, databaseUrlFor, describeHost } from "@/core/config/database-url"
+import { sslOptionsFor } from "./ssl"
 
 /**
  * Compares the migration files on disk against the ledger a database has actually
@@ -26,20 +27,6 @@ const JOURNAL = new URL("../../drizzle/meta/_journal.json", import.meta.url)
 export function readJournal(): JournalEntry[] {
   const journal = JSON.parse(readFileSync(JOURNAL, "utf8")) as { entries: JournalEntry[] }
   return [...journal.entries].sort((a, b) => a.idx - b.idx)
-}
-
-/**
- * Certificate verification stays on. A managed database whose CA is not in the platform
- * trust store can supply one through `DB_SSL_CA`; the deliberate absence of an "ignore
- * certificates" switch is the point, since the status this tool reports is only worth
- * anything if the server is who it claims to be.
- */
-function sslOptionsFor(url: string) {
-  const { hostname } = new URL(url)
-  if (hostname === "localhost" || hostname === "127.0.0.1") return undefined
-
-  const caPath = process.env.DB_SSL_CA
-  return caPath ? { ca: readFileSync(caPath, "utf8") } : true
 }
 
 export async function statusFor(target: DatabaseTarget): Promise<TargetStatus> {

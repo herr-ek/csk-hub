@@ -131,8 +131,12 @@ Guardrails, when a command resolves to production:
 - Seeding refuses outright and exits non-zero. It is not a prompt.
 
 `scripts/ops/` (`bun run ops`) is the guarded door for production work and shows the
-migration ledger for local and production side by side. Certificate verification is always
-on; supply a CA through `DB_SSL_CA` if a platform's is not in the system trust store.
+migration ledger for local and production side by side.
+
+Certificate verification is always on. Supabase signs with its own root rather than a
+public CA, so `src/core/config/prod-ca-2021.crt` is committed and used by default — it is
+a public certificate, identical for every project, so committing it removes a setup step
+without exposing anything. `DB_SSL_CA` overrides it for another managed database.
 
 ## Next.js And React
 
