@@ -3,6 +3,9 @@ import { eq } from "drizzle-orm"
 import { auth } from "@/core/auth"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
+import { assertLocalTarget } from "./ops/guards"
+
+assertLocalTarget("Seeding an admin user")
 
 const email = "admin@example.com"
 const username = "admin"

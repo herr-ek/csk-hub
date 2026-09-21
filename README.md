@@ -42,14 +42,15 @@ Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
 2. Create the local environment file and generate an auth secret:
 
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    openssl rand -base64 32
    ```
 
-   Put the generated value in `BETTER_AUTH_SECRET`. The example configuration
-   points at the PostgreSQL container defined in `docker-compose.yml` and uses
-   `EMAIL_MODE=log`, so auth emails are written to the server log during local
-   development.
+   Put the generated value in `BETTER_AUTH_SECRET`. `POSTGRES_URL_LOCAL` already
+   points at the PostgreSQL container defined in `docker-compose.yml`, and
+   `EMAIL_MODE=log` writes auth emails to the server log during local
+   development. Leave `POSTGRES_URL_PROD` blank unless you administer
+   production; see [Database targets](#database-targets).
 
 3. Start PostgreSQL:
 
@@ -80,8 +81,11 @@ password `password`:
 bun run db:seed-admin
 ```
 
-This is a local-development convenience only. Change the password immediately
-and do not use these credentials in a deployed environment.
+`bun run db:seed-users` adds ten further example users with the same password.
+
+Both are local-development conveniences only. Change the password immediately,
+and do not use these credentials in a deployed environment. Seeding refuses to
+run against production.
 
 ## Routes
 
@@ -111,11 +115,57 @@ bun run db:generate
 bun run db:migrate
 ```
 
-To open Drizzle Studio against the configured database:
+To open Drizzle Studio against the current target:
 
 ```bash
 bun run db:studio
 ```
+
+## Database targets
+
+Local is the default database. Nothing reaches production unless you ask it to,
+so forgetting to set something is safe rather than dangerous.
+
+`.env` holds two connection strings — `POSTGRES_URL_LOCAL` and
+`POSTGRES_URL_PROD` — and `DB_TARGET` selects between them, defaulting to
+`local`. Pass `DB_TARGET=prod` on the command that needs it; do not put it in
+`.env`, or production becomes the ambient default again. Deployed instances
+ignore both and use the connection string Vercel injects.
+
+`POSTGRES_URL_PROD` must be the direct, non-pooling Supabase string on port
+5432. The transaction pooler on 6543 cannot run migrations.
+
+### The ops CLI
+
+```bash
+bun run ops
+```
+
+Opens an interactive menu and shows the migration status of local and
+production side by side, so one screen answers whether either is behind the
+migrations in `drizzle/`. From there you can run migrations, open Studio, or
+seed the local database.
+
+```bash
+bun run ops --status    # print the status and exit, without the menu
+DB_TARGET=prod bun run ops
+```
+
+Production has no credentials configured for most contributors; the status
+simply reports `not configured` and carries on.
+
+### Guardrails
+
+When a command resolves to production:
+
+- a banner names the host before anything connects, including a bare
+  `bunx drizzle-kit`
+- writes ask you to type `prod` to continue — `--yes` skips the prompt for CI
+- seeding refuses outright and exits non-zero
+
+Certificate verification is always on. If a platform's CA is not in your system
+trust store, point `DB_SSL_CA` at the certificate file; there is deliberately no
+switch to skip verification.
 
 ## Email configuration
 
@@ -134,6 +184,7 @@ bun run typecheck   # TypeScript checks
 bun run lint        # Biome checks
 bun run build       # production build
 bun run pr          # tests, lint, and build
+bun run ops         # database status and guarded database operations
 ```
 
 The project context and architectural conventions are documented in

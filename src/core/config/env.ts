@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { resolveDatabaseUrl } from "@/core/config/database-url"
 
 const environment = process.env.ENVIRONMENT ?? process.env.VERCEL_ENV
 
@@ -7,6 +8,8 @@ const envSchema = z
     ENVIRONMENT: z.enum(["development", "test", "preview", "production"]).default("development"),
     VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
 
+    // Resolved by `database-url.ts` rather than read from the environment directly, so
+    // that local stays the default and production is an explicit opt-in.
     POSTGRES_URL: z.string(),
 
     BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
@@ -47,7 +50,15 @@ const envSchema = z
     }
   })
 
-const parsed = envSchema.safeParse({ ...process.env, ENVIRONMENT: environment })
+let databaseUrl: string
+try {
+  databaseUrl = resolveDatabaseUrl().url
+} catch (error) {
+  console.error(`\u274c ${error instanceof Error ? error.message : error}`)
+  process.exit(1)
+}
+
+const parsed = envSchema.safeParse({ ...process.env, ENVIRONMENT: environment, POSTGRES_URL: databaseUrl })
 if (!parsed.success) {
   console.error("❌ Invalid environment variables:", JSON.stringify(z.treeifyError(parsed.error), null, 2))
   process.exit(1)

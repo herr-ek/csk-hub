@@ -100,6 +100,40 @@ Keep Drizzle schema files split by ownership under `src/core/db/schema`.
 
 When a model decision is hard to reverse or establishes an important domain rule, use an ADR in `docs/adr/`, following [CONTRIBUTING.md](../CONTRIBUTING.md#architectural-decision-records).
 
+## Database Targets
+
+Local is the default database; production is a deliberate opt-in. Forgetting to set
+anything must be safe, so no script reaches production by accident.
+
+`.env` holds two connection strings — `POSTGRES_URL_LOCAL` and `POSTGRES_URL_PROD` — and
+`DB_TARGET` (`local` | `prod`) selects between them, defaulting to `local` when unset.
+Pass `DB_TARGET=prod` on the invocation that needs it; never persist it in `.env`.
+
+`src/core/config/database-url.ts` is the only place a connection string is chosen.
+`env.ts`, `drizzle.config.ts` and `scripts/ops` all resolve through it, and nothing else
+reads a `POSTGRES_URL*` variable directly. It lives outside `env.ts` deliberately: that
+module validates the whole application environment and exits on anything missing, which
+would force tooling to supply unrelated secrets just to pick a connection string. A
+deployed instance still uses the connection string Vercel injects.
+
+`POSTGRES_URL_PROD` is the direct, non-pooling connection. The only sanctioned production
+operations are migrations and Studio, and the transaction pooler serves neither.
+
+`DB_TARGET` governs the database and nothing else. `ENVIRONMENT` and `EMAIL_MODE` stay
+orthogonal; bundling them is how a `development` environment ended up pointing at the
+production database.
+
+Guardrails, when a command resolves to production:
+
+- `drizzle.config.ts` prints a banner naming the host before any drizzle-kit command
+  connects — including `bunx drizzle-kit` run by hand.
+- Writes require a typed confirmation, bypassable with `--yes` for CI.
+- Seeding refuses outright and exits non-zero. It is not a prompt.
+
+`scripts/ops/` (`bun run ops`) is the guarded door for production work and shows the
+migration ledger for local and production side by side. Certificate verification is always
+on; supply a CA through `DB_SSL_CA` if a platform's is not in the system trust store.
+
 ## Next.js And React
 
 Keep route files thin. A `page.tsx`, `layout.tsx`, or route handler should compose modules; it should not become the main implementation of a feature.

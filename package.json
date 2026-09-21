@@ -12,9 +12,11 @@
     "format": "biome format --write",
     "auth:generate": "better-auth generate --config src/core/auth/index.ts --output src/core/db/schema/auth.ts -y",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "bun run scripts/ops/migrate.ts",
     "db:seed-admin": "bun run scripts/seed-admin.ts",
+    "db:seed-users": "bun run scripts/seed-users.ts",
     "db:studio": "drizzle-kit studio",
+    "ops": "bun run scripts/ops/index.ts",
     "pr": "bun tst && bun lint && bun run build",
     "fallow": "bunx fallow"
   },
@@ -54,6 +56,7 @@
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
     "@biomejs/biome": "2.5.13",
+    "@clack/prompts": "^1.8.1",
     "@tailwindcss/postcss": "^4",
     "@types/bun": "^1.4.2",
     "@types/node": "^26.5.1",

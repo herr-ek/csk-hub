@@ -1,20 +1,19 @@
 import { defineConfig } from "drizzle-kit"
+import { announceTarget, resolveOrExit } from "./scripts/ops/target"
 
-// POSTGRES_URL_NON_POOLING is the direct connection Vercel injects when a
-// Supabase project is linked; migrations should not run through the
-// transaction pooler. DATABASE_URL is used for local dev.
-// BUT ssl require does not work on Vercel Hobby plan!
-const DATABASE_URL = process.env.POSTGRES_URL ?? process.env.POSTGRES_URL_NON_POOLING
+// Relative imports: drizzle-kit bundles this config without reading tsconfig paths.
+const database = resolveOrExit()
 
-if (!DATABASE_URL) {
-  throw Error("DATABASE_URL is not set")
-}
+// Every drizzle-kit command loads this config before it opens a connection, so it is the
+// one place that can warn about a production target however drizzle-kit was reached —
+// including `bunx drizzle-kit` run by hand, which no package.json script guards.
+announceTarget(database)
 
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/core/db/schema",
   out: "./drizzle",
   dbCredentials: {
-    url: DATABASE_URL
+    url: database.url
   }
 })
