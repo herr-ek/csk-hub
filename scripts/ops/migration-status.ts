@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { Client } from "pg"
 import { type DatabaseTarget, databaseUrlFor, describeHost } from "@/core/config/database-url"
-import { sslOptionsFor } from "./ssl"
+import { connectionFor } from "./ssl"
 
 /**
  * Compares the migration files on disk against the ledger a database has actually
@@ -35,7 +35,8 @@ export async function statusFor(target: DatabaseTarget): Promise<TargetStatus> {
 
   const host = describeHost(url)
   const entries = readJournal()
-  const client = new Client({ connectionString: url, ssl: sslOptionsFor(url) })
+  const connection = connectionFor(url)
+  const client = new Client({ connectionString: connection.url, ssl: connection.ssl })
 
   try {
     await client.connect()

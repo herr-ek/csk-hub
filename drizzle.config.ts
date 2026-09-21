@@ -1,5 +1,5 @@
 import { defineConfig } from "drizzle-kit"
-import { sslOptionsFor } from "./scripts/ops/ssl"
+import { connectionFor } from "./scripts/ops/ssl"
 import { announceTarget, resolveOrExit } from "./scripts/ops/target"
 
 // Relative imports: drizzle-kit bundles this config without reading tsconfig paths.
@@ -10,14 +10,16 @@ const database = resolveOrExit()
 // including `bunx drizzle-kit` run by hand, which no package.json script guards.
 announceTarget(database)
 
+const connection = connectionFor(database.url)
+
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/core/db/schema",
   out: "./drizzle",
   dbCredentials: {
-    url: database.url,
-    // The same TLS policy the ops status check uses, so migrations and the status that
+    // The same connection the ops status check dials, so migrations and the status that
     // reports on them verify on identical terms.
-    ssl: sslOptionsFor(database.url)
+    url: connection.url,
+    ssl: connection.ssl
   }
 })
