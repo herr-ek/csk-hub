@@ -2,7 +2,7 @@
 
 import { Placeholder } from "@tiptap/extensions"
 import { EditorContent, useEditor } from "@tiptap/react"
-import { useId, useState } from "react"
+import { useId, useRef } from "react"
 import { cn } from "@/shared/utils"
 import type { DocumentSchema, RichTextDocument } from "../document"
 // Deep import on purpose: the view's entrypoint reaches the server-only renderer, and
@@ -31,7 +31,7 @@ export function RichTextEditor({
   placeholder: string
 }) {
   const editorId = useId()
-  const [document, setDocument] = useState(() => (defaultValue ? JSON.stringify(defaultValue) : ""))
+  const field = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
     extensions: [...schema.extensions, ...editingAffordances, Placeholder.configure({ placeholder })],
@@ -47,7 +47,13 @@ export function RichTextEditor({
         class: "min-h-56 px-3 py-2 focus-visible:outline-none"
       }
     },
-    onUpdate: ({ editor: current }) => setDocument(JSON.stringify(current.getJSON()))
+    // Straight into the field the form reads, rather than through React state: the
+    // document is not something this component renders, so making it state would
+    // rerender the editor and its toolbar on every keystroke for nothing.
+    onUpdate: ({ editor: current }) => {
+      const written = field.current
+      if (written) written.value = JSON.stringify(current.getJSON())
+    }
   })
 
   // No height of its own: the field above hands down whatever the viewport has left.
@@ -65,8 +71,12 @@ export function RichTextEditor({
       >
         <EditorContent editor={editor} />
       </RichTextProse>
-      {/* The value the form submits; holding it here keeps keystrokes out of the form. */}
-      <input type="hidden" name={name} value={document} />
+      {/*
+        The field the form submits the document under, uncontrolled so that writing to it
+        costs no render. It carries the document from the first paint, so a submission
+        that beats the editor's own mount still sends what the writer started from.
+      */}
+      <input ref={field} type="hidden" name={name} defaultValue={defaultValue ? JSON.stringify(defaultValue) : ""} />
     </div>
   )
 }

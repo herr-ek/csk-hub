@@ -1,6 +1,6 @@
 import { type Extensions, getSchema, type JSONContent } from "@tiptap/core"
 import { Node as ProseMirrorNode, type Schema } from "@tiptap/pm/model"
-import { baseFeatures } from "./features"
+import { baseFeatures, type HeadingLevel } from "./features"
 import { safeLinkHref } from "./safe-link-href"
 
 /** A document in the shape the editor writes and a consumer stores. */
@@ -14,7 +14,7 @@ export type RichTextDocument = JSONContent
 export type DocumentSchema = {
   extensions: Extensions
   /** The heading levels allowed, in ascending order; empty when headings are not. */
-  headingLevels: readonly number[]
+  headingLevels: readonly HeadingLevel[]
   /** A stored document from an untrusted value, or null when there is no document in it. */
   normalize: (value: unknown) => RichTextDocument | null
   /** The same, from the JSON string a form submits. */
@@ -27,20 +27,24 @@ function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
-function configuredHeadingLevels(extensions: Extensions): number[] {
+function isHeadingLevel(value: unknown): value is HeadingLevel {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 6
+}
+
+function configuredHeadingLevels(extensions: Extensions): HeadingLevel[] {
   const heading = extensions.find((extension) => extension.name === "heading")
   const levels = (heading?.options as { levels?: unknown } | undefined)?.levels
   if (!Array.isArray(levels)) return []
-  return levels.filter((level): level is number => Number.isInteger(level)).sort((a, b) => a - b)
+  return levels.filter(isHeadingLevel).sort((a, b) => a - b)
 }
 
-function nearestLevel(levels: readonly number[], requested: unknown): number {
+function nearestLevel(levels: readonly HeadingLevel[], requested: unknown): HeadingLevel {
   const wanted = Number(requested)
   if (!Number.isFinite(wanted)) return levels[0] ?? 1
   return levels.reduce((best, level) => (Math.abs(level - wanted) < Math.abs(best - wanted) ? level : best))
 }
 
-function createNormalizer(schema: Schema, headingLevels: readonly number[]) {
+function createNormalizer(schema: Schema, headingLevels: readonly HeadingLevel[]) {
   /**
    * Attribute values the schema cannot police on its own. A type absent here keeps
    * whatever attributes it declares.

@@ -13,9 +13,12 @@ export type NewsFeedEntry = {
   /** Null once the author has been erased; the Post itself survives them. */
   authorName: string | null
   publishedAt: Date
+  /** The feed renders this too, so a reader sees what a Post says before opening it. */
+  body: RichTextDocument
 }
 
-export type PublishedPost = NewsFeedEntry & { body: RichTextDocument }
+/** A Post read on its own page. The feed carries the same fields, so this is that type. */
+export type PublishedPost = NewsFeedEntry
 
 const postIdSchema = z.uuid()
 
@@ -25,6 +28,7 @@ export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
     .select({
       id: post.id,
       title: post.title,
+      body: post.body,
       authorName: user.name,
       publishedAt: post.publishedAt
     })

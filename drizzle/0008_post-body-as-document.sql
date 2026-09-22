@@ -1,10 +1,13 @@
 -- The text nodes of a rich-text document, in reading order, for full-text search.
+-- The ordinality is what makes "reading order" true rather than incidental: string_agg
+-- without an ORDER BY may aggregate in any order, which a phrase search would notice.
 -- IMMUTABLE so a generated column may call it; STRICT so a null body yields null.
 -- Strict-mode jsonpath: in lax mode `.**` visits array elements twice.
 CREATE FUNCTION post_body_text(body jsonb) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
-  SELECT string_agg(node #>> '{}', ' ')
-  FROM jsonb_array_elements(jsonb_path_query_array(body, 'strict $.**.text', '{}', true)) AS node
+  SELECT string_agg(node #>> '{}', ' ' ORDER BY ord)
+  FROM jsonb_array_elements(jsonb_path_query_array(body, 'strict $.**.text', '{}', true))
+       WITH ORDINALITY AS nodes(node, ord)
 $$;--> statement-breakpoint
 -- What the textarea stored becomes a document of one paragraph per line, so no
 -- published Post loses a word. Dropped again once the column has been converted.

@@ -33,3 +33,16 @@ export const table = (header: string[], ...rows: string[][]): RichTextDocument =
   ]
 })
 export const doc = (...content: RichTextDocument[]): RichTextDocument => ({ type: "doc", content })
+
+/** A cell carrying the attributes the editor writes once cells are merged or resized. */
+export const spannedCell = (
+  type: "tableHeader" | "tableCell",
+  value: string,
+  attrs: { colspan?: number; rowspan?: number; colwidth?: number[] }
+): RichTextDocument => ({ type, attrs, content: [paragraph(text(value))] })
+
+/** A table built row by row, for the cases `table` above is too tidy to express. */
+export const tableOf = (...rows: RichTextDocument[][]): RichTextDocument => ({
+  type: "table",
+  content: rows.map((cells) => ({ type: "tableRow", content: cells }))
+})

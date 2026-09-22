@@ -25,6 +25,9 @@ const document = postDocument.parse(formData.get("body"))   // RichTextDocument 
 
 // Reading: server-only, from `@/features/rich-text/view`.
 <RichTextContent document={row.body} />
+
+// Reading inside something that is itself a link, such as a feed card.
+<RichTextContent document={row.body} linksAsText />
 ```
 
 `parse` and `normalize` are the boundary. They drop nodes, marks and attributes outside
@@ -61,6 +64,16 @@ nothing to the document and goes in `editor/editing-affordances.ts` instead.
 `exit-empty-heading.ts` is the worked example.
 
 ## Things worth knowing
+
+**One link rule, not two.** `safeLinkHref` is both the editor's `isAllowedUri` and the
+normaliser's check, so a link that survives typing survives publication. Tiptap's
+`protocols` option would not do: it *adds* to Tiptap's defaults rather than replacing
+them, which would let `ftp:` or `tel:` autolink in the editor and then vanish on the way
+into the column.
+
+**A hard break is not a node here.** `Shift+Enter` would store a `<br>`, widening the
+stored vocabulary past what a consumer opted in to, so `HardBreak` is deliberately out of
+`baseFeatures`. Enter for a new paragraph is the whole of the line-breaking story.
 
 **Attributes are pruned to what the node declares.** A pasted `style` or `onclick`
 never reaches the column. If a new node needs an attribute checked rather than merely

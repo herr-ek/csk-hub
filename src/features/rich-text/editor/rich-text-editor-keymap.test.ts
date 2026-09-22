@@ -1,12 +1,12 @@
-import { GlobalRegistrator } from "@happy-dom/global-registrator"
+import { registerDom } from "../../../../test/dom"
 
 // ProseMirror needs a DOM, registered before the editor modules below evaluate.
-GlobalRegistrator.register({ url: "http://localhost:3000" })
+registerDom()
 
 import { describe, expect, test } from "bun:test"
 import { Editor } from "@tiptap/core"
 import { Placeholder } from "@tiptap/extensions"
-import { createDocumentSchema, richText } from "../document"
+import { createDocumentSchema, type RichTextDocument, richText } from "../document"
 import { editingAffordances } from "./editing-affordances"
 
 const schema = createDocumentSchema([richText.headings([2, 3]), richText.lists])
@@ -65,8 +65,13 @@ describe("Enter in the editor", () => {
     pressEnter(editor)
     editor.commands.insertContent("Bring the folder.")
 
+    // Typed as the document the feature stores, not as Tiptap's `getJSON` return: that
+    // type declares `marks` on every text node, which `getJSON` itself leaves off when a
+    // run of text carries none.
+    const document: RichTextDocument = editor.getJSON()
+
     expect(blocks(editor)).toEqual(["paragraph"])
-    expect(editor.getJSON()).toEqual({
+    expect(document).toEqual({
       type: "doc",
       content: [{ type: "paragraph", content: [{ type: "text", text: "Bring the folder." }] }]
     })

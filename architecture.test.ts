@@ -1,7 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join, relative, sep } from "node:path"
 import { projectFiles } from "archunit"
-import { describe, expect, it, test } from "vitest"
+import { describe, expect, test } from "vitest"
+
+/**
+ * A rule that parses the whole project. They are slow by nature and get slower as the
+ * codebase grows, and the default per-test timeout is about the length of a single scan
+ * — so under load they fail for being slow rather than for a rule actually being broken.
+ */
+const scanTest = (name: string, rule: () => Promise<void>) => test(name, rule, 30_000)
 
 const options = {
   logging: {
@@ -46,32 +53,32 @@ describe("Architecture Rules", () => {
     expect(violations).toEqual([])
   })
 
-  test("core should not depend on app", async () => {
+  scanTest("core should not depend on app", async () => {
     const rule = projectFiles().inFolder("src/core/**").shouldNot().dependOnFiles().inPath("src/app/**")
     await expect(rule).toPassAsync(options)
   })
 
-  it("should not have circular dependencies", async () => {
+  scanTest("should not have circular dependencies", async () => {
     const rule = projectFiles().inFolder("src/**").should().haveNoCycles()
     await expect(rule).toPassAsync(options)
   })
 
-  test("shared does not depend on app", async () => {
+  scanTest("shared does not depend on app", async () => {
     const rule = projectFiles().inPath("src/shared/**").shouldNot().dependOnFiles().inPath("src/app/**")
     await expect(rule).toPassAsync(options)
   })
 
-  test("shared does not depend on core", async () => {
+  scanTest("shared does not depend on core", async () => {
     const rule = projectFiles().inPath("src/shared/**").shouldNot().dependOnFiles().inPath("src/core/**")
     await expect(rule).toPassAsync(options)
   })
 
-  test("core does not depend on features", async () => {
+  scanTest("core does not depend on features", async () => {
     const rule = projectFiles().inPath("src/core/**").shouldNot().dependOnFiles().inPath("src/features/**")
     await expect(rule).toPassAsync(options)
   })
 
-  test("shared does not depend on features", async () => {
+  scanTest("shared does not depend on features", async () => {
     const rule = projectFiles().inPath("src/shared/**").shouldNot().dependOnFiles().inPath("src/features/**")
     await expect(rule).toPassAsync(options)
   })
@@ -87,7 +94,7 @@ describe("Architecture Rules", () => {
     expect(violations).toEqual([])
   })
 
-  test("nothing outside app depends on app", async () => {
+  scanTest("nothing outside app depends on app", async () => {
     const violations = await projectFiles()
       .inPath("src/**", {
         except: { inPath: "src/app/**" }

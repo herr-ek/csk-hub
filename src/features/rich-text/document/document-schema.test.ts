@@ -52,6 +52,14 @@ describe("normalizing a document", () => {
     expect(schema.normalize(wrapped)).toEqual(doc(paragraph(text("Alice sings."))))
   })
 
+  test("drops a hard break, which is an editing gesture rather than a node", () => {
+    const written = doc(paragraph(text("Doors 19:00"), { type: "hardBreak" }, text("Curtain 19:30")))
+
+    // Shift+Enter would otherwise store a `<br>`, widening the vocabulary past the
+    // nodes a consumer opted in to; the words either side of it survive.
+    expect(schema.normalize(written)).toEqual(doc(paragraph(text("Doors 19:00Curtain 19:30"))))
+  })
+
   test("drops a mark the schema does not know and keeps its words", () => {
     const pasted = doc(paragraph(text("loud", [{ type: "underline" }, { type: "bold" }])))
 
