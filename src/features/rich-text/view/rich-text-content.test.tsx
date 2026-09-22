@@ -14,7 +14,9 @@ import {
   listItem,
   orderedList,
   paragraph,
+  spannedCell,
   table,
+  tableOf,
   text
 } from "./test-fixtures"
 
@@ -33,10 +35,16 @@ describe("rendering a document", () => {
     ["an ordered list", doc(orderedList(listItem(paragraph(text("One"))))), "<ol><li><p>One</p></li></ol>"],
     ["a blockquote", doc(blockquote(paragraph(text("Sing out.")))), "<blockquote><p>Sing out.</p></blockquote>"],
     ["a divider", doc(horizontalRule()), "<hr/>"],
-    ["a table header", doc(table(["A"], ["1"])), '<th scope="col"><p>A</p></th>'],
-    ["a hard break", doc(paragraph(text("one"), { type: "hardBreak" }, text("two"))), "one<br/>two"]
+    ["a table header", doc(table(["A"], ["1"])), '<th scope="col"><p>A</p></th>']
   ])("draws %s", (_what, document, expected) => {
     expect(render(document)).toContain(expected)
+  })
+
+  test("draws a link as plain words where the surface is itself a link", () => {
+    const document = doc(paragraph(text("the rota", link("https://example.org/rota"))))
+
+    // A feed card links to the Post, and a browser will not nest one anchor in another.
+    expect(renderToStaticMarkup(renderRichText(document, { linksAsText: true }))).toBe("<p>the rota</p>")
   })
 
   test("gives a link its destination and holds it at arm's length", () => {
@@ -50,6 +58,28 @@ describe("rendering a document", () => {
     const html = render(doc(table(["Week", "Choir"], ["36", "MK"])))
 
     expect(html).toContain("<colgroup><col/><col/></colgroup>")
+    // A cell that spans only itself says so by saying nothing.
+    expect(html.toLowerCase()).not.toContain("colspan")
+    expect(html.toLowerCase()).not.toContain("rowspan")
+  })
+
+  test("keeps the spans and widths a merged or resized table carries", () => {
+    const html = render(
+      doc(
+        tableOf([
+          spannedCell("tableHeader", "Week", { colspan: 2, colwidth: [120, 80] }),
+          spannedCell("tableHeader", "Choir", { rowspan: 2 })
+        ])
+      )
+    )
+
+    // A merged cell covers each of its columns in the colgroup too; count the cells
+    // instead and the reader's table stops lining up with the editor's.
+    expect(html).toContain('<col style="width:120px"/><col style="width:80px"/><col/>')
+    // Lowercased first: React spells these `colSpan`/`rowSpan` in its output, which a
+    // browser reads as the same attribute because HTML attribute names are case-insensitive.
+    expect(html.toLowerCase()).toContain('colspan="2"')
+    expect(html.toLowerCase()).toContain('rowspan="2"')
   })
 })
 

@@ -4,9 +4,10 @@ import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { buttonVariants } from "@/shared/ui/base/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostByline } from "./post-byline"
@@ -61,6 +62,18 @@ export async function NewsScreen() {
                       <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
                     </CardDescription>
                   </CardHeader>
+                  <CardContent>
+                    {/*
+                      The same server renderer the permalink uses, so a Post reads the
+                      same in both places, cut off where the card ends rather than
+                      summarised into a second, plainer copy of the prose.
+                    */}
+                    <RichTextContent
+                      document={entry.body}
+                      linksAsText
+                      className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
+                    />
+                  </CardContent>
                 </Card>
               </Link>
             </li>
@@ -82,6 +95,10 @@ export function NewsScreenSkeleton() {
               <Skeleton className="h-5 w-2/3" />
               <Skeleton className="h-4 w-40" />
             </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
+            </CardContent>
           </Card>
         ))}
       </div>

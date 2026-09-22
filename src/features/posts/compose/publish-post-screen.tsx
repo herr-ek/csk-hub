@@ -1,4 +1,3 @@
-import { connection } from "next/server"
 import { Suspense } from "react"
 import { getTranslations } from "@/core/i18n/server"
 import { ContentPage } from "@/shared/layouts/content-page"
@@ -14,15 +13,6 @@ async function ComposeHeader() {
       <p className="mt-1 text-sm text-muted-foreground">{t("publishDescription")}</p>
     </div>
   )
-}
-
-/**
- * Tiptap ids each editor with `Math.random()`, which a prerendered shell would freeze
- * into the build, so the form is composed at request time.
- */
-async function PostComposer() {
-  await connection()
-  return <PublishPostForm />
 }
 
 function PostComposerSkeleton() {
@@ -46,8 +36,13 @@ export function PublishPostScreen() {
   return (
     <ContentPage fill>
       <ComposeHeader />
+      {/*
+        Tiptap keys its editor element with `Math.random()`, which a prerender would
+        freeze into the build, so the composer is left out of the static shell and
+        streamed instead. The boundary is what excludes it; the page itself stays static.
+      */}
       <Suspense fallback={<PostComposerSkeleton />}>
-        <PostComposer />
+        <PublishPostForm />
       </Suspense>
     </ContentPage>
   )

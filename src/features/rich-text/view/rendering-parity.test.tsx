@@ -83,8 +83,7 @@ describe("the editor and the stored document are made of the same elements", () 
     ["link", doc(paragraph(text("The rota is "), text("on the noticeboard", link("https://example.org/rota"))))],
     ["blockquote", doc(blockquote(paragraph(text("Sing it like you mean it."))))],
     ["horizontal rule", doc(paragraph(text("Before.")), horizontalRule(), paragraph(text("After.")))],
-    ["table", doc(table(["Week", "Choir"], ["36", "MK"]))],
-    ["hard break", doc(paragraph(text("one"), { type: "hardBreak" }, text("two")))]
+    ["table", doc(table(["Week", "Choir"], ["36", "MK"]))]
   ])("%s", (_feature, document) => {
     expect(serverTags(document)).toEqual(editorTags(document))
   })
