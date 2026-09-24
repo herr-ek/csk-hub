@@ -129,6 +129,7 @@
     "publishDescription": "Publishing shows the post to every member right away.",
     "titleLabel": "Title",
     "bodyLabel": "Post",
+    "bodyPlaceholder": "Write the post. Type ## for a heading, - for a list.",
     "publishing": "Publishing…",
     "publish": "Publish",
     "formInvalid": "Please check the form and try again.",
@@ -372,5 +373,31 @@
     "notificationTitle": "Test notification",
     "deliveryFailed": "Failed to send notification.",
     "noRecipients": "No recipients selected."
+  },
+  "RichText": {
+    "editor": {
+      "formatting": "Formatting",
+      "heading": "Heading {level}",
+      "bold": "Bold",
+      "italic": "Italic",
+      "link": "Link",
+      "linkAddress": "Link address",
+      "apply": "Apply",
+      "removeLink": "Remove",
+      "bulletList": "Bullet list",
+      "orderedList": "Numbered list",
+      "quote": "Quote",
+      "table": "Table",
+      "divider": "Divider",
+      "addRow": "Add row",
+      "addColumn": "Add column",
+      "deleteRow": "Delete row",
+      "deleteColumn": "Delete column",
+      "deleteTable": "Delete table",
+      "addRowShort": "Row +",
+      "addColumnShort": "Col +",
+      "deleteRowShort": "Row −",
+      "deleteColumnShort": "Col −"
+    }
   }
 }

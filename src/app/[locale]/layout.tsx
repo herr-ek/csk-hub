@@ -86,7 +86,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      {/* A definite height, not a minimum: it lets a screen give its overflow to a pane of
+          its own instead of to the window (see `ContentPage`'s `fill`). */}
+      <body className="h-full flex flex-col">
         <NextIntlClientProvider
           locale={locale}
           // TODO: Split up per feature if performance gets bad

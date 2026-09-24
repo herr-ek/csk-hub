@@ -129,6 +129,7 @@
     "publishDescription": "När du publicerar visas inlägget genast för alla medlemmar.",
     "titleLabel": "Titel",
     "bodyLabel": "Inlägg",
+    "bodyPlaceholder": "Skriv inlägget. Skriv ## för en rubrik, - för en lista.",
     "publishing": "Publicerar…",
     "publish": "Publicera",
     "formInvalid": "Kontrollera formuläret och försök igen.",
@@ -367,5 +368,31 @@
     "notificationTitle": "Testnotis",
     "deliveryFailed": "Det gick inte att skicka notisen.",
     "noRecipients": "Inga mottagare valda."
+  },
+  "RichText": {
+    "editor": {
+      "formatting": "Formatering",
+      "heading": "Rubrik {level}",
+      "bold": "Fetstil",
+      "italic": "Kursiv",
+      "link": "Länk",
+      "linkAddress": "Länkadress",
+      "apply": "Använd",
+      "removeLink": "Ta bort",
+      "bulletList": "Punktlista",
+      "orderedList": "Numrerad lista",
+      "quote": "Citat",
+      "table": "Tabell",
+      "divider": "Avdelare",
+      "addRow": "Lägg till rad",
+      "addColumn": "Lägg till kolumn",
+      "deleteRow": "Ta bort rad",
+      "deleteColumn": "Ta bort kolumn",
+      "deleteTable": "Ta bort tabell",
+      "addRowShort": "Rad +",
+      "addColumnShort": "Kol +",
+      "deleteRowShort": "Rad −",
+      "deleteColumnShort": "Kol −"
+    }
   }
 }
