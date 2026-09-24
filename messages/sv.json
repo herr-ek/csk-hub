@@ -115,7 +115,8 @@
     "loggingOut": "Loggar ut…",
     "stopImpersonating": "Sluta imitera",
     "stoppingImpersonation": "Avslutar imitiering…",
-    "language": "Språk"
+    "language": "Språk",
+    "messages": "Meddelanden"
   },
   "Posts": {
     "title": "Nyheter",
@@ -367,5 +368,53 @@
     "notificationTitle": "Testnotis",
     "deliveryFailed": "Det gick inte att skicka notisen.",
     "noRecipients": "Inga mottagare valda."
+  },
+  "Messages": {
+    "title": "Meddelanden",
+    "description": "Dina privata konversationer.",
+    "directConversations": "Direkta konversationer",
+    "formerMember": "Tidigare medlem",
+    "readOnly": "Den här konversationen är skrivskyddad.",
+    "unread": "{count} olästa",
+    "empty": "Inga konversationer ännu.",
+    "startTitle": "Starta en konversation",
+    "startDescription": "Hitta en aktiv medlem att skicka ett privat meddelande till.",
+    "searchPlaceholder": "Sök namn eller användarnamn",
+    "searchLabel": "Sök medlemmar",
+    "search": "Sök",
+    "usernameHandle": "@{username}",
+    "noMembers": "Inga aktiva medlemmar matchar sökningen.",
+    "typeToSearch": "Skriv för att söka bland aktiva medlemmar.",
+    "searching": "Söker…",
+    "backToHome": "Tillbaka till startsidan",
+    "firstMessageLabel": "Första meddelandet",
+    "messageLabel": "Meddelande",
+    "messagePlaceholder": "Skriv ett meddelande…",
+    "starting": "Startar…",
+    "sending": "Skickar…",
+    "sendMessage": "Skicka meddelande",
+    "otherMemberInactive": "Den andra medlemmen är inte längre aktiv.",
+    "loadOlder": "Läs in äldre meddelanden",
+    "sentAt": "Skickat {date}",
+    "errors": {
+      "blank-message": "Skriv ett meddelande.",
+      "message-too-long": "Meddelanden får vara högst 4 000 tecken.",
+      "sign-in-required": "Logga in för att använda meddelanden.",
+      "impersonation-unavailable": "Meddelanden kan inte skickas medan du imiterar en medlem.",
+      "inactive-member": "Endast aktiva medlemmar kan använda meddelanden.",
+      "recipient-required": "Välj en mottagare.",
+      "idempotency-key-required": "Det gick inte att skicka meddelandet. Försök igen.",
+      "idempotency-key-reused": "Den här sändningsbegäran har redan använts för ett annat meddelande. Försök igen.",
+      "self-recipient": "Du kan inte starta en konversation med dig själv.",
+      "recipient-inactive": "Mottagaren är inte längre aktiv.",
+      "conversation-send-forbidden": "Du kan inte skicka meddelanden i den här konversationen.",
+      "conversation-unavailable": "Den här konversationen kan inte ta emot meddelanden.",
+      "conversation-read-only": "Den här konversationen är skrivskyddad.",
+      "conversation-recipient-inactive": "Den här konversationen är skrivskyddad eftersom den andra medlemmen är inaktiv.",
+      "conversation-view-forbidden": "Du kan inte visa den här konversationen.",
+      "conversation-not-found": "Den här konversationen kunde inte hittas.",
+      "read-position-invalid": "Den här läspositionen är ogiltig.",
+      "unexpected": "Det gick inte att skicka meddelandet. Försök igen."
+    }
   }
 }

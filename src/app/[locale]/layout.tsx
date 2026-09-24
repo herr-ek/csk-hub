@@ -9,6 +9,7 @@ import { isLocale } from "@/core/i18n/locales"
 import { getMessages } from "@/core/i18n/messages"
 import { routing } from "@/core/i18n/routing"
 import { getLocale, getTranslations } from "@/core/i18n/server"
+import { timeZone } from "@/core/i18n/time-zone"
 import { Toaster } from "@/shared/ui/base/toast"
 import { cn } from "@/shared/utils"
 
@@ -92,7 +93,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           // TODO: Split up per feature if performance gets bad
           messages={getMessages(locale)}
           formats={{}}
-          timeZone="UTC"
+          timeZone={timeZone}
         >
           <ThemeProvider>
             {children}
