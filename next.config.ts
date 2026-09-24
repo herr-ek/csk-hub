@@ -47,6 +47,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactStrictMode: true,
+  // Read at runtime by `src/core/db/tls.ts`, so the tracer cannot see it on its own.
+  outputFileTracingIncludes: {
+    "/*": ["src/core/db/certs/*.crt"]
+  },
   headers
 }
 

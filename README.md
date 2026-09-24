@@ -42,14 +42,15 @@ Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
 2. Create the local environment file and generate an auth secret:
 
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    openssl rand -base64 32
    ```
 
-   Put the generated value in `BETTER_AUTH_SECRET`. The example configuration
-   points at the PostgreSQL container defined in `docker-compose.yml` and uses
-   `EMAIL_MODE=log`, so auth emails are written to the server log during local
-   development.
+   Put the generated value in `BETTER_AUTH_SECRET`. `POSTGRES_URL` already
+   points at the PostgreSQL container defined in `docker-compose.yml`, and
+   `EMAIL_MODE=log` writes auth emails to the server log during local
+   development. Leave `POSTGRES_URL_PROD` blank unless you administer
+   production.
 
 3. Start PostgreSQL:
 
@@ -60,7 +61,7 @@ Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
 4. Apply the existing database migrations:
 
    ```bash
-   bun run db:migrate
+   bun run ops migrate
    ```
 
 5. Start the development server:
@@ -77,11 +78,14 @@ The development seed script currently creates `admin@example.com` with the
 password `password`:
 
 ```bash
-bun run db:seed-admin
+bun run ops seed-admin
 ```
 
-This is a local-development convenience only. Change the password immediately
-and do not use these credentials in a deployed environment.
+`bun run ops seed-users` adds ten further example users with the same password.
+
+Both are local-development conveniences only. Change the password immediately,
+and do not use these credentials in a deployed environment. Seeding refuses to
+run against production.
 
 ## Routes
 
@@ -108,14 +112,16 @@ apply it:
 ```bash
 bun run auth:generate
 bun run db:generate
-bun run db:migrate
+bun run ops migrate
 ```
 
-To open Drizzle Studio against the configured database:
+## Database operations
 
-```bash
-bun run db:studio
-```
+Use `bun run ops` for all database operations: migration status, migrations,
+Drizzle Studio and local seeding. It targets the local database unless you pass
+`--prod`. See [`scripts/ops/README.md`](scripts/ops/README.md) for commands and
+production safeguards, and [`src/core/db/README.md`](src/core/db/README.md) for
+how the application connects.
 
 ## Email configuration
 
@@ -134,6 +140,7 @@ bun run typecheck   # TypeScript checks
 bun run lint        # Biome checks
 bun run build       # production build
 bun run pr          # tests, lint, and build
+bun run ops         # database status and guarded database operations
 ```
 
 The project context and architectural conventions are documented in
