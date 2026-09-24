@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { Client } from "pg"
-import { type DatabaseTarget, databaseUrlFor, describeHost } from "@/core/config/database-url"
-import { connectionFor } from "./ssl"
+import { secureConnection } from "@/core/db/tls"
+import { databaseFor, type Target } from "./target"
 
 /**
  * Compares the migration files on disk against the ledger a database has actually
@@ -29,14 +29,13 @@ export function readJournal(): JournalEntry[] {
   return [...journal.entries].sort((a, b) => a.idx - b.idx)
 }
 
-export async function statusFor(target: DatabaseTarget): Promise<TargetStatus> {
-  const url = databaseUrlFor(target)
-  if (!url) return { kind: "not-configured" }
+export async function statusFor(target: Target): Promise<TargetStatus> {
+  const database = databaseFor(target)
+  if (!database) return { kind: "not-configured" }
 
-  const host = describeHost(url)
+  const { host } = database
   const entries = readJournal()
-  const connection = connectionFor(url)
-  const client = new Client({ connectionString: connection.url, ssl: connection.ssl })
+  const client = new Client(secureConnection(database.url))
 
   try {
     await client.connect()

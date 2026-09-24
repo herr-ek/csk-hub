@@ -1,25 +1,20 @@
 import { defineConfig } from "drizzle-kit"
-import { connectionFor } from "./scripts/ops/ssl"
-import { announceTarget, resolveOrExit } from "./scripts/ops/target"
+// Relative import: drizzle-kit bundles this config without reading tsconfig paths.
+import { secureConnection } from "./src/core/db/tls"
 
-// Relative imports: drizzle-kit bundles this config without reading tsconfig paths.
-const database = resolveOrExit()
+// Which database this is was decided before drizzle-kit started: `.env` for local work, or
+// the ops CLI, which passes its selected target in as POSTGRES_URL.
+const POSTGRES_URL = process.env.POSTGRES_URL
 
-// Every drizzle-kit command loads this config before it opens a connection, so it is the
-// one place that can warn about a production target however drizzle-kit was reached —
-// including `bunx drizzle-kit` run by hand, which no package.json script guards.
-announceTarget(database)
+if (!POSTGRES_URL) {
+  throw Error("POSTGRES_URL is not set")
+}
 
-const connection = connectionFor(database.url)
+const { connectionString, ssl } = secureConnection(POSTGRES_URL)
 
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/core/db/schema",
   out: "./drizzle",
-  dbCredentials: {
-    // The same connection the ops status check dials, so migrations and the status that
-    // reports on them verify on identical terms.
-    url: connection.url,
-    ssl: connection.ssl
-  }
+  dbCredentials: { url: connectionString, ssl }
 })

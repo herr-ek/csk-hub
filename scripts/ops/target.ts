@@ -1,50 +1,82 @@
-import {
-  type DatabaseTarget,
-  type ResolvedDatabase,
-  readDatabaseTarget,
-  resolveDatabaseUrl
-} from "../../src/core/config/database-url"
+/**
+ * The one place a database target is chosen. Local is the default and production is a
+ * deliberate opt-in (`--prod`), so forgetting a flag is safe rather than dangerous.
+ *
+ * Nothing outside `scripts/ops` reads POSTGRES_URL_PROD. Child processes — drizzle-kit and
+ * the seed scripts — are handed the selected URL as their ordinary POSTGRES_URL.
+ */
 
-// Relative imports, not the `@/` alias: drizzle-kit bundles `drizzle.config.ts` without
-// reading tsconfig paths, and this module is on that import path.
+export type Target = "local" | "prod"
+
+export type Database = {
+  target: Target
+  url: string
+  /** Host, port and database name, with any credentials removed. Safe to print. */
+  host: string
+}
+
+const VARIABLE: Record<Target, string> = {
+  local: "POSTGRES_URL",
+  prod: "POSTGRES_URL_PROD"
+}
 
 const YELLOW = "\x1b[33m"
 const BOLD = "\x1b[1m"
 const RESET = "\x1b[0m"
 
+/** The environment variable a target reads from, for use in error and help messages. */
+export function variableFor(target: Target): string {
+  return VARIABLE[target]
+}
+
+/** The configured database for a target, or `undefined` when it is not set up. */
+export function databaseFor(target: Target): Database | undefined {
+  const url = process.env[VARIABLE[target]]
+  if (!url) return undefined
+
+  return { target, url, host: describeHost(url) }
+}
+
+/**
+ * The configured database for a target. Misconfiguration is a message to read, not a
+ * stack trace to decipher.
+ */
+export function databaseOrExit(target: Target): Database {
+  const database = databaseFor(target)
+  if (database) return database
+
+  console.error(`✖ ${VARIABLE[target]} is not set.`)
+  console.error(
+    target === "prod"
+      ? "  Set it to the direct (non-pooling) Supabase connection string — port 5432, not the\n  transaction pooler on 6543, which cannot run migrations."
+      : '  Copy it from .env.example — with `docker compose up -d` the value is:\n  POSTGRES_URL="postgresql://csk_hub:csk_hub@localhost:5433/csk_hub"'
+  )
+  process.exit(1)
+}
+
 /**
  * Warn, on stderr, that a command is about to touch production.
  *
  * The failure this defends against is muscle memory rather than malice, so the banner
- * names the host it resolved instead of merely saying "production" — the point is that a
- * developer recognises a machine they did not mean to talk to.
- *
- * Silent for `local`, and for `vercel` because a deployed instance has no one to warn.
+ * names the host instead of merely saying "production" — the point is that a developer
+ * recognises a machine they did not mean to talk to.
  */
-export function announceTarget(database: ResolvedDatabase): void {
+export function announce(database: Database): void {
   if (database.target !== "prod") return
 
   console.error(`${YELLOW}${BOLD}⚠  PRODUCTION DATABASE${RESET}${YELLOW} — ${database.host}${RESET}`)
 }
 
-/**
- * Misconfiguration is a message to read, not a stack trace to decipher. Every tooling
- * entry point resolves through here, so a missing variable or a `DB_TARGET` typo reads the
- * same wherever it surfaces.
- */
-export function resolveOrExit(): ResolvedDatabase {
-  return orExit(resolveDatabaseUrl)
+/** The environment for a child process that should connect to `database`. */
+export function childEnvironment(database: Database): NodeJS.ProcessEnv {
+  return { ...process.env, POSTGRES_URL: database.url }
 }
 
-export function targetOrExit(): DatabaseTarget {
-  return orExit(readDatabaseTarget)
-}
-
-function orExit<T>(read: () => T): T {
+function describeHost(url: string): string {
   try {
-    return read()
-  } catch (error) {
-    console.error(`✖ ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    const parsed = new URL(url)
+    return `${parsed.hostname}${parsed.port ? `:${parsed.port}` : ""}${parsed.pathname}`
+  } catch {
+    return "<unparseable connection string>"
   }
 }

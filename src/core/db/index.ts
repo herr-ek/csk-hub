@@ -1,11 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import { env } from "@/core/config/env"
+import { secureConnection } from "@/core/db/tls"
 
-const databaseUrl = new URL(env.POSTGRES_URL)
-
-// TODO: Remove in prod!
-if (databaseUrl.searchParams.has("sslmode")) {
-  databaseUrl.searchParams.set("sslmode", "no-verify")
-}
-
-export const db = drizzle(databaseUrl.toString())
+export const db = drizzle({ connection: secureConnection(env.POSTGRES_URL) })

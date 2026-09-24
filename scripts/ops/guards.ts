@@ -1,19 +1,18 @@
 import { isCancel, text } from "@clack/prompts"
-import { readDatabaseTarget } from "@/core/config/database-url"
-import { resolveOrExit } from "./target"
+import { isLocalDatabase } from "@/core/db/tls"
+import type { Database } from "./target"
 
 /**
- * Refuse to run a local-only action against production.
+ * Refuse to run a local-only action against anything but a local database.
  *
  * A refusal rather than a prompt: seeding fabricates users, and there is no circumstance
- * in which the right answer to "seed production?" is yes.
+ * in which the right answer to "seed production?" is yes. The seed scripts call this on
+ * their own POSTGRES_URL too, so running one by hand is held to the same rule.
  */
-export function assertLocalTarget(action: string): void {
-  if (readDatabaseTarget() === "local") return
+export function assertLocalDatabase(action: string, url = process.env.POSTGRES_URL): void {
+  if (url && isLocalDatabase(url)) return
 
-  const { host } = resolveOrExit()
-  console.error(`✖ ${action} is local-only and will not run against ${host}.`)
-  console.error("  Unset DB_TARGET to use the local database.")
+  console.error(`✖ ${action} is local-only and needs POSTGRES_URL to point at a local database.`)
   process.exit(1)
 }
 
@@ -21,37 +20,38 @@ export function assertLocalTarget(action: string): void {
  * Require the word "prod" to be typed before a write reaches production.
  *
  * A speed bump against muscle memory, not an authorisation check — the value is in making
- * the developer read the host name before the write happens.
+ * the developer read the host name before the write happens. Returns whether to proceed.
  */
-export async function confirmProductionWrite(action: string, { skip }: { skip: boolean }): Promise<void> {
-  const { host } = resolveOrExit()
+export async function confirmProductionWrite(
+  action: string,
+  database: Database,
+  { skip }: { skip: boolean }
+): Promise<boolean> {
+  if (database.target !== "prod") return true
 
   if (skip) {
-    console.error(`Proceeding with ${action} against ${host} (--yes).`)
-    return
+    console.error(`Proceeding with ${action} against ${database.host} (--yes).`)
+    return true
   }
 
   // Refuse rather than block on a prompt nobody can answer. An unattended run reaching
   // production without --yes is a mistake worth failing loudly.
   if (!process.stdin.isTTY) {
-    console.error(`✖ ${action} against ${host} needs confirmation, but there is no terminal to ask.`)
+    console.error(`✖ ${action} against ${database.host} needs confirmation, but there is no terminal to ask.`)
     console.error("  Pass --yes to proceed unattended.")
-    process.exit(1)
+    return false
   }
 
   const typed = await text({
-    message: `${action} against PRODUCTION (${host}). Type "prod" to continue:`,
+    message: `${action} against PRODUCTION (${database.host}). Type "prod" to continue:`,
     placeholder: "prod",
     validate: (value) => (value === "prod" ? undefined : 'Type "prod" exactly, or press Ctrl+C to abort.')
   })
 
   if (isCancel(typed)) {
     console.error("Aborted.")
-    process.exit(1)
+    return false
   }
-}
 
-/** Whether `--yes` was passed, for unattended use in CI. */
-export function hasYesFlag(argv: string[] = process.argv.slice(2)): boolean {
-  return argv.includes("--yes") || argv.includes("-y")
+  return true
 }
