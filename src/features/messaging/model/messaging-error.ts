@@ -2,6 +2,7 @@ export type MessagingErrorKind =
   | "blank-message"
   | "message-too-long"
   | "sign-in-required"
+  | "impersonation-unavailable"
   | "recipient-required"
   | "recipient-inactive"
   | "idempotency-key-required"

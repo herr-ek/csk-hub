@@ -88,6 +88,8 @@ export async function appendMessage(tx: MessageTransaction, input: AppendMessage
 
   if (!created) throw new Error("Message creation did not return a record.")
 
+  // Sending is treated as reading through the new Message. Advancing to its sequence therefore
+  // also marks any earlier, unseen Messages from the other member as read for unread-count purposes.
   await tx
     .update(conversationReadState)
     .set({ lastReadSequence: sequence })

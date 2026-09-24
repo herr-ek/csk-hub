@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { ROUTES } from "@/core/navigation/site"
 import { startDirectConversation } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
+import { requireMessageSendingAvailable } from "../message-command-access"
 import { messageCommandErrorState } from "../message-command-result"
 import { searchMembers } from "./member-search"
 
@@ -14,6 +15,7 @@ export async function startDirectConversationAction(
   const text = String(formData.get("text") ?? "")
 
   try {
+    await requireMessageSendingAvailable()
     const result = await startDirectConversation({
       recipientId: String(formData.get("recipientId") ?? ""),
       text,

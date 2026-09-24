@@ -137,12 +137,7 @@
     "publishUnauthorized": "Nur Administratoren können Beiträge veröffentlichen.",
     "publishFailed": "Der Beitrag kann gerade nicht veröffentlicht werden. Bitte versuche es erneut."
   },
-  "Theme": {
-    "toggle": "Design wechseln",
-    "light": "Hell",
-    "dark": "Dunkel",
-    "system": "System"
-  },
+  "Theme": { "toggle": "Design wechseln", "light": "Hell", "dark": "Dunkel", "system": "System" },
   "Admin": {
     "title": "Verwaltung",
     "description": "Verwalte CSK-Hub-Ressourcen.",
@@ -432,6 +427,7 @@
       "blank-message": "Gib eine Nachricht ein.",
       "message-too-long": "Nachrichten dürfen höchstens 4.000 Zeichen lang sein.",
       "sign-in-required": "Melde dich an, um Nachrichten zu verwenden.",
+      "impersonation-unavailable": "Während du ein Mitglied imitierst, können keine Nachrichten gesendet werden.",
       "inactive-member": "Nur aktive Mitglieder können Nachrichten verwenden.",
       "recipient-required": "Wähle einen Empfänger.",
       "idempotency-key-required": "Deine Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.",

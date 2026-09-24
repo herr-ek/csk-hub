@@ -137,12 +137,7 @@
     "publishUnauthorized": "Endast administratörer kan publicera inlägg.",
     "publishFailed": "Det går inte att publicera inlägget just nu. Försök igen."
   },
-  "Theme": {
-    "toggle": "Växla tema",
-    "light": "Ljust",
-    "dark": "Mörkt",
-    "system": "System"
-  },
+  "Theme": { "toggle": "Växla tema", "light": "Ljust", "dark": "Mörkt", "system": "System" },
   "Admin": {
     "title": "Administratör",
     "description": "Hantera resurser i CSK Hub.",
@@ -432,6 +427,7 @@
       "blank-message": "Skriv ett meddelande.",
       "message-too-long": "Meddelanden får vara högst 4 000 tecken.",
       "sign-in-required": "Logga in för att använda meddelanden.",
+      "impersonation-unavailable": "Meddelanden kan inte skickas medan du imiterar en medlem.",
       "inactive-member": "Endast aktiva medlemmar kan använda meddelanden.",
       "recipient-required": "Välj en mottagare.",
       "idempotency-key-required": "Det gick inte att skicka meddelandet. Försök igen.",

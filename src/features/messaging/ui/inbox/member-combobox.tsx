@@ -33,7 +33,7 @@ export function MemberCombobox() {
         return
       }
       startTransition(() => {
-        searchMembersAction(query)
+        return searchMembersAction(query)
           .then((result) => {
             if (latestRequest.current === request) setMembers(result)
           })
