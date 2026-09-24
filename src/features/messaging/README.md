@@ -23,8 +23,10 @@ Routes import screens only through `@/features/messaging`. UI Server Actions cal
 
 ## Where changes belong
 
-- Change authentication, authorization, idempotency, transaction ordering, or Message persistence
-  in `sending/`. Read [`sending/README.md`](sending/README.md) before changing that module.
+- Change sender authentication, Conversation authorization, idempotency, transaction ordering, or
+  Message persistence in `sending/`. Request-context availability rules, such as preventing sends
+  during support impersonation, belong at the Server Action boundary in `ui/`. Read
+  [`sending/README.md`](sending/README.md) before changing that module.
 - Change shared Message body rules or pure Direct Conversation rules in `model/`.
 - Change rendering, form behavior, navigation, or cache revalidation in `ui/`.
 - Keep reads shaped for a screen beside that screen. For example, the inbox query returns the inbox

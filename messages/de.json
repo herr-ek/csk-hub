@@ -400,6 +400,7 @@
       "blank-message": "Gib eine Nachricht ein.",
       "message-too-long": "Nachrichten dürfen höchstens 4.000 Zeichen lang sein.",
       "sign-in-required": "Melde dich an, um Nachrichten zu verwenden.",
+      "impersonation-unavailable": "Während du ein Mitglied imitierst, können keine Nachrichten gesendet werden.",
       "inactive-member": "Nur aktive Mitglieder können Nachrichten verwenden.",
       "recipient-required": "Wähle einen Empfänger.",
       "idempotency-key-required": "Deine Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.",

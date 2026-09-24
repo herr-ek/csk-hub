@@ -400,6 +400,7 @@
       "blank-message": "Skriv ett meddelande.",
       "message-too-long": "Meddelanden får vara högst 4 000 tecken.",
       "sign-in-required": "Logga in för att använda meddelanden.",
+      "impersonation-unavailable": "Meddelanden kan inte skickas medan du imiterar en medlem.",
       "inactive-member": "Endast aktiva medlemmar kan använda meddelanden.",
       "recipient-required": "Välj en mottagare.",
       "idempotency-key-required": "Det gick inte att skicka meddelandet. Försök igen.",

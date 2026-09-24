@@ -1,3 +1,5 @@
+import { canReceiveDirectMessages } from "../../model/direct-conversation"
+
 export type InboxConversationRow = {
   conversationId: string
   otherMemberId: string | null
@@ -33,4 +35,4 @@ export function toInboxConversations(rows: readonly InboxConversationRow[]): Inb
     .sort((first, second) => second.sentAt.getTime() - first.sentAt.getTime())
 }
 
-import { canReceiveDirectMessages } from "../../model/direct-conversation"
+

@@ -405,6 +405,7 @@
       "blank-message": "Enter a message.",
       "message-too-long": "Messages can be at most 4,000 characters.",
       "sign-in-required": "Sign in to use Messages.",
+      "impersonation-unavailable": "Messages cannot be sent while impersonating a member.",
       "inactive-member": "Only active members can use Messages.",
       "recipient-required": "Choose a recipient.",
       "idempotency-key-required": "Unable to send your message. Please try again.",

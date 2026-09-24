@@ -116,8 +116,10 @@ Validation and access failures use stable `MessagingErrorKind` values from `mode
 Unexpected database and programming errors are not converted here; they propagate so the UI adapter
 can present a generic failure while server observability retains the original error.
 
-Server Actions are transport adapters. They parse `FormData`, call this module, invalidate affected
-routes, and translate errors. They must not duplicate authorization or transaction behavior.
+Server Actions are transport adapters. They enforce request-context availability rules such as the
+support-impersonation restriction, parse `FormData`, call this module, invalidate affected routes,
+and translate errors. They must not duplicate sender, Conversation, recipient, or transaction
+behavior owned here.
 
 ## Tests
 
