@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 import { spawnSync } from "node:child_process"
 import { parseArgs } from "node:util"
-import { intro, isCancel, log, outro, select, spinner } from "@clack/prompts"
+import { intro, isCancel, log, outro, select, spinner, text } from "@clack/prompts"
 import { openStudio, runMigrations } from "./drizzle-kit"
+import { grantAdmin } from "./grant-admin"
 import { statusFor, type TargetStatus } from "./migration-status"
 import { childEnvironment, databaseOrExit, type Target, variableFor } from "./target"
 
@@ -10,6 +11,7 @@ import { childEnvironment, databaseOrExit, type Target, variableFor } from "./ta
  * The single entrypoint for database operations.
  *
  *   bun run ops [command] [--prod] [--yes]
+ *   bun run ops grant-admin <email> [--prod] [--yes]
  *
  * With no command it shows the status and, in a terminal, opens a menu. `--prod` is the
  * only way to reach production; without it every command runs against the local database.
@@ -21,7 +23,7 @@ const GREEN = "\x1b[32m"
 const YELLOW = "\x1b[33m"
 const RESET = "\x1b[0m"
 
-const COMMANDS = ["status", "migrate", "studio", "seed-admin", "seed-users"] as const
+const COMMANDS = ["status", "migrate", "studio", "grant-admin", "seed-admin", "seed-users"] as const
 type Command = (typeof COMMANDS)[number]
 
 const SEED_SCRIPTS: Record<string, string> = {
@@ -69,6 +71,15 @@ async function run(choice: Command): Promise<number> {
 
   const database = databaseOrExit(target)
 
+  if (choice === "grant-admin") {
+    const email = positionals[1] ?? (await askForEmail())
+    if (!email) {
+      log.error("grant-admin needs the email of an existing user: bun run ops grant-admin <email>")
+      return 1
+    }
+    return grantAdmin(database, email, { skipConfirmation: flags.yes })
+  }
+
   if (choice === "migrate") {
     const code = await runMigrations(database, { skipConfirmation: flags.yes })
     if (code !== 0) log.error(`Migrations exited with code ${code}.`)
@@ -80,6 +91,18 @@ async function run(choice: Command): Promise<number> {
   return openStudio(database)
 }
 
+/** Prompt for the email in a terminal; without one there is nobody to ask. */
+async function askForEmail(): Promise<string | undefined> {
+  if (!process.stdin.isTTY) return undefined
+
+  const email = await text({
+    message: "Email of the existing user to make admin:",
+    validate: (value) => (value?.includes("@") ? undefined : "Enter an email address.")
+  })
+
+  return isCancel(email) ? undefined : email
+}
+
 async function menu(): Promise<void> {
   while (true) {
     const choice = await select<Command | "exit">({
@@ -88,6 +111,7 @@ async function menu(): Promise<void> {
         { value: "status", label: "Status", hint: "migration ledger for local and prod" },
         { value: "migrate", label: "Run migrations", hint: `against ${target}` },
         { value: "studio", label: "Open Studio", hint: `against ${target}` },
+        { value: "grant-admin", label: "Grant admin", hint: `existing user, against ${target}` },
         seedOption("seed-admin", "Seed admin"),
         seedOption("seed-users", "Seed users"),
         { value: "exit", label: "Exit" }

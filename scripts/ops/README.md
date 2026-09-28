@@ -1,20 +1,23 @@
 # Ops CLI
 
 `bun run ops` is the single entrypoint for database operations: migration status,
-migrations, Drizzle Studio and local seeding. There are no alternative `db:*` scripts to
-remember; `db:generate` and `auth:generate` remain because they work offline.
+migrations, Drizzle Studio, granting admin and local seeding. There are no alternative
+`db:*` scripts to remember; `db:generate` and `auth:generate` remain because they work
+offline.
 
 ```bash
 bun run ops                      # status, then an interactive menu
 bun run ops status               # local and production migration status side by side
 bun run ops migrate              # apply pending migrations locally
 bun run ops studio               # Drizzle Studio against the local database
+bun run ops grant-admin <email>  # make an existing user an admin
 bun run ops seed-admin           # local admin account
 bun run ops seed-users           # ten local example users
 
 bun run ops --prod               # the menu, targeting production
 bun run ops migrate --prod       # asks you to type "prod" first
 bun run ops migrate --prod --yes # unattended, e.g. in CI
+bun run ops grant-admin <email> --prod  # regain admin access in production
 ```
 
 ## Targets
@@ -34,6 +37,10 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
 - Every production command prints a banner that names the host before it connects.
 - Production migrations require typing `prod`. `--yes` skips the prompt, and without a
   terminal they refuse instead of waiting.
+- `grant-admin` against production also requires typing `prod`. It is the way to
+  regain admin access, and it is allowed in production because it creates no account
+  and no credentials. The user must already exist; their existing roles are kept, and
+  a deactivated user stays deactivated.
 - Seeding refuses outright and exits non-zero with `--prod`. The seed scripts also refuse
   any `POSTGRES_URL` that is not a local database, including when run by hand.
 

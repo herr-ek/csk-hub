@@ -1,20 +1,13 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { SUPABASE_ROOT_CA_2021 } from "./certs/supabase-root-2021"
 
 /**
  * How a connection string is dialled securely. Shared by the application client,
  * `drizzle.config.ts` and the ops CLI so that none of them can verify on weaker terms than
  * the others. It says nothing about *which* database to connect to — callers bring the URL.
  *
- * No relative-path or `@/` imports: drizzle-kit bundles `drizzle.config.ts` without reading
+ * Relative imports only, never `@/`: drizzle-kit bundles `drizzle.config.ts` without reading
  * tsconfig paths, and this module is on that import path.
  */
-
-// Resolved against the working directory rather than `import.meta.url`: drizzle-kit
-// bundles its config to a temporary file, which would move `import.meta.url` away from the
-// repository. Next.js and every script run from the package root, and `next.config.ts`
-// includes this file in the server trace so deployed functions can read it.
-const SUPABASE_ROOT_CA = join(process.cwd(), "src/core/db/certs/supabase-root-2021.crt")
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 
@@ -48,5 +41,5 @@ export function secureConnection(url: string): Connection {
 
   if (isLocalDatabase(url)) return { connectionString }
 
-  return { connectionString, ssl: { ca: readFileSync(SUPABASE_ROOT_CA, "utf8"), rejectUnauthorized: true } }
+  return { connectionString, ssl: { ca: SUPABASE_ROOT_CA_2021, rejectUnauthorized: true } }
 }

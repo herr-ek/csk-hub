@@ -22,18 +22,19 @@ it override explicit `ssl` options, which would silently discard the CA.
 
 ### The committed CA
 
-`certs/supabase-root-2021.crt` is Supabase's root certificate. Supabase signs its
+`certs/supabase-root-2021.ts` holds Supabase's root certificate. Supabase signs its
 database certificates with this root rather than a public CA, so no system trust store
 contains it. It is public trust material, identical for every Supabase project, and is
 committed rather than kept in `.env`.
+
+It is a TypeScript module rather than a `.crt` file so that nothing reads the filesystem
+at runtime. It travels with the import graph into the Next.js server bundle and into
+drizzle-kit's bundled config, with no file-tracing configuration.
 
 - Provenance: downloaded from the Supabase dashboard (Database settings → SSL
   Configuration).
 - Subject: `CN=Supabase Root 2021 CA, O=Supabase Inc`.
 - Expires: 26 April 2031. Replace it before then.
-
-`next.config.ts` adds it to the server file trace, because it is read at runtime rather
-than imported.
 
 ## Direct versus pooled connections
 
