@@ -100,6 +100,12 @@ Keep Drizzle schema files split by ownership under `src/core/db/schema`.
 
 When a model decision is hard to reverse or establishes an important domain rule, use an ADR in `docs/adr/`, following [CONTRIBUTING.md](../CONTRIBUTING.md#architectural-decision-records).
 
+## Database Operations
+
+Database infrastructure — the client, schemas and TLS policy — belongs in `src/core/db`. Application code consumes `POSTGRES_URL` and never chooses between local and production; see `src/core/db/README.md`.
+
+Operational tooling — migrations, Studio, seeding and anything that can reach production — belongs in `scripts/ops`, which is the only code that selects a database target; see `scripts/ops/README.md`.
+
 ## Next.js And React
 
 Keep route files thin. A `page.tsx`, `layout.tsx`, or route handler should compose modules; it should not become the main implementation of a feature.

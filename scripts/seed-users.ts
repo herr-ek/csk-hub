@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
 import { auth } from "@/core/auth"
+import { assertLocalDatabase } from "./ops/guards"
+
+assertLocalDatabase("Seeding users")
 
 const firstNames = ["Alex", "Elin", "Hugo", "Linnea", "Noah", "Saga", "Viktor", "Wilma"]
 const lastNames = ["Andersson", "Berg", "Dahl", "Ek", "Lind", "Nilsson", "Sjöberg", "Åström"]

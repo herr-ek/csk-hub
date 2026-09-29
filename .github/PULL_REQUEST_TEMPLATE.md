@@ -17,7 +17,7 @@
 ### Notice
 
 Requires `bun install`?
-Requires `bun db:migrate`?
+Requires `bun run ops migrate`?
 
 ## Checklist
 
