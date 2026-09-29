@@ -61,8 +61,15 @@
     {
       "idx": 8,
       "version": "7",
-      "when": 1790015551353,
+      "when": 1790671537343,
       "tag": "0008_post-body-as-document",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790671547328,
+      "tag": "0009_post-body-search",
       "breakpoints": true
     }
   ]

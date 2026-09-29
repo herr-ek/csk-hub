@@ -8,7 +8,7 @@ import {
 } from "@tiptap/static-renderer/json/react"
 import { createElement, Fragment, type ReactNode } from "react"
 import { type RichTextDocument, safeLinkHref } from "../document"
-import { RichTextProse } from "./rich-text-prose"
+import { RichTextProse } from "../prose"
 
 // Spelled out rather than read off `renderJSONContentToReactElement`: that function's
 // node and mark types are generic, so `Parameters<…>` yields their bare constraints
@@ -21,12 +21,26 @@ function cellSpan(value: unknown): number {
   return Number.isInteger(span) && span > 0 ? span : 1
 }
 
-/** The spans a cell carries, left off the element entirely when it spans only itself. */
-function cellSpans(attrs: JSONNodeType["attrs"]): { colSpan?: number; rowSpan?: number } {
+const CELL_ALIGNMENTS = new Set(["left", "center", "right"])
+
+/**
+ * The spans and alignment a cell carries, each left off the element when it says
+ * nothing — a cell spanning only itself, or aligned the way every cell is by default.
+ */
+function cellAttributes(attrs: JSONNodeType["attrs"]): {
+  colSpan?: number
+  rowSpan?: number
+  style?: { textAlign: "left" | "center" | "right" }
+} {
   const colSpan = cellSpan(attrs?.colspan)
   const rowSpan = cellSpan(attrs?.rowspan)
+  const align = attrs?.align
 
-  return { colSpan: colSpan > 1 ? colSpan : undefined, rowSpan: rowSpan > 1 ? rowSpan : undefined }
+  return {
+    colSpan: colSpan > 1 ? colSpan : undefined,
+    rowSpan: rowSpan > 1 ? rowSpan : undefined,
+    style: CELL_ALIGNMENTS.has(align) ? { textAlign: align } : undefined
+  }
 }
 
 /**
@@ -84,11 +98,11 @@ const nodeMapping = {
   ),
   tableRow: ({ children }) => <tr>{children}</tr>,
   tableHeader: ({ node, children }) => (
-    <th scope="col" {...cellSpans(node.attrs)}>
+    <th scope="col" {...cellAttributes(node.attrs)}>
       {children}
     </th>
   ),
-  tableCell: ({ node, children }) => <td {...cellSpans(node.attrs)}>{children}</td>
+  tableCell: ({ node, children }) => <td {...cellAttributes(node.attrs)}>{children}</td>
 } satisfies RenderOptions["nodeMapping"]
 
 /** How each mark the module supports is drawn, on the same allowlist terms as the nodes. */

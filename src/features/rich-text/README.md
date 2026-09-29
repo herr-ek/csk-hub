@@ -8,7 +8,8 @@ features its documents may contain, and the column the document goes in.
 ```
 document/   what a document may contain, and how an untrusted one is normalised   (no React)
 editor/     the writing surface: editor, toolbar, editing affordances               (client)
-view/       the reading surface: server renderer and the shared prose stylesheet   (server)
+view/       the reading surface: the server renderer                               (server)
+prose/      the shared prose wrapper and stylesheet both surfaces draw inside      (either)
 ```
 
 ## Consuming it
@@ -52,18 +53,26 @@ nothing in any consumer until the consumer opts in:
    `dangerouslySetInnerHTML`.
 3. **`editor/rich-text-toolbar.tsx`** — add a control if the feature is hard to type.
    Show it only when `editor.schema` has the node, as the others do.
-4. **`view/rich-text-prose.css`** — style it once. The editor keeps its content one level
+4. **`prose/rich-text-prose.css`** — style it once. The editor keeps its content one level
    deeper, inside ProseMirror's own element, so block-level selectors name both levels;
    the declarations behind the two selectors must never become two copies.
 5. **`view/rendering-parity.test.tsx`** — add a row. It renders the same document through
    the editor's DOM spec and the server renderer and compares the element names, so a
-   missing step 2 fails here rather than in front of a reader.
+   missing step 2 fails here rather than in front of a reader. Element names are all it
+   compares; an attribute that changes how the node looks, like a table cell's `align`,
+   needs its own assertion there.
 
 An extension that only changes editing behaviour — undo, a drop cursor, a keymap — adds
 nothing to the document and goes in `editor/editing-affordances.ts` instead.
 `exit-empty-heading.ts` is the worked example.
 
 ## Things worth knowing
+
+**The editor renders only in the browser.** Tiptap draws random keys while rendering,
+which a Cache Components prerender refuses. `RichTextEditor` draws an empty frame on the
+server and mounts Tiptap after hydration, so a consumer needs no `<Suspense>` of its own
+around it. The hidden form field sits outside that switch and carries `defaultValue`
+from the first paint.
 
 **One link rule, not two.** `safeLinkHref` is both the editor's `isAllowedUri` and the
 normaliser's check, so a link that survives typing survives publication. Tiptap's

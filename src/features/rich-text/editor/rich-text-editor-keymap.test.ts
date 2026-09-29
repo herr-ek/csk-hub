@@ -1,13 +1,12 @@
-import { registerDom } from "../../../../test/dom"
-
-// ProseMirror needs a DOM, registered before the editor modules below evaluate.
-registerDom()
-
 import { describe, expect, test } from "bun:test"
+import { registerDom } from "@test/dom"
 import { Editor } from "@tiptap/core"
 import { Placeholder } from "@tiptap/extensions"
 import { createDocumentSchema, type RichTextDocument, richText } from "../document"
 import { editingAffordances } from "./editing-affordances"
+
+// The editor mounts into a DOM element.
+registerDom()
 
 const schema = createDocumentSchema([richText.headings([2, 3]), richText.lists])
 

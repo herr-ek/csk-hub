@@ -1,11 +1,10 @@
-import { registerDom } from "../../../../test/dom"
-
-// ProseMirror and React both need a DOM, registered before the modules below evaluate.
-registerDom()
-
 import { describe, expect, mock, test } from "bun:test"
+import { registerDom } from "@test/dom"
 import { act } from "react"
 import { createRoot } from "react-dom/client"
+
+// The editor is mounted into a DOM, with a form around it.
+registerDom()
 
 // The toolbar reads its labels from next-intl, which wants a provider this test has no
 // use for; the labels are not what is under test.
@@ -17,6 +16,7 @@ mock.module("@/core/i18n/translations", () => ({
 // React only runs effects under `act` when it is told it is in a test.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
+// Imported after the mock above, so the toolbar picks up the stand-in translations.
 const { createDocumentSchema, richText } = await import("../document")
 const { RichTextEditor } = await import("./rich-text-editor")
 
@@ -62,5 +62,19 @@ describe("the field the form submits", () => {
     // submission that beats its mount, or an untouched draft — the field still carries
     // the document the form opened with, rather than the empty body the action rejects.
     expect(new FormData(form).get("body")).toBe(JSON.stringify(stored))
+  })
+
+  test("carries the edited document once the writer has changed it", async () => {
+    const form = await mountEditor()
+    // The stand-in translations hand every heading level the same label; the first is h2.
+    const heading = form.querySelector<HTMLButtonElement>('[aria-label="heading"]')
+    if (!heading) throw new Error("The toolbar did not mount.")
+
+    await act(async () => heading.click())
+
+    expect(JSON.parse(String(new FormData(form).get("body")))).toEqual({
+      type: "doc",
+      content: [{ type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Bring the folder." }] }]
+    })
   })
 })

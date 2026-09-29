@@ -82,6 +82,21 @@ describe("normalizing a document", () => {
     expect(schema.normalize(nonsense)?.content?.[0]?.attrs).toEqual({ level: 2 })
   })
 
+  test("keeps a cell alignment the editor writes and clears one it could not", () => {
+    const cellWith = (align: string) =>
+      doc({
+        type: "table",
+        content: [
+          { type: "tableRow", content: [{ type: "tableCell", attrs: { align }, content: [paragraph(text("36"))] }] }
+        ]
+      })
+    const alignOf = (document: object) =>
+      schema.normalize(document)?.content?.[0]?.content?.[0]?.content?.[0]?.attrs?.align
+
+    expect(alignOf(cellWith("center"))).toBe("center")
+    expect(alignOf(cellWith("red; background:url(x)"))).toBeNull()
+  })
+
   test("keeps the words of a link that points somewhere unsafe, without the link", () => {
     const pasted = doc(paragraph(text("click", [{ type: "link", attrs: { href: "javascript:alert(1)" } }])))
 

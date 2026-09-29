@@ -44,13 +44,20 @@ function nearestLevel(levels: readonly HeadingLevel[], requested: unknown): Head
   return levels.reduce((best, level) => (Math.abs(level - wanted) < Math.abs(best - wanted) ? level : best))
 }
 
+/** A cell alignment Tiptap could have written, or null — the default it writes itself. */
+function cellAlignment(requested: unknown): string | null {
+  return requested === "left" || requested === "center" || requested === "right" ? requested : null
+}
+
 function createNormalizer(schema: Schema, headingLevels: readonly HeadingLevel[]) {
   /**
    * Attribute values the schema cannot police on its own. A type absent here keeps
    * whatever attributes it declares.
    */
   const attributeRules: Record<string, (attrs: UnknownRecord) => UnknownRecord> = {
-    heading: (attrs) => ({ ...attrs, level: nearestLevel(headingLevels, attrs.level) })
+    heading: (attrs) => ({ ...attrs, level: nearestLevel(headingLevels, attrs.level) }),
+    tableHeader: (attrs) => ("align" in attrs ? { ...attrs, align: cellAlignment(attrs.align) } : attrs),
+    tableCell: (attrs) => ("align" in attrs ? { ...attrs, align: cellAlignment(attrs.align) } : attrs)
   }
 
   /** Keep the attributes the node or mark actually declares, then apply its own rule. */

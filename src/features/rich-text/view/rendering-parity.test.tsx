@@ -16,7 +16,9 @@ import {
   listItem,
   orderedList,
   paragraph,
+  spannedCell,
   table,
+  tableOf,
   text
 } from "./test-fixtures"
 
@@ -107,5 +109,40 @@ describe("the editor and the stored document are made of the same elements", () 
     )
 
     expect(serverTags(document)).toEqual(editorTags(document))
+  })
+})
+
+/** The `text-align` of every cell the editor draws, in document order. */
+function editorAlignments(document: RichTextDocument): (string | null)[] {
+  const alignments: (string | null)[] = []
+
+  Node.fromJSON(schema, document).descendants((child) => {
+    if (child.type.name !== "tableHeader" && child.type.name !== "tableCell") return true
+    const [, attrs] = (child.type.spec.toDOM?.(child) ?? []) as [string?, { style?: string }?]
+    alignments.push(/text-align:\s*(\w+)/.exec(attrs?.style ?? "")?.[1] ?? null)
+    return true
+  })
+
+  return alignments
+}
+
+/** The `text-align` of every cell the server draws, in document order. */
+function serverAlignments(document: RichTextDocument): (string | null)[] {
+  const html = renderToStaticMarkup(renderRichText(document))
+
+  return [...html.matchAll(/<t[hd]\b([^>]*)>/g)].map(([, attrs]) => /text-align:\s*(\w+)/.exec(attrs)?.[1] ?? null)
+}
+
+describe("the editor and the stored document align table cells alike", () => {
+  test("header and body cells, aligned and not", () => {
+    const document = doc(
+      tableOf(
+        [spannedCell("tableHeader", "Week", { align: "center" }), spannedCell("tableHeader", "Choir", {})],
+        [spannedCell("tableCell", "36", { align: "right" }), spannedCell("tableCell", "MK", { align: "left" })]
+      )
+    )
+
+    expect(editorAlignments(document)).toEqual(["center", null, "right", "left"])
+    expect(serverAlignments(document)).toEqual(editorAlignments(document))
   })
 })

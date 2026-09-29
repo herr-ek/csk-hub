@@ -81,6 +81,22 @@ describe("rendering a document", () => {
     expect(html.toLowerCase()).toContain('colspan="2"')
     expect(html.toLowerCase()).toContain('rowspan="2"')
   })
+
+  test("keeps the alignment an author gave a cell", () => {
+    const html = render(
+      doc(
+        tableOf(
+          [spannedCell("tableHeader", "Week", { align: "center" }), spannedCell("tableHeader", "Choir", {})],
+          [spannedCell("tableCell", "36", { align: "right" }), spannedCell("tableCell", "MK", { align: "left" })]
+        )
+      )
+    )
+
+    expect(html).toContain('<th scope="col" style="text-align:center">')
+    expect(html).toContain('<th scope="col"><p>Choir</p></th>')
+    expect(html).toContain('<td style="text-align:right">')
+    expect(html).toContain('<td style="text-align:left">')
+  })
 })
 
 describe("what a reader is protected from", () => {
@@ -104,6 +120,12 @@ describe("what a reader is protected from", () => {
   test("a heading level outside h1–h6 in a stored row still renders as a heading", () => {
     expect(render(doc(heading(0, text("Low"))))).toBe("<h1>Low</h1>")
     expect(render(doc(heading(9, text("High"))))).toBe("<h6>High</h6>")
+  })
+
+  test("an alignment the editor could not have written is dropped", () => {
+    const html = render(doc(tableOf([spannedCell("tableCell", "36", { align: "red; background:url(x)" })])))
+
+    expect(html).toContain("<td><p>36</p></td>")
   })
 
   test("a node the view does not know loses its markup but keeps its words", () => {

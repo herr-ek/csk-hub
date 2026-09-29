@@ -63,11 +63,6 @@ export async function NewsScreen() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {/*
-                      The same server renderer the permalink uses, so a Post reads the
-                      same in both places, cut off where the card ends rather than
-                      summarised into a second, plainer copy of the prose.
-                    */}
                     <RichTextContent
                       document={entry.body}
                       linksAsText

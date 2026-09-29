@@ -1,3 +1,6 @@
+-- Custom migration (drizzle-kit generate --custom): Drizzle cannot express SQL functions or
+-- a column type change that needs a USING conversion. The search column and its index that
+-- depend on post_body_text follow in the next, generated migration.
 -- The text nodes of a rich-text document, in reading order, for full-text search.
 -- The ordinality is what makes "reading order" true rather than incidental: string_agg
 -- without an ORDER BY may aggregate in any order, which a phrase search would notice.
@@ -32,6 +35,4 @@ LANGUAGE sql IMMUTABLE AS $$
   )
 $$;--> statement-breakpoint
 ALTER TABLE "post" ALTER COLUMN "body" SET DATA TYPE jsonb USING post_text_to_document("body");--> statement-breakpoint
-DROP FUNCTION post_text_to_document(text);--> statement-breakpoint
-ALTER TABLE "post" ADD COLUMN "body_search" "tsvector" GENERATED ALWAYS AS (to_tsvector('swedish', coalesce(post_body_text("body"), ''))) STORED;--> statement-breakpoint
-CREATE INDEX "post_body_search_idx" ON "post" USING gin ("body_search");
+DROP FUNCTION post_text_to_document(text);

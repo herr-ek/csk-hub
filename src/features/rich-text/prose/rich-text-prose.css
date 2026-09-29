@@ -19,10 +19,11 @@
 /*
  * Block spacing, written once for both surfaces. The editor keeps its content one
  * level deeper, inside ProseMirror's own element, so the selector has to name that
- * level — but the declarations behind it must never become a second copy.
+ * level — but the declarations behind it must never become a second copy. `:where`
+ * keeps that extra level out of the specificity, so both surfaces cascade alike.
  */
 .rich-text > * + *,
-.rich-text > .ProseMirror > * + * {
+.rich-text > :where(.ProseMirror) > * + * {
   margin-top: 1rem;
 }
 
@@ -35,15 +36,15 @@
 
 .rich-text > h2 + *,
 .rich-text > h3 + *,
-.rich-text > .ProseMirror > h2 + *,
-.rich-text > .ProseMirror > h3 + * {
+.rich-text > :where(.ProseMirror) > h2 + *,
+.rich-text > :where(.ProseMirror) > h3 + * {
   margin-top: 0.5rem;
 }
 
 .rich-text > * + h2,
 .rich-text > * + h3,
-.rich-text > .ProseMirror > * + h2,
-.rich-text > .ProseMirror > * + h3 {
+.rich-text > :where(.ProseMirror) > * + h2,
+.rich-text > :where(.ProseMirror) > * + h3 {
   margin-top: 1.75rem;
 }
 

@@ -5,8 +5,8 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator"
  * test files in one process, and registering Happy DOM twice throws, so every such file
  * asks for the DOM through here rather than registering it itself.
  *
- * Call it above the imports that need a DOM, and reach those through `await import`:
- * static imports are hoisted, and would otherwise evaluate before this runs.
+ * Call it before the test touches `document` or `window`. Importing Tiptap or React does
+ * not need one, so those can stay static imports.
  */
 export function registerDom(): void {
   if (GlobalRegistrator.isRegistered) return
