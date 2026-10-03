@@ -1,5 +1,6 @@
 "use client"
 
+import { ArrowUpIcon } from "lucide-react"
 import { useActionState, useEffect, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
@@ -37,23 +38,33 @@ export function MessageComposer({ conversationId, readOnly }: { conversationId: 
     <form action={action} className="grid gap-3">
       <input name="conversationId" type="hidden" value={conversationId} />
       <input name="idempotencyKey" type="hidden" value={idempotencyKey} />
-      <Textarea
-        name="text"
-        aria-label={t("messageLabel")}
-        placeholder={t("messagePlaceholder")}
-        required
-        maxLength={MAX_MESSAGE_BODY_LENGTH}
-        defaultValue={state.status === "error" ? state.text : undefined}
-        onKeyDown={(event) => submitOnEnter(event, pending)}
-      />
+      <div className="relative">
+        <Textarea
+          name="text"
+          className="pr-14"
+          aria-label={t("messageLabel")}
+          placeholder={t("messagePlaceholder")}
+          required
+          maxLength={MAX_MESSAGE_BODY_LENGTH}
+          defaultValue={state.status === "error" ? state.text : undefined}
+          onKeyDown={(event) => submitOnEnter(event, pending)}
+        />
+        <Button
+          type="submit"
+          size="icon-sm"
+          className="absolute right-3 bottom-3 rounded-full"
+          disabled={pending}
+          aria-label={pending ? t("sending") : t("sendMessage")}
+          title={pending ? t("sending") : t("sendMessage")}
+        >
+          <ArrowUpIcon aria-hidden="true" />
+        </Button>
+      </div>
       {state.status === "error" ? (
         <p className="text-sm text-destructive" role="alert">
           {t(`errors.${state.error}`)}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending}>
-        {pending ? t("sending") : t("sendMessage")}
-      </Button>
     </form>
   )
 }

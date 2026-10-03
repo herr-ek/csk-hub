@@ -1,5 +1,6 @@
 import "server-only"
 
+import { io } from "next/cache"
 import { headers } from "next/headers"
 import { auth } from "./auth"
 
@@ -17,6 +18,8 @@ export class AuthenticationRequiredError extends Error {
 
 /** Returns the signed-in user's ID for server-side workflows. */
 export async function requireAuthenticatedUser(): Promise<string> {
+  // Headers can resolve during runtime prerender; session expiry still needs the current time.
+  await io()
   const session = await auth.api.getSession({ headers: await headers() })
 
   if (!session) throw new AuthenticationRequiredError()
