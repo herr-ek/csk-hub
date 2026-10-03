@@ -137,7 +137,7 @@
     "publishUnauthorized": "Nur Administratoren können Beiträge veröffentlichen.",
     "publishFailed": "Der Beitrag kann gerade nicht veröffentlicht werden. Bitte versuche es erneut."
   },
-  "Theme": { "toggle": "Design wechseln", "light": "Hell", "dark": "Dunkel", "system": "System" },
+  "Theme": { "label": "Design", "light": "Hell", "dark": "Dunkel", "system": "System" },
   "Admin": {
     "title": "Verwaltung",
     "description": "Verwalte CSK-Hub-Ressourcen.",
@@ -287,6 +287,8 @@
     "languageTitle": "Sprache",
     "languageDescription": "Verwende diese Sprache bei jeder Anmeldung.",
     "languageUpdateFailed": "Deine Sprache kann gerade nicht aktualisiert werden.",
+    "themeTitle": "Design",
+    "themeDescription": "Wähle, wie die App auf diesem Gerät aussieht.",
     "sessionsTitle": "Aktive Sitzungen",
     "sessionsDescription": "Geräte, die derzeit bei deinem Konto angemeldet sind.",
     "unknownDevice": "Unbekanntes Gerät",

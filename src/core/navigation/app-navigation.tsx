@@ -9,6 +9,7 @@ import { useTranslations } from "@/core/i18n/translations"
 import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { cn } from "@/shared/utils"
+import { ThemeSwitch } from "../theme/ThemeSwitch"
 import { LogoutButton } from "./logout-button"
 
 export type NavigationRoute = {
@@ -65,6 +66,7 @@ export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
               </Link>
             ))}
             {config ? <LogoutButton isImpersonating={Boolean(config.impersonatingUserName)} /> : null}
+            <ThemeSwitch />
           </nav>
         </div>
         {config?.impersonatingUserName ? (

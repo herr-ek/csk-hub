@@ -9,7 +9,7 @@
     "tst": "bun test --dots",
     "lint": "biome check",
     "typecheck": "tsc --noEmit",
-    "format": "biome format --write",
+    "format": "biome check --write --linter-enabled=false",
     "auth:generate": "better-auth generate --config src/core/auth/index.ts --output src/core/db/schema/auth.ts -y",
     "db:generate": "drizzle-kit generate",
     "ops": "bun run scripts/ops/index.ts",
