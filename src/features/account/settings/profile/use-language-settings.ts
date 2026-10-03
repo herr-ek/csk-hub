@@ -1,47 +1,25 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { useLocale } from "@/core/i18n/client"
-import { writeBrowserLocaleCookie } from "@/core/i18n/locale-cookie"
-import { defaultLocale, isLocale, type Locale } from "@/core/i18n/locales"
+import { useState } from "react"
+import type { Locale } from "@/core/i18n/locales"
 import { useTranslations } from "@/core/i18n/translations"
 import { updateLocalePreference } from "./actions"
 
+/** Saves the member's locale preference before the shared locale switcher applies it. */
 export function useLanguageSettings() {
-  const activeLocale = useLocale()
-  const resolvedLocale = isLocale(activeLocale) ? activeLocale : defaultLocale
   const t = useTranslations("AccountSettings")
-  const router = useRouter()
-  const [locale, setLocale] = useState<Locale>(resolvedLocale)
   const [error, setError] = useState<string>()
-  const [isPending, setIsPending] = useState(false)
 
-  useEffect(() => {
-    setLocale(resolvedLocale)
-  }, [resolvedLocale])
-
-  async function changeLocale(nextLocale: Locale) {
-    if (nextLocale === locale || isPending) return
-
+  async function persistLocale(locale: Locale) {
     setError(undefined)
-    setIsPending(true)
     try {
-      const result = await updateLocalePreference(nextLocale)
-      if (!result.success) {
-        setError(t("languageUpdateFailed"))
-        return
-      }
+      const result = await updateLocalePreference(locale)
+      if (result.success) return true
+    } catch {}
 
-      writeBrowserLocaleCookie(nextLocale)
-      setLocale(nextLocale)
-      router.refresh()
-    } catch {
-      setError(t("languageUpdateFailed"))
-    } finally {
-      setIsPending(false)
-    }
+    setError(t("languageUpdateFailed"))
+    return false
   }
 
-  return { changeLocale, error, isPending, locale }
+  return { error, persistLocale }
 }

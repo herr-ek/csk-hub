@@ -136,7 +136,7 @@
     "publishUnauthorized": "Endast administratörer kan publicera inlägg.",
     "publishFailed": "Det går inte att publicera inlägget just nu. Försök igen."
   },
-  "Theme": { "toggle": "Växla tema", "light": "Ljust", "dark": "Mörkt", "system": "System" },
+  "Theme": { "label": "Tema", "light": "Ljust", "dark": "Mörkt", "system": "System" },
   "Admin": {
     "title": "Administratör",
     "description": "Hantera resurser i CSK Hub.",
@@ -286,6 +286,8 @@
     "languageTitle": "Språk",
     "languageDescription": "Använd det här språket varje gång du loggar in.",
     "languageUpdateFailed": "Det går inte att uppdatera ditt språk just nu.",
+    "themeTitle": "Tema",
+    "themeDescription": "Välj hur appen ser ut på den här enheten.",
     "sessionsTitle": "Aktiva sessioner",
     "sessionsDescription": "Enheter som för närvarande är inloggade på ditt konto.",
     "unknownDevice": "Okänd enhet",

@@ -137,7 +137,7 @@
     "publishFailed": "Unable to publish that post right now. Please try again."
   },
   "Theme": {
-    "toggle": "Toggle theme",
+    "label": "Theme",
     "light": "Light",
     "dark": "Dark",
     "system": "System"
@@ -291,6 +291,8 @@
     "languageTitle": "Language",
     "languageDescription": "Use this language whenever you sign in.",
     "languageUpdateFailed": "Unable to update your language right now.",
+    "themeTitle": "Theme",
+    "themeDescription": "Choose how the app looks on this device.",
     "sessionsTitle": "Active sessions",
     "sessionsDescription": "Devices currently signed in to your account.",
     "unknownDevice": "Unknown device",
