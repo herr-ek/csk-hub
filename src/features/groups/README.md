@@ -6,7 +6,7 @@ Who is in which Choir and Section, and who holds which Position. Terminology liv
 
 ## The only write path
 
-Nothing outside this folder writes to the tables in `src/core/db/schema/groups.ts`; an
+Apart from the reference-data migration, nothing outside this folder writes to the tables in `src/core/db/schema/groups.ts`; an
 architecture test refuses any import of that schema from elsewhere. Read helpers live here
 too, so other features ask this module rather than querying the tables.
 
@@ -51,8 +51,11 @@ never surface as thrown errors.
   who leads the Sexmästeri.
 - Reads: `listCurrentGroupMembers`, `listCurrentGroupsOfUser`, `getCurrentPositionHolder`,
   `listChoirMembersByPart`, `listVoiceCapabilities`.
-- `seedGroups` creates MK, DK and KK with their Sections and the Position catalogue; run it
-  with `bun run ops seed-groups`.
+- Reference data: the migration `0012_groups-reference-data` creates MK, DK and KK with their
+  Sections and Voices, Styret and the Position catalogue in every environment.
+  `REFERENCE_DATA` mirrors it, and a test keeps the two in step; change both together.
+- `seedGroups` adds local example data on top: the remaining groups of the scheme's "Example
+  placement", and a Section for every user who has none. Run it with `bun run ops seed-groups`.
 
 "Current" means no end date. Dates are calendar dates, `YYYY-MM-DD`; a period may end on the
 day the next one starts.

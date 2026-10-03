@@ -1,85 +1,79 @@
 import "server-only"
 
-import { and, eq } from "drizzle-orm"
-import { group, position } from "@/core/db/schema/groups"
+import { and, eq, isNull, notExists, or } from "drizzle-orm"
+import { user } from "@/core/db/schema/auth"
+import { group, groupMember } from "@/core/db/schema/groups"
+import { placeSinger } from "./membership"
 import type { GroupType, Voice } from "./model"
 import type { GroupsDatabase } from "./operation"
-import { allowPositionInGroupTypes, createChoir, createPosition } from "./structure"
+import { REFERENCE_DATA } from "./reference-data"
+import { createGroup } from "./structure"
 
-/** CSK's three Choirs and their Sections, as placed in the Groups scheme. */
-export const CHOIRS: { name: string; sections: { name: string; voices: Voice[] }[] }[] = [
-  {
-    name: "MK",
-    sections: [
-      { name: "MKT1", voices: ["T1"] },
-      { name: "MKT2", voices: ["T2"] },
-      { name: "MKB1", voices: ["B1"] },
-      { name: "MKB2", voices: ["B2"] }
-    ]
-  },
-  {
-    name: "DK",
-    sections: [
-      { name: "DKS1", voices: ["S1"] },
-      { name: "DKS2", voices: ["S2"] },
-      { name: "DKA1", voices: ["A1"] },
-      { name: "DKA2", voices: ["A2"] }
-    ]
-  },
-  {
-    name: "KK",
-    sections: [
-      { name: "KKS", voices: ["S1", "S2"] },
-      { name: "KKA", voices: ["A1", "A2"] },
-      { name: "KKT", voices: ["T1", "T2"] },
-      { name: "KKB", voices: ["B1", "B2"] }
-    ]
-  }
+/** The remaining groups of the scheme's "Example placement", for local development only. */
+const EXAMPLE_GROUPS: { name: string; type: Exclude<GroupType, "Choir" | "Section">; choir?: string }[] = [
+  { name: "Gigmästeri", type: "Gigmästeri" },
+  { name: "Sexmästeri", type: "Sexmästeri" },
+  { name: "CSK konsertgrupp", type: "Konsert" },
+  { name: "Jubileumskommittén", type: "Committee" },
+  { name: "Giggrupp vår", type: "GigGroup" },
+  ...REFERENCE_DATA.choirs.flatMap(({ name: choir }) => [
+    { name: `${choir} konsertgrupp`, type: "Konsert" as const, choir },
+    { name: `${choir} roddgrupp`, type: "Rodd" as const, choir },
+    { name: `${choir} festgrupp`, type: "Fest" as const, choir },
+    { name: `${choir} rephelgsgrupp`, type: "Rephelg" as const, choir }
+  ])
 ]
 
-/** The Positions CSK uses, and the GroupTypes each may be held in. */
-export const POSITIONS: { name: string; groupTypes: GroupType[] }[] = [
-  { name: "Ordförande", groupTypes: ["Board"] },
-  { name: "PR-mästare", groupTypes: ["Board"] },
-  { name: "Gigmästare", groupTypes: ["Board", "Gigmästeri"] },
-  { name: "Sexmästare", groupTypes: ["Board", "Sexmästeri"] },
-  { name: "Sexmästarinna", groupTypes: ["Board", "Sexmästeri"] },
-  { name: "Conductor", groupTypes: ["Choir"] },
-  { name: "Notfiskal", groupTypes: ["Choir"] },
-  { name: "Konsertmästare", groupTypes: ["Choir"] },
-  { name: "Stämförälder", groupTypes: ["Section"] }
-]
+const SEED_START_DATE = "2025-08-25"
 
 /**
- * Creates the Choirs, their Sections and the Position catalogue. Safe to run again: anything that
- * already exists is left as it is.
+ * Local example data on top of the reference data the migrations create: the example groups,
+ * and a Section for every active user who belongs to no group yet, dealt round the Choirs' Voices.
+ * Safe to run again: existing groups and placed users are left as they are.
  */
 export async function seedGroups(database: GroupsDatabase) {
   const created: string[] = []
 
-  for (const definition of CHOIRS) {
-    const [existing] = await database
-      .select({ id: group.id })
-      .from(group)
-      .where(and(eq(group.name, definition.name), eq(group.type, "Choir"), eq(group.active, true)))
-    if (existing) continue
+  for (const example of EXAMPLE_GROUPS) {
+    const choirId = example.choir ? await activeGroupId(database, example.choir, null) : null
+    if (await activeGroupId(database, example.name, choirId)) continue
 
-    const result = await createChoir(database, definition)
-    if (!result.success) throw new Error(`Seeding Choir ${definition.name} failed: ${result.error}`)
-    created.push(definition.name)
+    const result = await createGroup(database, { name: example.name, type: example.type, choirId })
+    if (!result.success) throw new Error(`Seeding group ${example.name} failed: ${result.error}`)
+    created.push(example.name)
   }
 
-  for (const definition of POSITIONS) {
-    const [existing] = await database
-      .select({ id: position.id })
-      .from(position)
-      .where(eq(position.name, definition.name))
-    const result = existing
-      ? await allowPositionInGroupTypes(database, existing.id, definition.groupTypes)
-      : await createPosition(database, definition)
-    if (!result.success) throw new Error(`Seeding Position ${definition.name} failed: ${result.error}`)
-    if (!existing) created.push(definition.name)
+  const slots: { choir: string; voice: Voice }[] = REFERENCE_DATA.choirs.flatMap(({ name, sections }) =>
+    sections.flatMap(({ voices }) => voices.map((voice) => ({ choir: name, voice })))
+  )
+  const unplaced = await database
+    .select({ id: user.id })
+    .from(user)
+    .where(
+      and(
+        or(isNull(user.banned), eq(user.banned, false)),
+        notExists(database.select().from(groupMember).where(eq(groupMember.userId, user.id)))
+      )
+    )
+    .orderBy(user.createdAt)
+
+  for (const [index, { id }] of unplaced.entries()) {
+    const slot = slots[index % slots.length] as (typeof slots)[number]
+    const choirId = await activeGroupId(database, slot.choir, null)
+    if (!choirId) throw new Error(`Choir ${slot.choir} is missing; run the migrations first.`)
+    const result = await placeSinger(database, { userId: id, choirId, voice: slot.voice, startDate: SEED_START_DATE })
+    if (!result.success) throw new Error(`Placing a seeded singer failed: ${result.error}`)
   }
 
-  return { created }
+  return { created, placed: unplaced.length }
+}
+
+async function activeGroupId(database: GroupsDatabase, name: string, choirId: string | null) {
+  const [row] = await database
+    .select({ id: group.id })
+    .from(group)
+    .where(
+      and(eq(group.name, name), eq(group.active, true), choirId ? eq(group.choirId, choirId) : isNull(group.choirId))
+    )
+  return row?.id
 }

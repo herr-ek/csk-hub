@@ -58,8 +58,10 @@ describe.skipIf(!database)("groups schema constraints", () => {
     await t.db.insert(group).values({ name: "Roddgrupp", type: "Rodd", choirId: mk })
     await t.db.insert(group).values({ name: "Roddgrupp", type: "Rodd", choirId: kk })
 
-    await t.db.insert(group).values({ name: "Styret", type: "Board" })
-    await expect(t.db.insert(group).values({ name: "Styret", type: "Board" }).execute()).rejects.toMatchObject({
+    await t.db.insert(group).values({ name: "Valberedningen", type: "Committee" })
+    await expect(
+      t.db.insert(group).values({ name: "Valberedningen", type: "Committee" }).execute()
+    ).rejects.toMatchObject({
       cause: { constraint: "group_name_choir_active_unique" }
     })
   })

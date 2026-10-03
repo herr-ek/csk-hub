@@ -13,7 +13,7 @@ bun run ops studio               # Drizzle Studio against the local database
 bun run ops grant-admin <email>  # make an existing user an admin
 bun run ops seed-admin           # local admin account
 bun run ops seed-users           # ten local example users
-bun run ops seed-groups          # MK, DK, KK, their Sections and the Positions
+bun run ops seed-groups          # example groups, and a Section for every unplaced user
 
 bun run ops --prod               # the menu, targeting production
 bun run ops migrate --prod       # asks you to type "prod" first

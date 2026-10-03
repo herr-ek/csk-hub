@@ -3,13 +3,11 @@ import { user } from "@/core/db/schema/auth"
 import { group, position } from "@/core/db/schema/groups"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
 import type { GroupsResult } from "./model"
-import { seedGroups } from "./seed"
 
-/** A migrated, seeded throwaway database for the groups tests, or undefined without Postgres. */
+/** A migrated throwaway database, with the reference data, or undefined without Postgres. */
 export async function createGroupsTestDatabase() {
   const database = await createTestDatabase()
   if (!database) return undefined
-  await seedGroups(database.db)
   return fixture(database)
 }
 

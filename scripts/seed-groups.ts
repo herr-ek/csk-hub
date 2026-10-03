@@ -7,7 +7,8 @@ import { assertLocalDatabase } from "./ops/guards"
 
 assertLocalDatabase("Seeding groups")
 
-const { created } = await seedGroups(db)
+const { created, placed } = await seedGroups(db)
 await db.$client.end()
 
-console.log(created.length > 0 ? `Created: ${created.join(", ")}` : "Groups were already seeded.")
+console.log(created.length > 0 ? `Created groups: ${created.join(", ")}` : "Example groups already exist.")
+console.log(`Placed ${placed} user(s) in a Section.`)

@@ -113,7 +113,7 @@ describe.skipIf(!database)("Groups scheme examples", () => {
   })
 
   test("the Sexmästeri: two Position holders, two helpers, the Sexmästare also on the Board", async () => {
-    const { id: styret } = expectSuccess(await createGroup(t.db, { name: "Styret", type: "Board" }))
+    const styret = await t.groupId("Styret")
     const { id: sexmasteri } = expectSuccess(await createGroup(t.db, { name: "Sexmästeri", type: "Sexmästeri" }))
     const [anna, bertil, cecilia, david] = [
       await t.user("Anna"),

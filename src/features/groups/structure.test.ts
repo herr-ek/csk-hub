@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
-import { choir, group, sectionVoice } from "@/core/db/schema/groups"
+import { choir, group, groupTypePosition, position, sectionVoice } from "@/core/db/schema/groups"
 import type { Voice } from "./model"
-import { seedGroups } from "./seed"
+import { REFERENCE_DATA } from "./reference-data"
 import { archiveGroup, createChoir, createGroup, createPosition } from "./structure"
 import { createGroupsTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
@@ -27,30 +27,34 @@ describe.skipIf(!database)("groups structure", () => {
       .innerJoin(sectionVoice, eq(sectionVoice.sectionId, group.id))
       .where(and(eq(group.choirId, choirId), eq(group.type, "Section")))
       .orderBy(group.name, sectionVoice.voice)
-    return rows.map(({ name, voice }) => `${name}:${voice}`)
+    return rows.map(({ name, voice }) => `${name}:${voice}`).sort()
   }
 
-  describe("seed", () => {
-    test("creates MK, DK and KK with four Sections apiece and their Voices", async () => {
-      expect(await sectionsOf("MK")).toEqual(["MKB1:B1", "MKB2:B2", "MKT1:T1", "MKT2:T2"])
-      expect(await sectionsOf("DK")).toEqual(["DKA1:A1", "DKA2:A2", "DKS1:S1", "DKS2:S2"])
-      expect(await sectionsOf("KK")).toEqual([
-        "KKA:A1",
-        "KKA:A2",
-        "KKB:B1",
-        "KKB:B2",
-        "KKS:S1",
-        "KKS:S2",
-        "KKT:T1",
-        "KKT:T2"
-      ])
-      const choirs = await t.db.select().from(choir)
-      expect(choirs).toHaveLength(3)
-    })
+  describe("reference data", () => {
+    test("the migration creates the Choirs, their Sections and Voices, the Board and the Positions", async () => {
+      for (const definition of REFERENCE_DATA.choirs) {
+        const expected = definition.sections
+          .flatMap(({ name, voices }) => voices.map((voice) => `${name}:${voice}`))
+          .sort()
+        expect(await sectionsOf(definition.name)).toEqual(expected)
+      }
+      expect(await t.db.select().from(choir)).toHaveLength(REFERENCE_DATA.choirs.length)
 
-    test("is safe to run again", async () => {
-      expect(await seedGroups(t.db)).toEqual({ created: [] })
-      expect(await t.db.select().from(choir)).toHaveLength(3)
+      for (const { name, type } of REFERENCE_DATA.groups) {
+        const [row] = await t.db
+          .select()
+          .from(group)
+          .where(eq(group.id, await t.groupId(name)))
+        expect(row).toMatchObject({ type, choirId: null })
+      }
+
+      const allowed = await t.db
+        .select({ name: position.name, type: groupTypePosition.type })
+        .from(groupTypePosition)
+        .innerJoin(position, eq(position.id, groupTypePosition.positionId))
+      expect(allowed.map(({ name, type }) => `${name}:${type}`).sort()).toEqual(
+        REFERENCE_DATA.positions.flatMap(({ name, groupTypes }) => groupTypes.map((type) => `${name}:${type}`)).sort()
+      )
     })
   })
 
