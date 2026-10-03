@@ -23,12 +23,15 @@ const GREEN = "\x1b[32m"
 const YELLOW = "\x1b[33m"
 const RESET = "\x1b[0m"
 
-const COMMANDS = ["status", "migrate", "studio", "grant-admin", "seed-admin", "seed-users"] as const
+const COMMANDS = ["status", "migrate", "studio", "grant-admin", "seed-admin", "seed-users", "seed-groups"] as const
 type Command = (typeof COMMANDS)[number]
 
-const SEED_SCRIPTS: Record<string, string> = {
-  "seed-admin": "scripts/seed-admin.ts",
-  "seed-users": "scripts/seed-users.ts"
+// Bun arguments per seed. The groups seed imports a server-only module, which resolves only under
+// the react-server condition.
+const SEED_SCRIPTS: Record<string, string[]> = {
+  "seed-admin": ["run", "scripts/seed-admin.ts"],
+  "seed-users": ["run", "scripts/seed-users.ts"],
+  "seed-groups": ["--conditions=react-server", "run", "scripts/seed-groups.ts"]
 }
 
 const { values: flags, positionals } = parseArgs({
@@ -65,7 +68,7 @@ async function run(choice: Command): Promise<number> {
       return 1
     }
     const database = databaseOrExit("local")
-    const seed = spawnSync("bun", ["run", SEED_SCRIPTS[choice]], { stdio: "inherit", env: childEnvironment(database) })
+    const seed = spawnSync("bun", SEED_SCRIPTS[choice], { stdio: "inherit", env: childEnvironment(database) })
     return seed.status ?? 1
   }
 
@@ -114,6 +117,7 @@ async function menu(): Promise<void> {
         { value: "grant-admin", label: "Grant admin", hint: `existing user, against ${target}` },
         seedOption("seed-admin", "Seed admin"),
         seedOption("seed-users", "Seed users"),
+        seedOption("seed-groups", "Seed groups"),
         { value: "exit", label: "Exit" }
       ]
     })

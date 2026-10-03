@@ -93,6 +93,16 @@ describe("Architecture Rules", () => {
     expect(violations).toEqual([])
   })
 
+  test("only the groups feature reaches the groups tables", () => {
+    // The groups module is the only write path, because it enforces the rules the database cannot.
+    const violations = [...sourceFiles("src"), ...sourceFiles("scripts")]
+      .map(projectPath)
+      .filter((file) => !file.startsWith("src/features/groups/") && !file.startsWith("src/core/db/schema/"))
+      .filter((file) => /from\s+["'][^"']*db\/schema\/groups["']/.test(readFileSync(file, "utf8")))
+
+    expect(violations).toEqual([])
+  })
+
   test("nothing outside app depends on app", async () => {
     const violations = await projectFiles()
       .inPath("src/**", {

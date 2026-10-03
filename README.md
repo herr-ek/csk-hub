@@ -87,6 +87,9 @@ Both are local-development conveniences only. Change the password immediately,
 and do not use these credentials in a deployed environment. Seeding refuses to
 run against production.
 
+`bun run ops seed-groups` creates the Choirs MK, DK and KK with their Sections,
+and the Positions groups can hold. Running it again changes nothing.
+
 ## Routes
 
 | Route | Purpose | Access |
