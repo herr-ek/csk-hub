@@ -49,11 +49,14 @@ savepoint. Commands return `{ success: true, data }` or `{ success: false, error
 `error` is an `OrgStructureViolation`. Rule violations, including constraint violations from
 races, never surface as thrown errors.
 
-- Structure: `createChoir`, `createGroup`, `archiveGroup`, `createPosition`,
+- Structure: `createChoir`, `createGroup`, `renameGroup`, `archiveGroup`, `createPosition`,
+  `updatePosition` (`renamePosition` plus `setPositionGroupTypes`, as one change),
   `allowPositionInGroupTypes`.
 - Membership: `startMembership`, `endMembership`, `placeSinger` (the Voice decides the
-  Section: the one whose Voice contains it), `changeVoice`.
-- Positions: `startPositionHolding`, `endPositionHolding`, and `startLinkedPosition` /
+  Section: the one whose Voice contains it), `placeSingerInSection` (refuses a Voice the
+  Section's Voice does not contain), `changeVoice`.
+- Positions: `startPositionHolding`, `endPositionHolding`, `replacePositionHolder` (a handover
+  on the new holder's start date), and `startLinkedPosition` /
   `endLinkedPosition` for one office held in several Groups, such as the Board's Sexmästare
   who leads the Sexmästeri.
 - Reads: `listCurrentGroupMembers`, `listCurrentGroupsOfUser`, `getCurrentPositionHolder`,
@@ -65,6 +68,25 @@ production. `bun run ops seed-groups` adds local example data on top. Both live 
 
 "Current" means no end date. Dates are calendar dates, `YYYY-MM-DD`; a period may end on the
 day the next one starts.
+
+## Admin pages
+
+`/admin/groups` and `/admin/groups/[groupId]` are the Admin surface over this module. The
+feature entrypoint exports their screens; everything else lives in `ui/`:
+
+```text
+ui/
+  structure/   the overview, and creating, renaming and archiving groups
+  detail/      one group's Members and Position holders, with their history
+  catalogue/   the Positions and the group types each is allowed in
+  command-dialog.tsx, run-command.ts   the shared shape of every admin command
+```
+
+Every Server Action goes through `runGroupCommand`: `requireAdmin`, validate the form, run one
+module command, and return its violation as `{ status: "error", error }`. The client translates
+the kind from `Groups.errors`, so adding an `OrgStructureViolation` means adding its message to
+every catalogue; the typed translation keys fail the typecheck until you do. Reads for a screen
+live beside it (`query.ts`) and are shaped for that screen.
 
 ## Tests
 

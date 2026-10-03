@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, asc, eq } from "drizzle-orm"
 import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
-import { changeVoice, endMembership, placeSinger, startMembership } from "./membership"
+import { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
 import { listChoirMembersByVoiceFamily, listCurrentGroupMembers, listCurrentGroupsOfUser } from "./reads"
 import { archiveGroup, createGroup } from "./structure"
@@ -189,6 +189,36 @@ describe.skipIf(!database)("groups membership", () => {
       expect(
         await placeSinger(t.db, { userId, choirId: await t.groupId("MKB1"), voice: "B1", startDate: "2025-01-01" })
       ).toEqual({ success: false, error: "choir-not-found" })
+    })
+  })
+
+  describe("placeSingerInSection", () => {
+    test("places a singer in the given Section and its Choir", async () => {
+      const userId = await t.user()
+      const kkt = await t.groupId("KKT")
+      expectSuccess(await placeSingerInSection(t.db, { userId, sectionId: kkt, voice: "T2", startDate: "2025-01-01" }))
+      const names = (await listCurrentGroupsOfUser(t.db, userId)).map(({ name }) => name).sort()
+      expect(names).toEqual(["KK", "KKT"])
+    })
+
+    test("refuses a Voice the Section does not sing, and a group that is not a Section", async () => {
+      const userId = await t.user()
+      expect(
+        await placeSingerInSection(t.db, {
+          userId,
+          sectionId: await t.groupId("KKT"),
+          voice: "B1",
+          startDate: "2025-01-01"
+        })
+      ).toEqual({ success: false, error: "voice-not-sung-in-section" })
+      expect(
+        await placeSingerInSection(t.db, {
+          userId,
+          sectionId: await t.groupId("KK"),
+          voice: "B1",
+          startDate: "2025-01-01"
+        })
+      ).toEqual({ success: false, error: "group-not-found" })
     })
   })
 

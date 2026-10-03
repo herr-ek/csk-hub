@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
-import { choir, group, groupTypePosition, section } from "@/core/db/schema/org-structure"
+import { choir, group, groupTypePosition, position, section } from "@/core/db/schema/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
@@ -11,7 +11,8 @@ import {
   createPosition,
   renameGroup,
   renamePosition,
-  setPositionGroupTypes
+  setPositionGroupTypes,
+  updatePosition
 } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
@@ -227,6 +228,26 @@ describe.skipIf(!database)("groups structure", () => {
       })
       expectSuccess(await setPositionGroupTypes(t.db, id, ["Board"]))
       expect(await types()).toEqual(["Board"])
+    })
+
+    test("updatePosition renames and retypes together, or not at all", async () => {
+      const name = uniqueName("Fanbärare")
+      const { id } = expectSuccess(await createPosition(t.db, { name, groupTypes: ["Board"] }))
+      const styret = await t.groupId("Styret")
+      const userId = await t.user()
+      expectSuccess(await startMembership(t.db, { userId, groupId: styret, startDate: "2025-01-01" }))
+      expectSuccess(
+        await startPositionHolding(t.db, { userId, groupId: styret, positionId: id, startDate: "2025-01-01" })
+      )
+
+      expect(
+        await updatePosition(t.db, { positionId: id, name: uniqueName("Fana"), groupTypes: ["Festgrupp"] })
+      ).toEqual({
+        success: false,
+        error: "position-in-use"
+      })
+      const [row] = await t.db.select({ name: position.name }).from(position).where(eq(position.id, id))
+      expect(row?.name).toBe(name)
     })
   })
 })

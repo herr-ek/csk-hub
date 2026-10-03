@@ -142,14 +142,7 @@ async function allowPosition(tx: OrgStructureTransaction, positionId: string, gr
 }
 
 export function renamePosition(database: OrgStructureDatabase, positionId: string, name: string) {
-  return runOrgStructureCommand(database, async (tx) => {
-    const renamed = await tx
-      .update(position)
-      .set({ name: name.trim() })
-      .where(eq(position.id, positionId))
-      .returning({ id: position.id })
-    if (renamed.length === 0) throw new RuleViolation("position-not-found")
-  })
+  return runOrgStructureCommand(database, (tx) => applyPositionName(tx, positionId, name))
 }
 
 /**
@@ -157,33 +150,55 @@ export function renamePosition(database: OrgStructureDatabase, positionId: strin
  * currently holds the Position in a group of that type.
  */
 export function setPositionGroupTypes(database: OrgStructureDatabase, positionId: string, groupTypes: GroupType[]) {
+  return runOrgStructureCommand(database, (tx) => applyPositionGroupTypes(tx, positionId, groupTypes))
+}
+
+/** Renames a Position and replaces its GroupTypes as one change, or neither. */
+export function updatePosition(
+  database: OrgStructureDatabase,
+  input: { positionId: string; name: string; groupTypes: GroupType[] }
+) {
   return runOrgStructureCommand(database, async (tx) => {
-    const [row] = await tx.select({ id: position.id }).from(position).where(eq(position.id, positionId)).for("update")
-    if (!row) throw new RuleViolation("position-not-found")
-
-    const kept = [...new Set(groupTypes)]
-    const [held] = await tx
-      .select({ type: group.type })
-      .from(positionHolder)
-      .innerJoin(group, eq(group.id, positionHolder.groupId))
-      .where(
-        and(
-          eq(positionHolder.positionId, positionId),
-          isNull(positionHolder.endDate),
-          kept.length > 0 ? notInArray(group.type, kept) : undefined
-        )
-      )
-      .limit(1)
-    if (held) throw new RuleViolation("position-in-use")
-
-    await tx
-      .delete(groupTypePosition)
-      .where(
-        and(
-          eq(groupTypePosition.positionId, positionId),
-          kept.length > 0 ? notInArray(groupTypePosition.type, kept) : undefined
-        )
-      )
-    await allowPosition(tx, positionId, kept)
+    await applyPositionName(tx, input.positionId, input.name)
+    await applyPositionGroupTypes(tx, input.positionId, input.groupTypes)
   })
+}
+
+async function applyPositionName(tx: OrgStructureTransaction, positionId: string, name: string) {
+  const renamed = await tx
+    .update(position)
+    .set({ name: name.trim() })
+    .where(eq(position.id, positionId))
+    .returning({ id: position.id })
+  if (renamed.length === 0) throw new RuleViolation("position-not-found")
+}
+
+async function applyPositionGroupTypes(tx: OrgStructureTransaction, positionId: string, groupTypes: GroupType[]) {
+  const [row] = await tx.select({ id: position.id }).from(position).where(eq(position.id, positionId)).for("update")
+  if (!row) throw new RuleViolation("position-not-found")
+
+  const kept = [...new Set(groupTypes)]
+  const [held] = await tx
+    .select({ type: group.type })
+    .from(positionHolder)
+    .innerJoin(group, eq(group.id, positionHolder.groupId))
+    .where(
+      and(
+        eq(positionHolder.positionId, positionId),
+        isNull(positionHolder.endDate),
+        kept.length > 0 ? notInArray(group.type, kept) : undefined
+      )
+    )
+    .limit(1)
+  if (held) throw new RuleViolation("position-in-use")
+
+  await tx
+    .delete(groupTypePosition)
+    .where(
+      and(
+        eq(groupTypePosition.positionId, positionId),
+        kept.length > 0 ? notInArray(groupTypePosition.type, kept) : undefined
+      )
+    )
+  await allowPosition(tx, positionId, kept)
 }

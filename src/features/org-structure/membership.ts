@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm"
 import { group, groupMember, section } from "@/core/db/schema/org-structure"
-import { familyOf, type Voice } from "@/features/voice/model"
+import { contains, familyOf, type Voice } from "@/features/voice/model"
 import { findCurrentMembership, requireActiveGroup, requireChoir, requireGroup } from "./lookup"
 import type { IsoDate } from "./model"
 import {
@@ -53,15 +53,34 @@ export function placeSinger(database: OrgStructureDatabase, input: PlaceSingerIn
     const startDate = requireDate(input.startDate)
     await requireChoir(tx, input.choirId)
     await lockUser(tx, input.userId)
-
-    if (await findCurrentSectionMembership(tx, input.userId, input.choirId)) {
-      throw new RuleViolation("already-in-section")
-    }
-    const sectionId = await sectionSinging(tx, input.choirId, input.voice)
-    await ensureChoirMembership(tx, input.userId, input.choirId, startDate)
-    await insertMembership(tx, { userId: input.userId, groupId: sectionId, startDate, voice: input.voice })
-    return { sectionId }
+    return addSinger(tx, input, startDate)
   })
+}
+
+type PlaceSingerInSectionInput = { userId: string; sectionId: string; voice: Voice; startDate: IsoDate }
+
+/** Places a singer in a given Section, refusing a Voice that Section does not sing. */
+export function placeSingerInSection(database: OrgStructureDatabase, input: PlaceSingerInSectionInput) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const startDate = requireDate(input.startDate)
+    const sectionGroup = await requireActiveGroup(tx, input.sectionId)
+    if (sectionGroup.type !== "Section" || !sectionGroup.choirId) throw new RuleViolation("group-not-found")
+    const [sung] = await tx.select({ voice: section.voice }).from(section).where(eq(section.groupId, input.sectionId))
+    if (!sung || !contains(sung.voice, input.voice)) throw new RuleViolation("voice-not-sung-in-section")
+
+    await lockUser(tx, input.userId)
+    return addSinger(tx, { userId: input.userId, choirId: sectionGroup.choirId, voice: input.voice }, startDate)
+  })
+}
+
+async function addSinger(tx: OrgStructureTransaction, input: Omit<PlaceSingerInput, "startDate">, startDate: IsoDate) {
+  if (await findCurrentSectionMembership(tx, input.userId, input.choirId)) {
+    throw new RuleViolation("already-in-section")
+  }
+  const sectionId = await sectionSinging(tx, input.choirId, input.voice)
+  await ensureChoirMembership(tx, input.userId, input.choirId, startDate)
+  await insertMembership(tx, { userId: input.userId, groupId: sectionId, startDate, voice: input.voice })
+  return { sectionId }
 }
 
 type ChangeVoiceInput = { userId: string; choirId: string; voice: Voice; date: IsoDate }
