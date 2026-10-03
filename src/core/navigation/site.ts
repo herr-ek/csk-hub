@@ -12,6 +12,7 @@ export const ROUTES = {
   adminUsers: "/admin/users",
   adminNotifications: "/admin/notifications",
   account: "/me",
+  messages: "/messages",
   accountSettings: "/me/settings"
 } as const
 
