@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join, relative, sep } from "node:path"
 import { projectFiles } from "archunit"
-import { describe, expect, it, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 
 const options = {
   logging: {
@@ -37,6 +37,12 @@ function isEntrypoint(feature: string, subpath: string): boolean {
 }
 
 describe("Architecture Rules", () => {
+  // Archunit parses the project once and caches the graph for every later rule. Pay for
+  // that parse here, under a timeout sized for it, rather than in whichever rule runs first.
+  beforeAll(async () => {
+    await projectFiles().inPath("src/**").shouldNot().dependOnFiles().inPath("node_modules/**").check()
+  }, 30_000)
+
   test("only core i18n imports next-intl", () => {
     const violations = sourceFiles("src")
       .filter((file) => !projectPath(file).startsWith("src/core/i18n/"))
@@ -51,7 +57,7 @@ describe("Architecture Rules", () => {
     await expect(rule).toPassAsync(options)
   })
 
-  it("should not have circular dependencies", async () => {
+  test("should not have circular dependencies", async () => {
     const rule = projectFiles().inFolder("src/**").should().haveNoCycles()
     await expect(rule).toPassAsync(options)
   })

@@ -5,7 +5,7 @@ import { confirmProductionWrite } from "./guards"
 import { announce, type Database } from "./target"
 
 /**
- * Give an existing user the admin role. 
+ * Give an existing user the admin role.
  * Allowed against prod since it requires an existing user. (Real password and/or 2FA/passkey)
  * Keeps the existing roles of the user
  *
