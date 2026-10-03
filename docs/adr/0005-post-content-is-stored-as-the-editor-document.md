@@ -28,9 +28,9 @@ that must not trust it — normalisation is a security boundary, not a tidy-up �
 rule cannot place an unsafe destination on a page.
 
 The cost is legibility. A `jsonb` document is not something a person, an email digest or
-a search index reads directly. Search is met without storing the prose twice: an
-immutable SQL function, `post_body_text(jsonb)`, extracts the text nodes, and a generated
-`tsvector` column over it feeds a GIN index. The words live in one column; the index
+a search index reads directly. Search is met without storing the prose twice: a generated
+`tsvector` column extracts the text nodes with a jsonpath and feeds a GIN index, using
+built-in functions only so that drizzle-kit generates it from the schema. The words live in one column; the index
 holds lexemes. Any other consumer of the text — a digest, a preview — walks the document
 it has already loaded rather than reading a second stored copy.
 

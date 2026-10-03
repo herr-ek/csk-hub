@@ -19,9 +19,11 @@ export const post = pgTable(
     // may hold is the posts feature's decision, enforced before the row is written.
     body: jsonb("body").$type<JSONContent>().notNull(),
     // Lexemes for search, derived by Postgres from the text nodes in `body` — so the
-    // words are stored once, and the index cannot fall out of step with them.
+    // words are stored once, and the index cannot fall out of step with them. Built-ins
+    // only, so drizzle-kit can generate the column: the jsonpath picks out text nodes in
+    // document order, and `to_tsvector` indexes the strings of the array it returns.
     bodySearch: tsvector("body_search").generatedAlwaysAs(
-      sql`to_tsvector('swedish', coalesce(post_body_text("body"), ''))`
+      sql`to_tsvector('swedish', jsonb_path_query_array("body", 'strict $.**.text')::text)`
     ),
     // A Post outlives its author. Erasing a User drops the attribution and leaves the
     // announcement standing: the News feed is the record of what the choir was told, not

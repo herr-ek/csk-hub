@@ -1,6 +1,6 @@
 {
-  "id": "87a7fe8d-9f3c-4dfe-b64e-3acf0c2b9e01",
-  "prevId": "34e8c180-505b-41d6-809d-01b8b25f3f07",
+  "id": "f40983be-8de0-400a-b50b-1ab158c809ad",
+  "prevId": "f60c8d0f-7841-43db-a5dc-7709e09f11c9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -864,7 +864,7 @@
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "to_tsvector('swedish', coalesce(post_body_text(\"body\"), ''))",
+            "as": "to_tsvector('swedish', jsonb_path_query_array(\"body\", 'strict $.**.text')::text)",
             "type": "stored"
           }
         },

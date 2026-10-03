@@ -93,6 +93,6 @@ levels and link hrefs are the two existing ones.
 — syntax highlighting, say — has no server-side counterpart and would need a second
 implementation kept in step by hand. Plain nodes first; decoration is its own decision.
 
-**Search reads the document in SQL.** `post_body_text(jsonb)` in the posts migration
+**Search reads the document in SQL.** The posts schema's generated `body_search` column
 extracts text nodes with `jsonb_path_query_array(body, 'strict $.**.text')`. A new node
 whose words live anywhere but `text` nodes is invisible to it.
