@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl"
 import { useOptimistic, useTransition } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
 import { writeBrowserLocaleCookie } from "./locale-cookie"
+import { LocaleFlag } from "./locale-flag"
 import { defaultLocale, getLocaleName, isLocale, type Locale, localeNames, locales } from "./locales"
 
 export interface LocaleSwitcherProps {
@@ -41,11 +42,19 @@ export function LocaleSwitcher({ id, className, size = "sm", persistLocale }: Lo
   return (
     <Select value={selectedLocale} onValueChange={changeLocale} disabled={isPending}>
       <SelectTrigger id={id} aria-label={t("language")} size={size} className={className}>
-        <SelectValue>{getLocaleName}</SelectValue>
+        <SelectValue>
+          {(value: string | null) => (
+            <>
+              <LocaleFlag locale={isLocale(value) ? value : defaultLocale} />
+              {getLocaleName(value)}
+            </>
+          )}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent alignItemWithTrigger={false} className="p-1.5">
         {locales.map((supportedLocale) => (
           <SelectItem key={supportedLocale} value={supportedLocale} className="">
+            <LocaleFlag locale={supportedLocale} />
             {localeNames[supportedLocale]}
           </SelectItem>
         ))}
