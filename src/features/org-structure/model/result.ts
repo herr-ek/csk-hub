@@ -24,6 +24,8 @@ export type OrgStructureViolation =
   | "position-name-taken"
   | "position-not-allowed"
   | "position-taken"
+  | "position-in-use"
+  | "already-holding-position"
   | "not-holding-position"
   | "period-conflict"
 
