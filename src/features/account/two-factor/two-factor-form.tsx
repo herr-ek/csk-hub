@@ -1,11 +1,11 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Checkbox } from "@/shared/ui/base/checkbox"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { Field, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import type { TwoFactorMethod } from "./service"
 import { useTwoFactorForm } from "./use-two-factor-form"
 
@@ -52,18 +52,15 @@ export function TwoFactorForm() {
               {state.pending ? t("sending") : t("sendEmailCode")}
             </Button>
           ) : null}
-          <Field>
-            <FieldLabel htmlFor="two-factor-code">{t("securityCode")}</FieldLabel>
-            <Input
-              id="two-factor-code"
-              inputMode={state.method === "backup" ? "text" : "numeric"}
-              autoComplete={state.method === "backup" ? "off" : "one-time-code"}
-              value={state.code}
-              onChange={(event) => state.setCode(event.target.value)}
-              required
-            />
-            <FieldError>{state.error}</FieldError>
-          </Field>
+          <InputField
+            label={t("securityCode")}
+            inputMode={state.method === "backup" ? "text" : "numeric"}
+            autoComplete={state.method === "backup" ? "off" : "one-time-code"}
+            value={state.code}
+            onChange={(event) => state.setCode(event.target.value)}
+            required
+            error={state.error}
+          />
           <Field orientation="horizontal">
             <Checkbox id="trust-device" checked={state.trustDevice} onCheckedChange={state.setTrustDevice} />
             <FieldLabel htmlFor="trust-device" className="font-normal">

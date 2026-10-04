@@ -1,13 +1,13 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import { CommandDialog } from "../command-dialog"
-import { DateField, SelectField } from "../form-fields"
 import { assignHolderAction, endHoldingAction } from "./actions"
 import type { GroupDetail } from "./query"
 
@@ -127,10 +127,11 @@ function AssignHolderDialog({
         <SelectField
           label={t("holder")}
           name="userId"
+          required
           options={candidates.map((member) => ({ value: member.userId, label: member.name }))}
         />
       )}
-      <DateField label={t("startDate")} name="startDate" defaultValue={today} />
+      <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
     </CommandDialog>
   )
 }
@@ -163,7 +164,7 @@ function EndHoldingDialog({
       <input type="hidden" name="groupId" value={detail.group.id} />
       <input type="hidden" name="positionId" value={position.id} />
       <input type="hidden" name="userId" value={position.holder.userId} />
-      <DateField label={t("endDate")} name="endDate" defaultValue={today} />
+      <InputField label={t("endDate")} name="endDate" defaultValue={today} type="date" required />
     </CommandDialog>
   )
 }

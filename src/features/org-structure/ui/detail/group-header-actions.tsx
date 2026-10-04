@@ -1,9 +1,10 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { CommandDialog } from "../command-dialog"
-import { TextField } from "../form-fields"
+import { NAME_MAX_LENGTH } from "../limits"
 import { archiveGroupAction, renameGroupAction } from "../structure/actions"
 import type { GroupDetail } from "./query"
 
@@ -25,7 +26,7 @@ export function GroupHeaderActions({ group }: { group: GroupDetail["group"] }) {
         submitLabel={t("rename")}
       >
         <input type="hidden" name="groupId" value={group.id} />
-        <TextField label={t("name")} name="name" defaultValue={group.name} />
+        <InputField label={t("name")} name="name" defaultValue={group.name} required maxLength={NAME_MAX_LENGTH} />
       </CommandDialog>
       {archivable ? (
         <CommandDialog

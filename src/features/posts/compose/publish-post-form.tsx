@@ -5,9 +5,9 @@ import { useActionState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { RichTextEditor } from "@/features/rich-text"
+import { InputField } from "@/shared/forms/fields"
 import { Button, buttonVariants } from "@/shared/ui/base/button"
-import { Field, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { Field, FieldError, FieldGroup, FieldTitle } from "@/shared/ui/base/field"
 import { postDocument } from "../post-document"
 import { type PublishPostState, publishPost } from "./actions"
 import { POST_TITLE_MAX_LENGTH } from "./schemas"
@@ -25,17 +25,14 @@ export function PublishPostForm() {
   return (
     <form action={action} className="flex flex-col gap-6 md:min-h-0 md:flex-1">
       <FieldGroup className="md:min-h-0">
-        <Field>
-          <FieldLabel htmlFor="post-title">{t("titleLabel")}</FieldLabel>
-          <Input
-            id="post-title"
-            name="title"
-            type="text"
-            defaultValue={draft?.title}
-            maxLength={POST_TITLE_MAX_LENGTH}
-            required
-          />
-        </Field>
+        <InputField
+          label={t("titleLabel")}
+          name="title"
+          type="text"
+          defaultValue={draft?.title}
+          maxLength={POST_TITLE_MAX_LENGTH}
+          required
+        />
         <Field className="md:min-h-0">
           <FieldTitle id={POST_BODY_LABEL_ID}>{t("bodyLabel")}</FieldTitle>
           <RichTextEditor
