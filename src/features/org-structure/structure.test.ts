@@ -1,62 +1,22 @@
 import { afterAll, describe, expect, test } from "bun:test"
-import { and, eq } from "drizzle-orm"
-import { choir, group, groupTypePosition, position, sectionVoice } from "@/core/db/schema/groups"
-import type { Voice } from "./model"
-import { REFERENCE_DATA } from "./reference-data"
+import { eq } from "drizzle-orm"
+import { choir, group, section } from "@/core/db/schema/org-structure"
+import type { Voice } from "@/features/voice/model"
 import { archiveGroup, createChoir, createGroup, createPosition } from "./structure"
-import { createGroupsTestDatabase, expectSuccess, uniqueName } from "./test-support"
+import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
-const database = await createGroupsTestDatabase()
+const database = await createOrgStructureTestDatabase()
 
-const fourSections = (prefix: string): { name: string; voices: Voice[] }[] => [
-  { name: `${prefix}S`, voices: ["S1", "S2"] },
-  { name: `${prefix}A`, voices: ["A1", "A2"] },
-  { name: `${prefix}T`, voices: ["T1", "T2"] },
-  { name: `${prefix}B`, voices: ["B1", "B2"] }
+const fourSections = (prefix: string): { name: string; voice: Voice }[] => [
+  { name: `${prefix}S`, voice: "S" },
+  { name: `${prefix}A`, voice: "A" },
+  { name: `${prefix}T`, voice: "T" },
+  { name: `${prefix}B`, voice: "B" }
 ]
 
 describe.skipIf(!database)("groups structure", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
-
-  async function sectionsOf(choirName: string) {
-    const choirId = await t.groupId(choirName)
-    const rows = await t.db
-      .select({ name: group.name, voice: sectionVoice.voice })
-      .from(group)
-      .innerJoin(sectionVoice, eq(sectionVoice.sectionId, group.id))
-      .where(and(eq(group.choirId, choirId), eq(group.type, "Section")))
-      .orderBy(group.name, sectionVoice.voice)
-    return rows.map(({ name, voice }) => `${name}:${voice}`).sort()
-  }
-
-  describe("reference data", () => {
-    test("the migration creates the Choirs, their Sections and Voices, the Board and the Positions", async () => {
-      for (const definition of REFERENCE_DATA.choirs) {
-        const expected = definition.sections
-          .flatMap(({ name, voices }) => voices.map((voice) => `${name}:${voice}`))
-          .sort()
-        expect(await sectionsOf(definition.name)).toEqual(expected)
-      }
-      expect(await t.db.select().from(choir)).toHaveLength(REFERENCE_DATA.choirs.length)
-
-      for (const { name, type } of REFERENCE_DATA.groups) {
-        const [row] = await t.db
-          .select()
-          .from(group)
-          .where(eq(group.id, await t.groupId(name)))
-        expect(row).toMatchObject({ type, choirId: null })
-      }
-
-      const allowed = await t.db
-        .select({ name: position.name, type: groupTypePosition.type })
-        .from(groupTypePosition)
-        .innerJoin(position, eq(position.id, groupTypePosition.positionId))
-      expect(allowed.map(({ name, type }) => `${name}:${type}`).sort()).toEqual(
-        REFERENCE_DATA.positions.flatMap(({ name, groupTypes }) => groupTypes.map((type) => `${name}:${type}`)).sort()
-      )
-    })
-  })
 
   describe("createChoir", () => {
     test("creates a CSK-wide Choir group with its extension and four Sections", async () => {
@@ -66,7 +26,13 @@ describe.skipIf(!database)("groups structure", () => {
       const [row] = await t.db.select().from(group).where(eq(group.id, choirId))
       expect(row).toMatchObject({ type: "Choir", choirId: null, active: true })
       expect(await t.db.select().from(choir).where(eq(choir.groupId, choirId))).toHaveLength(1)
-      expect(sections).toHaveLength(4)
+      expect(sections.map(({ voice }) => voice)).toEqual(["S", "A", "T", "B"])
+      const extensions = await t.db
+        .select({ voice: section.voice })
+        .from(section)
+        .innerJoin(group, eq(group.id, section.groupId))
+        .where(eq(group.choirId, choirId))
+      expect(extensions).toHaveLength(4)
     })
 
     test("requires exactly four Sections", async () => {
@@ -74,18 +40,32 @@ describe.skipIf(!database)("groups structure", () => {
       expect(result).toEqual({ success: false, error: "section-count" })
     })
 
-    test("requires every Section to sing at least one Voice", async () => {
+    test("refuses the same Voice in two Sections of the Choir", async () => {
       const sections = fourSections("X")
-      sections[3] = { name: "XB", voices: [] }
-      const result = await createChoir(t.db, { name: uniqueName("Choir"), sections })
-      expect(result).toEqual({ success: false, error: "section-without-voice" })
-    })
-
-    test("refuses a Voice in more than one Section of the Choir", async () => {
-      const sections = fourSections("X")
-      sections[3] = { name: "XB", voices: ["B1", "T2"] }
+      sections[3] = { name: "XB", voice: "T" }
       const result = await createChoir(t.db, { name: uniqueName("Choir"), sections })
       expect(result).toEqual({ success: false, error: "voice-in-several-sections" })
+    })
+
+    test("refuses overlapping Sections: a family alongside one of its divisions", async () => {
+      const sections: { name: string; voice: Voice }[] = [
+        { name: "XT1", voice: "T1" },
+        { name: "XT2", voice: "T2" },
+        { name: "XB", voice: "B" },
+        { name: "XB1", voice: "B1" }
+      ]
+      const result = await createChoir(t.db, { name: uniqueName("Choir"), sections })
+      expect(result).toEqual({ success: false, error: "voice-in-several-sections" })
+    })
+
+    test("allows divisions of one family in separate Sections", async () => {
+      const sections: { name: string; voice: Voice }[] = [
+        { name: "XT1", voice: "T1" },
+        { name: "XT2", voice: "T2" },
+        { name: "XB1", voice: "B1" },
+        { name: "XB2", voice: "B2" }
+      ]
+      expectSuccess(await createChoir(t.db, { name: uniqueName("Choir"), sections }))
     })
 
     test("leaves nothing behind when refused", async () => {

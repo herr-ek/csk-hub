@@ -2,16 +2,16 @@ import "server-only"
 
 import { sql } from "drizzle-orm"
 import type { db } from "@/core/db"
-import type { GroupsResult, GroupsViolation, IsoDate } from "./model"
+import type { IsoDate, OrgStructureResult, OrgStructureViolation } from "./model"
 
 /** The application database client, or a transaction on it. Every groups command accepts either. */
-export type GroupsDatabase = typeof db | GroupsTransaction
+export type OrgStructureDatabase = typeof db | OrgStructureTransaction
 
-export type GroupsTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+export type OrgStructureTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
-/** Raised inside a command to roll it back; `runGroupsCommand` turns it into a result. */
+/** Raised inside a command to roll it back; `runOrgStructureCommand` turns it into a result. */
 export class RuleViolation extends Error {
-  constructor(readonly kind: GroupsViolation) {
+  constructor(readonly kind: OrgStructureViolation) {
     super(kind)
     this.name = "RuleViolation"
   }
@@ -21,19 +21,19 @@ export class RuleViolation extends Error {
  * Constraints the database checks on the module's behalf, and the rule each one stands for.
  * A race between two commands ends here rather than in a raw constraint error.
  */
-const CONSTRAINT_VIOLATIONS: Record<string, GroupsViolation> = {
+const CONSTRAINT_VIOLATIONS: Record<string, OrgStructureViolation> = {
   group_name_choir_active_unique: "group-name-taken",
   group_member_current_unique: "already-member",
   group_member_user_id_group_id_start_date_pk: "period-conflict",
   group_member_period_check: "period-conflict",
-  group_member_section_voice_fk: "voice-not-sung-in-section",
+  group_member_voice_containment_check: "voice-not-sung-in-section",
   position_name_unique: "position-name-taken",
   position_holder_current_unique: "position-taken",
   position_holder_user_id_group_id_position_id_start_date_pk: "period-conflict",
   position_holder_period_check: "period-conflict"
 }
 
-function violationOf(error: unknown): GroupsViolation | undefined {
+function violationOf(error: unknown): OrgStructureViolation | undefined {
   for (let current = error; current instanceof Error; current = current.cause) {
     if (current instanceof RuleViolation) return current.kind
     const constraint = (current as { constraint?: unknown }).constraint
@@ -46,10 +46,10 @@ function violationOf(error: unknown): GroupsViolation | undefined {
  * Runs one command atomically. Given a transaction, it nests as a savepoint, so a refused command
  * leaves the caller's transaction usable.
  */
-export async function runGroupsCommand<T>(
-  database: GroupsDatabase,
-  command: (tx: GroupsTransaction) => Promise<T>
-): Promise<GroupsResult<T>> {
+export async function runOrgStructureCommand<T>(
+  database: OrgStructureDatabase,
+  command: (tx: OrgStructureTransaction) => Promise<T>
+): Promise<OrgStructureResult<T>> {
   try {
     return { success: true, data: await database.transaction(command) }
   } catch (error) {
@@ -63,8 +63,8 @@ export async function runGroupsCommand<T>(
  * Serializes commands that change one user's Memberships or Positions, so check-then-write rules
  * such as "one Section per Choir" hold under concurrent requests.
  */
-export async function lockUser(tx: GroupsTransaction, userId: string) {
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`groups:user:${userId}`}))`)
+export async function lockUser(tx: OrgStructureTransaction, userId: string) {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:user:${userId}`}))`)
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/

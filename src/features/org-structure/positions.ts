@@ -1,31 +1,31 @@
 import "server-only"
 
 import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm"
-import { groupTypePosition, position, positionHolder } from "@/core/db/schema/groups"
+import { groupTypePosition, position, positionHolder } from "@/core/db/schema/org-structure"
 import { findCurrentMembership, requireActiveGroup } from "./lookup"
 import type { IsoDate } from "./model"
 import {
-  type GroupsDatabase,
-  type GroupsTransaction,
   lockUser,
+  type OrgStructureDatabase,
+  type OrgStructureTransaction,
   RuleViolation,
   requireDate,
-  runGroupsCommand
+  runOrgStructureCommand
 } from "./operation"
 
 type HoldingInput = { userId: string; groupId: string; positionId: string }
 
 /** Starts a Position holding for a current member of a group whose type allows the Position. */
-export function startPositionHolding(database: GroupsDatabase, input: HoldingInput & { startDate: IsoDate }) {
-  return runGroupsCommand(database, async (tx) => {
+export function startPositionHolding(database: OrgStructureDatabase, input: HoldingInput & { startDate: IsoDate }) {
+  return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
     await lockUser(tx, input.userId)
     await addHolding(tx, input, startDate)
   })
 }
 
-export function endPositionHolding(database: GroupsDatabase, input: HoldingInput & { endDate: IsoDate }) {
-  return runGroupsCommand(database, async (tx) => {
+export function endPositionHolding(database: OrgStructureDatabase, input: HoldingInput & { endDate: IsoDate }) {
+  return runOrgStructureCommand(database, async (tx) => {
     const endDate = requireDate(input.endDate)
     await lockUser(tx, input.userId)
     await closeHolding(tx, input, endDate)
@@ -33,7 +33,7 @@ export function endPositionHolding(database: GroupsDatabase, input: HoldingInput
 }
 
 /** Starts a holding for a user already locked by the caller. */
-export async function addHolding(tx: GroupsTransaction, input: HoldingInput, startDate: IsoDate) {
+export async function addHolding(tx: OrgStructureTransaction, input: HoldingInput, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, input.groupId)
   const [found] = await tx.select({ id: position.id }).from(position).where(eq(position.id, input.positionId))
   if (!found) throw new RuleViolation("position-not-found")
@@ -77,7 +77,7 @@ export async function addHolding(tx: GroupsTransaction, input: HoldingInput, sta
   await tx.insert(positionHolder).values({ ...input, startDate })
 }
 
-export async function closeHolding(tx: GroupsTransaction, input: HoldingInput, endDate: IsoDate) {
+export async function closeHolding(tx: OrgStructureTransaction, input: HoldingInput, endDate: IsoDate) {
   const ended = await tx
     .update(positionHolder)
     .set({ endDate })
@@ -94,7 +94,12 @@ export async function closeHolding(tx: GroupsTransaction, input: HoldingInput, e
 }
 
 /** Ends every current Position the user holds in the given groups, as their Membership ends. */
-export async function endHoldingsInGroups(tx: GroupsTransaction, userId: string, groupIds: string[], endDate: IsoDate) {
+export async function endHoldingsInGroups(
+  tx: OrgStructureTransaction,
+  userId: string,
+  groupIds: string[],
+  endDate: IsoDate
+) {
   await tx
     .update(positionHolder)
     .set({ endDate })

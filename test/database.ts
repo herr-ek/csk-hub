@@ -7,6 +7,8 @@ import { isLocalDatabase } from "@/core/db/tls"
 export type TestDatabase = {
   /** Typed as the application client, so modules that take one accept it. */
   db: typeof applicationDb
+  /** The connection string, for code that connects on its own, such as the ops commands. */
+  url: string
   /** Closes the connections and drops the database. */
   drop: () => Promise<void>
 }
@@ -41,6 +43,7 @@ export async function createTestDatabase(migrationsFolder = "drizzle"): Promise<
 
   return {
     db,
+    url: url.toString(),
     drop: async () => {
       await db.$client.end()
       const cleanup = new Client({ connectionString: baseUrl })

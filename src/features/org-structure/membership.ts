@@ -1,16 +1,17 @@
 import "server-only"
 
-import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
-import { group, groupMember, sectionVoice } from "@/core/db/schema/groups"
+import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm"
+import { group, groupMember, section } from "@/core/db/schema/org-structure"
+import { familyOf, type Voice } from "@/features/voice/model"
 import { findCurrentMembership, requireActiveGroup, requireChoir, requireGroup } from "./lookup"
-import type { IsoDate, Voice } from "./model"
+import type { IsoDate } from "./model"
 import {
-  type GroupsDatabase,
-  type GroupsTransaction,
   lockUser,
+  type OrgStructureDatabase,
+  type OrgStructureTransaction,
   RuleViolation,
   requireDate,
-  runGroupsCommand
+  runOrgStructureCommand
 } from "./operation"
 import { endHoldingsInGroups } from "./positions"
 
@@ -20,8 +21,8 @@ type StartMembershipInput = { userId: string; groupId: string; startDate: IsoDat
  * Starts a Membership in any group but a Section. Joining a group that belongs to a Choir also
  * starts a Membership in that Choir when the user has none.
  */
-export function startMembership(database: GroupsDatabase, input: StartMembershipInput) {
-  return runGroupsCommand(database, async (tx) => {
+export function startMembership(database: OrgStructureDatabase, input: StartMembershipInput) {
+  return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
     await lockUser(tx, input.userId)
     await addMembership(tx, input.userId, input.groupId, startDate)
@@ -32,7 +33,7 @@ export function startMembership(database: GroupsDatabase, input: StartMembership
  * Starts a Membership for a user already locked by the caller. Shared with commands that make
  * someone a member as one step of a larger change.
  */
-export async function addMembership(tx: GroupsTransaction, userId: string, groupId: string, startDate: IsoDate) {
+export async function addMembership(tx: OrgStructureTransaction, userId: string, groupId: string, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, groupId)
   if (row.type === "Section") throw new RuleViolation("section-requires-placement")
   if (row.choirId) await ensureChoirMembership(tx, userId, row.choirId, startDate)
@@ -42,11 +43,13 @@ export async function addMembership(tx: GroupsTransaction, userId: string, group
 type PlaceSingerInput = { userId: string; choirId: string; voice: Voice; startDate: IsoDate }
 
 /**
- * Places a singer in a Choir, in the Section that sings their Voice. A Voice belongs to at most one
- * Section per Choir, so the Voice decides the Section.
+ * Places a singer in a Choir, in the Section whose Voice contains theirs: B1 in KK goes to KKB,
+ * which sings B. The Sections of a Choir never overlap, so the Voice decides the Section. A family
+ * is a valid Voice for a singer not yet placed in a division (B in KKB), but not where the Choir
+ * divides it (B in MK).
  */
-export function placeSinger(database: GroupsDatabase, input: PlaceSingerInput) {
-  return runGroupsCommand(database, async (tx) => {
+export function placeSinger(database: OrgStructureDatabase, input: PlaceSingerInput) {
+  return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
     await requireChoir(tx, input.choirId)
     await lockUser(tx, input.userId)
@@ -68,8 +71,8 @@ type ChangeVoiceInput = { userId: string; choirId: string; voice: Voice; date: I
  * one starts, in the same Section or another; history is never rewritten. Leaving a Section ends
  * the singer's Positions in it, while a change within one Section keeps them.
  */
-export function changeVoice(database: GroupsDatabase, input: ChangeVoiceInput) {
-  return runGroupsCommand(database, async (tx) => {
+export function changeVoice(database: OrgStructureDatabase, input: ChangeVoiceInput) {
+  return runOrgStructureCommand(database, async (tx) => {
     const date = requireDate(input.date)
     await requireChoir(tx, input.choirId)
     await lockUser(tx, input.userId)
@@ -94,8 +97,8 @@ type EndMembershipInput = { userId: string; groupId: string; endDate: IsoDate }
  * Ends a Membership and the user's Positions in that group. Leaving a Choir also ends their
  * Memberships, and Positions, in every group that belongs to it.
  */
-export function endMembership(database: GroupsDatabase, input: EndMembershipInput) {
-  return runGroupsCommand(database, async (tx) => {
+export function endMembership(database: OrgStructureDatabase, input: EndMembershipInput) {
+  return runOrgStructureCommand(database, async (tx) => {
     const endDate = requireDate(input.endDate)
     const row = await requireGroup(tx, input.groupId)
     await lockUser(tx, input.userId)
@@ -118,7 +121,7 @@ export function endMembership(database: GroupsDatabase, input: EndMembershipInpu
 }
 
 /** A Membership in a Choir's group requires one in the Choir, so it is started when missing. */
-async function ensureChoirMembership(tx: GroupsTransaction, userId: string, choirId: string, startDate: IsoDate) {
+async function ensureChoirMembership(tx: OrgStructureTransaction, userId: string, choirId: string, startDate: IsoDate) {
   const current = await findCurrentMembership(tx, userId, choirId)
   if (!current) {
     await requireActiveGroup(tx, choirId)
@@ -129,7 +132,7 @@ async function ensureChoirMembership(tx: GroupsTransaction, userId: string, choi
   }
 }
 
-async function insertMembership(tx: GroupsTransaction, membership: typeof groupMember.$inferInsert) {
+async function insertMembership(tx: OrgStructureTransaction, membership: typeof groupMember.$inferInsert) {
   if (await findCurrentMembership(tx, membership.userId, membership.groupId)) throw new RuleViolation("already-member")
 
   // A new period starts no earlier than the end of every earlier period in the same group.
@@ -149,14 +152,14 @@ async function insertMembership(tx: GroupsTransaction, membership: typeof groupM
   await tx.insert(groupMember).values(membership)
 }
 
-async function closeMembership(tx: GroupsTransaction, userId: string, groupId: string, endDate: IsoDate) {
+async function closeMembership(tx: OrgStructureTransaction, userId: string, groupId: string, endDate: IsoDate) {
   await tx
     .update(groupMember)
     .set({ endDate })
     .where(and(eq(groupMember.userId, userId), eq(groupMember.groupId, groupId), isNull(groupMember.endDate)))
 }
 
-async function findCurrentSectionMembership(tx: GroupsTransaction, userId: string, choirId: string) {
+async function findCurrentSectionMembership(tx: OrgStructureTransaction, userId: string, choirId: string) {
   const [row] = await tx
     .select({ groupId: groupMember.groupId, voice: groupMember.voice, startDate: groupMember.startDate })
     .from(groupMember)
@@ -172,13 +175,19 @@ async function findCurrentSectionMembership(tx: GroupsTransaction, userId: strin
   return row
 }
 
-async function sectionSinging(tx: GroupsTransaction, choirId: string, voice: Voice) {
+/** The active Section of the Choir whose Voice contains `voice`: the Voice itself, or its family. */
+async function sectionSinging(tx: OrgStructureTransaction, choirId: string, voice: Voice) {
   const [row] = await tx
-    .select({ sectionId: sectionVoice.sectionId })
-    .from(sectionVoice)
-    .innerJoin(group, eq(group.id, sectionVoice.sectionId))
+    .select({ sectionId: section.groupId })
+    .from(section)
+    .innerJoin(group, eq(group.id, section.groupId))
     .where(
-      and(eq(group.choirId, choirId), eq(group.type, "Section"), eq(group.active, true), eq(sectionVoice.voice, voice))
+      and(
+        eq(group.choirId, choirId),
+        eq(group.type, "Section"),
+        eq(group.active, true),
+        inArray(section.voice, [...new Set([voice, familyOf(voice)])])
+      )
     )
   if (!row) throw new RuleViolation("voice-not-sung-in-choir")
   return row.sectionId

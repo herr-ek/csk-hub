@@ -1,13 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, asc, eq } from "drizzle-orm"
-import { groupMember, positionHolder } from "@/core/db/schema/groups"
+import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { changeVoice, endMembership, placeSinger, startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
-import { listChoirMembersByPart, listCurrentGroupMembers, listCurrentGroupsOfUser } from "./reads"
+import { listChoirMembersByVoiceFamily, listCurrentGroupMembers, listCurrentGroupsOfUser } from "./reads"
 import { archiveGroup, createGroup } from "./structure"
-import { createGroupsTestDatabase, expectSuccess, uniqueName } from "./test-support"
+import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
-const database = await createGroupsTestDatabase()
+const database = await createOrgStructureTestDatabase()
 
 describe.skipIf(!database)("groups membership", () => {
   const t = database as NonNullable<typeof database>
@@ -165,6 +165,22 @@ describe.skipIf(!database)("groups membership", () => {
       expect(sections.map(({ name }) => name).sort()).toEqual(["KKB", "MKB1"])
     })
 
+    test("places a singer not yet in a division with the family, where a Section sings the family", async () => {
+      const userId = await t.user()
+      const { sectionId } = expectSuccess(
+        await placeSinger(t.db, { userId, choirId: await t.groupId("KK"), voice: "B", startDate: "2025-01-01" })
+      )
+      expect(sectionId).toBe(await t.groupId("KKB"))
+      expect(
+        await placeSinger(t.db, {
+          userId: await t.user(),
+          choirId: await t.groupId("MK"),
+          voice: "B",
+          startDate: "2025-01-01"
+        })
+      ).toEqual({ success: false, error: "voice-not-sung-in-choir" })
+    })
+
     test("refuses a Voice the Choir does not sing, and a group that is not a Choir", async () => {
       const userId = await t.user()
       expect(
@@ -196,6 +212,23 @@ describe.skipIf(!database)("groups membership", () => {
       ])
       const holdings = await t.db.select().from(positionHolder).where(eq(positionHolder.userId, userId))
       expect(holdings.map(({ endDate }) => endDate)).toEqual([null])
+    })
+
+    test("from the family to a division stays in the Section that sings the family", async () => {
+      const userId = await t.user()
+      const kk = await t.groupId("KK")
+      const kkb = await t.groupId("KKB")
+      expectSuccess(await placeSinger(t.db, { userId, choirId: kk, voice: "B", startDate: "2024-08-20" }))
+
+      const { sectionId } = expectSuccess(
+        await changeVoice(t.db, { userId, choirId: kk, voice: "B2", date: "2024-10-01" })
+      )
+
+      expect(sectionId).toBe(kkb)
+      expect((await historyOf(userId)).filter(({ groupId }) => groupId === kkb)).toEqual([
+        { groupId: kkb, startDate: "2024-08-20", endDate: "2024-10-01", voice: "B" },
+        { groupId: kkb, startDate: "2024-10-01", endDate: null, voice: "B2" }
+      ])
     })
 
     test("between Sections moves the singer and ends their Positions in the old Section", async () => {
@@ -306,7 +339,7 @@ describe.skipIf(!database)("groups membership", () => {
   })
 
   describe("reads", () => {
-    test("lists current members of a group and of a Choir by Part", async () => {
+    test("lists current members of a group and of a Choir by Voice family", async () => {
       const kk = await t.groupId("KK")
       const [bass, tenor, alumnus] = [await t.user(), await t.user(), await t.user()]
       expectSuccess(await placeSinger(t.db, { userId: bass, choirId: kk, voice: "B1", startDate: "2025-01-01" }))
@@ -314,7 +347,7 @@ describe.skipIf(!database)("groups membership", () => {
       expectSuccess(await placeSinger(t.db, { userId: alumnus, choirId: kk, voice: "B2", startDate: "2020-01-01" }))
       expectSuccess(await endMembership(t.db, { userId: alumnus, groupId: kk, endDate: "2024-06-30" }))
 
-      const basses = (await listChoirMembersByPart(t.db, kk, "B")).map(({ userId }) => userId)
+      const basses = (await listChoirMembersByVoiceFamily(t.db, kk, "B")).map(({ userId }) => userId)
       expect(basses).toContain(bass)
       expect(basses).not.toContain(tenor)
       expect(basses).not.toContain(alumnus)

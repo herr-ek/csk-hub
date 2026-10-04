@@ -1,14 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
-import { groupMember, positionHolder } from "@/core/db/schema/groups"
+import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { endLinkedPosition, startLinkedPosition } from "./linked-positions"
 import { startMembership } from "./membership"
 import { endPositionHolding, startPositionHolding } from "./positions"
 import { getCurrentPositionHolder } from "./reads"
 import { createGroup } from "./structure"
-import { createGroupsTestDatabase, expectSuccess, uniqueName } from "./test-support"
+import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
-const database = await createGroupsTestDatabase()
+const database = await createOrgStructureTestDatabase()
 
 describe.skipIf(!database)("groups positions", () => {
   const t = database as NonNullable<typeof database>

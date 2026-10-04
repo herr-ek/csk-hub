@@ -3,7 +3,7 @@ import "server-only"
 import { findCurrentMembership } from "./lookup"
 import { addMembership } from "./membership"
 import type { IsoDate } from "./model"
-import { type GroupsDatabase, lockUser, RuleViolation, requireDate, runGroupsCommand } from "./operation"
+import { lockUser, type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 import { addHolding, closeHolding } from "./positions"
 
 /**
@@ -13,8 +13,11 @@ import { addHolding, closeHolding } from "./positions"
 type LinkedPositionInput = { userId: string; positionId: string; groupIds: string[] }
 
 /** Starts the holding in every group, and any missing Membership, or nothing at all. */
-export function startLinkedPosition(database: GroupsDatabase, input: LinkedPositionInput & { startDate: IsoDate }) {
-  return runGroupsCommand(database, async (tx) => {
+export function startLinkedPosition(
+  database: OrgStructureDatabase,
+  input: LinkedPositionInput & { startDate: IsoDate }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
     if (input.groupIds.length === 0) throw new RuleViolation("group-not-found")
     await lockUser(tx, input.userId)
@@ -29,8 +32,8 @@ export function startLinkedPosition(database: GroupsDatabase, input: LinkedPosit
 }
 
 /** Ends the holding in every group together. Memberships are left as they are. */
-export function endLinkedPosition(database: GroupsDatabase, input: LinkedPositionInput & { endDate: IsoDate }) {
-  return runGroupsCommand(database, async (tx) => {
+export function endLinkedPosition(database: OrgStructureDatabase, input: LinkedPositionInput & { endDate: IsoDate }) {
+  return runOrgStructureCommand(database, async (tx) => {
     const endDate = requireDate(input.endDate)
     if (input.groupIds.length === 0) throw new RuleViolation("group-not-found")
     await lockUser(tx, input.userId)

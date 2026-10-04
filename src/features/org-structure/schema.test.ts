@@ -1,29 +1,79 @@
 import { afterAll, describe, expect, test } from "bun:test"
-import { group, groupMember, positionHolder } from "@/core/db/schema/groups"
-import { createGroupsTestDatabase } from "./test-support"
+import { eq } from "drizzle-orm"
+import { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
+import { createOrgStructureTestDatabase } from "./test-support"
 
 // The constraints the database enforces by itself, written to directly so that the module's own
 // checks cannot mask a missing constraint.
 
-const database = await createGroupsTestDatabase()
+const database = await createOrgStructureTestDatabase()
 
 describe.skipIf(!database)("groups schema constraints", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
 
-  test("rejects a Section Membership whose Voice the Section does not sing", async () => {
+  test("rejects a Section Membership whose Voice the Section's Voice does not contain", async () => {
     const userId = await t.user()
     const mkb1 = await t.groupId("MKB1")
 
-    await expect(
-      t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice: "B2" }).execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_section_voice_fk" } })
+    for (const voice of ["B2", "B"] as const) {
+      await expect(
+        t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice }).execute()
+      ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
+    }
     await t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice: "B1" })
   })
 
-  test("leaves the Voice key unchecked on Memberships without a Voice", async () => {
+  test("accepts the family or any of its divisions in a Section that sings the family", async () => {
+    const kkb = await t.groupId("KKB")
+    for (const voice of ["B", "B1", "B2"] as const) {
+      await t.db.insert(groupMember).values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice })
+    }
+    await expect(
+      t.db
+        .insert(groupMember)
+        .values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice: "T1" })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
+  })
+
+  test("rechecks the Voice when a Membership is updated", async () => {
+    const userId = await t.user()
+    const kkb = await t.groupId("KKB")
+    await t.db.insert(groupMember).values({ userId, groupId: kkb, startDate: "2025-01-01", voice: "B1" })
+    await expect(
+      t.db.update(groupMember).set({ voice: "A1" }).where(eq(groupMember.userId, userId)).execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
+  })
+
+  test("sets a Voice exactly on Section Memberships", async () => {
     const userId = await t.user()
     await t.db.insert(groupMember).values({ userId, groupId: await t.groupId("MK"), startDate: "2025-01-01" })
+
+    await expect(
+      t.db
+        .insert(groupMember)
+        .values({ userId, groupId: await t.groupId("KK"), startDate: "2025-01-01", voice: "B1" })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_section_check" } })
+    await expect(
+      t.db
+        .insert(groupMember)
+        .values({ userId, groupId: await t.groupId("MKB1"), startDate: "2025-01-01" })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_section_check" } })
+  })
+
+  test("keeps a Choir CSK-wide, and a Section inside a Choir", async () => {
+    await expect(
+      t.db
+        .insert(group)
+        .values({ name: "Nested choir", type: "Choir", choirId: await t.groupId("MK") })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_choir_csk_wide_check" } })
+    await expect(t.db.insert(group).values({ name: "Loose section", type: "Section" }).execute()).rejects.toMatchObject(
+      { cause: { constraint: "group_section_in_choir_check" } }
+    )
   })
 
   test("rejects a second current Membership of the same user in a group, but keeps history", async () => {

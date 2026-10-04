@@ -1,12 +1,12 @@
 import "server-only"
 
 import { and, asc, eq, inArray, isNull } from "drizzle-orm"
-import { group, groupMember, positionHolder, sectionVoice } from "@/core/db/schema/groups"
-import { type Part, voicesOfPart } from "./model"
-import type { GroupsDatabase } from "./operation"
+import { group, groupMember, positionHolder, section } from "@/core/db/schema/org-structure"
+import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
+import type { OrgStructureDatabase } from "./operation"
 
 /** The current members of a group, with the Voice each sings when the group is a Section. */
-export function listCurrentGroupMembers(database: GroupsDatabase, groupId: string) {
+export function listCurrentGroupMembers(database: OrgStructureDatabase, groupId: string) {
   return database
     .select({ userId: groupMember.userId, startDate: groupMember.startDate, voice: groupMember.voice })
     .from(groupMember)
@@ -15,7 +15,7 @@ export function listCurrentGroupMembers(database: GroupsDatabase, groupId: strin
 }
 
 /** The groups a user currently belongs to. */
-export function listCurrentGroupsOfUser(database: GroupsDatabase, userId: string) {
+export function listCurrentGroupsOfUser(database: OrgStructureDatabase, userId: string) {
   return database
     .select({
       groupId: group.id,
@@ -33,7 +33,7 @@ export function listCurrentGroupsOfUser(database: GroupsDatabase, userId: string
 }
 
 /** Who currently holds a Position in a group, or null when it is vacant. */
-export async function getCurrentPositionHolder(database: GroupsDatabase, groupId: string, positionId: string) {
+export async function getCurrentPositionHolder(database: OrgStructureDatabase, groupId: string, positionId: string) {
   const [holder] = await database
     .select({ userId: positionHolder.userId, startDate: positionHolder.startDate })
     .from(positionHolder)
@@ -48,21 +48,21 @@ export async function getCurrentPositionHolder(database: GroupsDatabase, groupId
 }
 
 /**
- * The current singers of a Choir in one Part: members of each Section whose Voices include a Voice
- * in that Part. "All basses" is never a group; it is found this way.
+ * The current singers of a Choir in one Voice family: members of the Sections whose Voice is in
+ * that family (KKB, or MKB1 and MKB2, for B). "All basses" is never a group; it is found this way.
  */
-export function listChoirMembersByPart(database: GroupsDatabase, choirId: string, part: Part) {
+export function listChoirMembersByVoiceFamily(database: OrgStructureDatabase, choirId: string, family: VoiceFamily) {
   return database
     .selectDistinct({ userId: groupMember.userId, sectionId: groupMember.groupId, voice: groupMember.voice })
     .from(groupMember)
     .innerJoin(group, eq(group.id, groupMember.groupId))
-    .innerJoin(sectionVoice, eq(sectionVoice.sectionId, group.id))
+    .innerJoin(section, eq(section.groupId, group.id))
     .where(
       and(
         eq(group.choirId, choirId),
         eq(group.type, "Section"),
         isNull(groupMember.endDate),
-        inArray(sectionVoice.voice, voicesOfPart(part))
+        inArray(section.voice, [family, ...divisionsOf(family)])
       )
     )
     .orderBy(asc(groupMember.userId))

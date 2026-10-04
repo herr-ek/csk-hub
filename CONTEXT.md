@@ -58,19 +58,34 @@ directly to one Choir; there is no deeper hierarchy. Groups are archived, never 
 _Avoid_: Team, role, Conversation
 
 **Voice**:
-The line someone sings: S1, S2, A1, A2, T1, T2, B1 or B2. An attribute of a singer's
-Section Membership, never a group of people.
+A line someone sings, at either granularity: a Voice family or a Voice division, so "B" and
+"B1" are both Voices. One Voice contains another when they are equal or the first is the
+family of the second: B contains B and B1, B1 contains only B1. An attribute of a Section and
+of a singer's Section Membership, never a group of people.
 _Avoid_: Stämma (as a group), part
 
+**Voice family**:
+S, A, T or B: a whole Voice in an undivided setting, as B in SATB. The family of a division is
+derived (B1 → B), never stored. "All basses" is never a Group; it is found through the Sections
+whose Voice is in the bass family.
+_Avoid_: Part, Section
+
+**Voice division**:
+S1, S2, A1, A2, T1, T2, B1 or B2: a Voice when its family splits, as B1 in TTBB. What a singer
+can sing is recorded in divisions only; someone who can sing B can sing B1 and B2.
+_Avoid_: Part, sub-voice
+
 **Part**:
-The voice family S, A, T or B, derived from a Voice (B1 → B) by a fixed mapping. Never
-stored and never a Group; "all basses" is found through the Sections that sing a bass Voice.
-_Avoid_: Voice, Section
+A line in a specific arrangement (*stämma* in a score), labelled with a Voice. A repertoire
+concept, not modelled yet.
+_Avoid_: Voice family, Section
 
 **Section**:
-The people in one Choir who sing a given Voice or Voices, such as MKB1 (B1) or KKB (B1 and
-B2). Always a Group. Every Choir has exactly four, and each Voice belongs to at most one
-Section of a Choir. A singer is in exactly one Section of each Choir they sing in.
+The people in one Choir who sing a given Voice, such as MKB1 (B1) or KKB (B). Always a Group,
+and it sings exactly one Voice. Every Choir has exactly four, and the Sections of a Choir never
+overlap: one singing B rules out another singing B1. A singer is in exactly one Section of each
+Choir they sing in, with one Voice that the Section's Voice contains: B1, B2 or, before they are
+placed in a division, B in KKB; only B1 in MKB1.
 _Avoid_: Voice, part, stämma
 
 **Membership**:

@@ -2,7 +2,7 @@
  * Why a groups command was refused. Every rule the module enforces, and every constraint the
  * database enforces on its behalf, surfaces as one of these rather than as a thrown error.
  */
-export type GroupsViolation =
+export type OrgStructureViolation =
   | "invalid-date"
   | "group-not-found"
   | "group-archived"
@@ -10,7 +10,6 @@ export type GroupsViolation =
   | "choir-not-found"
   | "choir-created-with-sections"
   | "section-count"
-  | "section-without-voice"
   | "voice-in-several-sections"
   | "section-archived-with-choir"
   | "already-member"
@@ -28,4 +27,4 @@ export type GroupsViolation =
   | "not-holding-position"
   | "period-conflict"
 
-export type GroupsResult<T> = { success: true; data: T } | { success: false; error: GroupsViolation }
+export type OrgStructureResult<T> = { success: true; data: T } | { success: false; error: OrgStructureViolation }

@@ -1,16 +1,16 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { asc, eq } from "drizzle-orm"
-import { groupMember, positionHolder } from "@/core/db/schema/groups"
+import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { startLinkedPosition } from "./linked-positions"
 import { placeSinger, startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
-import { getCurrentPositionHolder, listChoirMembersByPart, listCurrentGroupMembers } from "./reads"
+import { getCurrentPositionHolder, listChoirMembersByVoiceFamily, listCurrentGroupMembers } from "./reads"
 import { createGroup } from "./structure"
-import { createGroupsTestDatabase, expectSuccess } from "./test-support"
+import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
-// The worked examples from the Groups scheme (v2), expressed through the module's interface.
+// The worked examples from the Groups scheme (v3), expressed through the module's interface.
 
-const database = await createGroupsTestDatabase()
+const database = await createOrgStructureTestDatabase()
 
 describe.skipIf(!database)("Groups scheme examples", () => {
   const t = database as NonNullable<typeof database>
@@ -33,6 +33,19 @@ describe.skipIf(!database)("Groups scheme examples", () => {
       .orderBy(asc(positionHolder.startDate))
     return { memberships, holdings }
   }
+
+  // His capability to cover B1 is in the voice feature's tests.
+  test("Lucas sings B2 in KK", async () => {
+    const lucas = await t.user("Lucas")
+    const [kk, kkb] = [await t.groupId("KK"), await t.groupId("KKB")]
+
+    expectSuccess(await placeSinger(t.db, { userId: lucas, choirId: kk, voice: "B2", startDate: "2024-08-20" }))
+
+    expect((await rowsOf(lucas)).memberships).toEqual([
+      { groupId: kkb, startDate: "2024-08-20", voice: "B2" },
+      { groupId: kk, startDate: "2024-08-20", voice: null }
+    ])
+  })
 
   test("Sara sings B1 in KK and holds two Positions there", async () => {
     const sara = await t.user("Sara")
@@ -78,7 +91,7 @@ describe.skipIf(!database)("Groups scheme examples", () => {
       memberships: [{ groupId: kk, startDate: "2020-01-10", voice: null }],
       holdings: [{ groupId: kk, positionId: conductor, startDate: "2020-01-10" }]
     })
-    expect((await listChoirMembersByPart(t.db, kk, "B")).map(({ userId }) => userId)).not.toContain(erik)
+    expect((await listChoirMembersByVoiceFamily(t.db, kk, "B")).map(({ userId }) => userId)).not.toContain(erik)
   })
 
   test("Olof sings B2 in KK and is Stämförälder of KKB", async () => {
@@ -97,7 +110,7 @@ describe.skipIf(!database)("Groups scheme examples", () => {
     )
 
     expect(await getCurrentPositionHolder(t.db, kkb, stamforalder)).toEqual({ userId: olof, startDate: "2025-09-01" })
-    expect((await listChoirMembersByPart(t.db, kk, "B")).map(({ userId }) => userId)).toContain(olof)
+    expect((await listChoirMembersByVoiceFamily(t.db, kk, "B")).map(({ userId }) => userId)).toContain(olof)
   })
 
   test("Nils sings B1 in MK", async () => {
@@ -110,6 +123,10 @@ describe.skipIf(!database)("Groups scheme examples", () => {
       { groupId: mkb1, startDate: "2024-08-22", voice: "B1" },
       { groupId: mk, startDate: "2024-08-22", voice: null }
     ])
+    // MK divides the basses, so no MK Section contains the family B.
+    expect(
+      await placeSinger(t.db, { userId: await t.user(), choirId: mk, voice: "B", startDate: "2024-08-22" })
+    ).toEqual({ success: false, error: "voice-not-sung-in-choir" })
   })
 
   test("the Sexmästeri: two Position holders, two helpers, the Sexmästare also on the Board", async () => {

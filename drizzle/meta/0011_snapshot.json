@@ -1,5 +1,5 @@
 {
-  "id": "5f108bb1-0999-47e1-bfd5-9e2e4d3cc049",
+  "id": "12608dbf-dc9d-4016-a2db-fe465658a8a1",
   "prevId": "4d9e4973-5a82-4c1d-94f7-0d1f615d7ed3",
   "version": "7",
   "dialect": "postgresql",
@@ -774,6 +774,14 @@
         "group_name_not_blank_check": {
           "name": "group_name_not_blank_check",
           "value": "length(btrim(\"group\".\"name\")) > 0"
+        },
+        "group_choir_csk_wide_check": {
+          "name": "group_choir_csk_wide_check",
+          "value": "\"group\".\"type\" <> 'Choir' OR \"group\".\"choir_id\" IS NULL"
+        },
+        "group_section_in_choir_check": {
+          "name": "group_section_in_choir_check",
+          "value": "\"group\".\"type\" <> 'Section' OR \"group\".\"choir_id\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false
@@ -876,21 +884,6 @@
           ],
           "columnsTo": [
             "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "group_member_section_voice_fk": {
-          "name": "group_member_section_voice_fk",
-          "tableFrom": "group_member",
-          "tableTo": "section_voice",
-          "columnsFrom": [
-            "group_id",
-            "voice"
-          ],
-          "columnsTo": [
-            "section_id",
-            "voice"
           ],
           "onDelete": "restrict",
           "onUpdate": "no action"
@@ -1147,14 +1140,14 @@
       },
       "isRLSEnabled": false
     },
-    "public.section_voice": {
-      "name": "section_voice",
+    "public.section": {
+      "name": "section",
       "schema": "",
       "columns": {
-        "section_id": {
-          "name": "section_id",
+        "group_id": {
+          "name": "group_id",
           "type": "uuid",
-          "primaryKey": false,
+          "primaryKey": true,
           "notNull": true
         },
         "voice": {
@@ -1167,12 +1160,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "section_voice_section_id_group_id_fk": {
-          "name": "section_voice_section_id_group_id_fk",
-          "tableFrom": "section_voice",
+        "section_group_id_group_id_fk": {
+          "name": "section_group_id_group_id_fk",
+          "tableFrom": "section",
           "tableTo": "group",
           "columnsFrom": [
-            "section_id"
+            "group_id"
           ],
           "columnsTo": [
             "id"
@@ -1181,15 +1174,7 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "section_voice_section_id_voice_pk": {
-          "name": "section_voice_section_id_voice_pk",
-          "columns": [
-            "section_id",
-            "voice"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -1207,8 +1192,7 @@
         },
         "voice": {
           "name": "voice",
-          "type": "voice",
-          "typeSchema": "public",
+          "type": "voice_division",
           "primaryKey": false,
           "notNull": true
         }
@@ -2156,20 +2140,14 @@
         "Konsert"
       ]
     },
-    "public.part": {
-      "name": "part",
+    "public.voice": {
+      "name": "voice",
       "schema": "public",
       "values": [
         "S",
         "A",
         "T",
-        "B"
-      ]
-    },
-    "public.voice": {
-      "name": "voice",
-      "schema": "public",
-      "values": [
+        "B",
         "S1",
         "S2",
         "A1",

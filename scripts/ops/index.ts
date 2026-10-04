@@ -5,6 +5,8 @@ import { intro, isCancel, log, outro, select, spinner, text } from "@clack/promp
 import { openStudio, runMigrations } from "./drizzle-kit"
 import { grantAdmin } from "./grant-admin"
 import { statusFor, type TargetStatus } from "./migration-status"
+import { createReferenceData } from "./reference-data"
+import { resetLocalDatabase } from "./reset"
 import { childEnvironment, databaseOrExit, type Target, variableFor } from "./target"
 
 /**
@@ -12,6 +14,8 @@ import { childEnvironment, databaseOrExit, type Target, variableFor } from "./ta
  *
  *   bun run ops [command] [--prod] [--yes]
  *   bun run ops grant-admin <email> [--prod] [--yes]
+ *   bun run ops reference-data [--prod] [--yes]
+ *   bun run ops reset [--yes]
  *
  * With no command it shows the status and, in a terminal, opens a menu. `--prod` is the
  * only way to reach production; without it every command runs against the local database.
@@ -23,15 +27,24 @@ const GREEN = "\x1b[32m"
 const YELLOW = "\x1b[33m"
 const RESET = "\x1b[0m"
 
-const COMMANDS = ["status", "migrate", "studio", "grant-admin", "seed-admin", "seed-users", "seed-groups"] as const
+const COMMANDS = [
+  "status",
+  "migrate",
+  "studio",
+  "grant-admin",
+  "reference-data",
+  "reset",
+  "seed-admin",
+  "seed-users",
+  "seed-groups"
+] as const
 type Command = (typeof COMMANDS)[number]
 
-// Bun arguments per seed. The groups seed imports a server-only module, which resolves only under
-// the react-server condition.
+// Bun arguments per seed.
 const SEED_SCRIPTS: Record<string, string[]> = {
   "seed-admin": ["run", "scripts/seed-admin.ts"],
   "seed-users": ["run", "scripts/seed-users.ts"],
-  "seed-groups": ["--conditions=react-server", "run", "scripts/seed-groups.ts"]
+  "seed-groups": ["run", "scripts/seed-groups.ts"]
 }
 
 const { values: flags, positionals } = parseArgs({
@@ -62,6 +75,14 @@ async function run(choice: Command): Promise<number> {
     return 0
   }
 
+  if (choice === "reset") {
+    if (target !== "local") {
+      log.error("Reset is local-only and never runs against production. Run without --prod.")
+      return 1
+    }
+    return resetLocalDatabase(databaseOrExit("local"), { skipConfirmation: flags.yes })
+  }
+
   if (choice in SEED_SCRIPTS) {
     if (target !== "local") {
       log.error("Seeding is local-only and never runs against production. Run without --prod.")
@@ -82,6 +103,8 @@ async function run(choice: Command): Promise<number> {
     }
     return grantAdmin(database, email, { skipConfirmation: flags.yes })
   }
+
+  if (choice === "reference-data") return createReferenceData(database, { skipConfirmation: flags.yes })
 
   if (choice === "migrate") {
     const code = await runMigrations(database, { skipConfirmation: flags.yes })
@@ -115,9 +138,15 @@ async function menu(): Promise<void> {
         { value: "migrate", label: "Run migrations", hint: `against ${target}` },
         { value: "studio", label: "Open Studio", hint: `against ${target}` },
         { value: "grant-admin", label: "Grant admin", hint: `existing user, against ${target}` },
-        seedOption("seed-admin", "Seed admin"),
-        seedOption("seed-users", "Seed users"),
-        seedOption("seed-groups", "Seed groups"),
+        {
+          value: "reference-data",
+          label: "Create reference data",
+          hint: `Choirs, Sections, Styret, Positions, against ${target}`
+        },
+        localOnlyOption("reset", "Reset local database"),
+        localOnlyOption("seed-admin", "Seed admin"),
+        localOnlyOption("seed-users", "Seed users"),
+        localOnlyOption("seed-groups", "Seed groups"),
         { value: "exit", label: "Exit" }
       ]
     })
@@ -129,7 +158,7 @@ async function menu(): Promise<void> {
 }
 
 /** Shown always, so the guardrail is visible rather than hidden when it applies. */
-function seedOption(value: Command, label: string) {
+function localOnlyOption(value: Command, label: string) {
   return target === "local"
     ? { value, label, hint: "local only" }
     : { value, label: `${DIM}${label}${RESET}`, hint: "local only — disabled" }
