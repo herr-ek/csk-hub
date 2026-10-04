@@ -3,7 +3,7 @@
 import { type ReactNode, useId } from "react"
 import { Field, FieldDescription, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
-import { NativeSelect, NativeSelectOption } from "@/shared/ui/base/native-select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
 
 export function TextField({ label, name, defaultValue }: { label: string; name: string; defaultValue?: string }) {
   const id = useId()
@@ -46,20 +46,24 @@ export function SelectField({
   return (
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <NativeSelect
-        id={id}
+      <Select
         name={name}
-        defaultValue={defaultValue}
+        items={options}
+        defaultValue={defaultValue ?? options[0]?.value}
         required={required}
-        className="w-full"
-        onChange={(event) => onChange?.(event.target.value)}
+        onValueChange={(value) => onChange?.(value ?? "")}
       >
-        {options.map((option) => (
-          <NativeSelectOption key={option.value} value={option.value}>
-            {option.label}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {description ? <FieldDescription>{description}</FieldDescription> : null}
     </Field>
   )
