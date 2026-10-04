@@ -1,4 +1,3 @@
-import { headers } from "next/headers"
 import { auth } from "@/core/auth/auth"
 import {
   type AccessRole,
@@ -7,6 +6,7 @@ import {
   type PermissionAction,
   type PermissionResource
 } from "@/core/auth/permissions"
+import { getRequestSession } from "@/core/auth/session.server"
 import { ADMIN_ROLE, hasAdminRole, parseRoles } from "@/shared/roles"
 
 type RequestActor = {
@@ -82,7 +82,7 @@ function parseAccessRoles(value: unknown): AccessRole[] {
 }
 
 async function getCurrentActor(): Promise<RequestActor | null> {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await getRequestSession()
 
   if (!session) {
     return null

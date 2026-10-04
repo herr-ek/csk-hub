@@ -1,11 +1,10 @@
 "use server"
 
-import { headers } from "next/headers"
-import { auth } from "@/core/auth"
+import { getRequestSession } from "@/core/auth/session.server"
 import { type NotificationSubscription, sendToUser, subscribe, unsubscribe } from "@/core/notifications"
 
 async function requireUserId() {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await getRequestSession()
   if (!session) {
     throw new Error("Unauthorized")
   }

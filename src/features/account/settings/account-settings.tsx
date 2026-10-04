@@ -1,14 +1,11 @@
-import { headers } from "next/headers"
-import { auth } from "@/core/auth/auth"
+import { getRequestSession } from "@/core/auth/session.server"
 import { AccountSettingsTabs } from "./account-settings-tabs"
 import { PushNotificationSettings } from "./notifications"
 import { LanguageSettings, ProfileSettings } from "./profile"
 import { PasskeySettings, PasswordSettings, SessionsSettings, TwoFactorSettings } from "./security"
 
 export async function AccountSettings() {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  })
+  const session = await getRequestSession()
 
   if (!session) {
     return null

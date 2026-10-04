@@ -16,11 +16,20 @@ export class AuthenticationRequiredError extends Error {
   }
 }
 
-/** Returns the signed-in user's ID for server-side workflows. */
-export async function requireAuthenticatedUser(): Promise<string> {
+/**
+ * Reads the request session outside prerendering so Better Auth can check expiry
+ * against the current time. Rendering callers need an enclosing Suspense boundary.
+ * Keep this uncached: io() does not suspend inside a cache scope.
+ */
+export async function getRequestSession() {
   // Headers can resolve during runtime prerender; session expiry still needs the current time.
   await io()
-  const session = await auth.api.getSession({ headers: await headers() })
+  return auth.api.getSession({ headers: await headers() })
+}
+
+/** Returns the signed-in user's ID for server-side workflows. */
+export async function requireAuthenticatedUser(): Promise<string> {
+  const session = await getRequestSession()
 
   if (!session) throw new AuthenticationRequiredError()
 

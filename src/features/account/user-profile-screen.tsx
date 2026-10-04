@@ -1,6 +1,5 @@
-import { headers } from "next/headers"
 import Link from "next/link"
-import { auth } from "@/core/auth/auth"
+import { getRequestSession } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
 import { buttonVariants } from "@/shared/ui/base/button"
@@ -8,7 +7,7 @@ import { Card, CardContent } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 
 export async function UserProfileScreen() {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await getRequestSession()
 
   if (!session) return null
 

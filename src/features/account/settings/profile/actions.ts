@@ -1,7 +1,6 @@
 "use server"
 
-import { headers } from "next/headers"
-import { auth } from "@/core/auth/auth"
+import { getRequestSession } from "@/core/auth/session.server"
 import type { Locale } from "@/core/i18n/locales"
 import { updateUserPreferences } from "@/core/preferences"
 
@@ -13,7 +12,7 @@ import { updateUserPreferences } from "@/core/preferences"
  * @throws A validation or database error when an authenticated member's update cannot be persisted.
  */
 export async function updateLocalePreference(locale: Locale) {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await getRequestSession()
   if (!session) {
     return { success: false as const }
   }
