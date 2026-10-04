@@ -441,7 +441,30 @@
       "conversation-view-forbidden": "Du kan inte visa den här konversationen.",
       "conversation-not-found": "Den här konversationen kunde inte hittas.",
       "read-position-invalid": "Den här läspositionen är ogiltig.",
-      "unexpected": "Det gick inte att skicka meddelandet. Försök igen."
-    }
+      "unexpected": "Det gick inte att skicka meddelandet. Försök igen.",
+      "group-name-invalid": "Ange ett gruppnamn med 1–100 tecken."
+    },
+    "conversations": "Konversationer",
+    "groupName": "Gruppnamn",
+    "createGroup": "Skapa gruppkonversation",
+    "createGroupDescription": "Välj ett namn och minst en annan medlem. Alla som läggs till kan läsa hela konversationshistoriken.",
+    "selectedMembers": "Valda medlemmar",
+    "removeSelectedMember": "Ta bort {name} från urvalet",
+    "addMembers": "Lägg till medlemmar",
+    "renameGroup": "Byt gruppnamn",
+    "leaveGroup": "Lämna konversationen",
+    "confirmLeaveGroup": "Vill du lämna konversationen?",
+    "startCombinedDescription": "Lägg till en medlem för en direktkonversation eller flera medlemmar för en namngiven gruppkonversation.",
+    "groupConversationMode": "Gruppkonversation — välj ett namn för gruppen.",
+    "directConversationMode": "Direktkonversation — skicka ditt första meddelande.",
+    "groupSettingsDescription": "Hantera medlemmar och konversationens namn.",
+    "groupSettings": "Medlemmar och inställningar",
+    "groupMembers": "{count, plural, one {# medlem} other {# medlemmar}}",
+    "leaveGroupDescription": "Du kan fortfarande läsa meddelanden som skickades innan du lämnade. En aktiv medlem kan lägga till dig igen.",
+    "leftGroup": "Du har lämnat konversationen. Du kan läsa meddelanden som skickades innan du lämnade.",
+    "noMessages": "Inga meddelanden ännu.",
+    "groupUpdated": "Konversationen har uppdaterats.",
+    "savingGroup": "Sparar…",
+    "groupUpdateFailed": "Det gick inte att uppdatera konversationen. Försök igen."
   }
 }

@@ -10,6 +10,7 @@ the implementation lives and how its parts depend on one another.
 messaging/
   index.ts       public screen entrypoint used by routes
   model/         small, universal messaging rules and validation
+  group-conversations/  creation, additions, renaming, departure, and group write authorization
   sending/       server-only module that owns all Message-send behavior
   ui/            screens, screen-shaped reads, Server Actions, and client interaction
 ```
@@ -35,3 +36,24 @@ Routes import screens only through `@/features/messaging`. UI Server Actions cal
 
 The `ui/conversation/` name follows the domain language. “Thread” and “chat” are intentionally not
 used as synonyms for Conversation.
+
+
+## Group Conversations
+
+Active members can add or re-add Users and rename the Conversation. The creator's identity is
+attribution, not an ownership role. Membership changes and sends serialize on the Conversation row;
+departure stores the last visible Message sequence. Timeline reads hold a shared Conversation lock,
+and inbox queries apply the departure cutoff to both previews and unread counts. Former members
+receive the current name and their retained Messages, but no current member list.
+
+Creation needs no Message. Joining or rejoining initializes the read cursor through existing
+history; adding an already active member preserves their cursor. Empty groups remain retained,
+with no former member able to reactivate them. The UI uses the same update behavior as Direct
+Conversations; no polling, conversation subscriptions, or push delivery is introduced.
+
+The local database integration check uses disposable Users and Conversations and cleans them up.
+Run it separately from the mocked suite:
+
+```sh
+MESSAGING_INTEGRATION_TEST=1 bun test src/features/messaging/group-conversations/group-conversation.integration.test.ts
+```

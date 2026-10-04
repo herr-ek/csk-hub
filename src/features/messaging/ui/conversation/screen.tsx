@@ -14,10 +14,11 @@ import {
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { MessagingAccessError } from "../../model/messaging-error"
 import { formatMessageSentAt } from "../message-timestamp"
+import { GroupControls } from "./group-controls"
 import { MessageComposer } from "./message-composer"
-import { getDirectConversationPage } from "./query"
+import { getConversationPage } from "./query"
 import { ReadMarker } from "./read-marker"
-import { getDirectMessageLayout } from "./timeline-layout"
+import { getMessageLayout } from "./timeline-layout"
 import { createMessageCalendarDayKey, formatMessageDay, formatMessageTime } from "./timestamp"
 
 export async function ConversationScreen({
@@ -33,18 +34,29 @@ export async function ConversationScreen({
     getFormatter(),
     getTimeZone()
   ])
-  const layout = getDirectMessageLayout(conversation.messages, createMessageCalendarDayKey(timeZone))
+  const layout = getMessageLayout(conversation.messages, createMessageCalendarDayKey(timeZone))
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <div>
         <Link href="/messages" className="text-sm text-muted-foreground underline">
           {t("title")}
         </Link>
-        <h1 className="mt-2 font-heading text-2xl font-semibold">
-          {conversation.otherMemberName ?? t("formerMember")}
-        </h1>
+        <div className="mt-2 flex items-start justify-between gap-3">
+          <h1 className="min-w-0 wrap-break-word font-heading text-2xl font-semibold">
+            {conversation.otherMemberName ?? t("formerMember")}
+          </h1>
+          {conversation.kind === "group" && conversation.canSend ? (
+            <GroupControls
+              conversationId={conversationId}
+              name={conversation.otherMemberName}
+              members={conversation.members}
+            />
+          ) : null}
+        </div>
         {!conversation.canSend ? (
-          <p className="mt-1 text-sm text-muted-foreground">{t("otherMemberInactive")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t(conversation.kind === "group" ? "leftGroup" : "otherMemberInactive")}
+          </p>
         ) : null}
       </div>
       <MessageScrollerProvider autoScroll defaultScrollPosition="end">
@@ -58,6 +70,9 @@ export async function ConversationScreen({
                 >
                   {t("loadOlder")}
                 </Link>
+              ) : null}
+              {!conversation.messages.length ? (
+                <p className="text-sm text-muted-foreground">{t("noMessages")}</p>
               ) : null}
               <MessageGroup className="gap-0">
                 {conversation.messages.map((item, index) => {
@@ -87,6 +102,9 @@ export async function ConversationScreen({
                       >
                         <Message align={item.isOwnMessage ? "end" : "start"}>
                           <MessageContent className="w-fit! max-w-[85%]">
+                            {conversation.kind === "group" ? (
+                              <p className="text-xs text-muted-foreground">{item.authorName ?? t("formerMember")}</p>
+                            ) : null}
                             <div
                               className="w-fit max-w-full self-start rounded-2xl border bg-muted px-3.5 py-2.5 group-data-[align=end]/message:self-end group-data-[align=end]/message:bg-primary group-data-[align=end]/message:text-primary-foreground"
                               title={formatMessageSentAt(format, item.sentAt)}
@@ -120,7 +138,7 @@ export async function ConversationScreen({
 
 async function getConversationOrNotFound(conversationId: string, beforeSequence?: number) {
   try {
-    return await getDirectConversationPage(conversationId, beforeSequence)
+    return await getConversationPage(conversationId, beforeSequence)
   } catch (error) {
     if (
       error instanceof MessagingAccessError &&

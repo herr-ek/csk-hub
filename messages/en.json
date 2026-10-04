@@ -446,7 +446,30 @@
       "conversation-view-forbidden": "You cannot view this conversation.",
       "conversation-not-found": "That conversation could not be found.",
       "read-position-invalid": "That read position is invalid.",
-      "unexpected": "Unable to send your message. Please try again."
-    }
+      "unexpected": "Unable to send your message. Please try again.",
+      "group-name-invalid": "Enter a group name of 1–100 characters."
+    },
+    "conversations": "Conversations",
+    "groupName": "Group name",
+    "createGroup": "Create group conversation",
+    "createGroupDescription": "Choose a name and at least one other member. Everyone added can read the full conversation history.",
+    "selectedMembers": "Selected members",
+    "removeSelectedMember": "Remove {name} from selection",
+    "addMembers": "Add members",
+    "renameGroup": "Rename group",
+    "leaveGroup": "Leave conversation",
+    "confirmLeaveGroup": "Leave this conversation?",
+    "startCombinedDescription": "Add one member for a direct conversation, or multiple members for a named group conversation.",
+    "groupConversationMode": "Group conversation — choose a name for the group.",
+    "directConversationMode": "Direct conversation — send your first message.",
+    "groupSettingsDescription": "Manage members and the conversation name.",
+    "groupSettings": "Members and settings",
+    "groupMembers": "{count, plural, one {# member} other {# members}}",
+    "leaveGroupDescription": "You will keep read-only access to messages sent before you leave. An active member can add you again.",
+    "leftGroup": "You left this conversation. You can read messages sent before you left.",
+    "noMessages": "No messages yet.",
+    "groupUpdated": "Conversation updated.",
+    "savingGroup": "Saving…",
+    "groupUpdateFailed": "Unable to update the conversation. Please try again."
   }
 }
