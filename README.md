@@ -87,6 +87,12 @@ Both are local-development conveniences only. Change the password immediately,
 and do not use these credentials in a deployed environment. Seeding refuses to
 run against production.
 
+`bun run ops reference-data` creates the Choirs MK, DK and KK with their Sections,
+Styret and the Positions; run it once after migrating (it also runs against production
+with `--prod`). `bun run ops reset` starts the local database over: it erases it, migrates
+it from scratch and creates the reference data. `bun run ops seed-groups` then adds example groups and places every user
+who is in no group yet in a Section. Running either again changes nothing.
+
 ## Routes
 
 | Route | Purpose | Access |

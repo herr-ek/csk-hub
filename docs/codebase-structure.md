@@ -81,6 +81,7 @@ The subfolders are illustrative workflow boundaries, not a required template. Sh
 A feature may carry a `README.md` at its root for rules a reader cannot infer from the code around them — usually an obligation imposed from outside the feature, such as an ADR the feature has to keep satisfying. Keep it to what the code cannot say for itself; conventions that hold across the whole tree belong in this guide instead.
 
 - [`src/features/rich-text/README.md`](../src/features/rich-text/README.md): how a feature consumes the editor, and how to add a node or mark to it — three lists and a stylesheet, no consumer changes.
+- [`src/features/org-structure/README.md`](../src/features/org-structure/README.md): the rules the org-structure module enforces because the database cannot, and why application code writes its tables only through it.
 
 ## Dependency Direction
 
