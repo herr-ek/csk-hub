@@ -2,11 +2,11 @@
 
 import QRCode from "react-qr-code"
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { FieldGroup } from "@/shared/ui/base/field"
 import { Switch } from "@/shared/ui/base/switch"
 import { useTwoFactorSettings } from "./use-two-factor-settings"
 
@@ -40,17 +40,14 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
               <div className="mx-auto flex w-fit rounded-xl bg-white p-4">
                 <QRCode value={state.totpUri} size={192} aria-label={t("authenticatorQr")} />
               </div>
-              <Field>
-                <FieldLabel htmlFor="totp-code">{t("verificationCode")}</FieldLabel>
-                <Input
-                  id="totp-code"
-                  inputMode="numeric"
-                  value={state.code}
-                  onChange={(event) => state.setCode(event.target.value)}
-                  required
-                />
-                <FieldError>{state.error}</FieldError>
-              </Field>
+              <InputField
+                label={t("verificationCode")}
+                inputMode="numeric"
+                value={state.code}
+                onChange={(event) => state.setCode(event.target.value)}
+                required
+                error={state.error}
+              />
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={state.pending}>
                   {state.pending ? t("verifying") : t("verifyAndEnable")}
@@ -65,17 +62,14 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
           <form onSubmit={state.changeTwoFactor}>
             <FieldGroup>
               <p className="font-medium">{state.requestedEnabled ? t("addAuthenticator") : t("turnOffTwoFactor")}</p>
-              <Field>
-                <FieldLabel htmlFor="totp-password">{common("password")}</FieldLabel>
-                <Input
-                  id="totp-password"
-                  type="password"
-                  value={state.password}
-                  onChange={(event) => state.setPassword(event.target.value)}
-                  required
-                />
-                <FieldError>{state.error}</FieldError>
-              </Field>
+              <InputField
+                label={common("password")}
+                type="password"
+                value={state.password}
+                onChange={(event) => state.setPassword(event.target.value)}
+                required
+                error={state.error}
+              />
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={state.pending}>
                   {state.pending ? t("saving") : state.requestedEnabled ? t("addAuthenticator") : t("turnOffTwoFactor")}

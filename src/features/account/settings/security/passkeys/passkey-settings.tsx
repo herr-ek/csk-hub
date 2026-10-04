@@ -4,10 +4,11 @@ import { getAuthenticatorName } from "@better-auth/passkey"
 import { useCallback, useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
-import { Field, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
+import { FieldGroup } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { DeletePasskeyDialog } from "./delete-passkey-dialog"
 import {
@@ -184,16 +185,13 @@ export function PasskeySettings() {
         </div>
         <form onSubmit={addPasskey}>
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="passkey-name">{t("newPasskeyName")}</FieldLabel>
-              <Input
-                id="passkey-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder={t("passkeyPlaceholder")}
-                disabled={pending}
-              />
-            </Field>
+            <InputField
+              label={t("newPasskeyName")}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("passkeyPlaceholder")}
+              disabled={pending}
+            />
             <Button type="submit" disabled={pending}>
               {pending ? t("waitingForPasskey") : t("addPasskey")}
             </Button>

@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useActionState, useEffect } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
+import { InputField } from "@/shared/forms/fields"
 import { passwordPolicy } from "@/shared/policy"
 import { Button } from "@/shared/ui/base/button"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { FieldError, FieldGroup } from "@/shared/ui/base/field"
 import { type ActivationState, activateAccount } from "./actions"
 
 export function ActivationForm() {
@@ -52,26 +52,20 @@ export function ActivationForm() {
       ) : (
         <form action={action} className="space-y-4">
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="activation-password">{t("password")}</FieldLabel>
-              <Input
-                id="activation-password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                minLength={passwordPolicy.minPasswordLength}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="activation-confirm-password">{t("confirmPassword")}</FieldLabel>
-              <Input
-                id="activation-confirm-password"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={passwordPolicy.minPasswordLength}
-              />
-            </Field>
+            <InputField
+              label={t("password")}
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={passwordPolicy.minPasswordLength}
+            />
+            <InputField
+              label={t("confirmPassword")}
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              minLength={passwordPolicy.minPasswordLength}
+            />
             <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
           </FieldGroup>
           <Button type="submit" disabled={pending}>

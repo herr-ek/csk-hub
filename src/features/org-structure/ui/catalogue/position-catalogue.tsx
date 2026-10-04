@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { Badge } from "@/shared/ui/base/badge"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -8,7 +9,7 @@ import { Field, FieldLegend, FieldSet } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import type { GroupType } from "../../model"
 import { CommandDialog } from "../command-dialog"
-import { TextField } from "../form-fields"
+import { NAME_MAX_LENGTH } from "../limits"
 import { createPositionAction, updatePositionAction } from "./actions"
 import type { CataloguePosition } from "./query"
 
@@ -114,7 +115,7 @@ function PositionFields({ position }: { position?: CataloguePosition }) {
   const types = useTranslations("Groups.types")
   return (
     <>
-      <TextField label={t("name")} name="name" defaultValue={position?.name} />
+      <InputField label={t("name")} name="name" defaultValue={position?.name} required maxLength={NAME_MAX_LENGTH} />
       <FieldSet>
         <FieldLegend variant="label">{t("catalogue.groupTypes")}</FieldLegend>
         <div className="grid grid-cols-2 gap-2">

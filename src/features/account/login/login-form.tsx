@@ -8,11 +8,11 @@ import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Checkbox } from "@/shared/ui/base/checkbox"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { Field, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Spinner } from "@/shared/ui/base/spinner"
 import { loginSchema } from "./schemas"
 import { type LoginResult, signInWithIdentifier, signInWithPasskey } from "./service"
@@ -86,20 +86,17 @@ export function LoginForm() {
           {(field) => {
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
             return (
-              <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>{t("identifier")}</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  aria-invalid={isInvalid}
-                  placeholder={t("identifier")}
-                  autoComplete="username"
-                />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
-              </Field>
+              <InputField
+                label={t("identifier")}
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder={t("identifier")}
+                autoComplete="username"
+                invalid={isInvalid}
+                errors={isInvalid ? field.state.meta.errors : undefined}
+              />
             )
           }}
         </form.Field>
@@ -107,21 +104,18 @@ export function LoginForm() {
           {(field) => {
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
             return (
-              <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>{t("password")}</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  aria-invalid={isInvalid}
-                  placeholder={t("password")}
-                  autoComplete="current-password"
-                />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
-              </Field>
+              <InputField
+                label={t("password")}
+                name={field.name}
+                type="password"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder={t("password")}
+                autoComplete="current-password"
+                invalid={isInvalid}
+                errors={isInvalid ? field.state.meta.errors : undefined}
+              />
             )
           }}
         </form.Field>

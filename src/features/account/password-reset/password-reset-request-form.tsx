@@ -6,10 +6,9 @@ import { useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
+import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
-import { Field, FieldError, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
 import { passwordResetRequestSchema } from "./schemas"
 import { requestPasswordReset } from "./service"
@@ -62,20 +61,17 @@ export function PasswordResetRequestForm({
           const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
           return (
-            <Field data-invalid={isInvalid}>
-              <FieldLabel htmlFor={field.name}>{t("email")}</FieldLabel>
-              <Input
-                id={field.name}
-                name={field.name}
-                type="email"
-                autoComplete="email"
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value)}
-                aria-invalid={isInvalid}
-              />
-              {isInvalid && <FieldError errors={field.state.meta.errors} />}
-            </Field>
+            <InputField
+              label={t("email")}
+              name={field.name}
+              type="email"
+              autoComplete="email"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.target.value)}
+              invalid={isInvalid}
+              errors={isInvalid ? field.state.meta.errors : undefined}
+            />
           )
         }}
       </form.Field>

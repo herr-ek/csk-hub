@@ -1,12 +1,13 @@
 import { z } from "zod"
 import { groupType } from "@/core/db/schema/org-structure"
 import { voice } from "@/core/db/schema/voice"
+import { NAME_MAX_LENGTH } from "./limits"
 
 /** Form field schemas shared by the admin groups Server Actions. */
 export const fields = {
   id: z.uuid(),
   userId: z.string().trim().min(1),
-  name: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1).max(NAME_MAX_LENGTH),
   date: z.iso.date(),
   voice: z.enum(voice.enumValues),
   groupType: z.enum(groupType.enumValues),

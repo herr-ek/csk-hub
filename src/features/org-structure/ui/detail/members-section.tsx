@@ -1,13 +1,13 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import { CommandDialog } from "../command-dialog"
-import { DateField, SelectField } from "../form-fields"
 import { addMemberAction, changeVoiceAction, endMembershipAction } from "./actions"
 import type { GroupDetail } from "./query"
 
@@ -116,6 +116,7 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
         <SelectField
           label={t("member")}
           name="userId"
+          required
           options={detail.candidates.map((candidate) => ({
             value: candidate.id,
             label: t("userOption", { name: candidate.name, email: candidate.email })
@@ -126,10 +127,11 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
         <SelectField
           label={t("voice")}
           name="voice"
+          required
           options={detail.sectionVoices.map((voice) => ({ value: voice, label: voice }))}
         />
       ) : null}
-      <DateField label={t("startDate")} name="startDate" defaultValue={today} />
+      <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
     </CommandDialog>
   )
 }
@@ -162,7 +164,7 @@ function EndMembershipDialog({ detail, member, today }: { detail: GroupDetail; m
     >
       <input type="hidden" name="groupId" value={group.id} />
       <input type="hidden" name="userId" value={member.userId} />
-      <DateField label={t("endDate")} name="endDate" defaultValue={today} />
+      <InputField label={t("endDate")} name="endDate" defaultValue={today} type="date" required />
     </CommandDialog>
   )
 }
@@ -190,8 +192,13 @@ function ChangeVoiceDialog({ detail, member, today }: { detail: GroupDetail; mem
     >
       <input type="hidden" name="groupId" value={detail.group.id} />
       <input type="hidden" name="userId" value={member.userId} />
-      <SelectField label={t("voice")} name="voice" options={voices.map((voice) => ({ value: voice, label: voice }))} />
-      <DateField label={t("changeDate")} name="date" defaultValue={today} />
+      <SelectField
+        label={t("voice")}
+        name="voice"
+        required
+        options={voices.map((voice) => ({ value: voice, label: voice }))}
+      />
+      <InputField label={t("changeDate")} name="date" defaultValue={today} type="date" required />
     </CommandDialog>
   )
 }

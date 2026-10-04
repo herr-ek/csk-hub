@@ -5,12 +5,12 @@ import { useState } from "react"
 import type z from "zod"
 import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { FieldGroup } from "@/shared/ui/base/field"
 import { changePasswordSchema } from "./schemas"
 
 export function PasswordSettings() {
@@ -124,21 +124,18 @@ function PasswordField({
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
   return (
-    <Field data-invalid={isInvalid}>
-      <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
-      <Input
-        id={field.name}
-        name={field.name}
-        type="password"
-        autoComplete={autoComplete}
-        minLength={minLength}
-        value={field.state.value}
-        onBlur={field.handleBlur}
-        onChange={(event) => field.handleChange(event.target.value)}
-        aria-invalid={isInvalid}
-        required
-      />
-      {isInvalid && <FieldError errors={field.state.meta.errors} />}
-    </Field>
+    <InputField
+      label={label}
+      name={field.name}
+      type="password"
+      autoComplete={autoComplete}
+      minLength={minLength}
+      value={field.state.value}
+      onBlur={field.handleBlur}
+      onChange={(event) => field.handleChange(event.target.value)}
+      required
+      invalid={isInvalid}
+      errors={isInvalid ? field.state.meta.errors : undefined}
+    />
   )
 }
