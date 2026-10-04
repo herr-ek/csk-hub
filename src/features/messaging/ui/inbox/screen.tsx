@@ -3,24 +3,27 @@ import { getFormatter, getTranslations } from "@/core/i18n/server"
 import { Card, CardContent } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { formatMessageSentAt } from "../message-timestamp"
-import { MemberCombobox } from "./member-combobox"
-import { listDirectConversations } from "./query"
+import { listConversations } from "./query"
+import { StartConversationDialog } from "./start-conversation-dialog"
 
 export async function MessagesScreen() {
   const [conversations, t, format] = await Promise.all([
-    listDirectConversations(),
+    listConversations(),
     getTranslations("Messages"),
     getFormatter()
   ])
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
+        </div>
+        <StartConversationDialog />
       </div>
       {conversations.length ? (
-        <ol className="grid gap-3" aria-label={t("directConversations")}>
+        <ol className="grid gap-3" aria-label={t("conversations")}>
           {conversations.map((conversation) => (
             <li key={conversation.id}>
               <Link
@@ -29,8 +32,10 @@ export async function MessagesScreen() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium">{conversation.otherMemberName ?? t("formerMember")}</p>
-                    <p className="mt-1 truncate text-sm text-muted-foreground">{conversation.preview}</p>
+                    <p className="wrap-break-word font-medium">{conversation.otherMemberName ?? t("formerMember")}</p>
+                    <p className="mt-1 truncate text-sm text-muted-foreground">
+                      {conversation.preview ?? t("noMessages")}
+                    </p>
                     {!conversation.canSend ? (
                       <p className="mt-1 text-sm text-muted-foreground">{t("readOnly")}</p>
                     ) : null}
@@ -53,11 +58,6 @@ export async function MessagesScreen() {
       ) : (
         <p className="text-sm text-muted-foreground">{t("empty")}</p>
       )}
-      <div>
-        <h2 className="font-heading text-lg font-semibold">{t("startTitle")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("startDescription")}</p>
-      </div>
-      <MemberCombobox />
       <Link href="/" className="text-sm text-muted-foreground underline">
         {t("backToHome")}
       </Link>
@@ -84,14 +84,6 @@ export function MessagesScreenSkeleton() {
             </CardContent>
           </Card>
         ))}
-      </div>
-      <div>
-        <Skeleton className="h-6 w-44" />
-        <Skeleton className="mt-2 h-4 w-72" />
-      </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-9 flex-1" />
-        <Skeleton className="h-9 w-20" />
       </div>
     </main>
   )
