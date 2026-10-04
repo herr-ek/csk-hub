@@ -137,6 +137,31 @@ Focused reads improve locality, make data dependencies explicit, reduce accident
 
 Server Components are the default. Use Client Components only for interaction, browser APIs, optimistic state, or controlled UI state. Put `"use client"` as low in the tree as practical.
 
+### Server-side session reads
+
+Outside `src/proxy.ts`, read the current request's Better Auth session through
+[`getRequestSession()`](../src/core/auth/session.server.ts), imported from
+`@/core/auth/session.server`. This applies to Server Components, layouts, read
+helpers, Server Actions, and Route Handlers. Use `requireAuthenticatedUser()` from
+the same module when a workflow only needs a required user ID. Permission and
+admin guards in `permissions.server.ts` already use the shared session helper;
+pass an existing session to them when one is available.
+
+The helper awaits `io()` before calling `auth.api.getSession()`. Better Auth reads
+the clock to check expiry, which must stay outside prerendering. With Partial
+Prefetching enabled, session headers can resolve during App Shell prerendering,
+so `await headers()` alone does not protect that clock read. Rendering callers
+must have an enclosing `<Suspense>` boundary around the component that reads the
+session or calls a guard that reads it. Keep these calls outside `"use cache"`,
+`"use cache: private"`, and `"use cache: remote"` scopes: `io()` resolves immediately
+inside cache scopes and does not provide the intended prerendering gate there.
+
+Keep direct `auth.api.getSession()` calls confined to the shared helper and
+`src/proxy.ts`. Proxy reads `req.headers` before route rendering and does not need
+the prerendering gate. The helper does not disable Better Auth's cookie cache or
+force a fresh server request on every client navigation. Continue checking
+authorization where protected data is accessed and operations are performed.
+
 ### Server-only modules
 
 Add `import "server-only"` to modules that must never enter a client bundle, including database access, private environment variables, filesystem access, privileged server SDKs, and data-access operations that expose sensitive records. Put the guard on the leaf module that contains the server-only behavior so a deep import cannot bypass it.

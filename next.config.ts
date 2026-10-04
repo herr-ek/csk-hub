@@ -45,7 +45,6 @@ const nextConfig: NextConfig = {
     browserToTerminal: true
   },
   cacheComponents: true,
-  partialPrefetching: true,
   reactStrictMode: true,
   headers
 }

@@ -1,9 +1,8 @@
-import { headers } from "next/headers"
 import Link from "next/link"
 import { connection } from "next/server"
 import { Suspense } from "react"
-import { auth } from "@/core/auth/auth"
 import { isUserAdmin } from "@/core/auth/permissions.server"
+import { getRequestSession } from "@/core/auth/session.server"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
 import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
@@ -89,7 +88,7 @@ export function AppNavigation() {
 
 export async function RuntimeAppNavigation() {
   await connection()
-  const session = await auth.api.getSession({ headers: await headers() })
+  const session = await getRequestSession()
   const isAdmin = await isUserAdmin(session)
   return (
     <AppNavigationTemplate

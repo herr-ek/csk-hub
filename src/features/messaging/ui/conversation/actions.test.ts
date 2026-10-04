@@ -2,15 +2,13 @@ import { beforeEach, describe, expect, mock, test } from "bun:test"
 
 const markConversationRead = mock(async () => undefined)
 const getSession = mock(async () => null as null | { session: { impersonatedBy: string | null } })
-const headers = mock(async () => new Headers())
 const revalidatePath = mock()
 const sendMessage = mock(async () => ({ conversationId: "conversation-1" }))
 const startDirectConversation = mock(async () => ({ conversationId: "conversation-2" }))
 
 mock.module("./read", () => ({ markConversationRead }))
 mock.module("../inbox/member-search", () => ({ getMember: mock(), searchMembers: mock() }))
-mock.module("@/core/auth", () => ({ auth: { api: { getSession } } }))
-mock.module("next/headers", () => ({ headers }))
+mock.module("@/core/auth/session.server", () => ({ getRequestSession: getSession }))
 mock.module("../../sending", () => ({ sendMessage, startDirectConversation }))
 
 mock.module("next/cache", () => ({ revalidatePath }))
