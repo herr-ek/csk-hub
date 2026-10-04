@@ -96,7 +96,7 @@ Distinct from Conversation Membership, and from being a User of the Hub.
 _Avoid_: Enrolment, role
 
 **Position**:
-A named organisational position in a Group (Swedish: *post*): Ordförande, Conductor,
+A named organisational position in a Group (Swedish: *post*): Ordförande, Dirigent,
 Notfiskal, Konsertmästare, Stämförälder, Sexmästare. Which Positions a Group may have
 depends on its kind. Not a permission role, and never called a "post", which is reserved
 for news Posts.

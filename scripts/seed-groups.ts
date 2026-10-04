@@ -23,13 +23,13 @@ const CHOIRS = ["MK", "DK", "KK"]
 const EXAMPLE_GROUPS: { name: string; type: (typeof group.type.enumValues)[number]; choir?: string }[] = [
   { name: "Gigmästeri", type: "Gigmästeri" },
   { name: "Sexmästeri", type: "Sexmästeri" },
-  { name: "CSK konsertgrupp", type: "Konsert" },
-  { name: "Jubileumskommittén", type: "Committee" },
+  { name: "Konsertmästeri", type: "Konsertmästeri" },
+  { name: "Valberedningen", type: "Valberedning" },
+  { name: "Jubileumskommittén", type: "Övrig" },
   { name: "Giggrupp vår", type: "GigGroup" },
   ...CHOIRS.flatMap((choir) => [
-    { name: `${choir} konsertgrupp`, type: "Konsert" as const, choir },
-    { name: `${choir} roddgrupp`, type: "Rodd" as const, choir },
-    { name: `${choir} festgrupp`, type: "Fest" as const, choir },
+    { name: `${choir} roddgrupp`, type: "Roddgrupp" as const, choir },
+    { name: `${choir} festgrupp`, type: "Festgrupp" as const, choir },
     { name: `${choir} rephelgsgrupp`, type: "Rephelg" as const, choir }
   ])
 ]

@@ -42,8 +42,10 @@ describe.skipIf(!database)("reference data", () => {
     }
     expect(await t.db.select().from(choir)).toHaveLength(REFERENCE_DATA.choirs.length)
 
-    const [board] = await t.db.select().from(group).where(eq(group.name, "Styret"))
-    expect(board).toMatchObject({ type: "Board", choirId: null })
+    for (const { name, type } of REFERENCE_DATA.groups) {
+      const [row] = await t.db.select().from(group).where(eq(group.name, name))
+      expect(row).toMatchObject({ type, choirId: null })
+    }
 
     const allowed = await t.db
       .select({ name: position.name, type: groupTypePosition.type })
@@ -59,6 +61,9 @@ describe.skipIf(!database)("reference data", () => {
     expect(await createReferenceData({ target: "local", url: t.url, host: "test" }, { skipConfirmation: false })).toBe(
       0
     )
-    expect(await t.db.select().from(group)).toHaveLength(3 + 12 + 1)
+    const sections = REFERENCE_DATA.choirs.flatMap(({ sections }) => sections)
+    expect(await t.db.select().from(group)).toHaveLength(
+      REFERENCE_DATA.choirs.length + sections.length + REFERENCE_DATA.groups.length
+    )
   })
 })

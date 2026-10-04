@@ -20,14 +20,14 @@ describe.skipIf(!database)("groups positions", () => {
     return userId
   }
 
-  async function newGroup(type: "Board" | "Sexmästeri" | "Fest") {
+  async function newGroup(type: "Board" | "Sexmästeri" | "Festgrupp") {
     const { id } = expectSuccess(await createGroup(t.db, { name: uniqueName(type), type }))
     return id
   }
 
   test("a member holds a Position allowed in the group's type", async () => {
     const kk = await t.groupId("KK")
-    const conductor = await t.positionId("Conductor")
+    const conductor = await t.positionId("Dirigent")
     const userId = await member(kk)
 
     expectSuccess(
@@ -63,13 +63,13 @@ describe.skipIf(!database)("groups positions", () => {
   })
 
   test("refuses a Position the group's type does not allow", async () => {
-    const fest = await newGroup("Fest")
+    const fest = await newGroup("Festgrupp")
     const userId = await member(fest)
     expect(
       await startPositionHolding(t.db, {
         userId,
         groupId: fest,
-        positionId: await t.positionId("Conductor"),
+        positionId: await t.positionId("Dirigent"),
         startDate: "2025-01-01"
       })
     ).toEqual({ success: false, error: "position-not-allowed" })

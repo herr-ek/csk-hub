@@ -41,17 +41,23 @@ export const REFERENCE_DATA: {
       ]
     }
   ],
-  groups: [{ name: "Styret", type: "Board" }],
+  groups: [{ name: "Styret 25/26", type: "Board" }],
   positions: [
     { name: "Ordförande", groupTypes: ["Board"] },
+    { name: "Vice Ordförande", groupTypes: ["Board", "Rekryteringskommitté"] },
+    { name: "Kassör", groupTypes: ["Board"] },
+    { name: "Sekreterare", groupTypes: ["Board", "Föräldramötet"] },
     { name: "PR-mästare", groupTypes: ["Board"] },
+    { name: "1:a Konsertmästare", groupTypes: ["Board", "Konsertmästeri"] },
     { name: "Gigmästare", groupTypes: ["Board", "Gigmästeri"] },
     { name: "Sexmästare", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Sexmästarinna", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Conductor", groupTypes: ["Choir"] },
+    { name: "Sexmästarinna", groupTypes: ["Sexmästeri"] },
+    { name: "Dirigent", groupTypes: ["Choir"] },
     { name: "Notfiskal", groupTypes: ["Choir"] },
-    { name: "Konsertmästare", groupTypes: ["Choir"] },
-    { name: "Stämförälder", groupTypes: ["Section"] }
+    { name: "Konsertmästare", groupTypes: ["Choir", "Konsertmästeri"] },
+    { name: "DelkörsGigmästare", groupTypes: ["Choir", "Gigmästeri"] },
+    { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] },
+    { name: "Ekonomiskt Ansvarig", groupTypes: ["Turnékommitté"] }
   ]
 }
 

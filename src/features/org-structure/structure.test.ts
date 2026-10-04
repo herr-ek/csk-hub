@@ -79,7 +79,7 @@ describe.skipIf(!database)("groups structure", () => {
     test("creates a CSK-wide group, or one that belongs to a Choir", async () => {
       const board = expectSuccess(await createGroup(t.db, { name: uniqueName("Styret"), type: "Board" }))
       const rodd = expectSuccess(
-        await createGroup(t.db, { name: "MK roddgrupp", type: "Rodd", choirId: await t.groupId("MK") })
+        await createGroup(t.db, { name: "MK roddgrupp", type: "Roddgrupp", choirId: await t.groupId("MK") })
       )
 
       const rows = await t.db.select().from(group).where(eq(group.id, board.id))
@@ -91,7 +91,7 @@ describe.skipIf(!database)("groups structure", () => {
     test("only belongs to a Choir: no deeper hierarchy", async () => {
       const result = await createGroup(t.db, {
         name: uniqueName("Sub"),
-        type: "Rodd",
+        type: "Roddgrupp",
         choirId: await t.groupId("MKB1")
       })
       expect(result).toEqual({ success: false, error: "choir-not-found" })
@@ -105,13 +105,13 @@ describe.skipIf(!database)("groups structure", () => {
     })
 
     test("reports a name already taken among active groups in the same scope", async () => {
-      const name = uniqueName("Committee")
-      expectSuccess(await createGroup(t.db, { name, type: "Committee" }))
-      expect(await createGroup(t.db, { name, type: "Committee" })).toEqual({
+      const name = uniqueName("Valberedning")
+      expectSuccess(await createGroup(t.db, { name, type: "Valberedning" }))
+      expect(await createGroup(t.db, { name, type: "Valberedning" })).toEqual({
         success: false,
         error: "group-name-taken"
       })
-      expectSuccess(await createGroup(t.db, { name, type: "Committee", choirId: await t.groupId("DK") }))
+      expectSuccess(await createGroup(t.db, { name, type: "Valberedning", choirId: await t.groupId("DK") }))
     })
 
     test("refuses an archived Choir", async () => {
@@ -119,7 +119,7 @@ describe.skipIf(!database)("groups structure", () => {
         await createChoir(t.db, { name: uniqueName("Choir"), sections: fourSections("Y") })
       )
       expectSuccess(await archiveGroup(t.db, choirId))
-      expect(await createGroup(t.db, { name: uniqueName("Fest"), type: "Fest", choirId })).toEqual({
+      expect(await createGroup(t.db, { name: uniqueName("Festgrupp"), type: "Festgrupp", choirId })).toEqual({
         success: false,
         error: "group-archived"
       })

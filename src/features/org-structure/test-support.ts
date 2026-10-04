@@ -48,11 +48,11 @@ const STRUCTURE: {
     { name: "Ordförande", groupTypes: ["Board"] },
     { name: "Gigmästare", groupTypes: ["Board", "Gigmästeri"] },
     { name: "Sexmästare", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Sexmästarinna", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Conductor", groupTypes: ["Choir"] },
+    { name: "Sexmästarinna", groupTypes: ["Sexmästeri"] },
+    { name: "Dirigent", groupTypes: ["Choir"] },
     { name: "Notfiskal", groupTypes: ["Choir"] },
-    { name: "Konsertmästare", groupTypes: ["Choir"] },
-    { name: "Stämförälder", groupTypes: ["Section"] }
+    { name: "Konsertmästare", groupTypes: ["Choir", "Konsertmästeri"] },
+    { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] }
   ]
 }
 

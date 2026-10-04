@@ -31,14 +31,21 @@ export const groupType = pgEnum("group_type", [
   "Choir",
   "Section",
   "Board",
-  "Committee",
   "GigGroup",
   "Gigmästeri",
   "Sexmästeri",
-  "Rodd",
-  "Fest",
+  "Roddgrupp",
+  "Festgrupp",
   "Rephelg",
-  "Konsert"
+  "Konsertmästeri",
+  "Rekryteringskommitté",
+  "Turnékommitté",
+  "Valberedning",
+  "Webmästeri",
+  "Föräldramötet",
+  "Arkivarie",
+  "Utantillkommitté",
+  "Övrig"
 ])
 
 export const group = pgTable(

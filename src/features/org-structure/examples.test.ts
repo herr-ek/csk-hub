@@ -80,7 +80,7 @@ describe.skipIf(!database)("Groups scheme examples", () => {
   test("Erik conducts KK without singing: a Choir Membership only", async () => {
     const erik = await t.user("Erik")
     const kk = await t.groupId("KK")
-    const conductor = await t.positionId("Conductor")
+    const conductor = await t.positionId("Dirigent")
 
     expectSuccess(await startMembership(t.db, { userId: erik, groupId: kk, startDate: "2020-01-10" }))
     expectSuccess(

@@ -28,7 +28,7 @@ describe.skipIf(!database)("groups membership", () => {
 
   async function choirGroup(choirName: string) {
     const { id } = expectSuccess(
-      await createGroup(t.db, { name: uniqueName("Rodd"), type: "Rodd", choirId: await t.groupId(choirName) })
+      await createGroup(t.db, { name: uniqueName("Roddgrupp"), type: "Roddgrupp", choirId: await t.groupId(choirName) })
     )
     return id
   }

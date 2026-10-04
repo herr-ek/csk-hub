@@ -90,7 +90,7 @@ describe.skipIf(!database)("groups schema constraints", () => {
   test("rejects a second current holder of the same Position in a group", async () => {
     const [first, second] = [await t.user(), await t.user()]
     const kk = await t.groupId("KK")
-    const conductor = await t.positionId("Conductor")
+    const conductor = await t.positionId("Dirigent")
     await t.db
       .insert(positionHolder)
       .values({ userId: first, groupId: kk, positionId: conductor, startDate: "2025-01-01" })
@@ -105,20 +105,20 @@ describe.skipIf(!database)("groups schema constraints", () => {
 
   test("scopes active group names to their Choir, with CSK-wide names unique among themselves", async () => {
     const [mk, kk] = [await t.groupId("MK"), await t.groupId("KK")]
-    await t.db.insert(group).values({ name: "Roddgrupp", type: "Rodd", choirId: mk })
-    await t.db.insert(group).values({ name: "Roddgrupp", type: "Rodd", choirId: kk })
+    await t.db.insert(group).values({ name: "Roddgrupp", type: "Roddgrupp", choirId: mk })
+    await t.db.insert(group).values({ name: "Roddgrupp", type: "Roddgrupp", choirId: kk })
 
-    await t.db.insert(group).values({ name: "Valberedningen", type: "Committee" })
+    await t.db.insert(group).values({ name: "Valberedningen", type: "Valberedning" })
     await expect(
-      t.db.insert(group).values({ name: "Valberedningen", type: "Committee" }).execute()
+      t.db.insert(group).values({ name: "Valberedningen", type: "Valberedning" }).execute()
     ).rejects.toMatchObject({
       cause: { constraint: "group_name_choir_active_unique" }
     })
   })
 
   test("frees an archived group's name", async () => {
-    await t.db.insert(group).values({ name: "Festgrupp", type: "Fest", active: false })
-    await t.db.insert(group).values({ name: "Festgrupp", type: "Fest" })
+    await t.db.insert(group).values({ name: "Festgrupp", type: "Festgrupp", active: false })
+    await t.db.insert(group).values({ name: "Festgrupp", type: "Festgrupp" })
   })
 
   test("rejects a period that ends before it starts", async () => {

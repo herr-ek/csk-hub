@@ -1,4 +1,4 @@
-CREATE TYPE "public"."group_type" AS ENUM('Choir', 'Section', 'Board', 'Committee', 'GigGroup', 'Gigmästeri', 'Sexmästeri', 'Rodd', 'Fest', 'Rephelg', 'Konsert');--> statement-breakpoint
+CREATE TYPE "public"."group_type" AS ENUM('Choir', 'Section', 'Board', 'GigGroup', 'Gigmästeri', 'Sexmästeri', 'Roddgrupp', 'Festgrupp', 'Rephelg', 'Konsertmästeri', 'Rekryteringskommitté', 'Turnékommitté', 'Valberedning', 'Webmästeri', 'Föräldramötet', 'Arkivarie', 'Utantillkommitté', 'Övrig');--> statement-breakpoint
 CREATE TYPE "public"."voice" AS ENUM('S', 'A', 'T', 'B', 'S1', 'S2', 'A1', 'A2', 'T1', 'T2', 'B1', 'B2');--> statement-breakpoint
 -- Added by hand, because Drizzle cannot express domains: the Voice family and Voice division as
 -- restricted subtypes of `voice`, so the database has the same three types as the code.

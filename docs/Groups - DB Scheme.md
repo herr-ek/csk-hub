@@ -352,14 +352,21 @@ Enum GroupType:
 	Choir
 	Section
 	Board
-	Committee
 	GigGroup
 	Gigmästeri
 	Sexmästeri
-	Rodd
-	Fest
+	Roddgrupp
+	Festgrupp
 	Rephelg
-	Konsert
+	Konsertmästeri
+	Rekryteringskommitté
+	Turnékommitté
+	Valberedning
+	Webmästeri
+	Föräldramötet
+	Arkivarie
+	Utantillkommitté
+	Övrig
 
 // See "Voice types (code)": one base enum + two domains
 Enum   voice:          S, A, T, B, S1, S2, A1, A2, T1, T2, B1, B2
