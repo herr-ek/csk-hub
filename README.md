@@ -149,5 +149,6 @@ bun run pr          # tests, lint, and build
 bun run ops         # database status and guarded database operations
 ```
 
-The project context and architectural conventions are documented in
-[`CONTEXT.md`](CONTEXT.md) and [`docs/codebase-structure.md`](docs/codebase-structure.md).
+See [`CONTEXT.md`](CONTEXT.md) for project context and the
+[contribution guide](CONTRIBUTING.md#which-guide-to-read) for the task-based index
+of code conventions and module guides.

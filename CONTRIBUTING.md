@@ -1,8 +1,22 @@
 # Contributing to CSK Hub
 
-See the [README](README.md) for local setup and checks, and the
-[codebase structure guide](docs/codebase-structure.md) for code conventions.
+See the [README](README.md) for local setup and checks.
 We track work in [GitHub Issues](https://github.com/herr-ek/csk-hub/issues).
+
+## Which guide to read
+
+Read the guides and sections relevant to the task. Follow their conventions when
+changing the code they cover; loading every guide before every edit is unnecessary.
+
+| Task | Guide |
+| --- | --- |
+| Writing or reviewing code, naming files or migrations, documenting APIs | [Code style](docs/code-style.md) |
+| Adding or reorganizing modules, changing dependencies, composing screens, choosing tests | [Codebase structure](docs/codebase-structure.md) |
+| Adding user-facing copy, changing translations or locale behavior | [Internationalization](src/core/i18n/README.md) |
+| Changing database connections or TLS policy | [Database infrastructure](src/core/db/README.md) |
+| Running or changing migrations, Studio, or seeding | [Database operations](scripts/ops/README.md) |
+| Changing domain concepts or making architectural decisions | [Project context](CONTEXT.md), applicable [ADRs](docs/adr/), and the ADR guidance below |
+| Working on a feature with its own guide | That feature's `README.md`, such as [rich text](src/features/rich-text/README.md) |
 
 ## Architectural decision records
 
