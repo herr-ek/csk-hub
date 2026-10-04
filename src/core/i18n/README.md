@@ -2,6 +2,8 @@
 
 This module owns CSK Hub's locale contract: supported locales, cookie behavior, next-intl routing, request configuration, and catalog loading. Read this file before adding user-facing copy.
 
+CSK Hub uses cookie-selected locales and internal `[locale]` routes. The public URL never contains a locale prefix; `src/proxy.ts` applies the rewrite and the selected locale is a root parameter for rendering.
+
 ## Translation interface
 
 Only this module imports `next-intl`. Async Server Components, pages, layouts, and metadata use `getTranslations` from `@/core/i18n/server`; components that use the `useTranslations` hook import it from `@/core/i18n/translations`; Client Components use browser-only locale helpers from `@/core/i18n/client`. The proxy delegates locale routing to `middleware.ts`.
@@ -25,6 +27,10 @@ Keep the catalogs parallel. When adding a key, add its translation to every loca
   }
 }
 ```
+
+Translate every user-facing string, including headings, controls, empty states, dialogs, metadata, and validation/error copy displayed to a member. Biome enforces `style/noJsxLiterals` as an **error** except in `src/shared/ui/base/**`; do not treat it as a warning. Use it as the inventory when migrating existing copy.
+
+Preserve ICU placeholders and plural/select logic consistently across locales.
 
 Use ICU parameters instead of concatenating translated fragments:
 
@@ -92,7 +98,7 @@ Do not call `getTranslations` in a Client Component, add another provider, or pa
 
 ## Locale cookies
 
-Use [`locale-cookie.ts`](./locale-cookie.ts) to read and write the locale cookie. It keeps browser writers, proxy synchronization, and next-intl's cookie configuration aligned. `NEXT_LOCALE` is the per-browser locale choice: it is authoritative when valid. A saved member locale is validated through [`locale-preference.ts`](./locale-preference.ts) and initializes that cookie only when the browser has no valid choice. The Account Settings control updates both values, so a member's saved preference becomes the current browser choice too.
+Browser code must not write `NEXT_LOCALE` directly. Use [`locale-cookie.ts`](./locale-cookie.ts) to read and write the locale cookie. It keeps browser writers, proxy synchronization, and next-intl's cookie configuration aligned. `NEXT_LOCALE` is the per-browser locale choice: it is authoritative when valid. A saved member locale is validated through [`locale-preference.ts`](./locale-preference.ts) and initializes that cookie only when the browser has no valid choice. The Account Settings control updates both values, so a member's saved preference becomes the current browser choice too.
 
 ## Verification
 
