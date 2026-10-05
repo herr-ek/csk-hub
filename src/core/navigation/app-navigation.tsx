@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { connection } from "next/server"
 import { Suspense } from "react"
 import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getRequestSession } from "@/core/auth/session.server"
@@ -87,7 +86,6 @@ export function AppNavigation() {
 }
 
 export async function RuntimeAppNavigation() {
-  await connection()
   const session = await getRequestSession()
   const isAdmin = await isUserAdmin(session)
   return (

@@ -147,6 +147,11 @@ the same module when a workflow only needs a required user ID. Permission and
 admin guards in `permissions.server.ts` already use the shared session helper;
 pass an existing session to them when one is available.
 
+React `cache()` deduplicates session reads within a Server Component render and
+shares the pending promise and result. It does not share sessions across requests
+or deduplicate reads during Server Action or Route Handler execution. Treat the
+returned session as read-only.
+
 The helper awaits `io()` before calling `auth.api.getSession()`. Better Auth reads
 the clock to check expiry, which must stay outside prerendering. With Partial
 Prefetching enabled, session headers can resolve during App Shell prerendering,
