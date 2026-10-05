@@ -371,9 +371,7 @@
     "sendSelectedFailed": "Unable to send the notification right now.",
     "messageRequired": "Enter a notification message first.",
     "userRequired": "Select at least one user first.",
-    "signInRequired": "You must be signed in to manage notifications.",
     "noActiveSubscriptions": "No active notification subscriptions.",
-    "notificationTitle": "Test notification",
     "deliveryFailed": "Failed to send notification.",
     "noRecipients": "No recipients selected."
   },

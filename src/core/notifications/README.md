@@ -58,7 +58,7 @@ import { sendToUsers } from "@/core/notifications"
 export async function notifySelectedUsers(userIds: string[], message: string) {
   await requireAdmin()
   const text = message.trim()
-  if (!text) return { success: false as const, error: "Enter a notification message first." }
+  if (!text) return { success: false as const, error: "messageRequired" as const }
 
   return sendToUsers(userIds, text)
 }
@@ -70,10 +70,10 @@ All send functions resolve to one of these shapes:
 
 ```ts
 { success: true }
-{ success: false, error: string }
+{ success: false, error: "noActiveSubscriptions" | "noRecipients" | "deliveryFailed" }
 ```
 
-`success: false` means there were no active subscriptions or every attempted delivery failed. A successful result means at least one active subscription accepted the notification; it does not guarantee every selected device received it. Features should show the returned error to the actor and reserve exceptions for unexpected infrastructure failures.
+`success: false` means there were no active subscriptions or every attempted delivery failed. A successful result means at least one active subscription accepted the notification; it does not guarantee every selected device received it. Features handle the returned error code and reserve exceptions for unexpected infrastructure failures. Notifications use the application name, `CSK Hub`, as a fixed title and preserve the supplied message as their body.
 
 When a provider returns HTTP 404 or 410, this module marks that subscription disabled so future sends skip it. It also tracks delivery timestamps and failure counts. Features must not mutate those lifecycle fields directly.
 

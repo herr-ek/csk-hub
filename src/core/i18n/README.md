@@ -62,9 +62,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 }
 ```
 
-`generateStaticParams` remains responsible for the supported static locale variants. Pass an explicit locale only in a Route Handler or Server Action, where `next/root-params` is unavailable, or when rendering messages from multiple locales deliberately. Do not import JSON catalogs or `messages.ts` from a route or feature; the root layout and request configuration provide the translation context.
+`generateStaticParams` remains responsible for the supported static locale variants. Do not import JSON catalogs or `messages.ts` from a route or feature; the root layout and request configuration provide the translation context.
 
 For a synchronous Server Component, `useTranslations` is supported by next-intl. Prefer an async component with `getTranslations` when adding new page-level copy, so translation resolution stays in the central root-parameter-aware request configuration.
+
+## Server Actions
+
+Avoid i18n in Server Actions and the helpers they call. Return typed outcomes or stable error codes and translate them in the UI. Keep low-level services independent of translation APIs and message catalogs.
+
+Only translate on the server when it must produce final text, such as an email. Choose the intended recipient's locale explicitly. `next/root-params` is unavailable in Server Actions and Route Handlers; server translation APIs need an explicit locale and request configuration that honors the override before reading root params.
 
 ## Client Components
 
@@ -84,9 +90,7 @@ export function SaveButton() {
 
 Do not call `getTranslations` in a Client Component, add another provider, or pass an entire catalog through feature props.
 
-## Errors and locale cookies
-
-For new client-triggered workflows, return stable error kinds or codes from services and Server Actions, then translate the visible error at the presentation edge. Do not make low-level modules depend on React hooks or message catalogs.
+## Locale cookies
 
 Use [`locale-cookie.ts`](./locale-cookie.ts) to read and write the locale cookie. It keeps browser writers, proxy synchronization, and next-intl's cookie configuration aligned. `NEXT_LOCALE` is the per-browser locale choice: it is authoritative when valid. A saved member locale is validated through [`locale-preference.ts`](./locale-preference.ts) and initializes that cookie only when the browser has no valid choice. The Account Settings control updates both values, so a member's saved preference becomes the current browser choice too.
 
