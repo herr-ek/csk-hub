@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test"
+import { afterAll, describe, expect, spyOn, test } from "bun:test"
 import { sql } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { group } from "@/core/db/schema/org-structure"
@@ -15,13 +15,22 @@ describe.skipIf(!database)("resetLocalDatabase", () => {
   test("refuses production and any database that is not local", async () => {
     await t.db.insert(user).values({ id: "kept", name: "Kept", email: "kept@example.com" })
 
-    expect(await resetLocalDatabase({ target: "prod", url: t.url, host: "prod" }, { skipConfirmation: true })).toBe(1)
-    expect(
-      await resetLocalDatabase(
-        { target: "local", url: "postgresql://someone@db.example.com:5432/csk_hub", host: "remote" },
-        { skipConfirmation: true }
-      )
-    ).toBe(1)
+    const consoleError = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await resetLocalDatabase({ target: "prod", url: t.url, host: "prod" }, { skipConfirmation: true })).toBe(1)
+      expect(
+        await resetLocalDatabase(
+          { target: "local", url: "postgresql://someone@db.example.com:5432/csk_hub", host: "remote" },
+          { skipConfirmation: true }
+        )
+      ).toBe(1)
+      expect(consoleError.mock.calls).toEqual([
+        ["✖ Reset is local-only and needs POSTGRES_URL to point at a local database."],
+        ["✖ Reset is local-only and needs POSTGRES_URL to point at a local database."]
+      ])
+    } finally {
+      consoleError.mockRestore()
+    }
     expect(await t.db.select().from(user)).toHaveLength(1)
   })
 
