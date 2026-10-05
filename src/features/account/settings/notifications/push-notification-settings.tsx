@@ -108,7 +108,7 @@ export function PushNotificationSettings() {
         setMessage("")
         setStatus(t("testSent"))
       } else {
-        setError(result.error)
+        setError(t(result.error))
       }
     } catch {
       setError(t("testSendFailed"))

@@ -366,9 +366,7 @@
     "sendSelectedFailed": "Det går inte att skicka notisen just nu.",
     "messageRequired": "Ange först ett notismeddelande.",
     "userRequired": "Välj minst en användare först.",
-    "signInRequired": "Du måste vara inloggad för att hantera notiser.",
     "noActiveSubscriptions": "Inga aktiva notisprenumerationer.",
-    "notificationTitle": "Testnotis",
     "deliveryFailed": "Det gick inte att skicka notisen.",
     "noRecipients": "Inga mottagare valda."
   },

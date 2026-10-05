@@ -366,9 +366,7 @@
     "sendSelectedFailed": "Die Benachrichtigung kann gerade nicht gesendet werden.",
     "messageRequired": "Gib zuerst einen Benachrichtigungstext ein.",
     "userRequired": "Wähle zuerst mindestens einen Nutzer aus.",
-    "signInRequired": "Du musst angemeldet sein, um Benachrichtigungen zu verwalten.",
     "noActiveSubscriptions": "Keine aktiven Benachrichtigungsabonnements.",
-    "notificationTitle": "Testbenachrichtigung",
     "deliveryFailed": "Benachrichtigung konnte nicht gesendet werden.",
     "noRecipients": "Keine Empfänger ausgewählt."
   },

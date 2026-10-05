@@ -21,7 +21,7 @@ export function BroadcastToAllCard() {
         const result = await sendTestNotificationToAll(message)
         setFeedback({
           success: result.success,
-          message: result.success ? t("sentToAll") : result.error
+          message: result.success ? t("sentToAll") : t(result.error)
         })
         if (result.success) setMessage("")
       } catch {

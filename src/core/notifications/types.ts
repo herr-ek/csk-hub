@@ -6,4 +6,6 @@ export type NotificationSubscription = {
   deviceLabel?: string | null
 }
 
-export type NotificationDeliveryResult = { success: true } | { success: false; error: string }
+export type NotificationDeliveryResult =
+  | { success: true }
+  | { success: false; error: "noActiveSubscriptions" | "noRecipients" | "deliveryFailed" }
