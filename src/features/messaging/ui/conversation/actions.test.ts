@@ -8,7 +8,11 @@ const startDirectConversation = mock(async () => ({ conversationId: "conversatio
 
 mock.module("./read", () => ({ markConversationRead }))
 mock.module("../inbox/member-search", () => ({ getMember: mock(), searchMembers: mock() }))
-mock.module("@/core/auth/session.server", () => ({ getRequestSession: getSession }))
+mock.module("@/core/auth/session.server", () => ({
+  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
+  getRequestSession: getSession,
+  requireAuthenticatedUser: mock(async () => "sender")
+}))
 mock.module("../../sending", () => ({ sendMessage, startDirectConversation }))
 
 mock.module("next/cache", () => ({ revalidatePath }))
