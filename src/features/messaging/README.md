@@ -50,10 +50,3 @@ Creation needs no Message. Joining or rejoining initializes the read cursor thro
 history; adding an already active member preserves their cursor. Empty groups remain retained,
 with no former member able to reactivate them. The UI uses the same update behavior as Direct
 Conversations; no polling, conversation subscriptions, or push delivery is introduced.
-
-The local database integration check uses disposable Users and Conversations and cleans them up.
-Run it separately from the mocked suite:
-
-```sh
-MESSAGING_INTEGRATION_TEST=1 bun test src/features/messaging/group-conversations/group-conversation.integration.test.ts
-```
