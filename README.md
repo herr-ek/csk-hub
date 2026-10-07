@@ -100,6 +100,7 @@ who is in no group yet in a Section. Running either again changes nothing.
 | `/` | Authenticated home page | User |
 | `/me` | Account settings | User |
 | `/admin` | Admin surface (currently a placeholder) | Admin |
+| `/admin/groups` | Choirs, Sections, groups, Members and Positions | Admin |
 | `/login` | Password or passkey sign-in | Public |
 | `/activate` | Set the password for an activated account | Activation session |
 | `/forgot-password` | Request a password reset | Public |

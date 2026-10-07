@@ -6,11 +6,11 @@ import { useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
+import { InputField } from "@/shared/forms/fields"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { FieldGroup } from "@/shared/ui/base/field"
 import { passwordResetSchema } from "./schemas"
 import { resetPassword } from "./service"
 
@@ -66,20 +66,17 @@ export function PasswordResetForm({
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
             return (
-              <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>{t("email")}</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  autoComplete="email"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  aria-invalid={isInvalid}
-                />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
-              </Field>
+              <InputField
+                label={t("email")}
+                name={field.name}
+                type="email"
+                autoComplete="email"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                invalid={isInvalid}
+                errors={isInvalid ? field.state.meta.errors : undefined}
+              />
             )
           }}
         </form.Field>
@@ -88,22 +85,19 @@ export function PasswordResetForm({
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
             return (
-              <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>{t("newPassword")}</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={passwordPolicy.minPasswordLength}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  aria-invalid={isInvalid}
-                />
-                <FieldDescription>{t("passwordHint", { count: passwordPolicy.minPasswordLength })}</FieldDescription>
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
-              </Field>
+              <InputField
+                label={t("newPassword")}
+                name={field.name}
+                type="password"
+                autoComplete="new-password"
+                minLength={passwordPolicy.minPasswordLength}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                invalid={isInvalid}
+                description={t("passwordHint", { count: passwordPolicy.minPasswordLength })}
+                errors={isInvalid ? field.state.meta.errors : undefined}
+              />
             )
           }}
         </form.Field>
@@ -112,21 +106,18 @@ export function PasswordResetForm({
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
             return (
-              <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>{t("confirmNewPassword")}</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={passwordPolicy.minPasswordLength}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  aria-invalid={isInvalid}
-                />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
-              </Field>
+              <InputField
+                label={t("confirmNewPassword")}
+                name={field.name}
+                type="password"
+                autoComplete="new-password"
+                minLength={passwordPolicy.minPasswordLength}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                invalid={isInvalid}
+                errors={isInvalid ? field.state.meta.errors : undefined}
+              />
             )
           }}
         </form.Field>

@@ -1,8 +1,19 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
-import { choir, group, section } from "@/core/db/schema/org-structure"
+import { choir, group, groupTypePosition, position, section } from "@/core/db/schema/org-structure"
 import type { Voice } from "@/features/voice/model"
-import { archiveGroup, createChoir, createGroup, createPosition } from "./structure"
+import { startMembership } from "./membership"
+import { startPositionHolding } from "./positions"
+import {
+  archiveGroup,
+  createChoir,
+  createGroup,
+  createPosition,
+  renameGroup,
+  renamePosition,
+  setPositionGroupTypes,
+  updatePosition
+} from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -159,6 +170,84 @@ describe.skipIf(!database)("groups structure", () => {
     expect(await createPosition(t.db, { name, groupTypes: [] })).toEqual({
       success: false,
       error: "position-name-taken"
+    })
+  })
+
+  describe("renameGroup", () => {
+    test("renames an active group, keeping names unique within the Choir", async () => {
+      const kk = await t.groupId("KK")
+      const taken = uniqueName("Festgrupp")
+      expectSuccess(await createGroup(t.db, { name: taken, type: "Festgrupp", choirId: kk }))
+      const { id } = expectSuccess(
+        await createGroup(t.db, { name: uniqueName("Festgrupp"), type: "Festgrupp", choirId: kk })
+      )
+
+      expect(await renameGroup(t.db, id, taken)).toEqual({ success: false, error: "group-name-taken" })
+      const renamed = uniqueName("KK festgrupp")
+      expectSuccess(await renameGroup(t.db, id, renamed))
+      const [row] = await t.db.select().from(group).where(eq(group.id, id))
+      expect(row?.name).toBe(renamed)
+
+      expectSuccess(await archiveGroup(t.db, id))
+      expect(await renameGroup(t.db, id, uniqueName("Festgrupp"))).toEqual({ success: false, error: "group-archived" })
+    })
+  })
+
+  describe("Position catalogue", () => {
+    test("renames a Position and reports a taken name", async () => {
+      const { id } = expectSuccess(await createPosition(t.db, { name: uniqueName("Kassör"), groupTypes: ["Board"] }))
+      const renamed = uniqueName("Skattmästare")
+      expectSuccess(await renamePosition(t.db, id, renamed))
+      expect(await renamePosition(t.db, id, "Dirigent")).toEqual({ success: false, error: "position-name-taken" })
+    })
+
+    test("replaces the allowed GroupTypes, but keeps a type someone holds the Position in", async () => {
+      const { id } = expectSuccess(await createPosition(t.db, { name: uniqueName("Arkivarie"), groupTypes: ["Board"] }))
+      expectSuccess(await setPositionGroupTypes(t.db, id, ["Board", "Valberedning"]))
+      const types = async () =>
+        (
+          await t.db
+            .select({ type: groupTypePosition.type })
+            .from(groupTypePosition)
+            .where(eq(groupTypePosition.positionId, id))
+        )
+          .map(({ type }) => type)
+          .sort()
+      expect(await types()).toEqual(["Board", "Valberedning"])
+
+      const styret = await t.groupId("Styret")
+      const userId = await t.user()
+      expectSuccess(await startMembership(t.db, { userId, groupId: styret, startDate: "2025-01-01" }))
+      expectSuccess(
+        await startPositionHolding(t.db, { userId, groupId: styret, positionId: id, startDate: "2025-01-01" })
+      )
+
+      expect(await setPositionGroupTypes(t.db, id, ["Valberedning"])).toEqual({
+        success: false,
+        error: "position-in-use"
+      })
+      expectSuccess(await setPositionGroupTypes(t.db, id, ["Board"]))
+      expect(await types()).toEqual(["Board"])
+    })
+
+    test("updatePosition renames and retypes together, or not at all", async () => {
+      const name = uniqueName("Fanbärare")
+      const { id } = expectSuccess(await createPosition(t.db, { name, groupTypes: ["Board"] }))
+      const styret = await t.groupId("Styret")
+      const userId = await t.user()
+      expectSuccess(await startMembership(t.db, { userId, groupId: styret, startDate: "2025-01-01" }))
+      expectSuccess(
+        await startPositionHolding(t.db, { userId, groupId: styret, positionId: id, startDate: "2025-01-01" })
+      )
+
+      expect(
+        await updatePosition(t.db, { positionId: id, name: uniqueName("Fana"), groupTypes: ["Festgrupp"] })
+      ).toEqual({
+        success: false,
+        error: "position-in-use"
+      })
+      const [row] = await t.db.select({ name: position.name }).from(position).where(eq(position.id, id))
+      expect(row?.name).toBe(name)
     })
   })
 })

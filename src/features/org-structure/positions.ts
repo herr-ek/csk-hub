@@ -32,6 +32,33 @@ export function endPositionHolding(database: OrgStructureDatabase, input: Holdin
   })
 }
 
+/**
+ * Gives a Position in a group to a current member. Any current holder's holding ends on the new
+ * holder's start date, so the handover leaves no gap and no overlap.
+ */
+export function replacePositionHolder(database: OrgStructureDatabase, input: HoldingInput & { startDate: IsoDate }) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const startDate = requireDate(input.startDate)
+    const [current] = await tx
+      .select({ userId: positionHolder.userId })
+      .from(positionHolder)
+      .where(
+        and(
+          eq(positionHolder.groupId, input.groupId),
+          eq(positionHolder.positionId, input.positionId),
+          isNull(positionHolder.endDate)
+        )
+      )
+      .for("update")
+    if (current?.userId === input.userId) throw new RuleViolation("already-holding-position")
+
+    // Both users' locks, in a fixed order, so two handovers between the same people cannot deadlock.
+    for (const userId of [input.userId, current?.userId].filter(Boolean).sort()) await lockUser(tx, userId as string)
+    if (current) await closeHolding(tx, { ...input, userId: current.userId }, startDate)
+    await addHolding(tx, input, startDate)
+  })
+}
+
 /** Starts a holding for a user already locked by the caller. */
 export async function addHolding(tx: OrgStructureTransaction, input: HoldingInput, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, input.groupId)
