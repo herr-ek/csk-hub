@@ -17,8 +17,11 @@ const unsubscribe = mock(async () => undefined)
 
 mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
 mock.module("@/core/i18n/server", () => ({ getTranslations }))
-mock.module("next/headers", () => ({ headers: async () => new Headers() }))
-mock.module("@/core/auth", () => ({ auth: { api: { getSession } } }))
+mock.module("@/core/auth/session.server", () => ({
+  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
+  getRequestSession: getSession,
+  requireAuthenticatedUser: mock(async () => "user-1")
+}))
 mock.module("@/core/db", () => ({ db: { select, update } }))
 mock.module("web-push", () => ({
   default: { setVapidDetails: () => undefined, sendNotification, WebPushError: Error }
