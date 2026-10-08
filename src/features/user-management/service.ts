@@ -1,10 +1,13 @@
 import "server-only"
 
 import { and, asc, eq, exists, isNotNull } from "drizzle-orm"
+import { requireAdmin } from "@/core/auth/permissions.server"
 import { db } from "@/core/db"
 import { account, user } from "@/core/db/schema/auth"
 
 export async function listUsers() {
+  await requireAdmin()
+
   return db
     .select({
       id: user.id,

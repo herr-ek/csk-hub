@@ -1,10 +1,15 @@
-import { afterAll, describe, expect, test } from "bun:test"
+import { afterAll, describe, expect, mock, test } from "bun:test"
 import { eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { post } from "@/core/db/schema/posts"
 import { createTestDatabase } from "../../../test/database"
 import { createPost, discardDraft, editPublishedPost, type PostContent, saveDraft, unpublishPost } from "./lifecycle"
 import { getEditablePost, getPublishedPost, listDraftsByAuthor, listNewsFeed } from "./service"
+
+// These tests exercise persistence and lifecycle rules as an authorized reader.
+mock.module("@/core/auth/permissions.server", () => ({
+  requireCurrentUserPermission: mock(async () => ({ state: "authenticated" as const, userId: "reader-1" }))
+}))
 
 const database = await createTestDatabase()
 
