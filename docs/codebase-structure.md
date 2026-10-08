@@ -2,6 +2,20 @@
 
 This guide records the structural preferences for CSK Hub. Future changes should preserve these patterns unless a feature needs a deliberate exception. Explain exceptions in the PR; significant architectural decisions follow the ADR guidance in [CONTRIBUTING.md](../CONTRIBUTING.md#architectural-decision-records).
 
+For naming, function style, and TSDoc, see [code-style.md](code-style.md). Use the [contribution guide's reading index](../CONTRIBUTING.md#which-guide-to-read) to select other documentation relevant to the task.
+
+## Contents
+
+- [Design vocabulary](#design-vocabulary)
+- [Feature modules](#feature-modules)
+- [Dependency direction](#dependency-direction)
+- [Drizzle schema](#drizzle-schema)
+- [Database operations](#database-operations)
+- [Next.js and React](#nextjs-and-react)
+- [Reuse and duplication](#reuse-and-duplication)
+- [UI quality](#ui-quality)
+- [Tests](#tests)
+
 ## Design Vocabulary
 
 Use the `codebase-design` vocabulary when discussing structure:
@@ -50,15 +64,7 @@ Do not promote code to shared space just because two files currently look simila
 
 ### Internationalization
 
-CSK Hub uses `next-intl` with cookie-selected locales and internal `[locale]` routes. The public URL never contains a locale prefix; `src/proxy.ts` applies the rewrite and the selected locale is a root parameter for rendering.
-
-- `src/core/i18n/locales.ts` is the single source of truth for supported locales, their display names, and the default locale. Do not duplicate the locale list or default in features, routes, schemas, or UI.
-- Translation catalogs live at the repository root in `messages/<locale>.json`, not in `src`. Import them through `@messages/*`; the `@messages` alias deliberately marks these as application-wide content assets.
-- Keep one catalog per locale. Organize keys by durable feature or screen namespace inside the JSON, such as `Public.login` or `AccountSettings`; do not create a separate catalog file for every feature.
-- Add every user-facing string—including headings, controls, empty states, dialogs, metadata, and validation/error copy displayed to a member—to every supported catalog in the same change. Biome enforces `style/noJsxLiterals` as an **error** (except in `src/shared/ui/base/**`); it must not be treated as a warning. Use it as the migration inventory for this work.
-- Preserve ICU placeholders and plural/select logic consistently across locales. Prefer parameterized messages to string concatenation.
-- Browser code must not write `NEXT_LOCALE` directly. Use the locale-cookie functions in `src/core/i18n`; the proxy, next-intl routing, public selector, and member settings share this one contract.
-- Route modules remain thin. They select the translation namespace with `getTranslations("Namespace")` and compose feature UI; they do not load or parse catalog files directly, await `[locale]` route params, or pass a locale override to next-intl. `src/core/i18n/request.ts` resolves the root parameter centrally so Cache Components can retain a static shell.
+Locale infrastructure belongs in `src/core/i18n`; translation catalogs are application-wide assets in `messages/`. Add user-facing copy to every supported catalog in the same change. Read the [i18n guide](../src/core/i18n/README.md) when changing copy, locale behavior, or translation integration; it owns the detailed conventions.
 
 ### Workflow-local structure
 

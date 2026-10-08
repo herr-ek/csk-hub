@@ -28,6 +28,6 @@ Default vocabulary — the five canonical roles, each label string equal to its 
 
 Single-context layout: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
-### Codebase structure
+### Code conventions
 
-Follow the structural preferences in `docs/codebase-structure.md` when adding modules, Drizzle schema files, React screens, shared UI, and health checks.
+Use the task-based reading index in `CONTRIBUTING.md#which-guide-to-read` to select relevant guides and sections. Read `docs/code-style.md` when writing or reviewing code, and `docs/codebase-structure.md` when adding or reorganizing modules, changing dependencies, composing screens, or choosing tests. Read `src/core/i18n/README.md` when adding user-facing copy or changing locale behavior. Follow applicable conventions; do not load every linked guide for every task.
