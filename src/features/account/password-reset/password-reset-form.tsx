@@ -12,7 +12,7 @@ import { Button } from "@/shared/ui/base/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { passwordResetSchema } from "./schemas"
-import { resetPassword } from "./service"
+import { type PasswordResetCompletion, resetPassword } from "./service"
 
 export function PasswordResetForm({
   token,
@@ -21,7 +21,7 @@ export function PasswordResetForm({
 }: {
   token: string
   initialEmail: string
-  onSuccess: (role?: string | null) => void
+  onSuccess: (completion: PasswordResetCompletion) => void
 }) {
   const t = useTranslations("Public.passwordReset")
   const [formError, setFormError] = useState<string | null>(null)
@@ -35,7 +35,7 @@ export function PasswordResetForm({
       return
     }
 
-    onSuccess(result.signIn.role)
+    onSuccess(result)
   }
 
   const form = useForm({

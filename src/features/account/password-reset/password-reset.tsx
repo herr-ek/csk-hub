@@ -4,11 +4,12 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
-import { getPostLoginPath } from "@/core/navigation/navigation-utils"
+import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { PasswordResetForm } from "./password-reset-form"
 import { PasswordResetRequestForm } from "./password-reset-request-form"
+import type { PasswordResetCompletion } from "./service"
 
 export function PasswordResetRequest() {
   const t = useTranslations("Public.passwordReset")
@@ -45,6 +46,7 @@ export function PasswordReset() {
   const email = searchParams.get("email") ?? ""
   const invalidLink = searchParams.get("error") === "INVALID_TOKEN" || !token
   const [freshRequested, setFreshRequested] = useState(false)
+  const [resetCompleted, setResetCompleted] = useState(false)
 
   if (invalidLink) {
     return (
@@ -67,6 +69,40 @@ export function PasswordReset() {
     )
   }
 
+  function handleResetSuccess(completion: PasswordResetCompletion) {
+    if ("signIn" in completion) {
+      router.replace(getPostLoginPath(completion.signIn.role))
+      return
+    }
+
+    if ("requiresTwoFactor" in completion) {
+      router.replace(twoFactorPath(completion.methods))
+      return
+    }
+
+    setResetCompleted(true)
+  }
+
+  if (resetCompleted) {
+    return (
+      <>
+        <header className="flex flex-col gap-1">
+          <h1 id="password-reset-title" className="font-semibold text-2xl tracking-normal">
+            {t("resetCompleteTitle")}
+          </h1>
+          <p id="password-reset-description" className="text-muted-foreground text-sm">
+            {t("resetCompleteDescription")}
+          </p>
+        </header>
+        <div role="status">
+          <Link href={ROUTES.login} className="text-sm underline underline-offset-4">
+            {t("returnToSignIn")}
+          </Link>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <header className="flex flex-col gap-1">
@@ -77,11 +113,7 @@ export function PasswordReset() {
           {t("resetDescription")}
         </p>
       </header>
-      <PasswordResetForm
-        token={token}
-        initialEmail={email}
-        onSuccess={(role) => router.replace(getPostLoginPath(role))}
-      />
+      <PasswordResetForm token={token} initialEmail={email} onSuccess={handleResetSuccess} />
     </>
   )
 }

@@ -11,8 +11,13 @@ export type PasswordResetFailureKind = "invalid-reset-token" | "network" | "unkn
 export type PasswordResetRequestResult =
   | { success: true }
   | { success: false; kind: PasswordResetFailureKind; error: string }
-export type PasswordResetResult =
+export type PasswordResetCompletion =
   | { success: true; signIn: Extract<LoginResult, { success: true }> }
+  | { success: true; requiresTwoFactor: true; methods: string[] }
+  | { success: true; signInRequired: true }
+
+export type PasswordResetResult =
+  | PasswordResetCompletion
   | { success: false; kind: PasswordResetFailureKind; error: string }
 
 export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
@@ -48,12 +53,11 @@ export async function resetPassword(token: string, email: string, newPassword: s
     }
     const signIn = await signInWithEmailPassword({ email, password: newPassword, rememberMe: true })
     if (signIn.success) return { success: true, signIn }
-
-    return {
-      success: false,
-      kind: "unknown",
-      error: "Your password was updated, but we could not sign you in. Please sign in with your new password."
+    if ("requiresTwoFactor" in signIn) {
+      return { success: true, requiresTwoFactor: true, methods: signIn.methods }
     }
+
+    return { success: true, signInRequired: true }
   } catch (error) {
     logger.error("auth.password-reset.failed", { kind: "network", errorName: getErrorName(error) })
     return { success: false, kind: "network", error: genericPasswordUpdateError }

@@ -6,6 +6,8 @@ const envSchema = z
   .object({
     ENVIRONMENT: z.enum(["development", "test", "preview", "production"]).default("development"),
     VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
+    VERCEL_URL: z.string().min(1).optional(),
+    VERCEL_BRANCH_URL: z.string().min(1).optional(),
 
     POSTGRES_URL: z.string(),
 

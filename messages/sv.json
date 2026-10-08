@@ -52,6 +52,8 @@
       "newPasswordTitle": "Välj ett nytt lösenord",
       "newPasswordDescription": "Ange och bekräfta ditt nya lösenord.",
       "resetDescription": "Ange din e-postadress och bekräfta ditt nya lösenord.",
+      "resetCompleteTitle": "Lösenordet har uppdaterats",
+      "resetCompleteDescription": "Ditt lösenord har ändrats. Logga in med ditt nya lösenord för att fortsätta.",
       "invalidLink": "Den här återställningslänken är ogiltig eller har gått ut. Begär en ny nedan.",
       "email": "E-post",
       "newPassword": "Nytt lösenord",

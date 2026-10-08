@@ -8,6 +8,7 @@ import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
+import { getBaseURL } from "./base-url"
 import { adminPluginOptions } from "./permissions"
 
 const authPlugins = [
@@ -25,6 +26,7 @@ const authPlugins = [
   }),
   passkey(),
   emailOTP({
+    disableSignUp: true,
     expiresIn: 60 * 5,
     async sendVerificationOTP({ email, otp, type }) {
       const { sendVerificationOtpEmail } = await import("@/core/email")
@@ -50,10 +52,7 @@ const authPlugins = [
 
 export const authOptions = {
   appName: app.name,
-  baseURL: {
-    allowedHosts: ["*.vercel.app"],
-    fallback: env.BETTER_AUTH_URL
-  },
+  baseURL: getBaseURL(env),
   database: drizzleAdapter(db, {
     provider: "pg",
     schema
