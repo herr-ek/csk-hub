@@ -16,7 +16,15 @@ import { searchMembersAction } from "./actions"
 
 type Member = { id: string; name: string; username: string | null }
 
-export function MemberCombobox() {
+export function MemberCombobox({
+  onSelect,
+  excludedIds = [],
+  disabled = false
+}: {
+  onSelect?: (member: Member) => void
+  excludedIds?: string[]
+  disabled?: boolean
+}) {
   const t = useTranslations("Messages")
   const router = useRouter()
   const [value, setValue] = useState("")
@@ -48,12 +56,19 @@ export function MemberCombobox() {
 
   return (
     <Combobox
-      items={members}
+      items={members.filter((member) => !excludedIds.includes(member.id))}
+      inputValue={value}
+      disabled={disabled}
       itemToStringLabel={(member: Member | null) => (member ? `${member.name} ${member.username ?? ""}` : "")}
       value={null}
       onValueChange={(member) => {
         const selected = member as Member | null
-        if (selected) router.push(`/messages/new?recipientId=${selected.id}`)
+        if (selected) {
+          if (onSelect) {
+            onSelect(selected)
+            setValue("")
+          } else router.push(`/messages/new?recipientId=${selected.id}`)
+        }
       }}
       onInputValueChange={setValue}
     >
@@ -74,14 +89,16 @@ export function MemberCombobox() {
               t("typeToSearch")
             )}
           </ComboboxEmpty>
-          {members.map((member) => (
-            <ComboboxItem key={member.id} value={member}>
-              <span>{member.name}</span>
-              {member.username ? (
-                <span className="text-muted-foreground">{t("usernameHandle", { username: member.username })}</span>
-              ) : null}
-            </ComboboxItem>
-          ))}
+          {members
+            .filter((member) => !excludedIds.includes(member.id))
+            .map((member) => (
+              <ComboboxItem key={member.id} value={member}>
+                <span>{member.name}</span>
+                {member.username ? (
+                  <span className="text-muted-foreground">{t("usernameHandle", { username: member.username })}</span>
+                ) : null}
+              </ComboboxItem>
+            ))}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>

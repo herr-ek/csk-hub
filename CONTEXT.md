@@ -111,8 +111,8 @@ _Avoid_: Officer, role owner
 ## Messaging
 
 **Conversation**:
-A private exchange between Users. A Conversation is either a Direct Conversation or,
-when that capability is introduced, a Group Conversation.
+A private exchange between Users. A Conversation is either a Direct Conversation or
+a Group Conversation.
 _Avoid_: Chat, thread
 
 **Direct Conversation**:
@@ -122,10 +122,10 @@ read-only for the remaining User.
 _Avoid_: DM, private message
 
 **Group Conversation**:
-A named Conversation between multiple Users. A User joining or rejoining a Group
-Conversation can view its retained history from the beginning; after leaving, they
-retain read-only access to the history visible when they left. Group Conversations are
-represented in the model before their user-facing capability is introduced.
+A named Conversation whose active members can add Users and rename it; adding a User
+establishes membership immediately, including when rejoining. A User joining or rejoining
+can view all retained history; after leaving, they retain read-only access to history
+visible when they left.
 _Avoid_: Group chat
 
 **Conversation Membership**:

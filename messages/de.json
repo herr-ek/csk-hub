@@ -441,7 +441,30 @@
       "conversation-view-forbidden": "Du kannst diese Unterhaltung nicht ansehen.",
       "conversation-not-found": "Diese Unterhaltung wurde nicht gefunden.",
       "read-position-invalid": "Diese Leseposition ist ungültig.",
-      "unexpected": "Deine Nachricht konnte nicht gesendet werden. Bitte versuche es erneut."
-    }
+      "unexpected": "Deine Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.",
+      "group-name-invalid": "Gib einen Gruppennamen mit 1–100 Zeichen ein."
+    },
+    "conversations": "Unterhaltungen",
+    "groupName": "Gruppenname",
+    "createGroup": "Gruppenunterhaltung erstellen",
+    "createGroupDescription": "Wähle einen Namen und mindestens ein weiteres Mitglied. Alle hinzugefügten Mitglieder können den gesamten Verlauf lesen.",
+    "selectedMembers": "Ausgewählte Mitglieder",
+    "removeSelectedMember": "{name} aus der Auswahl entfernen",
+    "addMembers": "Mitglieder hinzufügen",
+    "renameGroup": "Gruppe umbenennen",
+    "leaveGroup": "Unterhaltung verlassen",
+    "confirmLeaveGroup": "Diese Unterhaltung verlassen?",
+    "startCombinedDescription": "Füge ein Mitglied für eine direkte Unterhaltung oder mehrere Mitglieder für eine benannte Gruppenunterhaltung hinzu.",
+    "groupConversationMode": "Gruppenunterhaltung — wähle einen Namen für die Gruppe.",
+    "directConversationMode": "Direkte Unterhaltung — sende deine erste Nachricht.",
+    "groupSettingsDescription": "Verwalte Mitglieder und den Namen der Unterhaltung.",
+    "groupSettings": "Mitglieder und Einstellungen",
+    "groupMembers": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+    "leaveGroupDescription": "Du kannst Nachrichten weiterhin lesen, die vor deinem Austritt gesendet wurden. Ein aktives Mitglied kann dich erneut hinzufügen.",
+    "leftGroup": "Du hast diese Unterhaltung verlassen. Du kannst Nachrichten lesen, die vor deinem Austritt gesendet wurden.",
+    "noMessages": "Noch keine Nachrichten.",
+    "groupUpdated": "Unterhaltung aktualisiert.",
+    "savingGroup": "Wird gespeichert…",
+    "groupUpdateFailed": "Die Unterhaltung konnte nicht aktualisiert werden. Bitte versuche es erneut."
   }
 }

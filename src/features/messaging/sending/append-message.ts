@@ -62,9 +62,14 @@ async function findPreviousSend(tx: MessageTransaction, input: AppendMessageInpu
  * This is the persistence seam for every way of sending a Message. The caller supplies an active
  * transaction and has already established that the author may send in the Conversation.
  */
-export async function appendMessage(tx: MessageTransaction, input: AppendMessageInput) {
+export async function appendMessage(
+  tx: MessageTransaction,
+  input: AppendMessageInput,
+  authorizeWhileLocked?: () => Promise<void>
+) {
   await lockSendIntent(tx, input)
   await lockConversation(tx, input.conversationId)
+  await authorizeWhileLocked?.()
 
   const retry = await findPreviousSend(tx, input)
   if (retry) return { ...retry, created: false }

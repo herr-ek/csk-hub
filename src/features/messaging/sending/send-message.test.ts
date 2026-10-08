@@ -26,7 +26,7 @@ const { sendMessage } = await import("./send-message")
 describe("sendMessage", () => {
   test("rejects a direct conversation whose counterpart is inactive", async () => {
     resolveActiveDirectCounterpart.mockRejectedValueOnce(new MessagingAccessError("conversation-recipient-inactive"))
-    const tx = {}
+    const tx = { select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ kind: "direct" }] }) }) }) }
     db.transaction.mockImplementationOnce((callback: (transaction: typeof tx) => unknown) => callback(tx))
 
     await expect(
