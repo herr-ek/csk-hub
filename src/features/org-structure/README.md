@@ -2,7 +2,7 @@
 
 Who is in which Group, Choir and Section, and who holds which Position. Groups and Positions are
 both first-class here: Positions are held in Groups, and the rules tying them to Memberships are
-why they share one module. Terminology lives in [`CONTEXT.md`](../../../CONTEXT.md#groups); the
+why they share one module. Terminology lives in [`GLOSSARY.md`](../../../GLOSSARY.md#groups); the
 scheme it implements is "Revised scheme (v3)" in `docs/Groups - DB Scheme.md`, introduced in #78.
 Voices and what each user can sing are the separate [`voice`](../voice/README.md) feature.
 

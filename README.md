@@ -150,4 +150,4 @@ bun run ops         # database status and guarded database operations
 ```
 
 The project context and architectural conventions are documented in
-[`CONTEXT.md`](CONTEXT.md) and [`docs/codebase-structure.md`](docs/codebase-structure.md).
+[`GLOSSARY.md`](GLOSSARY.md) and [`docs/codebase-structure.md`](docs/codebase-structure.md).

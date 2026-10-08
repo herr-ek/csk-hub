@@ -1,9 +1,12 @@
 # CSK Hub
 
-The internal web application for Chalmers Choirs. It carries information out to the
-organisation's singers and keeps track of rehearsals, events and gigs.
+The internal web application for Chalmers Choirs. It shares information with the
+organisation's singers and tracks rehearsals, events and gigs.
 
 ## Language
+
+**User**:
+A person with an account in CSK Hub. User status is distinct from Membership in a Group.
 
 **CSK**:
 Chalmers Sångkör is the single student association served by the platform. CSK is also the name of the collective choir formed when singers from the association appear together.
@@ -14,8 +17,8 @@ One of CSK's three permanent ensembles: Manskören (MK), Kammarkören (KK), or D
 _Avoid_: CSK, temporary project ensemble
 
 **Admin**:
-A User who may additionally invite people, change roles, remove Users, and act as
-another User. Every Admin is a User; the two are not separate populations.
+A User with additional authority to invite people, change roles, remove Users, and act as
+another User.
 _Avoid_: Superuser, staff, moderator, board member
 
 **Invite**:
@@ -38,15 +41,13 @@ from retained Messages while preserving shared Conversation history.
 _Avoid_: Delete, purge, GDPR-delete
 
 **Post**:
-A written announcement an Admin publishes to the whole choir, appearing in the News feed
-and at its own permanent address. A Post carries no audience of its own — publishing one
-means publishing it to every User.
+A written announcement an Admin publishes to every User. A Post has no audience of its
+own.
 _Avoid_: Article, news item, blog post, announcement email
 
 **News feed**:
-The single reverse-chronological list of published Posts at `/news`, identical for every
-User. It is where information published in the Hub lives; it is not a copy of the
-monthly email, which keeps running separately.
+The shared, reverse-chronological list of published Posts, identical for every User. It
+holds information published in the Hub; the monthly email remains separate.
 _Avoid_: Timeline, wall, dashboard, newsletter
 
 ## Groups
@@ -58,16 +59,14 @@ directly to one Choir; there is no deeper hierarchy. Groups are archived, never 
 _Avoid_: Team, role, Conversation
 
 **Voice**:
-A line someone sings, at either granularity: a Voice family or a Voice division, so "B" and
-"B1" are both Voices. One Voice contains another when they are equal or the first is the
-family of the second: B contains B and B1, B1 contains only B1. An attribute of a Section and
-of a singer's Section Membership, never a group of people.
+A line someone sings, at either granularity: a Voice family or a Voice division, such as B
+or B1. A Voice belongs to a Section and a singer's Section Membership; it is never a group
+of people.
 _Avoid_: Stämma (as a group), part
 
 **Voice family**:
-S, A, T or B: a whole Voice in an undivided setting, as B in SATB. The family of a division is
-derived (B1 → B), never stored. "All basses" is never a Group; it is found through the Sections
-whose Voice is in the bass family.
+S, A, T or B: a whole Voice in an undivided setting, as B in SATB. The family of a division
+is the letter before its number (B1 → B).
 _Avoid_: Part, Section
 
 **Voice division**:
@@ -76,30 +75,25 @@ can sing is recorded in divisions only; someone who can sing B can sing B1 and B
 _Avoid_: Part, sub-voice
 
 **Part**:
-A line in a specific arrangement (*stämma* in a score), labelled with a Voice. A repertoire
-concept, not modelled yet.
+A line in a specific arrangement (*stämma* in a score), labelled with a Voice.
 _Avoid_: Voice family, Section
 
 **Section**:
-The people in one Choir who sing a given Voice, such as MKB1 (B1) or KKB (B). Always a Group,
-and it sings exactly one Voice. Every Choir has exactly four, and the Sections of a Choir never
-overlap: one singing B rules out another singing B1. A singer is in exactly one Section of each
-Choir they sing in, with one Voice that the Section's Voice contains: B1, B2 or, before they are
-placed in a division, B in KKB; only B1 in MKB1.
+The people in one Choir who sing a given Voice, such as MKB1 (B1) or KKB (B); every Choir has
+four non-overlapping Sections. A singer belongs to exactly one Section in each Choir they sing
+in, and their Voice must be contained by that Section's Voice.
 _Avoid_: Voice, part, stämma
 
 **Membership**:
-Being in a Group over a period of time, from a start date until an end date; with no end
-date it is current. History is kept: a Voice change ends one Membership and starts
-another. A Membership in a Group that belongs to a Choir implies one in that Choir.
-Distinct from Conversation Membership, and from being a User of the Hub.
+Being in a Group for a period of time, from a start date until an end date; without an end date
+it is current. Membership history is kept, and membership in a Group belonging to a Choir
+implies membership in that Choir.
 _Avoid_: Enrolment, role
 
 **Position**:
-A named organisational position in a Group (Swedish: *post*): Ordförande, Dirigent,
-Notfiskal, Konsertmästare, Stämförälder, Sexmästare. Which Positions a Group may have
-depends on its kind. Not a permission role, and never called a "post", which is reserved
-for news Posts.
+A named organisational position in a Group (Swedish: *post*), such as Ordförande, Dirigent,
+Notfiskal, Konsertmästare, Stämförälder, or Sexmästare. A Position is distinct from a
+permission role; use Post only for a news announcement.
 _Avoid_: Post, role, title, Admin
 
 **Position holder**:
@@ -111,8 +105,7 @@ _Avoid_: Officer, role owner
 ## Messaging
 
 **Conversation**:
-A private exchange between Users. A Conversation is either a Direct Conversation or,
-when that capability is introduced, a Group Conversation.
+A private exchange between Users, either a Direct Conversation or a Group Conversation.
 _Avoid_: Chat, thread
 
 **Direct Conversation**:
@@ -122,10 +115,9 @@ read-only for the remaining User.
 _Avoid_: DM, private message
 
 **Group Conversation**:
-A named Conversation between multiple Users. A User joining or rejoining a Group
-Conversation can view its retained history from the beginning; after leaving, they
-retain read-only access to the history visible when they left. Group Conversations are
-represented in the model before their user-facing capability is introduced.
+A named Conversation between multiple Users. A User joining or rejoining can view its
+retained history from the beginning; after leaving, they retain read-only access to the
+history visible when they left.
 _Avoid_: Group chat
 
 **Conversation Membership**:
@@ -138,9 +130,8 @@ Text sent by an active Conversation User within a Conversation.
 _Avoid_: Chat, DM
 
 **Unread State**:
-A User's per-Conversation position before its latest visible Message. It is a cursor;
-when sender-visible read status is introduced, it means the User opened the Conversation,
-not that they viewed each individual Message.
+A User's position before the latest Message they have seen in a Conversation. It records that
+the User opened the Conversation, not that they viewed each individual Message.
 _Avoid_: Read receipt, seen state
 
 **Erased Authorship**:

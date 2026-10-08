@@ -17,7 +17,7 @@ import { voice } from "./voice"
 
 // Groups, their Memberships, and the Positions held in them: the organisation's structure. Every
 // write to these tables goes through `src/features/org-structure`, which enforces the rules the
-// database cannot express. See CONTEXT.md#groups for the language.
+// database cannot express. See GLOSSARY.md#groups for the language.
 //
 // Drizzle cannot express everything below, so `drizzle/0011_groups.sql` carries two additions
 // written by hand for these tables, each marked "Hand-written in drizzle/0011_groups.sql" here and

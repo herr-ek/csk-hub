@@ -4,7 +4,7 @@ import { user } from "./auth"
 
 // The Voice types, and what each user can sing. The org structure uses `voice` for Sections and
 // Section Memberships; every write to `voice_capability` goes through `src/features/voice`. See
-// CONTEXT.md#groups for the language.
+// GLOSSARY.md#groups for the language.
 //
 // `drizzle/0011_groups.sql` carries one addition for this file written by hand, marked
 // "Hand-written in drizzle/0011_groups.sql" here and "Added by hand" there; drizzle-kit neither

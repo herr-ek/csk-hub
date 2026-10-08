@@ -1,7 +1,7 @@
 # Voice
 
 The Voice types and what each user can sing. Terminology lives in
-[`CONTEXT.md`](../../../CONTEXT.md#groups): a Voice is a family (S, A, T, B) or one of its
+[`GLOSSARY.md`](../../../GLOSSARY.md#groups): a Voice is a family (S, A, T, B) or one of its
 divisions (S1 … B2), and one Voice contains another when they are equal or the first is the
 family of the second.
 
