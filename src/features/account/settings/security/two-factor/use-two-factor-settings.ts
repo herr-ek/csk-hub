@@ -49,7 +49,7 @@ export function useTwoFactorSettings() {
         const result = await enableTwoFactor(password)
         if (!result.success) {
           if ("unavailable" in result) await reconcileAfterUnavailable()
-          else setFeedback({ type: "error", message: result.error })
+          else setFeedback({ type: "error", message: t(`twoFactorErrors.${result.error}`) })
           return
         }
 
@@ -61,7 +61,7 @@ export function useTwoFactorSettings() {
       const result = await disableTwoFactor(password)
       if (!result.success) {
         if ("unavailable" in result) await reconcileAfterUnavailable()
-        else setFeedback({ type: "error", message: result.error })
+        else setFeedback({ type: "error", message: t(`twoFactorErrors.${result.error}`) })
         return
       }
 
@@ -83,7 +83,7 @@ export function useTwoFactorSettings() {
 
       if (!result.success) {
         if ("unavailable" in result) await reconcileAfterUnavailable()
-        else setFeedback({ type: "error", message: result.error })
+        else setFeedback({ type: "error", message: t(`twoFactorErrors.${result.error}`) })
         return
       }
 

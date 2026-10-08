@@ -7,6 +7,7 @@ export const MAX_IMPORT_FILE_SIZE_BYTES = 1_000_000
 
 export type ImportUserRow = z.infer<typeof addUserSchema> & { row: number }
 export type ImportUserSkipped = { row: number; name: string; email: string; error: string }
+export type ImportCsvError = "parse-failed" | "empty" | "columns" | "no-users" | "too-many-users"
 
 export function validateImportUser(input: { name: string; email: string }) {
   const result = addUserSchema.safeParse(input)
@@ -22,27 +23,27 @@ export function validateImportUser(input: { name: string; email: string }) {
 
 export function parseUserCsv(
   text: string
-): { rows: ImportUserRow[]; skipped: ImportUserSkipped[] } | { error: string } {
+): { rows: ImportUserRow[]; skipped: ImportUserSkipped[] } | { error: ImportCsvError } {
   const parsed = Papa.parse<string[]>(text, { skipEmptyLines: "greedy" })
-  if (parsed.errors.length > 0) return { error: "The CSV could not be parsed. Please check its quoted values." }
+  if (parsed.errors.length > 0) return { error: "parse-failed" }
 
   const [header, ...dataRows] = parsed.data
   if (!header) {
-    return { error: "The CSV is empty." }
+    return { error: "empty" }
   }
 
   const normalizedHeader = header.map((value) => value.trim().toLowerCase())
   const nameIndex = normalizedHeader.indexOf("name")
   const emailIndex = normalizedHeader.indexOf("email")
   if (nameIndex === -1 || emailIndex === -1) {
-    return { error: "The CSV must include name and email columns." }
+    return { error: "columns" }
   }
 
   if (dataRows.length === 0) {
-    return { error: "The CSV does not contain any users." }
+    return { error: "no-users" }
   }
   if (dataRows.length > MAX_IMPORT_USERS) {
-    return { error: `You can import up to ${MAX_IMPORT_USERS} users at a time.` }
+    return { error: "too-many-users" }
   }
 
   const emails = new Set<string>()
@@ -65,7 +66,7 @@ export function parseUserCsv(
         row: rowNumber,
         name: result.user.name,
         email: result.user.email,
-        error: "The email address is repeated in this CSV."
+        error: "email-repeated"
       })
       continue
     }

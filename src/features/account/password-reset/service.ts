@@ -4,10 +4,12 @@ import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import { type LoginResult, signInWithEmailPassword } from "../login/service"
 
-const genericResetError = "Unable to send a password reset email right now. Please try again."
-const genericPasswordUpdateError = "Unable to reset your password right now. Please try again."
-
-export type PasswordResetFailureKind = "invalid-reset-token" | "network" | "unknown"
+export type PasswordResetFailureKind =
+  | "request-failed"
+  | "request-network"
+  | "invalid-reset-token"
+  | "network"
+  | "unknown"
 export type PasswordResetRequestResult =
   | { success: true }
   | { success: false; kind: PasswordResetFailureKind; error: string }
@@ -32,12 +34,13 @@ export async function requestPasswordReset(email: string): Promise<PasswordReset
         errorCode: getErrorCode(result.error),
         status: getErrorStatus(result.error)
       })
-      return { success: false, kind: getFailureKind(result.error), error: genericResetError }
+      const kind = getErrorStatus(result.error) >= 500 ? "request-network" : "request-failed"
+      return { success: false, kind, error: kind }
     }
     return { success: true }
   } catch (error) {
     logger.error("auth.password-reset.request-failed", { kind: "network", errorName: getErrorName(error) })
-    return { success: false, kind: "network", error: genericResetError }
+    return { success: false, kind: "request-network", error: "request-network" }
   }
 }
 
@@ -46,10 +49,8 @@ export async function resetPassword(token: string, email: string, newPassword: s
     const result = await authClient.resetPassword({ newPassword, token })
     if (result.error) {
       const kind = getFailureKind(result.error)
-      const error =
-        kind === "invalid-reset-token" ? "That reset link is invalid or has expired." : genericPasswordUpdateError
       logger.warn("auth.password-reset.failed", { kind, errorCode: getErrorCode(result.error) })
-      return { success: false, kind, error }
+      return { success: false, kind, error: kind }
     }
     const signIn = await signInWithEmailPassword({ email, password: newPassword, rememberMe: true })
     if (signIn.success) return { success: true, signIn }
@@ -60,7 +61,7 @@ export async function resetPassword(token: string, email: string, newPassword: s
     return { success: true, signInRequired: true }
   } catch (error) {
     logger.error("auth.password-reset.failed", { kind: "network", errorName: getErrorName(error) })
-    return { success: false, kind: "network", error: genericPasswordUpdateError }
+    return { success: false, kind: "network", error: "network" }
   }
 }
 

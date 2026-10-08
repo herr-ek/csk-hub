@@ -1,13 +1,13 @@
 import { z } from "zod"
-import { passwordField } from "@/shared/schemas"
+import { passwordSchema, validationMessageIds } from "@/shared/schemas"
 
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string({ error: "Current password is required." }).min(1, "Current password is required."),
-    newPassword: passwordField("New password"),
-    confirmation: passwordField("Confirm password")
+    currentPassword: z.string({ error: validationMessageIds.required }).min(1, validationMessageIds.required),
+    newPassword: passwordSchema,
+    confirmation: passwordSchema
   })
   .refine((value) => value.newPassword === value.confirmation, {
-    message: "The new passwords do not match.",
+    message: validationMessageIds.passwordsMismatch,
     path: ["confirmation"]
   })

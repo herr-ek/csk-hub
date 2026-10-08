@@ -31,7 +31,7 @@ export function useTwoFactorForm() {
     try {
       const result = await sendTwoFactorOtp()
       if (result.success) setMessage(t("emailCodeSent"))
-      else setError("unavailable" in result ? t("requestFailed") : result.error)
+      else setError("unavailable" in result ? t("requestFailed") : t(`errors.${result.error}`))
     } finally {
       setPending(false)
       operationInProgress.current = false
@@ -61,7 +61,7 @@ export function useTwoFactorForm() {
           return
         }
 
-        setError(result.error)
+        setError(t(`errors.${result.error}`))
         return
       }
 

@@ -69,7 +69,7 @@ export async function importUsers(_state: ImportUsersState, formData: FormData):
 
     const parsed = parseUserCsv(await file.text())
     if ("error" in parsed) {
-      return { status: "error", error: parsed.error }
+      return { status: "error", error: `csv:${parsed.error}` }
     }
     rows = parsed.rows
     skipped = parsed.skipped
