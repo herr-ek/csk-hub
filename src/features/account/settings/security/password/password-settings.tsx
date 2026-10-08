@@ -6,7 +6,7 @@ import { useRef, useState } from "react"
 import type z from "zod"
 import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
-import { InputField } from "@/shared/forms/fields"
+import { LocalizedInputField } from "@/core/i18n/validation-errors"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
@@ -43,7 +43,7 @@ export function PasswordSettings() {
     }
 
     if (result.error) {
-      toast.add({ type: "error", title: result.error.message ?? t("passwordChangeFailed") })
+      toast.add({ type: "error", title: t("passwordChangeFailed") })
       return
     }
 
@@ -140,7 +140,7 @@ function PasswordField({
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
   return (
-    <InputField
+    <LocalizedInputField
       label={label}
       name={field.name}
       type="password"

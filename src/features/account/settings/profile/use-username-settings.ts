@@ -44,7 +44,7 @@ export function useUsernameSettings(initialUsername: string) {
 
         if (result.error) {
           setAvailability("unavailable")
-          setAvailabilityMessage(result.error.message)
+          setAvailabilityMessage(t("usernameCheckFailed"))
           return
         }
 
@@ -95,7 +95,7 @@ export function useUsernameSettings(initialUsername: string) {
       const result = await authClient.updateUser({ username })
 
       if (result.error) {
-        setError(result.error.message)
+        setError(t("usernameUpdateFailed"))
         return
       }
 

@@ -7,7 +7,10 @@ import { addUserSchema } from "./schemas"
 
 export type AddUserState =
   | { status: "idle" }
-  | { status: "error"; error: string }
+  | {
+      status: "error"
+      kind: "name-required" | "email-required" | "email-invalid" | "email-exists" | "create-failed" | "unknown"
+    }
   | { status: "success"; name: string; email: string; createdAt: number }
   | { status: "email-failed"; name: string; email: string; createdAt: number }
 
@@ -18,13 +21,20 @@ export async function addUser(_state: AddUserState, formData: FormData): Promise
   })
 
   if (!input.success) {
-    return { status: "error", error: input.error.issues[0]?.message ?? "Please check the form and try again." }
+    const name = formData.get("name")
+    const email = formData.get("email")
+    const kind =
+      typeof name !== "string" || !name.trim()
+        ? "name-required"
+        : typeof email !== "string" || !email.trim()
+          ? "email-required"
+          : "email-invalid"
+    return { status: "error", kind }
   }
 
   const result = await inviteUser(input.data)
-  if (result.kind === "already-exists") return { status: "error", error: "A user with that email already exists." }
-  if (result.kind === "creation-failed")
-    return { status: "error", error: "Unable to create the user right now. Please try again." }
+  if (result.kind === "already-exists") return { status: "error", kind: "email-exists" }
+  if (result.kind === "creation-failed") return { status: "error", kind: "create-failed" }
 
   revalidatePath(ROUTES.adminUsers)
   if (result.kind === "email-failed") {

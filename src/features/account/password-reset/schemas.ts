@@ -1,17 +1,17 @@
 import { z } from "zod"
-import { normalizedEmailField, passwordField } from "@/shared/schemas"
+import { normalizedEmailSchema, passwordSchema, validationMessageIds } from "@/shared/schemas"
 
 export const passwordResetRequestSchema = z.object({
-  email: normalizedEmailField("Email")
+  email: normalizedEmailSchema
 })
 
 export const passwordResetSchema = z
   .object({
-    email: normalizedEmailField("Email"),
-    password: passwordField("Password"),
-    confirmPassword: passwordField("Confirm password")
+    email: normalizedEmailSchema,
+    password: passwordSchema,
+    confirmPassword: passwordSchema
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
+    message: validationMessageIds.passwordsMismatch,
     path: ["confirmPassword"]
   })

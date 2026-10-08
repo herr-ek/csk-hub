@@ -39,8 +39,8 @@ describe("password reset service", () => {
 
     await expect(requestPasswordReset("user@example.com")).resolves.toEqual({
       success: false,
-      kind: "network",
-      error: "Unable to send a password reset email right now. Please try again."
+      kind: "request-network",
+      error: "request-network"
     })
   })
 
@@ -49,8 +49,8 @@ describe("password reset service", () => {
 
     await expect(requestPasswordReset("user@example.com")).resolves.toEqual({
       success: false,
-      kind: "unknown",
-      error: "Unable to send a password reset email right now. Please try again."
+      kind: "request-failed",
+      error: "request-failed"
     })
   })
 
@@ -60,14 +60,14 @@ describe("password reset service", () => {
     await expect(resetPassword("expired-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "invalid-reset-token",
-      error: "That reset link is invalid or has expired."
+      error: "invalid-reset-token"
     })
 
     resetPasswordEndpoint.mockResolvedValue({ error: { code: "INTERNAL_ERROR", status: 500 } })
     await expect(resetPassword("valid-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "network",
-      error: "Unable to reset your password right now. Please try again."
+      error: "network"
     })
   })
 
@@ -77,14 +77,14 @@ describe("password reset service", () => {
     await expect(resetPassword("expired-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "invalid-reset-token",
-      error: "That reset link is invalid or has expired."
+      error: "invalid-reset-token"
     })
 
     resetPasswordEndpoint.mockResolvedValue({ error: { code: "BAD_REQUEST", status: 400 } })
     await expect(resetPassword("unknown-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "unknown",
-      error: "Unable to reset your password right now. Please try again."
+      error: "unknown"
     })
   })
 
@@ -107,13 +107,37 @@ describe("password reset service", () => {
     })
   })
 
+  test("continues to two-factor verification after the password is updated", async () => {
+    resetPasswordEndpoint.mockResolvedValue({ error: null })
+    signInEmail.mockResolvedValue({
+      data: { twoFactorRedirect: true, twoFactorMethods: ["totp", "otp"] },
+      error: null
+    } as never)
+
+    await expect(resetPassword("valid-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
+      success: true,
+      requiresTwoFactor: true,
+      methods: ["totp", "otp"]
+    })
+  })
+
+  test("keeps the password update successful when automatic sign-in is unavailable", async () => {
+    resetPasswordEndpoint.mockResolvedValue({ error: null })
+    signInEmail.mockRejectedValue(new Error("Network unavailable"))
+
+    await expect(resetPassword("valid-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
+      success: true,
+      signInRequired: true
+    })
+  })
+
   test("normalizes reset password exceptions without exposing details", async () => {
     resetPasswordEndpoint.mockRejectedValue(new Error("database details should not reach the client"))
 
     await expect(resetPassword("valid-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "network",
-      error: "Unable to reset your password right now. Please try again."
+      error: "network"
     })
   })
 
@@ -122,8 +146,8 @@ describe("password reset service", () => {
 
     await expect(requestPasswordReset("user@example.com")).resolves.toEqual({
       success: false,
-      kind: "network",
-      error: "Unable to send a password reset email right now. Please try again."
+      kind: "request-network",
+      error: "request-network"
     })
   })
 })
