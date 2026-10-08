@@ -39,7 +39,7 @@ export function AddUserForm() {
       <FieldGroup>
         <InputField label={common("name")} name="name" type="text" autoComplete="name" required />
         <InputField label={common("email")} name="email" type="email" autoComplete="email" required />
-        <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
+        <FieldError>{state.status === "error" ? t(`addErrors.${state.kind}`) : undefined}</FieldError>
       </FieldGroup>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending}>

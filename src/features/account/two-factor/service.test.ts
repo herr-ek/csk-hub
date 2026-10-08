@@ -46,12 +46,24 @@ describe("two-factor verification", () => {
     expect(verifyBackupCode).toHaveBeenCalledWith({ code: "recovery-code", trustDevice: true, disableSession: false })
   })
 
+  test("distinguishes unavailable requests from rejected verification codes", async () => {
+    sendOtp.mockRejectedValue(new Error("Network unavailable"))
+    verifyTotp.mockRejectedValue(new Error("Network unavailable"))
+    verifyOtp.mockRejectedValue(new Error("Network unavailable"))
+    verifyBackupCode.mockRejectedValue(new Error("Network unavailable"))
+
+    await expect(sendTwoFactorOtp()).resolves.toEqual({ success: false, unavailable: true })
+    for (const method of ["totp", "otp", "backup"] as const) {
+      await expect(verifyTwoFactorMethod(method, "code", false)).resolves.toEqual({ success: false, unavailable: true })
+    }
+  })
+
   test("returns auth errors to the caller", async () => {
     verifyOtp.mockResolvedValue({ error: { message: "The code is invalid." } })
 
     await expect(verifyTwoFactorMethod("otp", "wrong", false)).resolves.toEqual({
       success: false,
-      error: "The code is invalid."
+      error: "verifyFailed"
     })
   })
 })

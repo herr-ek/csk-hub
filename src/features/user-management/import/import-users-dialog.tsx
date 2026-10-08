@@ -1,17 +1,12 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
+import { LocalizedDialogContent } from "@/core/i18n/localized-controls"
 import { useTranslations } from "@/core/i18n/translations"
+import { useValidationMessage } from "@/core/i18n/validation-errors"
 import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/shared/ui/base/dialog"
+import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/ui/base/dialog"
 import { FieldError, FieldGroup } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
@@ -25,6 +20,7 @@ type PreviewRow = ImportUserRow & { discarded: boolean; error?: string }
 export function ImportUsersDialog() {
   const t = useTranslations("Members")
   const common = useTranslations("Common")
+  const validationMessage = useValidationMessage()
   const [open, setOpen] = useState(false)
   const [state, setState] = useState<ImportUsersState>(initialState)
   const [rows, setRows] = useState<PreviewRow[] | null>(null)
@@ -56,7 +52,7 @@ export function ImportUsersDialog() {
     if (!file.name.toLowerCase().endsWith(".csv")) return setParseError(t("csvExtensionRequired"))
     if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) return setParseError(t("csvTooLarge"))
     const parsed = parseUserCsv(await file.text())
-    if ("error" in parsed) return setParseError(parsed.error)
+    if ("error" in parsed) return setParseError(t(`csvParseErrors.${parsed.error}`))
     const sourceRows = [...parsed.rows, ...parsed.skipped].sort((left, right) => left.row - right.row)
     const existing = new Set(await findExistingUserEmails(sourceRows.map((row) => row.email)))
     setExistingEmails(existing)
@@ -105,7 +101,14 @@ export function ImportUsersDialog() {
     setExistingEmails(new Set())
   }
 
-  const error = state.status === "error" ? state.error : parseError
+  const error =
+    state.status === "error"
+      ? state.error.startsWith("csv:")
+        ? t(
+            `csvParseErrors.${state.error.slice(4) as "parse-failed" | "empty" | "columns" | "no-users" | "too-many-users"}`
+          )
+        : state.error
+      : parseError
   const readyRows = rows?.filter((row) => !row.discarded && !row.error) ?? []
   const canConfirm = readyRows.length > 0 && !pending && state.status !== "success"
 
@@ -118,7 +121,7 @@ export function ImportUsersDialog() {
           </Button>
         }
       />
-      <DialogContent className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-4xl">
+      <LocalizedDialogContent className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{t("importUsers")}</DialogTitle>
           <DialogDescription>{t("importDescription")}</DialogDescription>
@@ -216,7 +219,14 @@ export function ImportUsersDialog() {
                                     : "text-green-700 dark:text-green-400"
                             }
                           >
-                            {user.discarded ? t("discarded") : (result?.label ?? user.error ?? t("ready"))}
+                            {user.discarded
+                              ? t("discarded")
+                              : (result?.label ??
+                                (user.error
+                                  ? user.error === "email-repeated"
+                                    ? t("emailRepeated")
+                                    : validationMessage(user.error, common(!user.name.trim() ? "name" : "email"))
+                                  : t("ready")))}
                           </TableCell>
                           <TableCell className="text-right">
                             {state.status !== "success" ? (
@@ -254,7 +264,7 @@ export function ImportUsersDialog() {
             </Button>
           )}
         </form>
-      </DialogContent>
+      </LocalizedDialogContent>
     </Dialog>
   )
 }

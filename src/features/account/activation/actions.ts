@@ -5,11 +5,21 @@ import { auth } from "@/core/auth/auth"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
+import { validationMessageIds } from "@/shared/schemas"
 import { activationSchema } from "./schemas"
 
 export type ActivationState =
   | { status: "idle" }
-  | { status: "error"; error: string; kind: "validation" | "invalid-link" | "unknown" }
+  | {
+      status: "error"
+      kind:
+        | "password-required"
+        | "password-too-short"
+        | "confirm-password-required"
+        | "passwords-mismatch"
+        | "invalid-link"
+        | "unavailable"
+    }
   | { status: "success"; redirectTo: string }
 
 export async function activateAccount(_state: ActivationState, formData: FormData): Promise<ActivationState> {
@@ -19,14 +29,15 @@ export async function activateAccount(_state: ActivationState, formData: FormDat
   })
 
   if (!input.success) {
-    if (input.error.issues.some((issue) => issue.path[0] === "confirmPassword" && issue.code === "custom"))
-      return { status: "error", kind: "validation", error: "Passwords do not match." }
-
-    return {
-      status: "error",
-      kind: "validation",
-      error: "Use a password with at least 8 characters."
-    }
+    if (input.error.issues.some((issue) => issue.message === validationMessageIds.passwordsMismatch))
+      return { status: "error", kind: "passwords-mismatch" }
+    const issue = input.error.issues[0]
+    const field = issue?.path[0]
+    if (field === "confirmPassword" && issue?.message === validationMessageIds.required)
+      return { status: "error", kind: "confirm-password-required" }
+    if (field === "password" && issue?.message === validationMessageIds.required)
+      return { status: "error", kind: "password-required" }
+    return { status: "error", kind: "password-too-short" }
   }
 
   try {
@@ -44,7 +55,7 @@ export async function activateAccount(_state: ActivationState, formData: FormDat
     const code = getErrorCode(error)
 
     if (status === 401 || code === "INVALID_TOKEN" || code === "SESSION_EXPIRED") {
-      return { status: "error", kind: "invalid-link", error: "This activation link is invalid or has expired." }
+      return { status: "error", kind: "invalid-link" }
     }
 
     logger.error("auth.activation.failed", {
@@ -53,6 +64,6 @@ export async function activateAccount(_state: ActivationState, formData: FormDat
       status
     })
 
-    return { status: "error", kind: "unknown", error: "Unable to activate your account right now. Please try again." }
+    return { status: "error", kind: "unavailable" }
   }
 }
