@@ -19,10 +19,14 @@ export const voice = pgEnum("voice", ["S", "A", "T", "B", "S1", "S2", "A1", "A2"
 // domains over `voice`, restricted to families and divisions. This custom type only names the
 // domain for drizzle-kit; it does not create it. Postgres has no `=` for a domain over an enum, so
 // a filter on such a column casts it first: `${voiceCapability.voice}::voice = 'B1'`. Keys,
-// ORDER BY and DISTINCT need no cast. Only `voice_division` has a column yet; `voice_family`
-// waits for news targeting and has no Drizzle counterpart.
+// ORDER BY and DISTINCT need no cast.
 const voiceDivision = customType<{ data: Exclude<(typeof voice.enumValues)[number], "S" | "A" | "T" | "B"> }>({
   dataType: () => "voice_division"
+})
+
+/** A `voice_family` domain column, for audiences targeted by Voice family; see (1) above. */
+export const voiceFamily = customType<{ data: "S" | "A" | "T" | "B" }>({
+  dataType: () => "voice_family"
 })
 
 /**
