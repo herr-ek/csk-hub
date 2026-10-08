@@ -11,7 +11,12 @@ const sendNotification = mock(async () => undefined)
 const getTranslations = mock(async () => {
   throw new Error("Notification actions must not resolve a rendering locale")
 })
-const getSession = mock(async (): Promise<{ user: { id: string } } | null> => ({ user: { id: "user-1" } }))
+const getSession = mock(
+  async (): Promise<{ user: { id: string }; session: { impersonatedBy?: string } } | null> => ({
+    user: { id: "user-1" },
+    session: {}
+  })
+)
 const subscribe = mock(async () => undefined)
 const unsubscribe = mock(async () => undefined)
 
@@ -30,6 +35,7 @@ mock.module("web-push", () => ({
 const delivery = await import("@/core/notifications/send-push-notification")
 mock.module("@/core/notifications", () => ({
   ...delivery,
+  hasActiveSubscription: mock(async () => true),
   subscribe,
   unsubscribe,
   listUsersWithActiveSubscriptions: mock(async () => [])
@@ -44,7 +50,7 @@ beforeEach(() => {
   requireAdmin.mockClear()
   requireAdmin.mockResolvedValue(undefined)
   getSession.mockClear()
-  getSession.mockResolvedValue({ user: { id: "user-1" } })
+  getSession.mockResolvedValue({ user: { id: "user-1" }, session: {} })
   getTranslations.mockClear()
   select.mockClear()
   set.mockClear()
@@ -56,15 +62,21 @@ beforeEach(() => {
 
 const activeSubscription = {
   id: "subscription-1",
-  endpoint: "https://push.example.test",
-  p256dh: "key",
-  auth: "auth",
+  endpoint: "https://fcm.googleapis.com/fcm/send/test-subscription",
+  p256dh: "BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  auth: "AAAAAAAAAAAAAAAAAAAAAA",
   failureCount: 0
 }
 
 describe("notification actions without a translation context", () => {
   test("broadcast returns a delivery error code for the UI to translate", async () => {
-    expect(await sendTestNotificationToAll("Hello")).toEqual({ success: false, error: "noActiveSubscriptions" })
+    expect(await sendTestNotificationToAll("Hello")).toEqual({
+      success: false,
+      error: "noActiveSubscriptions",
+      accepted: 0,
+      failed: 0,
+      failureCategories: {}
+    })
     expect(requireAdmin).toHaveBeenCalledTimes(1)
     expect(getTranslations).not.toHaveBeenCalled()
   })
@@ -82,28 +94,48 @@ describe("notification actions without a translation context", () => {
 
   test("selected delivery uses the app title and trims the message", async () => {
     subscriptions = [activeSubscription]
-    expect(await sendTestNotificationToUsers(["user-1"], "  Hello  ")).toEqual({ success: true })
+    expect(await sendTestNotificationToUsers(["user-1"], "  Hello  ")).toEqual({
+      success: true,
+      accepted: 1,
+      failed: 0,
+      failureCategories: {}
+    })
     expect(sendNotification).toHaveBeenCalledWith(
-      { endpoint: activeSubscription.endpoint, keys: { p256dh: "key", auth: "auth" } },
-      JSON.stringify({ title: "CSK Hub", body: "Hello" })
+      {
+        endpoint: activeSubscription.endpoint,
+        keys: { p256dh: activeSubscription.p256dh, auth: activeSubscription.auth }
+      },
+      JSON.stringify({ title: "CSK Hub", body: "Hello" }),
+      expect.objectContaining({ timeout: 7_000, agent: expect.any(Object) })
     )
     expect(getTranslations).not.toHaveBeenCalled()
   })
 
   test("delivery returns noRecipients without querying subscriptions", async () => {
-    expect(await delivery.sendToUsers([], "Hello")).toEqual({ success: false, error: "noRecipients" })
+    expect(await delivery.sendToUsers([], "Hello")).toEqual({
+      success: false,
+      error: "noRecipients",
+      accepted: 0,
+      failed: 0,
+      failureCategories: {}
+    })
     expect(select).not.toHaveBeenCalled()
   })
 
   test("all failed deliveries return a code and record the provider failure", async () => {
     subscriptions = [activeSubscription]
     sendNotification.mockRejectedValue(Object.assign(new Error("Gone"), { statusCode: 410 }))
-    expect(await sendTestNotificationToAll("Hello")).toEqual({ success: false, error: "deliveryFailed" })
+    expect(await sendTestNotificationToAll("Hello")).toEqual({
+      success: false,
+      error: "deliveryFailed",
+      accepted: 0,
+      failed: 1,
+      failureCategories: { subscriptionGone: 1 }
+    })
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "disabled",
-        failureCount: 1,
-        disabledReason: "Push provider returned HTTP 410"
+        disabledReason: "Push provider returned HTTP 404 or 410"
       })
     )
     expect(getTranslations).not.toHaveBeenCalled()
@@ -112,7 +144,12 @@ describe("notification actions without a translation context", () => {
   test("a partial delivery still succeeds", async () => {
     subscriptions = [activeSubscription, { ...activeSubscription, id: "subscription-2" }]
     sendNotification.mockRejectedValueOnce(new Error("Provider unavailable"))
-    expect(await sendTestNotificationToAll("Hello")).toEqual({ success: true })
+    expect(await sendTestNotificationToAll("Hello")).toEqual({
+      success: true,
+      accepted: 1,
+      failed: 1,
+      failureCategories: { transport: 1 }
+    })
     expect(sendNotification).toHaveBeenCalledTimes(2)
   })
 
@@ -125,7 +162,12 @@ describe("notification actions without a translation context", () => {
 
   test("account test delivery also works without translations", async () => {
     subscriptions = [activeSubscription]
-    expect(await sendPushNotificationTest("Hello")).toEqual({ success: true })
+    expect(await sendPushNotificationTest("Hello")).toEqual({
+      success: true,
+      accepted: 1,
+      failed: 0,
+      failureCategories: {}
+    })
     expect(getSession).toHaveBeenCalledTimes(1)
     expect(getTranslations).not.toHaveBeenCalled()
   })
