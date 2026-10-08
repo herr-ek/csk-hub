@@ -1,0 +1,35 @@
+import { test, expect } from 'bun:test'
+import { Client } from '/Users/liam/projects/csk/csk-hub/node_modules/pg'
+import { eq, and } from '/Users/liam/projects/csk/csk-hub/node_modules/drizzle-orm'
+import { createOrgStructureTestDatabase, expectSuccess } from '/Users/liam/projects/csk/csk-hub/src/features/org-structure/test-support'
+import { renameGroup, createGroup, createPosition } from '/Users/liam/projects/csk/csk-hub/src/features/org-structure/structure'
+import { startMembership } from '/Users/liam/projects/csk/csk-hub/src/features/org-structure/membership'
+import { startPositionHolding, endPositionHolding } from '/Users/liam/projects/csk/csk-hub/src/features/org-structure/positions'
+import { group, section, positionHolder } from '/Users/liam/projects/csk/csk-hub/src/core/db/schema/org-structure'
+import { insertReferenceData } from '/Users/liam/projects/csk/csk-hub/scripts/ops/reference-data'
+
+test('review evidence', async () => {
+ const t = await createOrgStructureTestDatabase()
+ if (!t) { console.log('No disposable local database available'); return }
+ try {
+ const mk = await t.groupId('MK'); const mkt1 = await t.groupId('MKT1')
+ expectSuccess(await renameGroup(t.db, mkt1, 'Renamed tenor section'))
+ // Find the disposable URL through the pool's connection parameters.
+ const params = t.db.$client.options
+ const sourceUrl = new URL(params.connectionString)
+ const opsClient = new Client({ connectionString: sourceUrl.toString() })
+ await opsClient.connect()
+ try { await insertReferenceData(opsClient) } finally { await opsClient.end() }
+ const sections = await t.db.select({name:group.name, voice:section.voice}).from(group).innerJoin(section,eq(section.groupId,group.id)).where(eq(group.choirId,mk))
+ console.log('Sections after rename + reference-data:', sections)
+ expect(sections).toHaveLength(5)
+ const { id:g } = expectSuccess(await createGroup(t.db,{name:'Review board',type:'Board'}))
+ const { id:p } = expectSuccess(await createPosition(t.db,{name:'Review position',groupTypes:['Board']}))
+ const a = await t.user(); const b = await t.user()
+ for (const userId of [a,b]) expectSuccess(await startMembership(t.db,{userId,groupId:g,startDate:'2025-01-01'}))
+ expectSuccess(await startPositionHolding(t.db,{userId:a,groupId:g,positionId:p,startDate:'2025-01-01'}))
+ expectSuccess(await endPositionHolding(t.db,{userId:a,groupId:g,positionId:p,endDate:'2025-06-01'}))
+ expectSuccess(await startPositionHolding(t.db,{userId:b,groupId:g,positionId:p,startDate:'2025-03-01'}))
+ console.log('Accepted overlapping holder periods:', await t.db.select({start:positionHolder.startDate,end:positionHolder.endDate}).from(positionHolder).where(eq(positionHolder.groupId,g)))
+ } finally { await t.drop() }
+},20000)

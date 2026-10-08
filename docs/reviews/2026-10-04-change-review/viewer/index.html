@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Explore CSK Hub’s source, real import boundaries, workflows and review evidence at a pinned commit.">
+  <title>CSK Hub · Codebase atlas</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e4038'/%3E%3Cpath d='M8 10h16M8 16h9M8 22h16' stroke='%23f4c67a' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip to workspace</a>
+  <header class="masthead">
+    <a class="brand" href="#view=map&module=messaging"><span class="brand-mark">c.</span><span>CSK HUB <small>CODEBASE ATLAS</small></span></a>
+    <div class="snapshot"><span class="snapshot-label">REVIEW SNAPSHOT</span><code>b5fd804 … 031da8f</code><span>04 OCT 2026</span></div>
+    <button class="search-launch" data-action="search"><span>Find a file, symbol or finding</span><kbd>⌘ K</kbd></button>
+    <button class="report-button" data-action="report">Read report</button>
+  </header>
+  <div class="app-shell">
+    <nav class="rail" aria-label="Workspace views" id="view-nav"></nav>
+    <aside class="explorer" aria-label="Repository explorer">
+      <div class="explorer-head"><strong>EXPLORER</strong><button class="icon-button" data-action="search" aria-label="Search repository">⌕</button></div>
+      <div class="repo-name"><span class="branch-icon">⑂</span> csk-hub <small>80-admin-groups</small></div>
+      <label class="tree-search"><span class="sr-only">Filter file names</span><input id="file-filter" type="search" placeholder="Filter files…" autocomplete="off"></label>
+      <div class="tree-options"><label><input type="checkbox" id="changed-only"> Changed only</label><label><input type="checkbox" id="include-tests"> Tests</label></div>
+      <div id="file-tree" class="file-tree"></div>
+      <footer class="explorer-footer"><span id="snapshot-count"></span><span>Source is embedded · offline</span></footer>
+    </aside>
+    <main id="workspace" tabindex="-1">
+      <div class="workspace-top"><div id="breadcrumb" class="breadcrumb"></div><div id="view-tools"></div></div>
+      <div id="workspace-content"></div>
+    </main>
+  </div>
+  <dialog id="search-dialog" aria-labelledby="search-title">
+    <div class="dialog-head"><h2 id="search-title">Search the snapshot</h2><button class="icon-button" data-close="search-dialog" aria-label="Close search">×</button></div>
+    <label class="command-input"><span class="sr-only">Search paths, symbols, code and findings</span><input id="global-search" placeholder="Try appendMessage, cookieCache or STD-4" type="search" autocomplete="off"></label>
+    <div class="search-hint">Paths · symbols · source lines · review findings</div><div id="search-results"></div>
+  </dialog>
+  <dialog id="finding-dialog" class="finding-dialog" aria-labelledby="finding-title"><div class="dialog-head"><span class="eyebrow">REVIEW ANNOTATION</span><button class="icon-button" data-close="finding-dialog" aria-label="Close finding">×</button></div><div id="finding-content"></div></dialog>
+  <dialog id="report-dialog" class="report-dialog" aria-labelledby="report-title"><div class="dialog-head"><h2 id="report-title">Canonical review</h2><button class="icon-button" data-close="report-dialog" aria-label="Close report">×</button></div><article id="report-content" class="prose"></article></dialog>
+  <div class="sr-only" id="announcement" role="status" aria-live="polite"></div>
+  <div id="toast" role="status" hidden></div>
+  <noscript><p>JavaScript is needed for the explorer. <a href="../README.md">Read the Markdown report</a>.</p></noscript>
+</body>
+</html>

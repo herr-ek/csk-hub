@@ -1,0 +1,36 @@
+import { expect, test } from 'bun:test'
+import { betterAuth } from '/Users/liam/projects/csk/csk-hub/node_modules/better-auth'
+import { drizzleAdapter } from '/Users/liam/projects/csk/csk-hub/node_modules/better-auth/dist/adapters/drizzle-adapter/index.mjs'
+import { eq } from '/Users/liam/projects/csk/csk-hub/node_modules/drizzle-orm'
+import { createTestDatabase } from '/Users/liam/projects/csk/csk-hub/test/database'
+import * as schema from '/Users/liam/projects/csk/csk-hub/src/core/db/schema/auth'
+
+test('revoked session remains available through configured cookie cache', async () => {
+  const fixture = await createTestDatabase()
+  if (!fixture) throw new Error('Disposable database required for evidence')
+  try {
+    const auth = betterAuth({
+      baseURL: 'http://localhost:3000',
+      secret: 'disposable-review-secret-at-least-thirty-two-characters',
+      database: drizzleAdapter(fixture.db, { provider: 'pg', schema }),
+      emailAndPassword: { enabled: true },
+      session: { cookieCache: { enabled: true, maxAge: 300 } }
+    })
+    const signedIn = await auth.api.signUpEmail({
+      body: { name: 'Review User', email: 'review@example.com', password: 'ReviewPassword123!' },
+      asResponse: true
+    })
+    expect(signedIn.ok).toBe(true)
+    const cookies = signedIn.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ')
+    const headers = new Headers({ cookie: cookies })
+    const initial = await auth.api.getSession({ headers })
+    expect(initial).not.toBeNull()
+    await fixture.db.update(schema.user).set({ banned: true }).where(eq(schema.user.id, initial!.user.id))
+    await fixture.db.delete(schema.session).where(eq(schema.session.userId, initial!.user.id))
+    const cached = await auth.api.getSession({ headers })
+    const fresh = await auth.api.getSession({ headers, query: { disableCookieCache: true } })
+    expect(cached?.user.id).toBe(initial!.user.id)
+    expect(fresh).toBeNull()
+    console.log('Revoked session: cached read authenticated; fresh read rejected.')
+  } finally { await fixture.drop() }
+}, 20000)
