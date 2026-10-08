@@ -6,6 +6,24 @@ export type NotificationSubscription = {
   deviceLabel?: string | null
 }
 
+export type NotificationDeliveryFailureCategory =
+  | "invalidSubscription"
+  | "subscriptionGone"
+  | "providerRejected"
+  | "timeout"
+  | "deadline"
+  | "transport"
+  | "bookkeeping"
+
+export type NotificationDeliveryDiagnostics = {
+  accepted: number
+  failed: number
+  failureCategories: Partial<Record<NotificationDeliveryFailureCategory, number>>
+}
+
 export type NotificationDeliveryResult =
-  | { success: true }
-  | { success: false; error: "noActiveSubscriptions" | "noRecipients" | "deliveryFailed" }
+  | ({ success: true } & NotificationDeliveryDiagnostics)
+  | ({
+      success: false
+      error: "noActiveSubscriptions" | "noRecipients" | "deliveryFailed"
+    } & NotificationDeliveryDiagnostics)
