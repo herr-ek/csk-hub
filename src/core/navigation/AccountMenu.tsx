@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger
 } from "@/shared/ui/base/dropdown-menu"
 import { toast } from "@/shared/ui/base/toast"
+import { revokePushBindingBeforeLogout } from "./logout-actions"
 import { ROUTES } from "./site"
 
 /** Combines account navigation and sign-out; impersonated sessions return to the Admin's session instead. */
@@ -33,6 +34,14 @@ export function AccountMenu({
   async function handleLogout() {
     setIsPending(true)
     try {
+      if (!isImpersonating && "serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration("/")
+        const subscription = await registration?.pushManager.getSubscription()
+        if (subscription) {
+          const removedBinding = await revokePushBindingBeforeLogout(subscription.endpoint)
+          if (removedBinding) await subscription.unsubscribe().catch(() => false)
+        }
+      }
       const result = isImpersonating ? await authClient.admin.stopImpersonating() : await authClient.signOut()
       if (result.error) {
         toast.add({ type: "error", title: isImpersonating ? t("stopImpersonationFailed") : t("logoutFailed") })

@@ -4,22 +4,23 @@ import { and, eq, ilike, or } from "drizzle-orm"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
-import type { NotificationSubscription } from "./types"
+import { normalizePushEndpoint, parseNotificationSubscription } from "./subscription-validation"
 
 /**
  * Stores a User's browser subscription by endpoint, reactivating and refreshing
  * lifecycle metadata when that endpoint already exists.
  */
-export async function subscribe(userId: string, subscription: NotificationSubscription) {
+export async function subscribe(userId: string, subscription: unknown) {
+  const validated = parseNotificationSubscription(subscription)
   const now = new Date()
   const values = {
     userId,
-    endpoint: subscription.endpoint,
-    p256dh: subscription.keys.p256dh,
-    auth: subscription.keys.auth,
-    expirationTime: subscription.expirationTime ? new Date(subscription.expirationTime) : null,
-    userAgent: subscription.userAgent ?? null,
-    deviceLabel: subscription.deviceLabel ?? null,
+    endpoint: validated.endpoint,
+    p256dh: validated.keys.p256dh,
+    auth: validated.keys.auth,
+    expirationTime: validated.expirationTime ? new Date(validated.expirationTime) : null,
+    userAgent: validated.userAgent ?? null,
+    deviceLabel: validated.deviceLabel ?? null,
     status: "active" as const,
     lastSeenAt: now,
     failureCount: 0,
@@ -36,9 +37,31 @@ export async function subscribe(userId: string, subscription: NotificationSubscr
 
 /** Removes a browser subscription only when it belongs to the specified User. */
 export async function unsubscribe(userId: string, endpoint: string) {
-  await db
+  const normalizedEndpoint = normalizePushEndpoint(endpoint)
+  const [deleted] = await db
     .delete(pushSubscription)
-    .where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.endpoint, endpoint)))
+    .where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.endpoint, normalizedEndpoint)))
+    .returning({ id: pushSubscription.id })
+
+  return Boolean(deleted)
+}
+
+/** Checks whether an endpoint is actively bound to the specified User without revealing its owner. */
+export async function hasActiveSubscription(userId: string, endpoint: string) {
+  const normalizedEndpoint = normalizePushEndpoint(endpoint)
+  const [subscription] = await db
+    .select({ id: pushSubscription.id })
+    .from(pushSubscription)
+    .where(
+      and(
+        eq(pushSubscription.userId, userId),
+        eq(pushSubscription.endpoint, normalizedEndpoint),
+        eq(pushSubscription.status, "active")
+      )
+    )
+    .limit(1)
+
+  return Boolean(subscription)
 }
 
 /** Returns at most 25 active push subscribers whose name or email matches the optional search text. */
