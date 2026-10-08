@@ -1,14 +1,27 @@
 "use server"
 
 import { getRequestSession } from "@/core/auth/session.server"
-import { type NotificationSubscription, sendToUser, subscribe, unsubscribe } from "@/core/notifications"
+import {
+  hasActiveSubscription,
+  type NotificationSubscription,
+  sendToUser,
+  subscribe,
+  unsubscribe
+} from "@/core/notifications"
 
 async function requireUserId() {
   const session = await getRequestSession()
   if (!session) {
     throw new Error("Unauthorized")
   }
+  if (session.session.impersonatedBy) {
+    throw new Error("Push notifications are unavailable while impersonating a User")
+  }
   return session.user.id
+}
+
+export async function isPushSubscriptionBoundToCurrentUser(endpoint: string) {
+  return hasActiveSubscription(await requireUserId(), endpoint)
 }
 
 export async function subscribeUserToPush(subscription: NotificationSubscription) {
@@ -17,8 +30,8 @@ export async function subscribeUserToPush(subscription: NotificationSubscription
 }
 
 export async function unsubscribeUserFromPush(endpoint: string) {
-  await unsubscribe(await requireUserId(), endpoint)
-  return { success: true }
+  const removed = await unsubscribe(await requireUserId(), endpoint)
+  return { success: true, removed }
 }
 
 export async function sendPushNotificationTest(message: string) {

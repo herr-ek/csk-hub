@@ -35,6 +35,8 @@ notifications.
 
 User subscription setup belongs in account settings. Features that only send notifications should not register service workers or write `push_subscription` rows directly.
 
+The browser's PushManager subscription is separate from the current User's server-side binding. Settings must confirm that the endpoint has an active row for the signed-in User before showing notifications as enabled. If a browser subscription exists without that binding, an explicit reconnect action rebinds it to the current User; never return or display the previous owner's identity. Ordinary logout removes that browser endpoint's binding before signing out. Stopping impersonation leaves the Admin's browser binding untouched, and subscription actions are unavailable during impersonation.
+
 ## Sending a notification
 
 Import the smallest delivery operation that matches the feature's audience:
@@ -69,13 +71,15 @@ export async function notifySelectedUsers(userIds: string[], message: string) {
 All send functions resolve to one of these shapes:
 
 ```ts
-{ success: true }
-{ success: false, error: "noActiveSubscriptions" | "noRecipients" | "deliveryFailed" }
+{ success: true, accepted: number, failed: number, failureCategories: Record<string, number> }
+{ success: false, error: "noActiveSubscriptions" | "noRecipients" | "deliveryFailed", accepted: 0, failed: number, failureCategories: Record<string, number> }
 ```
 
-`success: false` means there were no active subscriptions or every attempted delivery failed. A successful result means at least one active subscription accepted the notification; it does not guarantee every selected device received it. Features handle the returned error code and reserve exceptions for unexpected infrastructure failures. Notifications use the application name, `CSK Hub`, as a fixed title and preserve the supplied message as their body.
+`accepted` counts subscriptions whose push provider accepted the notification. `failed` counts subscriptions that did not accept it. A successful result means at least one active subscription accepted the notification; it does not guarantee every selected device received it. `failureCategories` contains only sanitized counts such as `timeout`, `providerRejected`, or `bookkeeping`; it never includes endpoints, keys, or message text. Features show accepted/attempted counts and handle the returned error code. Notifications use the application name, `CSK Hub`, as a fixed title and preserve the supplied message as their body.
 
 When a provider returns HTTP 404 or 410, this module marks that subscription disabled so future sends skip it. It also tracks delivery timestamps and failure counts. Features must not mutate those lifecycle fields directly.
+
+Provider sends use bounded concurrency, a 7-second socket inactivity timeout, a 10-second request socket deadline, and a 30-second batch deadline. Lifecycle bookkeeping is best effort and bounded to 2 seconds per update. Provider acceptance is recorded independently: if an accepted send cannot update its database metadata, the result still counts it as accepted, records a sanitized `bookkeeping` diagnostic, and does not trigger an automatic resend.
 
 ## Finding subscribed Users
 

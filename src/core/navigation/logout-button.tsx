@@ -6,6 +6,7 @@ import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import { toast } from "@/shared/ui/base/toast"
+import { revokePushBindingBeforeLogout } from "./logout-actions"
 import { ROUTES } from "./site"
 
 export function LogoutButton({ isImpersonating = false }: { isImpersonating?: boolean }) {
@@ -15,6 +16,14 @@ export function LogoutButton({ isImpersonating = false }: { isImpersonating?: bo
   async function handleLogout() {
     setIsPending(true)
     try {
+      if (!isImpersonating && "serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration("/")
+        const subscription = await registration?.pushManager.getSubscription()
+        if (subscription) {
+          const removedBinding = await revokePushBindingBeforeLogout(subscription.endpoint)
+          if (removedBinding) await subscription.unsubscribe().catch(() => false)
+        }
+      }
       const result = isImpersonating ? await authClient.admin.stopImpersonating() : await authClient.signOut()
       if (result.error) {
         toast.add({
