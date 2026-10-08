@@ -21,7 +21,7 @@
 | **Event detail**          | An organiser-provided labelled value describing the event ("Dress code: Kavaj", "Bring: Music folder"). Information _to_ the audience, not _from_ it.                          | `EventDetails`                                       |
 | **Attendance**            | What actually happened: Present, Excused or Absent. Recorded afterwards, independent of the response or registration.                                                          | `EventAttendance`                                    |
 
-Reserved words: **Post** stays reserved for news, **Position** for organisational positions, and **Invite** for an Admin bringing an email address into the Hub (see CONTEXT.md). Events therefore have an **audience** and **responses**, never "invitees". **Registration** here always means signing up for an event, never joining the Hub (that is an Invite).
+Reserved words: **Post** stays reserved for news, **Position** for organisational positions, and **Invite** for an Admin bringing an email address into the Hub (see GLOSSARY.md). Events therefore have an **audience** and **responses**, never "invitees". **Registration** here always means signing up for an event, never joining the Hub (that is an Invite).
 
 Domain facts:
 
