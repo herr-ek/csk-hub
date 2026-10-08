@@ -20,7 +20,15 @@
       "completeDescription": "Du wirst zu CSK Hub weitergeleitet…",
       "continue": "Weiter zu CSK Hub",
       "invalidLink": "Dieser Aktivierungslink ist ungültig oder abgelaufen.",
-      "requestFreshLink": "Neuen Passwort-Link anfordern"
+      "requestFreshLink": "Neuen Passwort-Link anfordern",
+      "errors": {
+        "password-required": "Ein Passwort ist erforderlich.",
+        "password-too-short": "Das Passwort muss mindestens {count} Zeichen enthalten.",
+        "confirm-password-required": "Bestätige dein Passwort.",
+        "passwords-mismatch": "Die Passwörter stimmen nicht überein.",
+        "invalid-link": "Dieser Aktivierungslink ist ungültig oder abgelaufen.",
+        "unavailable": "Dein Konto kann derzeit nicht aktiviert werden. Bitte versuche es erneut."
+      }
     },
     "activationFailed": {
       "pageTitle": "Aktivierungslink abgelaufen",
@@ -40,7 +48,13 @@
       "or": "oder",
       "passkeyPending": "Warte auf Passkey…",
       "passkey": "Mit einem Passkey anmelden",
-      "forgotPassword": "Passwort vergessen?"
+      "forgotPassword": "Passwort vergessen?",
+      "errors": {
+        "invalidCredentials": "Anmeldung nicht möglich. Prüfe deine E-Mail-Adresse oder deinen Benutzernamen und dein Passwort und versuche es erneut.",
+        "unavailable": "Anmeldung derzeit nicht möglich. Prüfe deine Verbindung und versuche es erneut.",
+        "passkeyFailed": "Anmeldung mit deinem Passkey nicht möglich. Versuche es erneut oder nutze E-Mail und Passwort.",
+        "passkeyUnavailable": "Anmeldung mit einem Passkey derzeit nicht möglich. Prüfe deine Verbindung und versuche es erneut."
+      }
     },
     "passwordReset": {
       "requestPageTitle": "Passwort zurücksetzen",
@@ -61,7 +75,15 @@
       "sendLink": "Link zum Zurücksetzen senden",
       "updating": "Wird aktualisiert…",
       "updatePassword": "Passwort aktualisieren",
-      "returnToSignIn": "Zurück zur Anmeldung"
+      "returnToSignIn": "Zurück zur Anmeldung",
+      "errors": {
+        "request-failed": "Die E-Mail zum Zurücksetzen des Passworts kann derzeit nicht gesendet werden. Bitte versuche es erneut.",
+        "request-network": "Die E-Mail zum Zurücksetzen des Passworts kann derzeit nicht gesendet werden. Prüfe deine Verbindung und versuche es erneut.",
+        "invalid-reset-token": "Der Link zum Zurücksetzen ist ungültig oder abgelaufen.",
+        "network": "Passwort kann derzeit nicht zurückgesetzt werden. Prüfe deine Verbindung und versuche es erneut.",
+        "unknown": "Passwort kann derzeit nicht zurückgesetzt werden. Bitte versuche es erneut.",
+        "password-updated-sign-in-failed": "Dein Passwort wurde geändert, aber die Anmeldung ist fehlgeschlagen. Melde dich mit deinem neuen Passwort an."
+      }
     },
     "twoFactor": {
       "pageTitle": "Zwei-Faktor-Verifizierung",
@@ -80,12 +102,18 @@
       "trustDevice": "Diesem Gerät 30 Tage lang vertrauen",
       "verifying": "Wird verifiziert…",
       "verify": "Verifizieren",
-      "emailCodeSent": "Ein Sicherheitscode wurde an deine E-Mail-Adresse gesendet."
+      "emailCodeSent": "Ein Sicherheitscode wurde an deine E-Mail-Adresse gesendet.",
+      "errors": {
+        "sendFailed": "Der Bestätigungscode konnte nicht gesendet werden.",
+        "verifyFailed": "Der Code konnte nicht bestätigt werden."
+      }
     }
   },
   "Common": {
     "cancel": "Abbrechen",
     "close": "Schließen",
+    "closeToast": "Benachrichtigung schließen",
+    "closeSidebar": "Seitenleiste schließen",
     "save": "Speichern",
     "delete": "Löschen",
     "edit": "Bearbeiten",
@@ -93,7 +121,13 @@
     "name": "Name",
     "password": "Passwort",
     "status": "Status",
-    "loading": "Wird geladen"
+    "loading": "Wird geladen",
+    "validation": {
+      "required": "{label} ist erforderlich.",
+      "passwordTooShort": "{label} muss mindestens {count} Zeichen enthalten.",
+      "invalidEmail": "{label} muss eine gültige E-Mail-Adresse sein.",
+      "passwordsMismatch": "Die Passwörter stimmen nicht überein."
+    },
   },
   "Ui": {
     "more": "Mehr",
@@ -167,6 +201,14 @@
     "noMatches": "Keine Mitglieder entsprechen diesen Filtern.",
     "add": "Mitglied hinzufügen",
     "addDescription": "Erstelle ein neues Konto für ein CSK-Mitglied.",
+    "addErrors": {
+      "name-required": "Ein Name ist erforderlich.",
+      "email-required": "Eine E-Mail-Adresse ist erforderlich.",
+      "email-invalid": "Gib eine gültige E-Mail-Adresse ein.",
+      "email-exists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.",
+      "create-failed": "Der Benutzer kann derzeit nicht erstellt werden. Bitte versuche es erneut.",
+      "unknown": "Bitte überprüfe das Formular und versuche es erneut."
+    },
     "adding": "Mitglied wird hinzugefügt",
     "inviteSent": "Einladung gesendet",
     "inviteSentDescription": "Ein Aktivierungslink wurde an {email} gesendet.",
@@ -175,6 +217,13 @@
     "usernameHandle": "@{username}",
     "importUsers": "Benutzer importieren",
     "importDescription": "Lade eine CSV mit Namens- und E-Mail-Spalten hoch und prüfe jede Zeile vor dem Einladen.",
+    "csvParseErrors": {
+      "parse-failed": "Die CSV-Datei konnte nicht gelesen werden. Prüfe die Anführungszeichen.",
+      "empty": "Die CSV-Datei ist leer.",
+      "columns": "Die CSV-Datei muss die Spalten name und email enthalten.",
+      "no-users": "Die CSV-Datei enthält keine Benutzer.",
+      "too-many-users": "Du kannst höchstens 50 Benutzer auf einmal importieren."
+    },
     "csvFile": "CSV-Datei",
     "csvColumns": "Erforderliche Spalten: Name, E-Mail. Andere Spalten werden ignoriert.",
     "csvExtensionRequired": "Wähle eine Datei mit der Erweiterung .csv.",
@@ -264,9 +313,21 @@
     "changingPassword": "Wird geändert…",
     "passwordChanged": "Passwort geändert. Andere Sitzungen wurden abgemeldet.",
     "passwordChangeFailed": "Dein Passwort kann nicht geändert werden.",
+    "twoFactorErrors": {
+      "enableFailed": "Die Zwei-Faktor-Authentifizierung konnte nicht aktiviert werden.",
+      "disableFailed": "Die Zwei-Faktor-Authentifizierung konnte nicht deaktiviert werden.",
+      "verifyFailed": "Der Authenticator-Code konnte nicht bestätigt werden."
+    },
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Verwende einen Passkey auf einem Gerät, um dich ohne Passwort anzumelden.",
     "noPasskeys": "Keine Passkeys registriert.",
+    "passkeysLoadFailed": "Deine Passkeys können derzeit nicht geladen werden.",
+    "passkeyErrors": {
+      "addFailed": "Der Passkey kann derzeit nicht hinzugefügt werden. Bitte versuche es erneut.",
+      "nameRequired": "Ein Passkey-Name ist erforderlich.",
+      "renameFailed": "Der Passkey kann derzeit nicht umbenannt werden. Bitte versuche es erneut.",
+      "deleteFailed": "Der Passkey kann derzeit nicht gelöscht werden. Bitte versuche es erneut."
+    },
     "passkey": "Passkey",
     "passkeyName": "Passkey-Name",
     "passkeyAdded": "Passkey hinzugefügt.",

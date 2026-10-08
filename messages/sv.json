@@ -20,7 +20,15 @@
       "completeDescription": "Du skickas till CSK Hub…",
       "continue": "Fortsätt till CSK Hub",
       "invalidLink": "Den här aktiveringslänken är ogiltig eller har gått ut.",
-      "requestFreshLink": "Begär en ny lösenordslänk"
+      "requestFreshLink": "Begär en ny lösenordslänk",
+      "errors": {
+        "password-required": "Lösenord måste anges.",
+        "password-too-short": "Lösenordet måste innehålla minst {count} tecken.",
+        "confirm-password-required": "Bekräfta lösenordet.",
+        "passwords-mismatch": "Lösenorden matchar inte.",
+        "invalid-link": "Den här aktiveringslänken är ogiltig eller har gått ut.",
+        "unavailable": "Det går inte att aktivera kontot just nu. Försök igen."
+      }
     },
     "activationFailed": {
       "pageTitle": "Aktiveringslänken har gått ut",
@@ -40,7 +48,13 @@
       "or": "eller",
       "passkeyPending": "Väntar på passkey…",
       "passkey": "Logga in med en passkey",
-      "forgotPassword": "Glömt lösenordet?"
+      "forgotPassword": "Glömt lösenordet?",
+      "errors": {
+        "invalidCredentials": "Det gick inte att logga in. Kontrollera din e-postadress eller ditt användarnamn och lösenord och försök igen.",
+        "unavailable": "Det går inte att logga in just nu. Kontrollera anslutningen och försök igen.",
+        "passkeyFailed": "Det gick inte att logga in med din passnyckel. Försök igen eller använd e-post och lösenord.",
+        "passkeyUnavailable": "Det går inte att logga in med en passnyckel just nu. Kontrollera anslutningen och försök igen."
+      }
     },
     "passwordReset": {
       "requestPageTitle": "Återställ lösenord",
@@ -61,7 +75,15 @@
       "sendLink": "Skicka återställningslänk",
       "updating": "Uppdaterar…",
       "updatePassword": "Uppdatera lösenord",
-      "returnToSignIn": "Tillbaka till inloggning"
+      "returnToSignIn": "Tillbaka till inloggning",
+      "errors": {
+        "request-failed": "Det går inte att skicka ett e-postmeddelande för lösenordsåterställning just nu. Försök igen.",
+        "request-network": "Det går inte att skicka ett e-postmeddelande för lösenordsåterställning just nu. Kontrollera anslutningen och försök igen.",
+        "invalid-reset-token": "Återställningslänken är ogiltig eller har gått ut.",
+        "network": "Det går inte att återställa lösenordet just nu. Kontrollera anslutningen och försök igen.",
+        "unknown": "Det går inte att återställa lösenordet just nu. Försök igen.",
+        "password-updated-sign-in-failed": "Lösenordet har uppdaterats, men det gick inte att logga in dig. Logga in med ditt nya lösenord."
+      }
     },
     "twoFactor": {
       "pageTitle": "Tvåfaktorsverifiering",
@@ -80,12 +102,18 @@
       "trustDevice": "Lita på den här enheten i 30 dagar",
       "verifying": "Verifierar…",
       "verify": "Verifiera",
-      "emailCodeSent": "En säkerhetskod har skickats till din e-post."
+      "emailCodeSent": "En säkerhetskod har skickats till din e-post.",
+      "errors": {
+        "sendFailed": "Det gick inte att skicka verifieringskoden.",
+        "verifyFailed": "Det gick inte att verifiera koden."
+      }
     }
   },
   "Common": {
     "cancel": "Avbryt",
     "close": "Stäng",
+    "closeToast": "Stäng avisering",
+    "closeSidebar": "Stäng sidomenyn",
     "save": "Spara",
     "delete": "Ta bort",
     "edit": "Redigera",
@@ -93,7 +121,13 @@
     "name": "Namn",
     "password": "Lösenord",
     "status": "Status",
-    "loading": "Laddar"
+    "loading": "Laddar",
+    "validation": {
+      "required": "{label} måste fyllas i.",
+      "passwordTooShort": "{label} måste innehålla minst {count} tecken.",
+      "invalidEmail": "{label} måste vara en giltig e-postadress.",
+      "passwordsMismatch": "Lösenorden matchar inte."
+    },
   },
   "Ui": {
     "more": "Mer",
@@ -167,6 +201,14 @@
     "noMatches": "Inga medlemmar matchar dessa filter.",
     "add": "Lägg till medlem",
     "addDescription": "Skapa ett nytt konto för en CSK-medlem.",
+    "addErrors": {
+      "name-required": "Namn måste fyllas i.",
+      "email-required": "E-post måste fyllas i.",
+      "email-invalid": "Ange en giltig e-postadress.",
+      "email-exists": "En användare med den e-postadressen finns redan.",
+      "create-failed": "Det går inte att skapa användaren just nu. Försök igen.",
+      "unknown": "Kontrollera formuläret och försök igen."
+    },
     "adding": "Lägger till medlem",
     "inviteSent": "Inbjudan skickad",
     "inviteSentDescription": "En aktiveringslänk skickades till {email}.",
@@ -175,6 +217,13 @@
     "usernameHandle": "@{username}",
     "importUsers": "Importera användare",
     "importDescription": "Ladda upp en CSV med kolumnerna namn och e-post och granska sedan varje rad innan du bjuder in.",
+    "csvParseErrors": {
+      "parse-failed": "CSV-filen kunde inte läsas. Kontrollera att citerade värden är korrekt formaterade.",
+      "empty": "CSV-filen är tom.",
+      "columns": "CSV-filen måste innehålla kolumnerna name och email.",
+      "no-users": "CSV-filen innehåller inga användare.",
+      "too-many-users": "Du kan importera högst 50 användare åt gången."
+    },
     "csvFile": "CSV-fil",
     "csvColumns": "Obligatoriska kolumner: namn, e-post. Andra kolumner ignoreras.",
     "csvExtensionRequired": "Välj en fil med filändelsen .csv.",
@@ -264,9 +313,21 @@
     "changingPassword": "Ändrar…",
     "passwordChanged": "Lösenordet har ändrats. Andra sessioner har loggats ut.",
     "passwordChangeFailed": "Det går inte att ändra ditt lösenord.",
+    "twoFactorErrors": {
+      "enableFailed": "Det gick inte att aktivera tvåfaktorsautentisering.",
+      "disableFailed": "Det gick inte att inaktivera tvåfaktorsautentisering.",
+      "verifyFailed": "Det gick inte att verifiera autentiseringskoden."
+    },
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Använd en passkey på en enhet för att logga in utan lösenord.",
     "noPasskeys": "Inga passkeys är registrerade.",
+    "passkeysLoadFailed": "Det går inte att läsa in dina passkeys just nu.",
+    "passkeyErrors": {
+      "addFailed": "Det går inte att lägga till passkeyn just nu. Försök igen.",
+      "nameRequired": "Passkeyns namn måste fyllas i.",
+      "renameFailed": "Det går inte att byta namn på passkeyn just nu. Försök igen.",
+      "deleteFailed": "Det går inte att ta bort passkeyn just nu. Försök igen."
+    },
     "passkey": "Passkey",
     "passkeyName": "Passkey-namn",
     "passkeyAdded": "Passkey har lagts till.",

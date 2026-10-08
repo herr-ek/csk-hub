@@ -8,6 +8,8 @@ Only this module imports `next-intl`. Async Server Components, pages, layouts, a
 
 Keep server and client imports separate. `translations.ts` is intentionally universal because next-intl supports `useTranslations` in synchronous Server Components. Do not add a broad barrel that combines the server-only and client-only modules.
 
+Keep shared UI base components independent of this module. Their localized-copy props should be optional and default to English; app code can use a wrapper when it needs locale-aware copy, but direct use must remain valid. For example, [`localized-controls.tsx`](./localized-controls.tsx) wraps the dialog primitives used by app workflows, and [`validation-errors.tsx`](./validation-errors.tsx) translates stable validation issue IDs for display.
+
 `next-intl.d.ts` registers the English catalogue as the canonical message shape. Translation namespaces and keys used through the façade are checked by TypeScript; catalogue parity remains responsible for checking that every locale supplies that shape.
 
 ## Catalogs and keys
@@ -69,6 +71,8 @@ For a synchronous Server Component, `useTranslations` is supported by next-intl.
 ## Server Actions
 
 Avoid i18n in Server Actions and the helpers they call. Return typed outcomes or stable error codes and translate them in the UI. Keep low-level services independent of translation APIs and message catalogs.
+
+Keep Zod schemas as static, locale-neutral constants. Validation issues should carry stable IDs (and machine-readable parameters such as a minimum length), not translated text. Translate those IDs in the rendering layer, with the field label available; use `LocalizedFieldError` for standard field errors. This keeps schemas reusable in server and client code and avoids rebuilding them for each locale.
 
 Only translate on the server when it must produce final text, such as an email. Choose the intended recipient's locale explicitly. `next/root-params` is unavailable in Server Actions and Route Handlers; server translation APIs need an explicit locale and request configuration that honors the override before reading root params.
 

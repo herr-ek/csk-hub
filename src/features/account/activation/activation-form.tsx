@@ -72,7 +72,13 @@ export function ActivationForm() {
                 minLength={passwordPolicy.minPasswordLength}
               />
             </Field>
-            <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
+            <FieldError>
+              {state.status === "error"
+                ? state.kind === "password-too-short"
+                  ? t("errors.password-too-short", { count: passwordPolicy.minPasswordLength })
+                  : t(`errors.${state.kind}`)
+                : undefined}
+            </FieldError>
           </FieldGroup>
           <Button type="submit" disabled={pending}>
             {pending ? t("submitting") : t("submit")}

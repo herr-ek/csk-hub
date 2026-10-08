@@ -123,7 +123,7 @@ describe("login service", () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: "Invalid email or password."
+      error: "invalidCredentials"
     })
   })
 
@@ -141,7 +141,7 @@ describe("login service", () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: "Invalid username or password."
+      error: "invalidCredentials"
     })
   })
 
@@ -156,7 +156,7 @@ describe("login service", () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: "Unable to sign in right now. Check your connection and try again."
+      error: "unavailable"
     })
   })
 
@@ -171,7 +171,7 @@ describe("login service", () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: "Unable to sign in right now. Check your connection and try again."
+      error: "unavailable"
     })
   })
 
@@ -232,7 +232,7 @@ describe("login service", () => {
 
     await expect(signInWithPasskey()).resolves.toEqual({
       success: false,
-      error: "Passkey not found."
+      error: "passkeyFailed"
     })
   })
 
@@ -241,7 +241,7 @@ describe("login service", () => {
 
     await expect(signInWithPasskey()).resolves.toEqual({
       success: false,
-      error: "Unable to sign in with a passkey right now. Check your connection and try again."
+      error: "passkeyUnavailable"
     })
   })
 })

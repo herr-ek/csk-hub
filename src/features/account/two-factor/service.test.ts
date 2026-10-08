@@ -51,7 +51,7 @@ describe("two-factor verification", () => {
 
     await expect(verifyTwoFactorMethod("otp", "wrong", false)).resolves.toEqual({
       success: false,
-      error: "The code is invalid."
+      error: "verifyFailed"
     })
   })
 })

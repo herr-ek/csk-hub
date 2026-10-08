@@ -5,11 +5,12 @@ import { useState } from "react"
 import type z from "zod"
 import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
+import { LocalizedFieldError } from "@/core/i18n/validation-errors"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
+import { Field, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { changePasswordSchema } from "./schemas"
 
@@ -29,7 +30,7 @@ export function PasswordSettings() {
     })
 
     if (result.error) {
-      setFormError(result.error.message ?? t("passwordChangeFailed"))
+      setFormError(t("passwordChangeFailed"))
       return
     }
 
@@ -138,7 +139,7 @@ function PasswordField({
         aria-invalid={isInvalid}
         required
       />
-      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+      {isInvalid && <LocalizedFieldError errors={field.state.meta.errors} label={label} />}
     </Field>
   )
 }

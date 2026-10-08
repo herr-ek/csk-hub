@@ -76,6 +76,7 @@ export function generateStaticParams() {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale()
+  const common = await getTranslations("Common")
 
   if (!isLocale(locale)) {
     notFound()
@@ -99,7 +100,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         >
           <ThemeProvider>
             {children}
-            <Toaster />
+            <Toaster closeToastLabel={common("closeToast")} />
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

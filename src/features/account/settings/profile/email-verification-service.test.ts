@@ -35,11 +35,11 @@ describe("email verification", () => {
 
     await expect(sendEmailVerificationOtp("user@example.com")).resolves.toEqual({
       success: false,
-      error: "Too many requests."
+      error: "send-failed"
     })
     await expect(verifyEmailOtp("user@example.com", "000000")).resolves.toEqual({
       success: false,
-      error: "Invalid code."
+      error: "verify-failed"
     })
   })
 })
