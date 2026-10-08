@@ -26,14 +26,27 @@ export function PasskeySettings() {
   const [error, setError] = useState<string>()
   const [message, setMessage] = useState<string>()
   const [pending, setPending] = useState(false)
+  const [isLoadingPasskeys, setIsLoadingPasskeys] = useState(true)
+  const [passkeyLoadError, setPasskeyLoadError] = useState(false)
   const [editingPasskeyId, setEditingPasskeyId] = useState<string>()
   const [editingName, setEditingName] = useState("")
   const [deletingPasskeyId, setDeletingPasskeyId] = useState<string>()
 
   const loadPasskeys = useCallback(async () => {
-    const result = await authClient.passkey.listUserPasskeys()
-    if (result.data) setPasskeys(result.data)
-    if (result.error) setError(result.error.message)
+    setIsLoadingPasskeys(true)
+    setPasskeyLoadError(false)
+    try {
+      const result = await authClient.passkey.listUserPasskeys()
+      if (result.error) {
+        setPasskeyLoadError(true)
+        return
+      }
+      setPasskeys(result.data ?? [])
+    } catch {
+      setPasskeyLoadError(true)
+    } finally {
+      setIsLoadingPasskeys(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -109,78 +122,95 @@ export function PasskeySettings() {
         <CardDescription>{t("passkeysDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
-        <div className="flex flex-col gap-3">
-          {passkeys.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noPasskeys")}</p>
-          ) : (
-            passkeys.map((passkey) => (
-              <div
-                key={passkey.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
+        <div className="flex flex-col gap-3" aria-busy={isLoadingPasskeys}>
+          {isLoadingPasskeys ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              {t("loadingPasskeys")}
+            </p>
+          ) : null}
+          {passkeyLoadError ? (
+            <div className="flex flex-col items-start gap-2">
+              <Alert variant="destructive">
+                <AlertDescription>{t("passkeysLoadFailed")}</AlertDescription>
+              </Alert>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void loadPasskeys()}
+                disabled={isLoadingPasskeys}
               >
-                {editingPasskeyId === passkey.id ? (
-                  <form onSubmit={renamePasskey} className="flex w-full flex-wrap gap-2">
-                    <Input
-                      value={editingName}
-                      onChange={(event) => setEditingName(event.target.value)}
-                      aria-label={t("passkeyName")}
-                      autoFocus
-                      required
-                      disabled={pending}
-                    />
-                    <Button type="submit" size="sm" disabled={pending}>
-                      {pending ? t("saving") : common("save")}
-                    </Button>
+                {t("retryPasskeys")}
+              </Button>
+            </div>
+          ) : null}
+          {!isLoadingPasskeys && !passkeyLoadError && passkeys.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("noPasskeys")}</p>
+          ) : null}
+          {passkeys.map((passkey) => (
+            <div key={passkey.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3">
+              {editingPasskeyId === passkey.id ? (
+                <form onSubmit={renamePasskey} className="flex w-full flex-wrap gap-2">
+                  <Input
+                    value={editingName}
+                    onChange={(event) => setEditingName(event.target.value)}
+                    aria-label={t("passkeyName")}
+                    autoFocus
+                    required
+                    disabled={pending}
+                  />
+                  <Button type="submit" size="sm" disabled={pending}>
+                    {pending ? t("saving") : common("save")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => setEditingPasskeyId(undefined)}
+                  >
+                    {common("cancel")}
+                  </Button>
+                </form>
+              ) : (
+                <>
+                  <div>
+                    <p className="font-medium">
+                      {passkey.name || getAuthenticatorName(passkey.aaguid) || t("passkey")}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("added", {
+                        date: passkey.createdAt ? new Date(passkey.createdAt).toLocaleDateString() : t("recently")
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
+                      onClick={() => {
+                        setEditingPasskeyId(passkey.id)
+                        setEditingName(passkey.name ?? "")
+                      }}
                       disabled={pending}
-                      onClick={() => setEditingPasskeyId(undefined)}
                     >
-                      {common("cancel")}
+                      {t("rename")}
                     </Button>
-                  </form>
-                ) : (
-                  <>
-                    <div>
-                      <p className="font-medium">
-                        {passkey.name || getAuthenticatorName(passkey.aaguid) || t("passkey")}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {t("added", {
-                          date: passkey.createdAt ? new Date(passkey.createdAt).toLocaleDateString() : t("recently")
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditingPasskeyId(passkey.id)
-                          setEditingName(passkey.name ?? "")
-                        }}
-                        disabled={pending}
-                      >
-                        {t("rename")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeletingPasskeyId(passkey.id)}
-                        disabled={pending}
-                      >
-                        {common("delete")}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))
-          )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeletingPasskeyId(passkey.id)}
+                      disabled={pending}
+                    >
+                      {common("delete")}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
         </div>
         <form onSubmit={addPasskey}>
           <FieldGroup>

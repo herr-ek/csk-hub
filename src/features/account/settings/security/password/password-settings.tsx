@@ -1,7 +1,8 @@
 "use client"
 
-import { type AnyFieldApi, useForm } from "@tanstack/react-form"
-import { useState } from "react"
+import { type AnyFieldApi, useForm, useSelector } from "@tanstack/react-form"
+import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
 import type z from "zod"
 import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
@@ -15,18 +16,32 @@ import { changePasswordSchema } from "./schemas"
 
 export function PasswordSettings() {
   const t = useTranslations("AccountSettings")
+  const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const submissionInProgress = useRef(false)
 
   async function onSubmit({ value }: { value: z.infer<typeof changePasswordSchema> }) {
     setFormError(null)
     setMessage(null)
 
-    const result = await authClient.changePassword({
-      currentPassword: value.currentPassword,
-      newPassword: value.newPassword,
-      revokeOtherSessions: true
-    })
+    let result: Awaited<ReturnType<typeof authClient.changePassword>>
+    try {
+      result = await authClient.changePassword({
+        currentPassword: value.currentPassword,
+        newPassword: value.newPassword,
+        revokeOtherSessions: true
+      })
+    } catch {
+      try {
+        await authClient.getSession()
+      } catch {
+        // Refresh the server-rendered session state below even if the client refresh fails.
+      }
+      router.refresh()
+      setFormError(t("passwordChangeUnconfirmed"))
+      return
+    }
 
     if (result.error) {
       setFormError(result.error.message ?? t("passwordChangeFailed"))
@@ -48,6 +63,7 @@ export function PasswordSettings() {
     },
     onSubmit
   })
+  const isSubmitting = useSelector(form.store, (state) => state.isSubmitting)
 
   return (
     <Card>
@@ -57,12 +73,18 @@ export function PasswordSettings() {
       </CardHeader>
       <CardContent>
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
-            form.handleSubmit()
+            if (submissionInProgress.current) return
+            submissionInProgress.current = true
+            try {
+              await form.handleSubmit()
+            } finally {
+              submissionInProgress.current = false
+            }
           }}
           noValidate
-          aria-busy={form.state.isSubmitting}
+          aria-busy={isSubmitting}
         >
           <FieldGroup>
             <form.Field name="currentPassword">
@@ -94,8 +116,8 @@ export function PasswordSettings() {
               </Alert>
             ) : null}
             <div className="flex items-center gap-3">
-              <Button type="submit" disabled={form.state.isSubmitting}>
-                {form.state.isSubmitting ? t("changingPassword") : t("changePassword")}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? t("changingPassword") : t("changePassword")}
               </Button>
               {message ? (
                 <Alert className="py-2">

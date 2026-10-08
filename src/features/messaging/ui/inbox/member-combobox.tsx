@@ -2,8 +2,9 @@
 
 import { LoaderCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { Button } from "@/shared/ui/base/button"
 import {
   Combobox,
   ComboboxContent,
@@ -21,30 +22,55 @@ export function MemberCombobox() {
   const router = useRouter()
   const [value, setValue] = useState("")
   const [members, setMembers] = useState<Member[]>([])
-  const [loading, startTransition] = useTransition()
+  const [searchStatus, setSearchStatus] = useState<"idle" | "loading" | "results" | "empty" | "error">("idle")
+  const [, startTransition] = useTransition()
   const latestRequest = useRef(0)
+
+  const searchMembers = useCallback((query: string, request: number) => {
+    startTransition(() => {
+      return searchMembersAction(query)
+        .then((result) => {
+          if (latestRequest.current === request) {
+            setMembers(result)
+            setSearchStatus(result.length > 0 ? "results" : "empty")
+          }
+        })
+        .catch(() => {
+          if (latestRequest.current === request) {
+            setMembers([])
+            setSearchStatus("error")
+          }
+        })
+    })
+  }, [])
 
   useEffect(() => {
     const request = ++latestRequest.current
     const query = value.trim()
-    const timer = setTimeout(() => {
-      if (!query) {
-        setMembers([])
-        return
-      }
-      startTransition(() => {
-        return searchMembersAction(query)
-          .then((result) => {
-            if (latestRequest.current === request) setMembers(result)
-          })
-          .catch(() => {
-            if (latestRequest.current === request) setMembers([])
-          })
-      })
-    }, 250)
+
+    if (!query) {
+      setMembers([])
+      setSearchStatus("idle")
+      return
+    }
+
+    setMembers([])
+    setSearchStatus("loading")
+    const timer = setTimeout(() => searchMembers(query, request), 250)
 
     return () => clearTimeout(timer)
-  }, [value])
+  }, [value, searchMembers])
+
+  function retrySearch() {
+    const query = value.trim()
+    if (!query) return
+    const request = ++latestRequest.current
+    setMembers([])
+    setSearchStatus("loading")
+    searchMembers(query, request)
+  }
+
+  const loading = searchStatus === "loading"
 
   return (
     <Combobox
@@ -68,6 +94,19 @@ export function MemberCombobox() {
           <ComboboxEmpty>
             {loading ? (
               <LoaderCircle className="size-4 animate-spin" aria-label={t("searching")} />
+            ) : searchStatus === "error" ? (
+              <div className="flex flex-col items-center gap-2">
+                <span role="alert">{t("searchFailed")}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={retrySearch}
+                >
+                  {t("retrySearch")}
+                </Button>
+              </div>
             ) : value.trim() ? (
               t("noMembers")
             ) : (

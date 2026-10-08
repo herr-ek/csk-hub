@@ -1,11 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
-import { disableTwoFactor, enableTwoFactor, verifyTwoFactorSetup } from "./two-factor-service"
+import {
+  disableTwoFactor,
+  enableTwoFactor,
+  getAuthoritativeTwoFactorState,
+  verifyTwoFactorSetup
+} from "./two-factor-service"
 
 export function useTwoFactorSettings(enabled: boolean) {
   const t = useTranslations("AccountSettings")
+  const router = useRouter()
   const [isEnabled, setIsEnabled] = useState(enabled)
   const [requestedEnabled, setRequestedEnabled] = useState<boolean>()
   const [password, setPassword] = useState("")
@@ -15,57 +22,88 @@ export function useTwoFactorSettings(enabled: boolean) {
   const [error, setError] = useState<string>()
   const [message, setMessage] = useState<string>()
   const [pending, setPending] = useState(false)
+  const operationInProgress = useRef(false)
+
+  useEffect(() => {
+    setIsEnabled(enabled)
+  }, [enabled])
+
+  async function reconcileAfterUnavailable() {
+    const authoritativeState = await getAuthoritativeTwoFactorState()
+    if (authoritativeState !== undefined) setIsEnabled(authoritativeState)
+    setRequestedEnabled(undefined)
+    setPassword("")
+    setCode("")
+    setTotpUri(undefined)
+    setBackupCodes(undefined)
+    router.refresh()
+    setError(t("twoFactorRequestFailed"))
+  }
 
   async function changeTwoFactor(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (operationInProgress.current) return
+    operationInProgress.current = true
     setError(undefined)
     setMessage(undefined)
     setPending(true)
 
-    if (requestedEnabled) {
-      const result = await enableTwoFactor(password)
-      setPending(false)
-      if (!result.success) {
-        setError(result.error)
+    try {
+      if (requestedEnabled) {
+        const result = await enableTwoFactor(password)
+        if (!result.success) {
+          if ("unavailable" in result) await reconcileAfterUnavailable()
+          else setError(result.error)
+          return
+        }
+        setTotpUri(result.totpUri)
+        setBackupCodes(result.backupCodes)
         return
       }
-      setTotpUri(result.totpUri)
-      setBackupCodes(result.backupCodes)
-      return
-    }
 
-    const result = await disableTwoFactor(password)
-    setPending(false)
-    if (!result.success) {
-      setError(result.error)
-      return
-    }
+      const result = await disableTwoFactor(password)
+      if (!result.success) {
+        if ("unavailable" in result) await reconcileAfterUnavailable()
+        else setError(result.error)
+        return
+      }
 
-    setIsEnabled(false)
-    setRequestedEnabled(undefined)
-    setPassword("")
-    setBackupCodes(undefined)
-    setMessage(t("twoFactorDisabled"))
+      setIsEnabled(false)
+      setRequestedEnabled(undefined)
+      setPassword("")
+      setBackupCodes(undefined)
+      setMessage(t("twoFactorDisabled"))
+    } finally {
+      setPending(false)
+      operationInProgress.current = false
+    }
   }
 
   async function verifySetup(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (operationInProgress.current) return
+    operationInProgress.current = true
     setError(undefined)
     setPending(true)
-    const result = await verifyTwoFactorSetup(code)
-    setPending(false)
+    try {
+      const result = await verifyTwoFactorSetup(code)
 
-    if (!result.success) {
-      setError(result.error)
-      return
+      if (!result.success) {
+        if ("unavailable" in result) await reconcileAfterUnavailable()
+        else setError(result.error)
+        return
+      }
+
+      setIsEnabled(true)
+      setRequestedEnabled(undefined)
+      setTotpUri(undefined)
+      setPassword("")
+      setCode("")
+      setMessage(t("authenticatorEnabled"))
+    } finally {
+      setPending(false)
+      operationInProgress.current = false
     }
-
-    setIsEnabled(true)
-    setRequestedEnabled(undefined)
-    setTotpUri(undefined)
-    setPassword("")
-    setCode("")
-    setMessage(t("authenticatorEnabled"))
   }
 
   function requestChange(nextEnabled: boolean) {

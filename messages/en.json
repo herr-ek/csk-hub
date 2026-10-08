@@ -80,7 +80,8 @@
       "trustDevice": "Trust this device for 30 days",
       "verifying": "Verifying…",
       "verify": "Verify",
-      "emailCodeSent": "A security code was sent to your email."
+      "emailCodeSent": "A security code was sent to your email.",
+      "requestFailed": "We couldn't complete the verification request. Please try again."
     }
   },
   "Common": {
@@ -113,8 +114,10 @@
     "impersonating": "Impersonating {name}",
     "logout": "Logout",
     "loggingOut": "Logging out…",
+    "logoutFailed": "Unable to log out right now. Please try again.",
     "stopImpersonating": "Stop impersonating",
     "stoppingImpersonation": "Stopping impersonation…",
+    "stopImpersonationFailed": "Unable to stop impersonating right now. Please try again.",
     "language": "Language",
     "messages": "Messages"
   },
@@ -269,8 +272,13 @@
     "changingPassword": "Changing…",
     "passwordChanged": "Password changed. Other sessions were signed out.",
     "passwordChangeFailed": "Unable to change your password.",
+    "passwordChangeUnconfirmed": "We couldn't confirm whether your password changed. Check your account before trying again.",
+    "twoFactorRequestFailed": "We couldn't confirm whether two-factor authentication changed. Check its status before trying again.",
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Use a device passkey to sign in without a password.",
+    "loadingPasskeys": "Loading passkeys…",
+    "passkeysLoadFailed": "Unable to load passkeys right now.",
+    "retryPasskeys": "Retry loading passkeys",
     "noPasskeys": "No passkeys registered.",
     "passkey": "Passkey",
     "passkeyName": "Passkey name",
@@ -418,6 +426,8 @@
     "noMembers": "No active members match that search.",
     "typeToSearch": "Type to search active members.",
     "searching": "Searching…",
+    "searchFailed": "Member search is unavailable right now.",
+    "retrySearch": "Retry search",
     "backToHome": "Back to home",
     "firstMessageLabel": "First message",
     "messageLabel": "Message",
