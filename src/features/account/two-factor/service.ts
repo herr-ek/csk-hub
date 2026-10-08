@@ -1,17 +1,22 @@
 import { authClient } from "@/core/auth/auth-client"
 
 export type TwoFactorMethod = "otp" | "totp" | "backup"
-export type TwoFactorOperationResult = { success: true; role?: string } | { success: false; error: string }
+type OperationFailure = { success: false; error: string } | { success: false; unavailable: true }
+export type TwoFactorOperationResult = { success: true; role?: string } | OperationFailure
 
 export function getAvailableMethods(methods: string[]): Exclude<TwoFactorMethod, "backup">[] {
   return methods.filter((method): method is "otp" | "totp" => method === "otp" || method === "totp")
 }
 
 export async function sendTwoFactorOtp(): Promise<TwoFactorOperationResult> {
-  const result = await authClient.twoFactor.sendOtp()
-  return result.error
-    ? { success: false, error: result.error.message ?? "Unable to send the verification code." }
-    : { success: true }
+  try {
+    const result = await authClient.twoFactor.sendOtp()
+    return result.error
+      ? { success: false, error: result.error.message ?? "Unable to send the verification code." }
+      : { success: true }
+  } catch {
+    return { success: false, unavailable: true }
+  }
 }
 
 export async function verifyTwoFactorMethod(
@@ -19,15 +24,19 @@ export async function verifyTwoFactorMethod(
   code: string,
   trustDevice: boolean
 ): Promise<TwoFactorOperationResult> {
-  const result =
-    method === "totp"
-      ? await authClient.twoFactor.verifyTotp({ code, trustDevice })
-      : method === "otp"
-        ? await authClient.twoFactor.verifyOtp({ code, trustDevice })
-        : await authClient.twoFactor.verifyBackupCode({ code, trustDevice, disableSession: false })
+  try {
+    const result =
+      method === "totp"
+        ? await authClient.twoFactor.verifyTotp({ code, trustDevice })
+        : method === "otp"
+          ? await authClient.twoFactor.verifyOtp({ code, trustDevice })
+          : await authClient.twoFactor.verifyBackupCode({ code, trustDevice, disableSession: false })
 
-  if (result.error) return { success: false, error: result.error.message ?? "Unable to verify the code." }
+    if (result.error) return { success: false, error: result.error.message ?? "Unable to verify the code." }
 
-  const role = result.data?.user?.role
-  return role ? { success: true, role } : { success: true }
+    const role = result.data?.user?.role
+    return role ? { success: true, role } : { success: true }
+  } catch {
+    return { success: false, unavailable: true }
+  }
 }
