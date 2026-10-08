@@ -1,8 +1,8 @@
 "use client"
 
-import { useForm } from "@tanstack/react-form"
+import { useForm, useSelector } from "@tanstack/react-form"
 import Link from "next/link"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
@@ -25,6 +25,7 @@ export function PasswordResetForm({
 }) {
   const t = useTranslations("Public.passwordReset")
   const [formError, setFormError] = useState<string | null>(null)
+  const submissionInProgress = useRef(false)
 
   async function onSubmit({ value }: { value: z.infer<typeof passwordResetSchema> }) {
     setFormError(null)
@@ -49,15 +50,22 @@ export function PasswordResetForm({
     },
     onSubmit
   })
+  const isSubmitting = useSelector(form.store, (state) => state.isSubmitting)
 
   return (
     <form
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault()
-        form.handleSubmit()
+        if (submissionInProgress.current) return
+        submissionInProgress.current = true
+        try {
+          await form.handleSubmit()
+        } finally {
+          submissionInProgress.current = false
+        }
       }}
       noValidate
-      aria-busy={form.state.isSubmitting}
+      aria-busy={isSubmitting}
       className="flex flex-col gap-4"
     >
       <FieldGroup>
@@ -136,8 +144,8 @@ export function PasswordResetForm({
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
-      <Button type="submit" disabled={form.state.isSubmitting}>
-        {form.state.isSubmitting ? t("updating") : t("updatePassword")}
+      <Button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? t("updating") : t("updatePassword")}
       </Button>
       <Link href={ROUTES.login} className="text-center text-sm underline underline-offset-4">
         {t("returnToSignIn")}
