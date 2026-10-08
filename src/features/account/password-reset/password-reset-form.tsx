@@ -5,11 +5,12 @@ import Link from "next/link"
 import { useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
+import { LocalizedFieldError } from "@/core/i18n/validation-errors"
 import { ROUTES } from "@/core/navigation/site"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { passwordResetSchema } from "./schemas"
 import { resetPassword } from "./service"
@@ -31,7 +32,7 @@ export function PasswordResetForm({
     const result = await resetPassword(token, value.email, value.password)
 
     if (!result.success) {
-      setFormError(result.error)
+      setFormError(t(`errors.${result.kind}`))
       return
     }
 
@@ -78,7 +79,7 @@ export function PasswordResetForm({
                   onChange={(event) => field.handleChange(event.target.value)}
                   aria-invalid={isInvalid}
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid && <LocalizedFieldError errors={field.state.meta.errors} label={t("email")} />}
               </Field>
             )
           }}
@@ -102,7 +103,7 @@ export function PasswordResetForm({
                   aria-invalid={isInvalid}
                 />
                 <FieldDescription>{t("passwordHint", { count: passwordPolicy.minPasswordLength })}</FieldDescription>
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid && <LocalizedFieldError errors={field.state.meta.errors} label={t("newPassword")} />}
               </Field>
             )
           }}
@@ -125,7 +126,7 @@ export function PasswordResetForm({
                   onChange={(event) => field.handleChange(event.target.value)}
                   aria-invalid={isInvalid}
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid && <LocalizedFieldError errors={field.state.meta.errors} label={t("confirmNewPassword")} />}
               </Field>
             )
           }}

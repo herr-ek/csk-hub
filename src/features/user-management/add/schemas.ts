@@ -1,7 +1,7 @@
 import { z } from "zod"
-import { normalizedEmailField } from "@/shared/schemas"
+import { normalizedEmailSchema, validationMessageIds } from "@/shared/schemas"
 
 export const addUserSchema = z.object({
-  name: z.string({ error: "Name is required." }).trim().min(1, "Name is required."),
-  email: normalizedEmailField("Email")
+  name: z.string({ error: validationMessageIds.required }).trim().min(1, validationMessageIds.required),
+  email: normalizedEmailSchema
 })

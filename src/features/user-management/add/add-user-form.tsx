@@ -45,7 +45,7 @@ export function AddUserForm() {
           <FieldLabel htmlFor="user-email">{common("email")}</FieldLabel>
           <Input id="user-email" name="email" type="email" autoComplete="email" required />
         </Field>
-        <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
+        <FieldError>{state.status === "error" ? t(`addErrors.${state.kind}`) : undefined}</FieldError>
       </FieldGroup>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending}>

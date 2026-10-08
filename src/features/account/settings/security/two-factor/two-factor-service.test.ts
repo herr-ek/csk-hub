@@ -62,8 +62,8 @@ describe("two-factor settings", () => {
     disable.mockResolvedValue({ error: { message: "Password is incorrect." } })
     verifyTotp.mockResolvedValue({ error: { message: "The code is invalid." } })
 
-    await expect(enableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "Password is incorrect." })
-    await expect(disableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "Password is incorrect." })
-    await expect(verifyTwoFactorSetup("wrong")).resolves.toEqual({ success: false, error: "The code is invalid." })
+    await expect(enableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "enableFailed" })
+    await expect(disableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "disableFailed" })
+    await expect(verifyTwoFactorSetup("wrong")).resolves.toEqual({ success: false, error: "verifyFailed" })
   })
 })

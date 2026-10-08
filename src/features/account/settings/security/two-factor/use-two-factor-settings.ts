@@ -26,7 +26,7 @@ export function useTwoFactorSettings(enabled: boolean) {
       const result = await enableTwoFactor(password)
       setPending(false)
       if (!result.success) {
-        setError(result.error)
+        setError(t(`twoFactorErrors.${result.error}`))
         return
       }
       setTotpUri(result.totpUri)
@@ -37,7 +37,7 @@ export function useTwoFactorSettings(enabled: boolean) {
     const result = await disableTwoFactor(password)
     setPending(false)
     if (!result.success) {
-      setError(result.error)
+      setError(t(`twoFactorErrors.${result.error}`))
       return
     }
 
@@ -56,7 +56,7 @@ export function useTwoFactorSettings(enabled: boolean) {
     setPending(false)
 
     if (!result.success) {
-      setError(result.error)
+      setError(t(`twoFactorErrors.${result.error}`))
       return
     }
 

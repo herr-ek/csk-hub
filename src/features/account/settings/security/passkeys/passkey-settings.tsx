@@ -3,7 +3,7 @@
 import { getAuthenticatorName } from "@better-auth/passkey"
 import { useCallback, useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
-import { useTranslations } from "@/core/i18n/translations"
+import { useFormatter, useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -21,6 +21,7 @@ type Passkey = NonNullable<Awaited<ReturnType<typeof authClient.passkey.listUser
 export function PasskeySettings() {
   const t = useTranslations("AccountSettings")
   const common = useTranslations("Common")
+  const format = useFormatter()
   const [passkeys, setPasskeys] = useState<Passkey[]>([])
   const [name, setName] = useState("")
   const [error, setError] = useState<string>()
@@ -33,8 +34,8 @@ export function PasskeySettings() {
   const loadPasskeys = useCallback(async () => {
     const result = await authClient.passkey.listUserPasskeys()
     if (result.data) setPasskeys(result.data)
-    if (result.error) setError(result.error.message)
-  }, [])
+    if (result.error) setError(t("passkeysLoadFailed"))
+  }, [t])
 
   useEffect(() => {
     void loadPasskeys()
@@ -49,7 +50,7 @@ export function PasskeySettings() {
     try {
       const result = await addPasskeyOperation(name)
       if (!result.success) {
-        setError(result.error)
+        setError(t(`passkeyErrors.${result.error}`))
         return
       }
       setName("")
@@ -70,7 +71,7 @@ export function PasskeySettings() {
     try {
       const result = await renamePasskeyOperation(editingPasskeyId, editingName)
       if (!result.success) {
-        setError(result.error)
+        setError(t(`passkeyErrors.${result.error}`))
         return
       }
       setEditingPasskeyId(undefined)
@@ -90,7 +91,7 @@ export function PasskeySettings() {
     try {
       const result = await deletePasskeyOperation(id)
       if (!result.success) {
-        setError(result.error)
+        setError(t(`passkeyErrors.${result.error}`))
         return
       }
       setDeletingPasskeyId(undefined)
@@ -149,7 +150,9 @@ export function PasskeySettings() {
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {t("added", {
-                          date: passkey.createdAt ? new Date(passkey.createdAt).toLocaleDateString() : t("recently")
+                          date: passkey.createdAt
+                            ? format.dateTime(passkey.createdAt, { dateStyle: "medium" })
+                            : t("recently")
                         })}
                       </p>
                     </div>

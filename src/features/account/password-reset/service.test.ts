@@ -40,7 +40,7 @@ describe("password reset service", () => {
     await expect(requestPasswordReset("user@example.com")).resolves.toEqual({
       success: false,
       kind: "network",
-      error: "Unable to send a password reset email right now. Please try again."
+      error: "request-network"
     })
   })
 
@@ -50,7 +50,7 @@ describe("password reset service", () => {
     await expect(requestPasswordReset("user@example.com")).resolves.toEqual({
       success: false,
       kind: "unknown",
-      error: "Unable to send a password reset email right now. Please try again."
+      error: "request-failed"
     })
   })
 
@@ -60,14 +60,14 @@ describe("password reset service", () => {
     await expect(resetPassword("expired-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "invalid-reset-token",
-      error: "That reset link is invalid or has expired."
+      error: "invalid-reset-token"
     })
 
     resetPasswordEndpoint.mockResolvedValue({ error: { code: "INTERNAL_ERROR", status: 500 } })
     await expect(resetPassword("valid-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "network",
-      error: "Unable to reset your password right now. Please try again."
+      error: "network"
     })
   })
 
@@ -77,14 +77,14 @@ describe("password reset service", () => {
     await expect(resetPassword("expired-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "invalid-reset-token",
-      error: "That reset link is invalid or has expired."
+      error: "invalid-reset-token"
     })
 
     resetPasswordEndpoint.mockResolvedValue({ error: { code: "BAD_REQUEST", status: 400 } })
     await expect(resetPassword("unknown-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "unknown",
-      error: "Unable to reset your password right now. Please try again."
+      error: "unknown"
     })
   })
 
@@ -113,7 +113,7 @@ describe("password reset service", () => {
     await expect(resetPassword("valid-token", "user@example.com", "correct horse battery staple")).resolves.toEqual({
       success: false,
       kind: "network",
-      error: "Unable to reset your password right now. Please try again."
+      error: "network"
     })
   })
 
@@ -123,7 +123,7 @@ describe("password reset service", () => {
     await expect(requestPasswordReset("user@example.com")).resolves.toEqual({
       success: false,
       kind: "network",
-      error: "Unable to send a password reset email right now. Please try again."
+      error: "request-network"
     })
   })
 })

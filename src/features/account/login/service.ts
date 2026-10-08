@@ -11,7 +11,7 @@ export type IdentifierPasswordSignInInput = Omit<EmailPasswordSignInInput, "emai
 
 export type LoginResult =
   | { success: true; role?: string | null }
-  | { success: false; error: string }
+  | { success: false; error: "invalidCredentials" | "unavailable" | "passkeyFailed" | "passkeyUnavailable" }
   | { success: false; requiresTwoFactor: true; methods: string[] }
 
 function requiresTwoFactor(result: { data: unknown }) {
@@ -30,10 +30,6 @@ function getTwoFactorMethods(result: { data: unknown }) {
     : []
 }
 
-function getAuthErrorMessage(error: { message?: string }, fallback: string) {
-  return error.message ?? fallback
-}
-
 export async function signInWithEmailPassword(input: EmailPasswordSignInInput): Promise<LoginResult> {
   try {
     const result = await authClient.signIn.email({
@@ -45,7 +41,7 @@ export async function signInWithEmailPassword(input: EmailPasswordSignInInput): 
     if (result.error) {
       return {
         success: false,
-        error: getAuthErrorMessage(result.error, "Unable to sign in. Check your email and password and try again.")
+        error: "invalidCredentials"
       }
     }
 
@@ -61,7 +57,7 @@ export async function signInWithEmailPassword(input: EmailPasswordSignInInput): 
   } catch {
     return {
       success: false,
-      error: "Unable to sign in right now. Check your connection and try again."
+      error: "unavailable"
     }
   }
 }
@@ -77,10 +73,7 @@ export async function signInWithUsernamePassword(input: UsernamePasswordSignInIn
     if (result.error) {
       return {
         success: false,
-        error: getAuthErrorMessage(
-          result.error,
-          "Unable to sign in. Check your email or username and password and try again."
-        )
+        error: "invalidCredentials"
       }
     }
 
@@ -96,7 +89,7 @@ export async function signInWithUsernamePassword(input: UsernamePasswordSignInIn
   } catch {
     return {
       success: false,
-      error: "Unable to sign in right now. Check your connection and try again."
+      error: "unavailable"
     }
   }
 }
@@ -114,10 +107,7 @@ export async function signInWithPasskey(): Promise<LoginResult> {
     if (result.error) {
       return {
         success: false,
-        error: getAuthErrorMessage(
-          result.error,
-          "Unable to sign in with your passkey. Try again or use your email and password."
-        )
+        error: "passkeyFailed"
       }
     }
 
@@ -126,7 +116,7 @@ export async function signInWithPasskey(): Promise<LoginResult> {
   } catch {
     return {
       success: false,
-      error: "Unable to sign in with a passkey right now. Check your connection and try again."
+      error: "passkeyUnavailable"
     }
   }
 }

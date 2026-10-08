@@ -47,7 +47,7 @@ describe("passkey settings", () => {
   test("does not rename a passkey to an empty name", async () => {
     await expect(renamePasskey("passkey-1", "  ")).resolves.toEqual({
       success: false,
-      error: "Passkey name is required."
+      error: "nameRequired"
     })
     expect(updatePasskeyEndpoint).not.toHaveBeenCalled()
   })
@@ -64,7 +64,7 @@ describe("passkey settings", () => {
 
     await expect(addPasskey("Laptop")).resolves.toEqual({
       success: false,
-      error: "Passkey registration failed."
+      error: "addFailed"
     })
   })
 })

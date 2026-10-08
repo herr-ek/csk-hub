@@ -27,7 +27,7 @@ export function useTwoFactorForm() {
     const result = await sendTwoFactorOtp()
     setPending(false)
     if (result.success) setMessage(t("emailCodeSent"))
-    else setError(result.error)
+    else setError(t(`errors.${result.error}`))
   }
 
   async function verify(event: React.SubmitEvent<HTMLFormElement>) {
@@ -37,7 +37,7 @@ export function useTwoFactorForm() {
     const result = await verifyTwoFactorMethod(method, code, trustDevice)
     setPending(false)
     if (!result.success) {
-      setError(result.error)
+      setError(t(`errors.${result.error}`))
       return
     }
 

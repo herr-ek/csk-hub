@@ -6,12 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
+import { LocalizedFieldError } from "@/core/i18n/validation-errors"
 import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Checkbox } from "@/shared/ui/base/checkbox"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
+import { Field, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
 import { loginSchema } from "./schemas"
@@ -31,7 +32,7 @@ export function LoginForm() {
         router.replace(twoFactorPath(result.methods, returnTo))
         return
       }
-      setFormError(result.error)
+      setFormError(t(`errors.${result.error}`))
       return
     }
 
@@ -98,7 +99,7 @@ export function LoginForm() {
                   placeholder={t("identifier")}
                   autoComplete="username"
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid && <LocalizedFieldError errors={field.state.meta.errors} label={t("identifier")} />}
               </Field>
             )
           }}
@@ -120,7 +121,7 @@ export function LoginForm() {
                   placeholder={t("password")}
                   autoComplete="current-password"
                 />
-                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                {isInvalid && <LocalizedFieldError errors={field.state.meta.errors} label={t("password")} />}
               </Field>
             )
           }}

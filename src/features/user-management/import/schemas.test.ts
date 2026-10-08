@@ -30,25 +30,23 @@ describe("parseUserCsv", () => {
       skipped: []
     })
     expect(parseUserCsv("full name,email\nAda,ada@example.com")).toEqual({
-      error: "The CSV must include name and email columns."
+      error: "columns"
     })
   })
 
   test("rejects duplicate emails and more than 50 rows", () => {
     expect(parseUserCsv("name,email\nAda,ada@example.com\nGrace,ADA@example.com")).toEqual({
       rows: [{ name: "Ada", email: "ada@example.com", row: 2 }],
-      skipped: [
-        { row: 3, name: "Grace", email: "ada@example.com", error: "The email address is repeated in this CSV." }
-      ]
+      skipped: [{ row: 3, name: "Grace", email: "ada@example.com", error: "email-repeated" }]
     })
     expect(parseUserCsv("name,email\nAda,not-an-email")).toEqual({
       rows: [],
-      skipped: [{ row: 2, name: "Ada", email: "not-an-email", error: "Email must be a valid email address." }]
+      skipped: [{ row: 2, name: "Ada", email: "not-an-email", error: "invalid-email:email" }]
     })
 
     const rows = Array.from({ length: MAX_IMPORT_USERS + 1 }, (_, index) => `User ${index},user${index}@example.com`)
     expect(parseUserCsv(["name,email", ...rows].join("\n"))).toEqual({
-      error: "You can import up to 50 users at a time."
+      error: "too-many-users"
     })
   })
 })

@@ -5,10 +5,11 @@ import Link from "next/link"
 import { useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
+import { LocalizedFieldError } from "@/core/i18n/validation-errors"
 import { ROUTES } from "@/core/navigation/site"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
-import { Field, FieldError, FieldLabel } from "@/shared/ui/base/field"
+import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
 import { passwordResetRequestSchema } from "./schemas"
@@ -30,7 +31,7 @@ export function PasswordResetRequestForm({
     const result = await requestPasswordReset(value.email)
 
     if (!result.success) {
-      setFormError(result.error)
+      setFormError(t(`errors.${result.kind}`))
       return
     }
 
@@ -74,7 +75,7 @@ export function PasswordResetRequestForm({
                 onChange={(event) => field.handleChange(event.target.value)}
                 aria-invalid={isInvalid}
               />
-              {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              {isInvalid && <LocalizedFieldError errors={field.state.meta.errors} label={t("email")} />}
             </Field>
           )
         }}
