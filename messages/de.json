@@ -52,6 +52,8 @@
       "newPasswordTitle": "Neues Passwort wählen",
       "newPasswordDescription": "Gib dein neues Passwort ein und bestätige es.",
       "resetDescription": "Gib deine E-Mail-Adresse ein und bestätige dein neues Passwort.",
+      "resetCompleteTitle": "Passwort aktualisiert",
+      "resetCompleteDescription": "Dein Passwort wurde geändert. Melde dich mit deinem neuen Passwort an, um fortzufahren.",
       "invalidLink": "Dieser Link zum Zurücksetzen ist ungültig oder abgelaufen. Fordere unten einen neuen an.",
       "email": "E-Mail",
       "newPassword": "Neues Passwort",

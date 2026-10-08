@@ -52,6 +52,8 @@
       "newPasswordTitle": "Choose a new password",
       "newPasswordDescription": "Enter and confirm your new password.",
       "resetDescription": "Enter your email and confirm your new password.",
+      "resetCompleteTitle": "Password updated",
+      "resetCompleteDescription": "Your password has been changed. Sign in with your new password to continue.",
       "invalidLink": "This reset link is invalid or has expired. Request a new one below.",
       "email": "Email",
       "newPassword": "New password",
