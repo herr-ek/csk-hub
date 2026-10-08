@@ -45,6 +45,9 @@
       "**/.vercel": true,
       "**/bun.lock": true,
       "**/drizzle": true
+    },
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
     }
   }
 }
