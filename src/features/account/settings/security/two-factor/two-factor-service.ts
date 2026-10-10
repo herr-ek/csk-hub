@@ -44,12 +44,3 @@ export async function verifyTwoFactorSetup(code: string): Promise<TwoFactorSetti
     return { success: false, unavailable: true }
   }
 }
-
-export async function getAuthoritativeTwoFactorState(): Promise<boolean | undefined> {
-  try {
-    const result = await authClient.getSession()
-    return result.data?.user ? Boolean(result.data.user.twoFactorEnabled) : undefined
-  } catch {
-    return undefined
-  }
-}
