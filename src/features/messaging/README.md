@@ -1,7 +1,7 @@
 # Messaging
 
 Messaging is a feature module for private Conversations and Messages. Domain terminology and
-product rules live in [`CONTEXT.md`](../../../CONTEXT.md#messaging); this document explains where
+product rules live in [`GLOSSARY.md`](../../../GLOSSARY.md#messaging); this document explains where
 the implementation lives and how its parts depend on one another.
 
 ## Structure
