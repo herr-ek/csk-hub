@@ -2,6 +2,7 @@
 
 import { useForm, useSelector } from "@tanstack/react-form"
 import Link from "next/link"
+import type { SubmitEvent } from "react"
 import { useRef, useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
@@ -27,7 +28,7 @@ export function PasswordResetForm({
   const [formError, setFormError] = useState<string | null>(null)
   const submissionInProgress = useRef(false)
 
-  async function onSubmit({ value }: { value: z.infer<typeof passwordResetSchema> }) {
+  async function submitPasswordReset({ value }: { value: z.infer<typeof passwordResetSchema> }) {
     setFormError(null)
     const result = await resetPassword(token, value.email, value.password)
 
@@ -48,26 +49,23 @@ export function PasswordResetForm({
     validators: {
       onSubmit: passwordResetSchema
     },
-    onSubmit
+    onSubmit: submitPasswordReset
   })
   const isSubmitting = useSelector(form.store, (state) => state.isSubmitting)
 
+  async function handleFormSubmit(event: SubmitEvent) {
+    event.preventDefault()
+    if (submissionInProgress.current) return
+    submissionInProgress.current = true
+    try {
+      await form.handleSubmit()
+    } finally {
+      submissionInProgress.current = false
+    }
+  }
+
   return (
-    <form
-      onSubmit={async (event) => {
-        event.preventDefault()
-        if (submissionInProgress.current) return
-        submissionInProgress.current = true
-        try {
-          await form.handleSubmit()
-        } finally {
-          submissionInProgress.current = false
-        }
-      }}
-      noValidate
-      aria-busy={isSubmitting}
-      className="flex flex-col gap-4"
-    >
+    <form onSubmit={handleFormSubmit} noValidate aria-busy={isSubmitting} className="flex flex-col gap-4">
       <FieldGroup>
         <form.Field name="email">
           {(field) => {

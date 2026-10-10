@@ -12,17 +12,16 @@ import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
+import { toast } from "@/shared/ui/base/toast"
 import { changePasswordSchema } from "./schemas"
 
 export function PasswordSettings() {
   const t = useTranslations("AccountSettings")
   const router = useRouter()
-  const [formError, setFormError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const submissionInProgress = useRef(false)
 
   async function onSubmit({ value }: { value: z.infer<typeof changePasswordSchema> }) {
-    setFormError(null)
     setMessage(null)
 
     let result: Awaited<ReturnType<typeof authClient.changePassword>>
@@ -39,12 +38,12 @@ export function PasswordSettings() {
         // Refresh the server-rendered session state below even if the client refresh fails.
       }
       router.refresh()
-      setFormError(t("passwordChangeUnconfirmed"))
+      toast.add({ type: "error", title: t("passwordChangeUnconfirmed") })
       return
     }
 
     if (result.error) {
-      setFormError(result.error.message ?? t("passwordChangeFailed"))
+      toast.add({ type: "error", title: result.error.message ?? t("passwordChangeFailed") })
       return
     }
 
@@ -110,11 +109,6 @@ export function PasswordSettings() {
                 />
               )}
             </form.Field>
-            {formError ? (
-              <Alert variant="destructive">
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            ) : null}
             <div className="flex items-center gap-3">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? t("changingPassword") : t("changePassword")}
