@@ -1,7 +1,8 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath } from "@/core/navigation/navigation-utils"
 import { getAvailableMethods, sendTwoFactorOtp, type TwoFactorMethod, verifyTwoFactorMethod } from "./service"
@@ -19,29 +20,56 @@ export function useTwoFactorForm() {
   const [message, setMessage] = useState<string>()
   const [error, setError] = useState<string>()
   const [pending, setPending] = useState(false)
+  const operationInProgress = useRef(false)
 
   async function sendEmailCode() {
+    if (operationInProgress.current) return
+    operationInProgress.current = true
     setError(undefined)
     setMessage(undefined)
     setPending(true)
-    const result = await sendTwoFactorOtp()
-    setPending(false)
-    if (result.success) setMessage(t("emailCodeSent"))
-    else setError(result.error)
+    try {
+      const result = await sendTwoFactorOtp()
+      if (result.success) setMessage(t("emailCodeSent"))
+      else setError("unavailable" in result ? t("requestFailed") : result.error)
+    } finally {
+      setPending(false)
+      operationInProgress.current = false
+    }
   }
 
   async function verify(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (operationInProgress.current) return
+    operationInProgress.current = true
     setError(undefined)
     setPending(true)
-    const result = await verifyTwoFactorMethod(method, code, trustDevice)
-    setPending(false)
-    if (!result.success) {
-      setError(result.error)
-      return
-    }
+    try {
+      const result = await verifyTwoFactorMethod(method, code, trustDevice)
+      if (!result.success) {
+        if ("unavailable" in result) {
+          try {
+            const session = await authClient.getSession()
+            if (session.data?.user) {
+              router.replace(getPostLoginPath(session.data.user.role, returnTo))
+              return
+            }
+          } catch {
+            // Keep the verification form available when session reconciliation also fails.
+          }
+          setError(t("requestFailed"))
+          return
+        }
 
-    router.replace(getPostLoginPath(result.role, returnTo))
+        setError(result.error)
+        return
+      }
+
+      router.replace(getPostLoginPath(result.role, returnTo))
+    } finally {
+      setPending(false)
+      operationInProgress.current = false
+    }
   }
 
   function selectMethod(nextMethod: TwoFactorMethod) {

@@ -1,8 +1,9 @@
 "use client"
 
-import { useForm } from "@tanstack/react-form"
+import { useForm, useSelector } from "@tanstack/react-form"
 import Link from "next/link"
-import { useState } from "react"
+import type { SubmitEvent } from "react"
+import { useRef, useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
@@ -23,8 +24,9 @@ export function PasswordResetRequestForm({
 }) {
   const t = useTranslations("Public.passwordReset")
   const [formError, setFormError] = useState<string | null>(null)
+  const submissionInProgress = useRef(false)
 
-  async function onSubmit({ value }: { value: z.infer<typeof passwordResetRequestSchema> }) {
+  async function requestPasswordResetLink({ value }: { value: z.infer<typeof passwordResetRequestSchema> }) {
     setFormError(null)
 
     const result = await requestPasswordReset(value.email)
@@ -44,19 +46,23 @@ export function PasswordResetRequestForm({
     validators: {
       onSubmit: passwordResetRequestSchema
     },
-    onSubmit
+    onSubmit: requestPasswordResetLink
   })
+  const isSubmitting = useSelector(form.store, (state) => state.isSubmitting)
+
+  async function handleFormSubmit(event: SubmitEvent) {
+    event.preventDefault()
+    if (submissionInProgress.current) return
+    submissionInProgress.current = true
+    try {
+      await form.handleSubmit()
+    } finally {
+      submissionInProgress.current = false
+    }
+  }
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        form.handleSubmit()
-      }}
-      noValidate
-      aria-busy={form.state.isSubmitting}
-      className="flex flex-col gap-4"
-    >
+    <form onSubmit={handleFormSubmit} noValidate aria-busy={isSubmitting} className="flex flex-col gap-4">
       <form.Field name="email">
         {(field) => {
           const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
@@ -84,8 +90,8 @@ export function PasswordResetRequestForm({
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
-      <Button type="submit" disabled={form.state.isSubmitting}>
-        {form.state.isSubmitting ? (
+      <Button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? (
           <>
             <Spinner />
             {t("sending")}

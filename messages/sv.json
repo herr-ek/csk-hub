@@ -82,7 +82,8 @@
       "trustDevice": "Lita på den här enheten i 30 dagar",
       "verifying": "Verifierar…",
       "verify": "Verifiera",
-      "emailCodeSent": "En säkerhetskod har skickats till din e-post."
+      "emailCodeSent": "En säkerhetskod har skickats till din e-post.",
+      "requestFailed": "Verifieringsbegäran kunde inte slutföras. Försök igen."
     }
   },
   "Common": {
@@ -115,8 +116,10 @@
     "impersonating": "Imiterar {name}",
     "logout": "Logga ut",
     "loggingOut": "Loggar ut…",
+    "logoutFailed": "Det gick inte att logga ut just nu. Försök igen.",
     "stopImpersonating": "Sluta imitera",
     "stoppingImpersonation": "Avslutar imitiering…",
+    "stopImpersonationFailed": "Det gick inte att avsluta imitieringen just nu. Försök igen.",
     "language": "Språk",
     "messages": "Meddelanden"
   },
@@ -266,8 +269,13 @@
     "changingPassword": "Ändrar…",
     "passwordChanged": "Lösenordet har ändrats. Andra sessioner har loggats ut.",
     "passwordChangeFailed": "Det går inte att ändra ditt lösenord.",
+    "passwordChangeUnconfirmed": "Vi kunde inte bekräfta om lösenordet ändrades. Kontrollera kontot innan du försöker igen.",
+    "twoFactorRequestFailed": "Vi kunde inte bekräfta om tvåfaktorsautentiseringen ändrades. Kontrollera statusen innan du försöker igen.",
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Använd en passkey på en enhet för att logga in utan lösenord.",
+    "loadingPasskeys": "Läser in passkeys…",
+    "passkeysLoadFailed": "Det gick inte att läsa in passkeys just nu.",
+    "retryPasskeys": "Försök läsa in passkeys igen",
     "noPasskeys": "Inga passkeys är registrerade.",
     "passkey": "Passkey",
     "passkeyName": "Passkey-namn",
@@ -415,6 +423,8 @@
     "noMembers": "Inga aktiva medlemmar matchar sökningen.",
     "typeToSearch": "Skriv för att söka bland aktiva medlemmar.",
     "searching": "Söker…",
+    "searchFailed": "Det går inte att söka efter medlemmar just nu.",
+    "retrySearch": "Försök söka igen",
     "backToHome": "Tillbaka till startsidan",
     "firstMessageLabel": "Första meddelandet",
     "messageLabel": "Meddelande",

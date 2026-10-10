@@ -1,105 +1,117 @@
 "use client"
 
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { disableTwoFactor, enableTwoFactor, verifyTwoFactorSetup } from "./two-factor-service"
 
-export function useTwoFactorSettings(enabled: boolean) {
+type Step = { kind: "idle" } | { kind: "confirm"; enable: boolean } | { kind: "verify"; totpUri: string }
+type Feedback = { type: "error" | "success"; message: string }
+
+export function useTwoFactorSettings() {
   const t = useTranslations("AccountSettings")
-  const [isEnabled, setIsEnabled] = useState(enabled)
-  const [requestedEnabled, setRequestedEnabled] = useState<boolean>()
-  const [password, setPassword] = useState("")
-  const [code, setCode] = useState("")
-  const [totpUri, setTotpUri] = useState<string>()
+  const router = useRouter()
+  const [step, setStep] = useState<Step>({ kind: "idle" })
   const [backupCodes, setBackupCodes] = useState<string[]>()
-  const [error, setError] = useState<string>()
-  const [message, setMessage] = useState<string>()
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [pending, setPending] = useState(false)
+  const operationInProgress = useRef(false)
 
-  async function changeTwoFactor(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(undefined)
-    setMessage(undefined)
+  async function runPendingOperation(operation: () => Promise<void>) {
+    if (operationInProgress.current) return
+    operationInProgress.current = true
     setPending(true)
-
-    if (requestedEnabled) {
-      const result = await enableTwoFactor(password)
+    try {
+      await operation()
+    } finally {
       setPending(false)
-      if (!result.success) {
-        setError(result.error)
+      operationInProgress.current = false
+    }
+  }
+
+  async function reconcileAfterUnavailable() {
+    setStep({ kind: "idle" })
+    setBackupCodes(undefined)
+    router.refresh()
+    setFeedback({ type: "error", message: t("twoFactorRequestFailed") })
+  }
+
+  function changeTwoFactor(event: React.SubmitEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    const password = String(formData.get("password") ?? "")
+
+    void runPendingOperation(async () => {
+      setFeedback(null)
+      if (step.kind !== "confirm") return
+
+      if (step.enable) {
+        const result = await enableTwoFactor(password)
+        if (!result.success) {
+          if ("unavailable" in result) await reconcileAfterUnavailable()
+          else setFeedback({ type: "error", message: result.error })
+          return
+        }
+
+        setBackupCodes(result.backupCodes)
+        if (result.totpUri) setStep({ kind: "verify", totpUri: result.totpUri })
         return
       }
-      setTotpUri(result.totpUri)
-      setBackupCodes(result.backupCodes)
-      return
-    }
 
-    const result = await disableTwoFactor(password)
-    setPending(false)
-    if (!result.success) {
-      setError(result.error)
-      return
-    }
+      const result = await disableTwoFactor(password)
+      if (!result.success) {
+        if ("unavailable" in result) await reconcileAfterUnavailable()
+        else setFeedback({ type: "error", message: result.error })
+        return
+      }
 
-    setIsEnabled(false)
-    setRequestedEnabled(undefined)
-    setPassword("")
-    setBackupCodes(undefined)
-    setMessage(t("twoFactorDisabled"))
+      setStep({ kind: "idle" })
+      setBackupCodes(undefined)
+      setFeedback({ type: "success", message: t("twoFactorDisabled") })
+      router.refresh()
+    })
   }
 
-  async function verifySetup(event: React.SubmitEvent<HTMLFormElement>) {
+  function verifySetup(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError(undefined)
-    setPending(true)
-    const result = await verifyTwoFactorSetup(code)
-    setPending(false)
+    const formData = new FormData(event.currentTarget)
+    const code = String(formData.get("code") ?? "")
 
-    if (!result.success) {
-      setError(result.error)
-      return
-    }
+    void runPendingOperation(async () => {
+      setFeedback(null)
+      const result = await verifyTwoFactorSetup(code)
 
-    setIsEnabled(true)
-    setRequestedEnabled(undefined)
-    setTotpUri(undefined)
-    setPassword("")
-    setCode("")
-    setMessage(t("authenticatorEnabled"))
+      if (!result.success) {
+        if ("unavailable" in result) await reconcileAfterUnavailable()
+        else setFeedback({ type: "error", message: result.error })
+        return
+      }
+
+      setStep({ kind: "idle" })
+      setFeedback({ type: "success", message: t("authenticatorEnabled") })
+      router.refresh()
+    })
   }
 
-  function requestChange(nextEnabled: boolean) {
-    setRequestedEnabled(nextEnabled)
-    setPassword("")
-    setError(undefined)
-    setMessage(undefined)
+  function requestChange(enable: boolean) {
+    setStep({ kind: "confirm", enable })
+    setFeedback(null)
   }
 
   function cancelChange() {
-    setRequestedEnabled(undefined)
-    setPassword("")
-    setCode("")
-    setTotpUri(undefined)
+    setStep({ kind: "idle" })
     setBackupCodes(undefined)
-    setError(undefined)
-    setMessage(undefined)
+    setFeedback(null)
   }
 
   return {
     backupCodes,
     cancelChange,
     changeTwoFactor,
-    code,
-    error,
-    isEnabled,
-    message,
-    password,
+    feedback,
     pending,
     requestChange,
-    requestedEnabled,
-    setCode,
-    setPassword,
-    totpUri,
+    step,
     verifySetup
   }
 }

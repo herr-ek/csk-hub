@@ -82,7 +82,8 @@
       "trustDevice": "Diesem Gerät 30 Tage lang vertrauen",
       "verifying": "Wird verifiziert…",
       "verify": "Verifizieren",
-      "emailCodeSent": "Ein Sicherheitscode wurde an deine E-Mail-Adresse gesendet."
+      "emailCodeSent": "Ein Sicherheitscode wurde an deine E-Mail-Adresse gesendet.",
+      "requestFailed": "Die Verifizierungsanfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut."
     }
   },
   "Common": {
@@ -115,8 +116,10 @@
     "impersonating": "Imitieren von {name}",
     "logout": "Abmelden",
     "loggingOut": "Abmeldung läuft…",
+    "logoutFailed": "Du konntest gerade nicht abgemeldet werden. Bitte versuche es erneut.",
     "stopImpersonating": "Imitierung beenden",
     "stoppingImpersonation": "Imitierung wird beendet…",
+    "stopImpersonationFailed": "Die Imitierung konnte gerade nicht beendet werden. Bitte versuche es erneut.",
     "language": "Sprache",
     "messages": "Nachrichten"
   },
@@ -266,8 +269,13 @@
     "changingPassword": "Wird geändert…",
     "passwordChanged": "Passwort geändert. Andere Sitzungen wurden abgemeldet.",
     "passwordChangeFailed": "Dein Passwort kann nicht geändert werden.",
+    "passwordChangeUnconfirmed": "Wir konnten nicht bestätigen, ob dein Passwort geändert wurde. Prüfe dein Konto, bevor du es erneut versuchst.",
+    "twoFactorRequestFailed": "Wir konnten nicht bestätigen, ob die Zwei-Faktor-Authentifizierung geändert wurde. Prüfe den Status, bevor du es erneut versuchst.",
     "passkeysTitle": "Passkeys",
     "passkeysDescription": "Verwende einen Passkey auf einem Gerät, um dich ohne Passwort anzumelden.",
+    "loadingPasskeys": "Passkeys werden geladen…",
+    "passkeysLoadFailed": "Passkeys können gerade nicht geladen werden.",
+    "retryPasskeys": "Passkeys erneut laden",
     "noPasskeys": "Keine Passkeys registriert.",
     "passkey": "Passkey",
     "passkeyName": "Passkey-Name",
@@ -415,6 +423,8 @@
     "noMembers": "Keine aktiven Mitglieder entsprechen der Suche.",
     "typeToSearch": "Tippen Sie, um aktive Mitglieder zu suchen.",
     "searching": "Suche…",
+    "searchFailed": "Mitglieder können gerade nicht gesucht werden.",
+    "retrySearch": "Erneut suchen",
     "backToHome": "Zurück zur Startseite",
     "firstMessageLabel": "Erste Nachricht",
     "messageLabel": "Nachricht",
