@@ -141,7 +141,7 @@ AbsenceReasons(_id_, label, active)
 // A singer's answer. No row = no response yet.
 // Surrogate key so that rows can outlive their User (Erasure).
 EventResponses(_id_, eventId, userId?, answer, comment?, absenceReasonId?, reasonText?, respondedAt)
-	eventId         -> Events.id
+	eventId         -> Events.id           // ON DELETE CASCADE
 	userId          -> Users.id            // ON DELETE SET NULL
 	answer          -> RsvpAnswer
 	comment         // optional note on any answer
@@ -170,7 +170,7 @@ EventRegistrationQuestionOptions(_id_, questionId, label, sortOrder)
 // A User signing up. No row = not signed up. Withdrawing keeps the row.
 // Surrogate key so that rows can outlive their User (Erasure).
 EventRegistrations(_id_, eventId, userId?, status, comment?, registeredAt, withdrawnAt?)
-	eventId      -> Events.id
+	eventId      -> Events.id              // ON DELETE CASCADE
 	userId       -> Users.id               // ON DELETE SET NULL
 	status       -> RegistrationStatus     // default Registered
 	comment      // optional note to the organiser
@@ -184,18 +184,18 @@ EventRegistrations(_id_, eventId, userId?, status, comment?, registeredAt, withd
 // choice answers carry their chosen options in EventRegistrationAnswerChoices.
 EventRegistrationAnswers(_registrationId_, _questionId_, text?, checked?)
 	registrationId -> EventRegistrations.id         // ON DELETE CASCADE
-	questionId     -> EventRegistrationQuestions.id // ON DELETE RESTRICT
+	questionId     -> EventRegistrationQuestions.id // ON DELETE NO ACTION (blocks deleting the question, not the event)
 
 	[DB] CHECK (text IS NULL OR checked IS NULL)
 
 EventRegistrationAnswerChoices(_registrationId_, _questionId_, _optionId_)
 	(registrationId, questionId) -> EventRegistrationAnswers   // ON DELETE CASCADE
-	(questionId, optionId)       -> EventRegistrationQuestionOptions(questionId, id)   // option belongs to the question. ON DELETE RESTRICT
+	(questionId, optionId)       -> EventRegistrationQuestionOptions(questionId, id)   // option belongs to the question. ON DELETE NO ACTION
 
 // --- Attendance (what actually happened) ---
 
 EventAttendance(_id_, eventId, userId?, status, recordedBy?, recordedAt)
-	eventId    -> Events.id
+	eventId    -> Events.id                // ON DELETE CASCADE
 	userId     -> Users.id                 // ON DELETE SET NULL
 	status     -> AttendanceStatus
 	recordedBy -> Users.id                 // ON DELETE SET NULL
@@ -210,7 +210,8 @@ EventAttendance(_id_, eventId, userId?, status, recordedBy?, recordedAt)
 
 - [app] **allDay**: `startsAt` is 00:00 on the first day and `endsAt` is 00:00 on the day after the last day, in Europe/Stockholm.
 - [app] **Lifecycle**: Draft → Published → Cancelled, and a cancelled event may be reinstated (Published). A Published event never goes back to Draft.
-- [app] A Draft is visible only to those who may edit it. Only Drafts may be deleted; a Published event is cancelled, never deleted, so responses, registrations and attendance survive. A Cancelled event stays visible (struck through).
+- [app] A Draft is visible only to those who may edit it. Cancelling keeps the event, its responses, registrations and attendance, and it stays visible (struck through).
+- [DB/app] **Deleting** an event deletes everything recorded for it (`ON DELETE CASCADE`), responses, registrations and attendance included. The database never refuses; the app warns and asks for confirmation before deleting an event that has any.
 - [app] The UI shows `locationText` when set, otherwise the Location's name and address.
 - [app] `organiserGroupId` refers to an active group.
 - [app] **Description** is parsed through the Events document schema (`createDocumentSchema` from the rich-text module) before it is stored, never stored as sent. Events define their own allowed features (emphasis, lists, links to start with) and do not reuse the Posts schema. A document with nothing to read is stored as NULL. See `src/features/rich-text/README.md` and `docs/adr/0005-post-content-is-stored-as-the-editor-document.md`.
@@ -309,7 +310,7 @@ scope(g):  g IS NULL                          -> all sections
 - [app] Answers must fit the question's kind: Text → `text`; Checkbox → `checked`; SingleChoice → exactly one choice row; MultipleChoice → one or more choice rows.
 - [app] Registering requires an answer to every `required` question. A question made required later is not enforced on existing registrations.
 - [app] **Withdrawing** sets `status = Withdrawn` and `withdrawnAt`; the answers stay. Registering again sets `status = Registered`, clears `withdrawnAt` and updates `registeredAt`.
-- [app] Once an event has registrations, its questions and options can be added and relabelled but not deleted (`ON DELETE RESTRICT`).
+- [app] Once an event has registrations, its questions and options can be added and relabelled but not deleted (`ON DELETE NO ACTION`). Deleting the whole event still removes them.
 - [app] A registration after `respondBy` is accepted but flagged late (`registeredAt > respondBy`). It is not blocked.
 - [app] **Visibility**: who is registered is visible to the audience. `comment` and the answers are visible only to the registrant and to those who may edit the event.
 - [app] Registration answers can be sensitive (dietary requirements, allergies). Clear them when no longer needed (retention rule not decided).
