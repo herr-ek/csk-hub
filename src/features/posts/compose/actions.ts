@@ -2,13 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { AUTHORIZATION_DENIED, requireCurrentUserPermission } from "@/core/auth/permissions.server"
-import { db } from "@/core/db"
-import { post } from "@/core/db/schema/posts"
-import { logger } from "@/core/logging"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
-import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
+import { publishPostCommand } from "./commands"
 import { publishPostSchema } from "./schemas"
 
 /**
@@ -36,46 +32,10 @@ export async function publishPost(_state: PublishPostState, formData: FormData):
     return errorState(draft, "formInvalid")
   }
 
-  let publisherId: string
-  try {
-    publisherId = (await requireCurrentUserPermission({ resource: "post", action: "create" })).userId
-  } catch (error) {
-    if (getErrorCode(error) === AUTHORIZATION_DENIED) {
-      return errorState(draft, "publishUnauthorized")
-    }
-
-    // Reading the session touches the database, so a failure here is not a verdict.
-    logger.error("news.post.authorization-failed", {
-      errorCode: getErrorCode(error),
-      errorName: getErrorName(error),
-      status: getErrorStatus(error)
-    })
-    return errorState(draft, "publishFailed")
-  }
-
-  let publishedId: string
-  try {
-    const [created] = await db
-      .insert(post)
-      .values({
-        title: input.data.title,
-        body: input.data.body,
-        authorId: publisherId,
-        publishedAt: new Date()
-      })
-      .returning({ id: post.id })
-
-    if (!created) throw new Error("The post insert returned no row.")
-    publishedId = created.id
-  } catch (error) {
-    logger.error("news.post.publish-failed", {
-      errorCode: getErrorCode(error),
-      errorName: getErrorName(error),
-      status: getErrorStatus(error)
-    })
-    return errorState(draft, "publishFailed")
-  }
+  const result = await publishPostCommand(input.data)
+  if (result.status === "unauthorized") return errorState(draft, "publishUnauthorized")
+  if (result.status === "failed") return errorState(draft, "publishFailed")
 
   revalidatePath(ROUTES.news)
-  redirect(newsPostPath(publishedId))
+  redirect(newsPostPath(result.postId))
 }

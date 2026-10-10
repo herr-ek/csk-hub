@@ -2,6 +2,7 @@ import "server-only"
 
 import { and, desc, eq, isNotNull } from "drizzle-orm"
 import { z } from "zod"
+import { requireCurrentUserPermission } from "@/core/auth/permissions.server"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { post } from "@/core/db/schema/posts"
@@ -24,6 +25,8 @@ const postIdSchema = z.uuid()
 
 /** The whole feed, newest first. Every signed-in User sees the same one. */
 export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
+  await requireCurrentUserPermission({ resource: "post", action: "read" })
+
   const rows = await db
     .select({
       id: post.id,
@@ -44,6 +47,8 @@ export async function listNewsFeed(): Promise<NewsFeedEntry[]> {
 
 /** One Post by its opaque id, or null when it does not exist or is not published. */
 export async function getPublishedPost(postId: string): Promise<PublishedPost | null> {
+  await requireCurrentUserPermission({ resource: "post", action: "read" })
+
   if (!postIdSchema.safeParse(postId).success) return null
 
   const [row] = await db
