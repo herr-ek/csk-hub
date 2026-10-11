@@ -12,6 +12,7 @@ import {
   groupMembership,
   message
 } from "@/core/db/schema/messaging"
+import { groupHistoryVisibility } from "../../group-conversations/access"
 import { toInboxConversations } from "./view-model"
 
 export async function listDirectConversations() {
@@ -73,7 +74,7 @@ async function listGroupConversations() {
   const userId = await requireAuthenticatedUser()
   const visibleMessage = and(
     eq(message.conversationId, groupMembership.conversationId),
-    sql`(${groupMembership.historyVisibleThroughSequence} IS NULL OR ${message.sequence} <= ${groupMembership.historyVisibleThroughSequence})`
+    groupHistoryVisibility(message.sequence, groupMembership.historyVisibleThroughSequence)
   )
   const latest = db
     .select({ text: message.text, sentAt: message.sentAt })

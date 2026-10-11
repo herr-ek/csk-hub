@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { conversation, conversationReadState, directConversation, groupMembership } from "@/core/db/schema/messaging"
+import { canViewGroupSequence } from "../../group-conversations/access"
 import { getDirectCounterpartId } from "../../model/direct-conversation"
 import { MessagingAccessError } from "../../model/messaging-error"
 import { verifiesReadToken } from "./read-token"
@@ -29,7 +30,7 @@ export async function markConversationRead(conversationId: string, sequence: num
         .where(and(eq(groupMembership.conversationId, conversationId), eq(groupMembership.userId, userId)))
         .for("share")
         .limit(1)
-      if (!membership || (membership.visibleThrough !== null && sequence > membership.visibleThrough))
+      if (!membership || !canViewGroupSequence(sequence, membership.visibleThrough))
         throw new MessagingAccessError("conversation-view-forbidden")
     } else {
       const [pair] = await tx

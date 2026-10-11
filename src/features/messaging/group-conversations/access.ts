@@ -1,9 +1,21 @@
 import "server-only"
 
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql, type SQL, type SQLWrapper } from "drizzle-orm"
 import { conversation, groupMembership } from "@/core/db/schema/messaging"
 import { MessagingAccessError, type MessagingErrorKind } from "../model/messaging-error"
 import type { MessageTransaction } from "../sending"
+
+/** Applies the stored departure cutoff to either a value or a SQL column. */
+export function groupHistoryVisibility(sequence: SQLWrapper, visibleThrough: number | null | SQLWrapper): SQL {
+  if (typeof visibleThrough === "number") return sql`${sequence} <= ${visibleThrough}`
+  if (visibleThrough === null) return sql`true`
+  return sql`(${visibleThrough} IS NULL OR ${sequence} <= ${visibleThrough})`
+}
+
+/** Whether a sequence is within the history retained for this member. */
+export function canViewGroupSequence(sequence: number, visibleThrough: number | null) {
+  return visibleThrough === null || sequence <= visibleThrough
+}
 
 /** All group membership changes and sends serialize on the Conversation row. */
 export async function lockGroupConversation(tx: MessageTransaction, conversationId: string) {

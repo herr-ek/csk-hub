@@ -1,10 +1,17 @@
 import "server-only"
 
-import { and, asc, desc, eq, isNull, lt, lte } from "drizzle-orm"
+import { and, asc, desc, eq, isNull, lt } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
-import { directConversation, groupConversation, groupMembership, message } from "@/core/db/schema/messaging"
+import {
+  conversation,
+  directConversation,
+  groupConversation,
+  groupMembership,
+  message
+} from "@/core/db/schema/messaging"
+import { groupHistoryVisibility } from "../../group-conversations/access"
 import { canReceiveDirectMessages, getDirectCounterpartId } from "../../model/direct-conversation"
 import { MessagingAccessError } from "../../model/messaging-error"
 import { createReadToken } from "./read-token"
@@ -99,7 +106,7 @@ async function getGroupConversationPage(conversationId: string, beforeSequence?:
       .where(
         and(
           eq(message.conversationId, conversationId),
-          membership.visibleThrough !== null ? lte(message.sequence, membership.visibleThrough) : undefined,
+          groupHistoryVisibility(message.sequence, membership.visibleThrough),
           beforeSequence ? lt(message.sequence, beforeSequence) : undefined
         )
       )
@@ -136,12 +143,13 @@ async function getGroupConversationPage(conversationId: string, beforeSequence?:
 }
 
 export async function getConversationPage(conversationId: string, beforeSequence?: number) {
-  const [group] = await db
-    .select({ id: groupConversation.conversationId })
-    .from(groupConversation)
-    .where(eq(groupConversation.conversationId, conversationId))
+  const [target] = await db
+    .select({ kind: conversation.kind })
+    .from(conversation)
+    .where(eq(conversation.id, conversationId))
     .limit(1)
-  return group
+  if (!target) throw new MessagingAccessError("conversation-not-found")
+  return target.kind === "group"
     ? getGroupConversationPage(conversationId, beforeSequence)
     : getDirectConversationPage(conversationId, beforeSequence)
 }
