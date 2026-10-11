@@ -102,7 +102,7 @@ export async function ConversationScreen({
                       >
                         <Message align={item.isOwnMessage ? "end" : "start"}>
                           <MessageContent className="w-fit! max-w-[85%]">
-                            {conversation.kind === "group" ? (
+                            {conversation.kind === "group" && itemLayout.startsNewGroup && !item.isOwnMessage ? (
                               <p className="text-xs text-muted-foreground">{item.authorName ?? t("formerMember")}</p>
                             ) : null}
                             <div

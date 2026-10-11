@@ -17,7 +17,7 @@ describe("getMessageLayout", () => {
         calendarDay
       )
     ).toEqual([
-      { startsNewGroup: false, showsDayDivider: true, showsTimeSeparator: false },
+      { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false },
       { startsNewGroup: false, showsDayDivider: false, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: false, showsTimeSeparator: false }
     ])
@@ -34,7 +34,7 @@ describe("getMessageLayout", () => {
         calendarDay
       )
     ).toEqual([
-      { startsNewGroup: false, showsDayDivider: true, showsTimeSeparator: false },
+      { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: false, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: false, showsTimeSeparator: true }
     ])
@@ -50,7 +50,7 @@ describe("getMessageLayout", () => {
         calendarDay
       )
     ).toEqual([
-      { startsNewGroup: false, showsDayDivider: true, showsTimeSeparator: false },
+      { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false }
     ])
   })

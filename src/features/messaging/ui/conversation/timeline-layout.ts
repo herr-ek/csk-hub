@@ -24,7 +24,7 @@ export function getMessageLayout(
   return messages.map((message, index) => {
     const previous = messages[index - 1]
 
-    if (!previous) return { startsNewGroup: false, showsDayDivider: true, showsTimeSeparator: false }
+    if (!previous) return { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false }
 
     const elapsed = message.sentAt.getTime() - previous.sentAt.getTime()
     const showsDayDivider = !isSameCalendarDay(message.sentAt, previous.sentAt, calendarDay)
