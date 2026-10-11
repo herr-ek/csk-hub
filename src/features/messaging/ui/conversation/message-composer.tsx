@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowUpIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
@@ -16,6 +17,7 @@ const initialState: MessageCommandState = { status: "idle" }
 
 export function MessageComposer({ conversationId, readOnly }: { conversationId: string; readOnly: boolean }) {
   const t = useTranslations("Messages")
+  const router = useRouter()
   const { scrollToEnd } = useMessageScroller()
 
   const [idempotencyKey, setIdempotencyKey] = useState(createMessageIdempotencyKey)
@@ -24,8 +26,9 @@ export function MessageComposer({ conversationId, readOnly }: { conversationId: 
   useEffect(() => {
     if (state.status !== "success") return
     setIdempotencyKey((currentKey) => nextMessageIdempotencyKey(currentKey))
+    router.replace(`/messages/${state.conversationId}`, { scroll: false })
     scrollToEnd({ behavior: "smooth" })
-  }, [scrollToEnd, state])
+  }, [router, scrollToEnd, state])
 
   useEffect(() => {
     if (state.status !== "error" || state.error !== "idempotency-key-reused") return
