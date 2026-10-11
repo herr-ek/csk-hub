@@ -443,6 +443,10 @@ Common queries:
 - Overlap checks for Bookings. Rejecting two bookings of the same room, and marking which Locations are bookable rooms, can be added later.
 - Extension tables for Concert, Rephelg, Körmöte, Booking, Meeting and Other. Add them later if those types need their own fields.
 
+### Known limitations
+
+- **Answers can end up across events.** The answer trigger checks that the registration and the question belong to the same event when an `EventRegistrationAnswers` row is inserted or its `registrationId`/`questionId` changes. Changing `EventRegistrations.eventId` or `EventRegistrationQuestions.eventId` afterwards is not checked, and can leave existing answers attached across events. No workflow in the current plan moves registrations or questions between events, so database enforcement is deferred. Revisit this before introducing such a workflow.
+
 ### Defaults I assumed (review these)
 
 1. **"Everyone"** (no targets) means Users with a Choir membership on the event's date. A User with no choir membership (e.g. an Admin who does not sing) is not in the audience, but can still see everything they may edit.
