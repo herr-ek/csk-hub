@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: csk_test
+      POSTGRES_PASSWORD: csk_test
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1::5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U csk_test -d postgres"]
+      interval: 1s
+      timeout: 5s
+      retries: 30

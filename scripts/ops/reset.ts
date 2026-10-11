@@ -2,21 +2,21 @@ import { confirm, isCancel } from "@clack/prompts"
 import { Client } from "pg"
 import { isLocalDatabase, secureConnection } from "@/core/db/tls"
 import { runMigrations } from "./drizzle-kit"
-import { createReferenceData } from "./reference-data"
+import { seedOrgStructure } from "./seed-org-structure"
 import type { Database } from "./target"
 
 /**
  * Empty the local database and build it again: drop every table, type, function and the
- * migration ledger, run all migrations, then create the reference data. Seeds are left to the
- * seed commands, so a reset never fabricates users on its own.
+ * migration ledger, run all migrations, then seed the organisation structure. User creation is left to
+ * the user seed commands, so a reset never fabricates users on its own.
  *
- * Local-only by refusal, like seeding: there is no circumstance in which "erase production?"
+ * Local-only by refusal, like user seeding: there is no circumstance in which "erase production?"
  * should be answerable with yes. Returns the exit code rather than exiting, so the interactive
  * menu can stay open.
  */
 export async function resetLocalDatabase(
   database: Database,
-  { skipConfirmation }: { skipConfirmation: boolean }
+  { skipConfirmation, captureOutput = false }: { skipConfirmation: boolean; captureOutput?: boolean }
 ): Promise<number> {
   if (database.target !== "local" || !isLocalDatabase(database.url)) {
     console.error("✖ Reset is local-only and needs POSTGRES_URL to point at a local database.")
@@ -38,14 +38,17 @@ export async function resetLocalDatabase(
   }
   console.log(`Emptied ${database.host}.`)
 
-  const migrated = await runMigrations(database, { skipConfirmation: true })
+  const migrated = await runMigrations(database, { skipConfirmation: true, captureOutput })
   if (migrated !== 0) {
     console.error(`✖ Migrations exited with code ${migrated}; the database is empty or partly migrated.`)
     return migrated
   }
 
-  const code = await createReferenceData(database, { skipConfirmation: true })
-  if (code === 0) console.log("Seed it with: bun run ops seed-admin, seed-users, seed-groups")
+  const code = await seedOrgStructure(database, { skipConfirmation: true })
+  if (code === 0)
+    console.log(
+      "Create users with: bun run ops seed-admin and bun run ops seed-users; then rerun bun run ops seed-org-structure to place them."
+    )
   return code
 }
 

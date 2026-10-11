@@ -10,9 +10,8 @@ Voices and what each user can sing are the separate [`voice`](../voice/README.md
 
 Application code writes the tables in `src/core/db/schema/org-structure.ts` only through this
 module, and reads them through its read helpers rather than querying the tables. This is a
-convention, not a test. The ops scripts are the deliberate exception: `bun run ops
-reference-data` and `bun run ops seed-groups` write the tables directly, so that scripts never
-depend on a feature, and they keep these rules by hand.
+convention, not a test. The ops seed is the deliberate exception: `bun run ops seed-org-structure` writes the
+tables directly, so that scripts never depend on a feature, and keeps these rules by hand.
 
 The rules below are not database constraints, so going around this module breaks them
 silently:
@@ -69,8 +68,9 @@ races, never surface as thrown errors.
   `listChoirMembersByVoiceFamily`.
 
 The structure every environment shares (MK, DK and KK with their Sections and Voices, Styret and
-the Position catalogue) comes from `bun run ops reference-data`, which can also run against
-production. `bun run ops seed-groups` adds local example data on top. Both live in `scripts/`.
+the Position catalogue) comes from `bun run ops seed-org-structure`. The same command adds
+example groups and places users locally; with `--prod` it creates only the shared structure
+after confirmation. The seed lives in `scripts/ops/seed-org-structure.ts`.
 
 "Current" means no end date. Dates are calendar dates, `YYYY-MM-DD`; a period may end on the
 day the next one starts.
@@ -101,7 +101,8 @@ live beside it (`query.ts`) and are shaped for that screen.
 
 ## Tests
 
-The tests run against a real, freshly migrated database created beside the local one in
-`POSTGRES_URL` and dropped afterwards (`test/database.ts`). Without a reachable local
-Postgres they are skipped with a warning. Migrations create no rows, so `test-support.ts` builds
-the structure the tests name through the module's own commands.
+The `*.db.test.ts` tests use a real, freshly migrated database for each test through
+`databaseTest()` (`test/database-test.ts`). `test-support.ts` builds the structure the
+tests name through the module's own commands. Fixtures and test data never depend on
+an earlier test. Run them with `bun run tst:db --file org-structure`; see the
+[shared test guide](../../../test/README.md) for provisioning and cleanup.

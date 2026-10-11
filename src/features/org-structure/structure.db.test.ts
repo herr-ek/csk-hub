@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, test } from "bun:test"
+import { describe, expect } from "bun:test"
+import { databaseTest } from "@test/database-test"
 import { eq } from "drizzle-orm"
 import { choir, group, groupTypePosition, position, positionGroup, section } from "@/core/db/schema/org-structure"
 import type { Voice } from "@/features/voice/model"
@@ -14,9 +15,9 @@ import {
   setPositionGroupTypes,
   updatePosition
 } from "./structure"
-import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
+import { expectSuccess, orgStructureFixture, uniqueName } from "./test-support"
 
-const database = await createOrgStructureTestDatabase()
+const test = databaseTest(orgStructureFixture)
 
 const fourSections = (prefix: string): { name: string; voice: Voice }[] => [
   { name: `${prefix}S`, voice: "S" },
@@ -25,12 +26,9 @@ const fourSections = (prefix: string): { name: string; voice: Voice }[] => [
   { name: `${prefix}B`, voice: "B" }
 ]
 
-describe.skipIf(!database)("groups structure", () => {
-  const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
-
+describe("groups structure", () => {
   describe("createChoir", () => {
-    test("creates a CSK-wide Choir group with its extension and four Sections", async () => {
+    test("creates a CSK-wide Choir group with its extension and four Sections", async (t) => {
       const name = uniqueName("Choir")
       const { choirId, sections } = expectSuccess(await createChoir(t.db, { name, sections: fourSections("X") }))
 
@@ -46,19 +44,19 @@ describe.skipIf(!database)("groups structure", () => {
       expect(extensions).toHaveLength(4)
     })
 
-    test("requires exactly four Sections", async () => {
+    test("requires exactly four Sections", async (t) => {
       const result = await createChoir(t.db, { name: uniqueName("Choir"), sections: fourSections("X").slice(0, 3) })
       expect(result).toEqual({ success: false, error: "section-count" })
     })
 
-    test("refuses the same Voice in two Sections of the Choir", async () => {
+    test("refuses the same Voice in two Sections of the Choir", async (t) => {
       const sections = fourSections("X")
       sections[3] = { name: "XB", voice: "T" }
       const result = await createChoir(t.db, { name: uniqueName("Choir"), sections })
       expect(result).toEqual({ success: false, error: "voice-in-several-sections" })
     })
 
-    test("refuses overlapping Sections: a family alongside one of its divisions", async () => {
+    test("refuses overlapping Sections: a family alongside one of its divisions", async (t) => {
       const sections: { name: string; voice: Voice }[] = [
         { name: "XT1", voice: "T1" },
         { name: "XT2", voice: "T2" },
@@ -69,7 +67,7 @@ describe.skipIf(!database)("groups structure", () => {
       expect(result).toEqual({ success: false, error: "voice-in-several-sections" })
     })
 
-    test("allows divisions of one family in separate Sections", async () => {
+    test("allows divisions of one family in separate Sections", async (t) => {
       const sections: { name: string; voice: Voice }[] = [
         { name: "XT1", voice: "T1" },
         { name: "XT2", voice: "T2" },
@@ -79,7 +77,7 @@ describe.skipIf(!database)("groups structure", () => {
       expectSuccess(await createChoir(t.db, { name: uniqueName("Choir"), sections }))
     })
 
-    test("leaves nothing behind when refused", async () => {
+    test("leaves nothing behind when refused", async (t) => {
       const name = uniqueName("Choir")
       await createChoir(t.db, { name, sections: fourSections("X").slice(0, 2) })
       expect(await t.db.select().from(group).where(eq(group.name, name))).toEqual([])
@@ -87,7 +85,7 @@ describe.skipIf(!database)("groups structure", () => {
   })
 
   describe("createGroup", () => {
-    test("creates a CSK-wide group, or one that belongs to a Choir", async () => {
+    test("creates a CSK-wide group, or one that belongs to a Choir", async (t) => {
       const board = expectSuccess(await createGroup(t.db, { name: uniqueName("Styret"), type: "Board" }))
       const rodd = expectSuccess(
         await createGroup(t.db, { name: "MK roddgrupp", type: "Roddgrupp", choirId: await t.groupId("MK") })
@@ -99,7 +97,7 @@ describe.skipIf(!database)("groups structure", () => {
       expect(roddRow?.choirId).toBe(await t.groupId("MK"))
     })
 
-    test("only belongs to a Choir: no deeper hierarchy", async () => {
+    test("only belongs to a Choir: no deeper hierarchy", async (t) => {
       const result = await createGroup(t.db, {
         name: uniqueName("Sub"),
         type: "Roddgrupp",
@@ -108,14 +106,14 @@ describe.skipIf(!database)("groups structure", () => {
       expect(result).toEqual({ success: false, error: "choir-not-found" })
     })
 
-    test("never creates a Choir or a Section on its own", async () => {
+    test("never creates a Choir or a Section on its own", async (t) => {
       for (const type of ["Choir", "Section"] as const) {
         const result = await createGroup(t.db, { name: uniqueName(type), type: type as never })
         expect(result).toEqual({ success: false, error: "choir-created-with-sections" })
       }
     })
 
-    test("reports a name already taken among active groups in the same scope", async () => {
+    test("reports a name already taken among active groups in the same scope", async (t) => {
       const name = uniqueName("Valberedning")
       expectSuccess(await createGroup(t.db, { name, type: "Valberedning" }))
       expect(await createGroup(t.db, { name, type: "Valberedning" })).toEqual({
@@ -125,7 +123,7 @@ describe.skipIf(!database)("groups structure", () => {
       expectSuccess(await createGroup(t.db, { name, type: "Valberedning", choirId: await t.groupId("DK") }))
     })
 
-    test("refuses an archived Choir", async () => {
+    test("refuses an archived Choir", async (t) => {
       const { choirId } = expectSuccess(
         await createChoir(t.db, { name: uniqueName("Choir"), sections: fourSections("Y") })
       )
@@ -138,7 +136,7 @@ describe.skipIf(!database)("groups structure", () => {
   })
 
   describe("archiveGroup", () => {
-    test("archives rather than deletes, freeing the name", async () => {
+    test("archives rather than deletes, freeing the name", async (t) => {
       const name = uniqueName("Gig")
       const { id } = expectSuccess(await createGroup(t.db, { name, type: "GigGroup" }))
       expectSuccess(await archiveGroup(t.db, id))
@@ -149,7 +147,7 @@ describe.skipIf(!database)("groups structure", () => {
       expect(await archiveGroup(t.db, id)).toEqual({ success: false, error: "group-archived" })
     })
 
-    test("archives a Choir with its Sections, and never a Section alone", async () => {
+    test("archives a Choir with its Sections, and never a Section alone", async (t) => {
       const { choirId, sections } = expectSuccess(
         await createChoir(t.db, { name: uniqueName("Choir"), sections: fourSections("Z") })
       )
@@ -164,7 +162,7 @@ describe.skipIf(!database)("groups structure", () => {
     })
   })
 
-  test("createPosition reports a taken name", async () => {
+  test("createPosition reports a taken name", async (t) => {
     const name = uniqueName("Kassör")
     expectSuccess(await createPosition(t.db, { name, groupTypes: ["Board"] }))
     expect(await createPosition(t.db, { name, groupTypes: [] })).toEqual({
@@ -174,7 +172,7 @@ describe.skipIf(!database)("groups structure", () => {
   })
 
   describe("renameGroup", () => {
-    test("renames an active group, keeping names unique within the Choir", async () => {
+    test("renames an active group, keeping names unique within the Choir", async (t) => {
       const kk = await t.groupId("KK")
       const taken = uniqueName("Festgrupp")
       expectSuccess(await createGroup(t.db, { name: taken, type: "Festgrupp", choirId: kk }))
@@ -194,14 +192,14 @@ describe.skipIf(!database)("groups structure", () => {
   })
 
   describe("Position catalogue", () => {
-    test("renames a Position and reports a taken name", async () => {
+    test("renames a Position and reports a taken name", async (t) => {
       const { id } = expectSuccess(await createPosition(t.db, { name: uniqueName("Kassör"), groupTypes: ["Board"] }))
       const renamed = uniqueName("Skattmästare")
       expectSuccess(await renamePosition(t.db, id, renamed))
       expect(await renamePosition(t.db, id, "Dirigent")).toEqual({ success: false, error: "position-name-taken" })
     })
 
-    test("replaces the allowed GroupTypes, but keeps a type someone holds the Position in", async () => {
+    test("replaces the allowed GroupTypes, but keeps a type someone holds the Position in", async (t) => {
       const { id } = expectSuccess(await createPosition(t.db, { name: uniqueName("Arkivarie"), groupTypes: ["Board"] }))
       expectSuccess(await setPositionGroupTypes(t.db, id, ["Board", "Valberedning"]))
       const types = async () =>
@@ -230,7 +228,7 @@ describe.skipIf(!database)("groups structure", () => {
       expect(await types()).toEqual(["Board"])
     })
 
-    test("updatePosition renames and retypes together, or not at all", async () => {
+    test("updatePosition renames and retypes together, or not at all", async (t) => {
       const name = uniqueName("Fanbärare")
       const { id } = expectSuccess(await createPosition(t.db, { name, groupTypes: ["Board"] }))
       const styret = await t.groupId("Styret")
@@ -250,7 +248,7 @@ describe.skipIf(!database)("groups structure", () => {
       expect(row?.name).toBe(name)
     })
 
-    test("limits a Position to some groups of its types, and keeps a group someone holds it in", async () => {
+    test("limits a Position to some groups of its types, and keeps a group someone holds it in", async (t) => {
       const [kk, mk] = [await t.groupId("KK"), await t.groupId("MK")]
       const { id: gigmasteri } = expectSuccess(
         await createGroup(t.db, { name: uniqueName("Gigmästeri"), type: "Gigmästeri" })

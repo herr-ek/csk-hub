@@ -215,3 +215,13 @@ Prefer focused tests for domain logic, validation, authorization, write behavior
 Use a limited number of high-value end-to-end tests for important workflows. Add a lower-level UI test only when it protects a durable user-visible regression that is not better covered through end-to-end testing. Temporary implementation-specific UI tests may be useful during development, but should be removed afterward unless they protect such a regression.
 
 When adding a seam, only introduce an adapter abstraction when at least two adapters are real or imminent. One adapter usually means the seam is hypothetical.
+
+### Database tests
+
+Keep real PostgreSQL tests colocated as `*.db.test.ts` and use `databaseTest()` from
+`@test/database-test`. Every test receives its own migrated database; feature fixture
+builders receive that database and create their domain data. Arrange every test
+independently. Provisioning, cleanup, suite selection and output handling belong in
+`test/`, as documented in [the test guide](../test/README.md). Use `bun run tst:unit`,
+`bun run tst:db` or `bun run tst`; database tests must fail when their prerequisites
+are unavailable rather than silently skip.

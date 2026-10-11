@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, test } from "bun:test"
+import { describe, expect } from "bun:test"
+import { databaseTest } from "@test/database-test"
 import { asc, eq } from "drizzle-orm"
 import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { startLinkedPosition } from "./linked-positions"
@@ -6,17 +7,14 @@ import { placeSinger, startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
 import { getCurrentPositionHolder, listChoirMembersByVoiceFamily, listCurrentGroupMembers } from "./reads"
 import { createGroup } from "./structure"
-import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
+import { expectSuccess, type OrgStructureTestDatabase, orgStructureFixture } from "./test-support"
 
 // The worked examples from the Groups scheme (v3), expressed through the module's interface.
 
-const database = await createOrgStructureTestDatabase()
+const test = databaseTest(orgStructureFixture)
 
-describe.skipIf(!database)("Groups scheme examples", () => {
-  const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
-
-  async function rowsOf(userId: string) {
+describe("Groups scheme examples", () => {
+  async function rowsOf(t: OrgStructureTestDatabase, userId: string) {
     const memberships = await t.db
       .select({ groupId: groupMember.groupId, startDate: groupMember.startDate, voice: groupMember.voice })
       .from(groupMember)
@@ -35,19 +33,19 @@ describe.skipIf(!database)("Groups scheme examples", () => {
   }
 
   // His capability to cover B1 is in the voice feature's tests.
-  test("Lucas sings B2 in KK", async () => {
+  test("Lucas sings B2 in KK", async (t) => {
     const lucas = await t.user("Lucas")
     const [kk, kkb] = [await t.groupId("KK"), await t.groupId("KKB")]
 
     expectSuccess(await placeSinger(t.db, { userId: lucas, choirId: kk, voice: "B2", startDate: "2024-08-20" }))
 
-    expect((await rowsOf(lucas)).memberships).toEqual([
+    expect((await rowsOf(t, lucas)).memberships).toEqual([
       { groupId: kkb, startDate: "2024-08-20", voice: "B2" },
       { groupId: kk, startDate: "2024-08-20", voice: null }
     ])
   })
 
-  test("Sara sings B1 in KK and holds two Positions there", async () => {
+  test("Sara sings B1 in KK and holds two Positions there", async (t) => {
     const sara = await t.user("Sara")
     const [kk, kkb] = [await t.groupId("KK"), await t.groupId("KKB")]
     const [notfiskal, konsertmastare] = [await t.positionId("Notfiskal"), await t.positionId("Konsertmästare")]
@@ -65,7 +63,7 @@ describe.skipIf(!database)("Groups scheme examples", () => {
       })
     )
 
-    expect(await rowsOf(sara)).toEqual({
+    expect(await rowsOf(t, sara)).toEqual({
       memberships: [
         { groupId: kkb, startDate: "2023-08-20", voice: "B1" },
         { groupId: kk, startDate: "2023-08-20", voice: null }
@@ -77,7 +75,7 @@ describe.skipIf(!database)("Groups scheme examples", () => {
     })
   })
 
-  test("Erik conducts KK without singing: a Choir Membership only", async () => {
+  test("Erik conducts KK without singing: a Choir Membership only", async (t) => {
     const erik = await t.user("Erik")
     const kk = await t.groupId("KK")
     const conductor = await t.positionId("Dirigent")
@@ -87,14 +85,14 @@ describe.skipIf(!database)("Groups scheme examples", () => {
       await startPositionHolding(t.db, { userId: erik, groupId: kk, positionId: conductor, startDate: "2020-01-10" })
     )
 
-    expect(await rowsOf(erik)).toEqual({
+    expect(await rowsOf(t, erik)).toEqual({
       memberships: [{ groupId: kk, startDate: "2020-01-10", voice: null }],
       holdings: [{ groupId: kk, positionId: conductor, startDate: "2020-01-10" }]
     })
     expect((await listChoirMembersByVoiceFamily(t.db, kk, "B")).map(({ userId }) => userId)).not.toContain(erik)
   })
 
-  test("Olof sings B2 in KK and is Stämförälder of KKB", async () => {
+  test("Olof sings B2 in KK and is Stämförälder of KKB", async (t) => {
     const olof = await t.user("Olof")
     const [kk, kkb] = [await t.groupId("KK"), await t.groupId("KKB")]
     const stamforalder = await t.positionId("Stämförälder")
@@ -113,19 +111,19 @@ describe.skipIf(!database)("Groups scheme examples", () => {
     expect((await listChoirMembersByVoiceFamily(t.db, kk, "B")).map(({ userId }) => userId)).toContain(olof)
   })
 
-  test("Nils sings B1 in MK", async () => {
+  test("Nils sings B1 in MK", async (t) => {
     const nils = await t.user("Nils")
     const [mk, mkb1] = [await t.groupId("MK"), await t.groupId("MKB1")]
 
     expectSuccess(await placeSinger(t.db, { userId: nils, choirId: mk, voice: "B1", startDate: "2024-08-22" }))
 
-    expect((await rowsOf(nils)).memberships).toEqual([
+    expect((await rowsOf(t, nils)).memberships).toEqual([
       { groupId: mkb1, startDate: "2024-08-22", voice: "B1" },
       { groupId: mk, startDate: "2024-08-22", voice: null }
     ])
   })
 
-  test("the Sexmästeri: two Position holders, two helpers, the Sexmästare also on the Board", async () => {
+  test("the Sexmästeri: two Position holders, two helpers, the Sexmästare also on the Board", async (t) => {
     const styret = await t.groupId("Styret")
     const { id: sexmasteri } = expectSuccess(await createGroup(t.db, { name: "Sexmästeri", type: "Sexmästeri" }))
     const [anna, bertil, cecilia, david] = [
@@ -161,6 +159,6 @@ describe.skipIf(!database)("Groups scheme examples", () => {
     expect((await getCurrentPositionHolder(t.db, sexmasteri, sexmastare))?.userId).toBe(anna)
     expect((await getCurrentPositionHolder(t.db, styret, sexmastare))?.userId).toBe(anna)
     expect((await getCurrentPositionHolder(t.db, sexmasteri, sexmastarinna))?.userId).toBe(bertil)
-    expect((await rowsOf(cecilia)).holdings).toEqual([])
+    expect((await rowsOf(t, cecilia)).holdings).toEqual([])
   })
 })

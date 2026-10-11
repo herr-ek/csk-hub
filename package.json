@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "tst": "bun test --dots",
+    "tst": "bun run test/run.ts all",
     "lint": "biome check",
     "typecheck": "tsc --noEmit",
     "format": "biome check --write --linter-enabled=false",
@@ -14,7 +14,9 @@
     "db:generate": "drizzle-kit generate",
     "ops": "bun run scripts/ops/index.ts",
     "pr": "bun tst && bun lint && bun run build",
-    "fallow": "bunx fallow"
+    "fallow": "bunx fallow",
+    "tst:unit": "bun run test/run.ts unit",
+    "tst:db": "bun run test/run.ts db"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

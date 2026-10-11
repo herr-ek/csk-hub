@@ -2,13 +2,13 @@ import { and, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { group, position } from "@/core/db/schema/org-structure"
 import type { Voice } from "@/features/voice/model"
-import { createTestDatabase, type TestDatabase } from "../../../test/database"
+import type { TestDatabase } from "../../../test/database"
 import type { GroupType, OrgStructureResult } from "./model"
 import { createChoir, createGroup, createPosition } from "./structure"
 
 /**
  * The structure the tests name: the scheme's Choirs and Sections, the Board and the Position
- * catalogue. Production gets the same from `bun run ops reference-data`, which this feature cannot
+ * catalogue. Production gets the same from `bun run ops seed-org-structure --prod`, which this feature cannot
  * import; this copy is built through the module's own commands instead.
  */
 const STRUCTURE: {
@@ -56,10 +56,8 @@ const STRUCTURE: {
   ]
 }
 
-/** A migrated throwaway database with the test structure, or undefined without Postgres. */
-export async function createOrgStructureTestDatabase() {
-  const database = await createTestDatabase()
-  if (!database) return undefined
+/** Build feature data in the database owned by the shared per-test lifecycle. */
+export async function orgStructureFixture(database: TestDatabase) {
   for (const choir of STRUCTURE.choirs) expectSuccess(await createChoir(database.db, choir))
   expectSuccess(await createGroup(database.db, { name: "Styret", type: "Board" }))
   for (const position of STRUCTURE.positions) expectSuccess(await createPosition(database.db, position))

@@ -84,14 +84,19 @@ bun run ops seed-admin
 `bun run ops seed-users` adds ten further example users with the same password.
 
 Both are local-development conveniences only. Change the password immediately,
-and do not use these credentials in a deployed environment. Seeding refuses to
+and do not use these credentials in a deployed environment. These user seeds refuse to
 run against production.
 
-`bun run ops reference-data` creates the Choirs MK, DK and KK with their Sections,
-Styret and the Positions; run it once after migrating (it also runs against production
-with `--prod`). `bun run ops reset` starts the local database over: it erases it, migrates
-it from scratch and creates the reference data. `bun run ops seed-groups` then adds example groups and places every user
-who is in no group yet in a Section. Running either again changes nothing.
+`bun run ops seed-org-structure` creates the Choirs MK, DK and KK with their Sections,
+Styret, Positions and local example groups, then places active users with no membership
+history in a Choir and a Section. Run it after migrating and creating example users.
+It is safe to rerun: existing structure and memberships are preserved, and newly created
+users are placed. With `--prod`, it creates only the shared Choirs, Sections, Styret and
+Positions, after confirmation; example groups and automatic user placement stay local.
+
+`bun run ops reset` erases the local database, migrates it from scratch and seeds the
+organisation structure. It creates no users; run the user seeds and then rerun
+`bun run ops seed-org-structure` to place them.
 
 ## Routes
 
@@ -143,13 +148,18 @@ Email delivery is controlled by `EMAIL_MODE`:
 ## Checks and useful commands
 
 ```bash
-bun run tst         # run the test suite
+bun run tst         # unit and database suites (Docker required)
+bun run tst:unit    # unit tests, no database required
+bun run tst:db      # real PostgreSQL tests, provisioned and cleaned automatically
 bun run typecheck   # TypeScript checks
 bun run lint        # Biome checks
 bun run build       # production build
 bun run pr          # tests, lint, and build
 bun run ops         # database status and guarded database operations
 ```
+
+See [the test guide](test/README.md) for database isolation, focused runs, diagnostics,
+and using an existing local PostgreSQL server.
 
 See [`GLOSSARY.md`](GLOSSARY.md) for project context and the
 [contribution guide](CONTRIBUTING.md#which-guide-to-read) for the task-based index

@@ -1,17 +1,33 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { beforeEach, describe, expect, mock } from "bun:test"
+import type { TestDatabase } from "@test/database"
+import { databaseTest } from "@test/database-test"
 import { and, eq, isNull } from "drizzle-orm"
 import { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
-import { createOrgStructureTestDatabase } from "../test-support"
+import { type OrgStructureTestDatabase, orgStructureFixture } from "../test-support"
 
 // The admin Server Actions against a real, throwaway database: only the Admin guard and cache
 // revalidation are replaced, so typed failures travel the whole way from the module.
 
-const database = await createOrgStructureTestDatabase()
+let currentDatabase: OrgStructureTestDatabase
+const test = databaseTest(async (database: TestDatabase) => {
+  currentDatabase = await orgStructureFixture(database)
+  return currentDatabase
+})
 
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
 const revalidatePath = mock(() => undefined)
 
-mock.module("@/core/db", () => ({ db: database?.db }))
+mock.module("@/core/db", () => ({
+  db: new Proxy(
+    {},
+    {
+      get: (_, key) => {
+        const value = Reflect.get(currentDatabase.db, key)
+        return typeof value === "function" ? value.bind(currentDatabase.db) : value
+      }
+    }
+  )
+}))
 mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
@@ -31,23 +47,20 @@ function form(values: Record<string, string | string[]>) {
   return data
 }
 
-describe.skipIf(!database)("admin groups Server Actions", () => {
-  const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
-
+describe("admin groups Server Actions", () => {
   beforeEach(() => {
     requireAdmin.mockClear()
     requireAdmin.mockImplementation(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
     revalidatePath.mockClear()
   })
 
-  async function groupNamed(name: string) {
+  async function groupNamed(t: OrgStructureTestDatabase, name: string) {
     const [row] = await t.db.select().from(group).where(eq(group.name, name))
     return row
   }
 
   describe("the Admin guard", () => {
-    test("refuses a non-Admin before validating or writing anything", async () => {
+    test("refuses a non-Admin before validating or writing anything", async (t) => {
       const denied = new Error("denied")
       requireAdmin.mockImplementation(async () => {
         throw denied
@@ -57,7 +70,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
       await expect(addMemberAction(IDLE, form({ groupId: "not-a-uuid" }))).rejects.toBe(denied)
       await expect(createPositionAction(IDLE, form({ name: "Smygpost" }))).rejects.toBe(denied)
 
-      expect(await groupNamed("Smygkommittén")).toBeUndefined()
+      expect(await groupNamed(t, "Smygkommittén")).toBeUndefined()
       expect(revalidatePath).not.toHaveBeenCalled()
     })
 
@@ -80,24 +93,24 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
   })
 
   describe("structure", () => {
-    test("creates, renames and archives a group, revalidating the admin pages", async () => {
+    test("creates, renames and archives a group, revalidating the admin pages", async (t) => {
       const created = await createGroupAction(
         IDLE,
         form({ name: "KK roddgrupp", type: "Roddgrupp", choirId: await t.groupId("KK") })
       )
       expect(created).toMatchObject({ status: "success" })
       expect(revalidatePath).toHaveBeenCalledWith("/admin/org-structure", "layout")
-      const row = await groupNamed("KK roddgrupp")
+      const row = await groupNamed(t, "KK roddgrupp")
       expect(row?.choirId).toBe(await t.groupId("KK"))
 
       expect(await renameGroupAction(IDLE, form({ groupId: row?.id as string, name: "KK rodd" }))).toMatchObject({
         status: "success"
       })
       expect(await archiveGroupAction(IDLE, form({ groupId: row?.id as string }))).toMatchObject({ status: "success" })
-      expect((await groupNamed("KK rodd"))?.active).toBe(false)
+      expect((await groupNamed(t, "KK rodd"))?.active).toBe(false)
     })
 
-    test("passes a module violation through as a typed failure", async () => {
+    test("passes a module violation through as a typed failure", async (t) => {
       expect(await createGroupAction(IDLE, form({ name: "Styret", type: "Board" }))).toEqual({
         status: "error",
         error: "group-name-taken"
@@ -122,7 +135,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
   })
 
   describe("members", () => {
-    test("adds a singer to a Section with a Voice, which makes them a Choir member", async () => {
+    test("adds a singer to a Section with a Voice, which makes them a Choir member", async (t) => {
       const userId = await t.user()
       const kkb = await t.groupId("KKB")
       expect(
@@ -141,7 +154,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
       )
     })
 
-    test("refuses a Voice the Section does not sing", async () => {
+    test("refuses a Voice the Section does not sing", async (t) => {
       const userId = await t.user()
       expect(
         await addMemberAction(
@@ -151,7 +164,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
       ).toEqual({ status: "error", error: "voice-not-sung-in-section" })
     })
 
-    test("changes a Voice by ending the old row, and ends Positions with the Membership", async () => {
+    test("changes a Voice by ending the old row, and ends Positions with the Membership", async (t) => {
       const userId = await t.user()
       const [mk, mkb2] = [await t.groupId("MK"), await t.groupId("MKB2")]
       await addMemberAction(IDLE, form({ groupId: mkb2, userId, voice: "B2", startDate: "2024-08-25" }))
@@ -176,7 +189,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
       expect(holdings).toEqual([])
     })
 
-    test("refuses to change the Voice of someone who does not sing in the Choir", async () => {
+    test("refuses to change the Voice of someone who does not sing in the Choir", async (t) => {
       expect(
         await changeVoiceAction(
           IDLE,
@@ -187,7 +200,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
   })
 
   describe("Positions", () => {
-    test("assigns, replaces and ends a holder, only among current members", async () => {
+    test("assigns, replaces and ends a holder, only among current members", async (t) => {
       const dk = await t.groupId("DK")
       const conductor = await t.positionId("Dirigent")
       const [first, second, outsider] = [await t.user(), await t.user(), await t.user()]
@@ -227,7 +240,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
       ])
     })
 
-    test("refuses a Position the group type does not allow", async () => {
+    test("refuses a Position the group type does not allow", async (t) => {
       const userId = await t.user()
       const styret = await t.groupId("Styret")
       await addMemberAction(IDLE, form({ groupId: styret, userId, startDate: "2025-01-01" }))
@@ -239,7 +252,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
       ).toEqual({ status: "error", error: "position-not-allowed" })
     })
 
-    test("creates and edits Positions in the catalogue", async () => {
+    test("creates and edits Positions in the catalogue", async (t) => {
       expect(await createPositionAction(IDLE, form({ name: "Kassör", groupTypes: ["Board"] }))).toMatchObject({
         status: "success"
       })
