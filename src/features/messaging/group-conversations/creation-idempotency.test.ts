@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, mock, test } from "bun:test"
 import { AsyncLocalStorage } from "node:async_hooks"
 import { createTestDatabase } from "@test/database"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import {
   conversation,
@@ -140,6 +140,55 @@ if (!process.env.CSK_GROUP_CREATION_TEST) {
         .where(eq(groupMembership.conversationId, original.conversationId))
       expect(members).toHaveLength(4)
       expect(members.find((member) => member.userId === f.creator)?.leftAt).toBeInstanceOf(Date)
+    })
+
+    test("bulk additions preserve active unread cursors and initialize new and rejoined members", async () => {
+      const f = await fixture()
+      const original = await f.create()
+      await t.db
+        .update(conversation)
+        .set({ nextMessageSequence: 7 })
+        .where(eq(conversation.id, original.conversationId))
+      await t.db
+        .update(conversationReadState)
+        .set({ lastReadSequence: 2 })
+        .where(eq(conversationReadState.conversationId, original.conversationId))
+      await identity.run(f.second, () => leaveGroupConversation(original.conversationId))
+      const [before] = await t.db
+        .select()
+        .from(groupMembership)
+        .where(and(eq(groupMembership.conversationId, original.conversationId), eq(groupMembership.userId, f.first)))
+
+      const add = () =>
+        identity.run(f.creator, () =>
+          addGroupMembers({
+            ...original,
+            memberIds: [f.extra, f.second, f.first, f.second]
+          })
+        )
+      await add()
+      await add()
+
+      const members = await t.db
+        .select()
+        .from(groupMembership)
+        .where(eq(groupMembership.conversationId, original.conversationId))
+      expect(members).toHaveLength(4)
+      expect(members.every((member) => member.leftAt === null && member.historyVisibleThroughSequence === null)).toBe(
+        true
+      )
+      expect(members.find((member) => member.userId === f.first)?.joinedAt).toEqual(before?.joinedAt)
+      const cursors = await t.db
+        .select()
+        .from(conversationReadState)
+        .where(eq(conversationReadState.conversationId, original.conversationId))
+      expect(cursors).toHaveLength(4)
+      expect(Object.fromEntries(cursors.map((cursor) => [cursor.userId, cursor.lastReadSequence]))).toEqual({
+        [f.creator]: 2,
+        [f.first]: 2,
+        [f.second]: 6,
+        [f.extra]: 6
+      })
     })
 
     test("blank keys are rejected and failed creation leaves the key available for a retry", async () => {

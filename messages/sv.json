@@ -463,7 +463,8 @@
       "conversation-not-found": "Den här konversationen kunde inte hittas.",
       "read-position-invalid": "Den här läspositionen är ogiltig.",
       "unexpected": "Det gick inte att skicka meddelandet. Försök igen.",
-      "group-name-invalid": "Ange ett gruppnamn med 1–100 tecken."
+      "group-name-invalid": "Ange ett gruppnamn med 1–100 tecken.",
+      "group-members-too-many": "Välj högst 100 medlemmar åt gången."
     },
     "conversations": "Konversationer",
     "groupName": "Gruppnamn",

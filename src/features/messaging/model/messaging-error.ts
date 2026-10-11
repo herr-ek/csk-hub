@@ -1,5 +1,6 @@
 export type MessagingErrorKind =
   | "group-name-invalid"
+  | "group-members-too-many"
   | "blank-message"
   | "message-too-long"
   | "sign-in-required"

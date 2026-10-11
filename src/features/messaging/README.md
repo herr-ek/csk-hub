@@ -53,6 +53,12 @@ history; adding an already active member preserves their cursor. Empty groups re
 with no former member able to reactivate them. The UI uses the same update behavior as Direct
 Conversations; no polling, conversation subscriptions, or push delivery is introduced.
 
+Creation and addition requests accept at most 100 submitted member IDs, including duplicates
+and blanks, before normalization or opening a transaction. The creator is included automatically
+on creation. This bounds each membership operation, rather than the total size of a Conversation.
+User validation locks a batch in ID order; membership and read-cursor writes use bulk inserts,
+with read cursors initialized only for new or rejoined members.
+
 Group creation requires an idempotency key scoped to the authenticated creator. Both creation
 forms retain their key across retries and generate a new key when the name or selected members
 change. A creator/key advisory lock serializes simultaneous submissions, and a database unique

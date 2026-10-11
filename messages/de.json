@@ -463,7 +463,8 @@
       "conversation-not-found": "Diese Unterhaltung wurde nicht gefunden.",
       "read-position-invalid": "Diese Leseposition ist ungültig.",
       "unexpected": "Deine Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.",
-      "group-name-invalid": "Gib einen Gruppennamen mit 1–100 Zeichen ein."
+      "group-name-invalid": "Gib einen Gruppennamen mit 1–100 Zeichen ein.",
+      "group-members-too-many": "Wähle höchstens 100 Mitglieder auf einmal."
     },
     "conversations": "Unterhaltungen",
     "groupName": "Gruppenname",

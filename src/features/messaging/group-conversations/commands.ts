@@ -1,7 +1,7 @@
 import "server-only"
 
 import { createHash } from "node:crypto"
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
@@ -13,8 +13,15 @@ import { lockGroupConversation, requireActiveGroupMember } from "./access"
 
 async function requireActiveUsers(tx: MessageTransaction, ids: string[]) {
   // Stable order avoids deadlocks when concurrent additions overlap.
+  const members = await tx
+    .select({ id: user.id, banned: user.banned })
+    .from(user)
+    .where(inArray(user.id, ids))
+    .orderBy(user.id)
+    .for("share")
+  const membersById = new Map(members.map((member) => [member.id, member]))
   for (const id of ids) {
-    const [member] = await tx.select({ banned: user.banned }).from(user).where(eq(user.id, id)).for("share").limit(1)
+    const member = membersById.get(id)
     if (!member) throw new MessagingAccessError("recipient-required")
     if (member.banned) throw new MessagingAccessError("recipient-inactive")
   }
@@ -71,30 +78,30 @@ export async function addGroupMembers(input: { conversationId: string; memberIds
     const row = await lockGroupConversation(tx, input.conversationId)
     await requireActiveGroupMember(tx, input.conversationId, userId)
     await requireActiveUsers(tx, ids)
-    for (const memberId of ids) {
-      const [added] = await tx
-        .insert(groupMembership)
-        .values({ conversationId: input.conversationId, userId: memberId })
-        .onConflictDoUpdate({
-          target: [groupMembership.conversationId, groupMembership.userId],
-          set: { joinedAt: new Date(), leftAt: null, historyVisibleThroughSequence: null },
-          setWhere: sql`${groupMembership.leftAt} IS NOT NULL`
-        })
-        .returning({ userId: groupMembership.userId })
-      // Re-adding an existing active member must not reset their unread position.
-      if (added)
-        await tx
-          .insert(conversationReadState)
-          .values({
+    const added = await tx
+      .insert(groupMembership)
+      .values(ids.map((userId) => ({ conversationId: input.conversationId, userId })))
+      .onConflictDoUpdate({
+        target: [groupMembership.conversationId, groupMembership.userId],
+        set: { joinedAt: new Date(), leftAt: null, historyVisibleThroughSequence: null },
+        setWhere: sql`${groupMembership.leftAt} IS NOT NULL`
+      })
+      .returning({ userId: groupMembership.userId })
+    // Only new or rejoined memberships are returned; active members keep their unread position.
+    if (added.length)
+      await tx
+        .insert(conversationReadState)
+        .values(
+          added.map(({ userId }) => ({
             conversationId: input.conversationId,
-            userId: memberId,
+            userId,
             lastReadSequence: row.nextMessageSequence - 1
-          })
-          .onConflictDoUpdate({
-            target: [conversationReadState.conversationId, conversationReadState.userId],
-            set: { lastReadSequence: row.nextMessageSequence - 1 }
-          })
-    }
+          }))
+        )
+        .onConflictDoUpdate({
+          target: [conversationReadState.conversationId, conversationReadState.userId],
+          set: { lastReadSequence: row.nextMessageSequence - 1 }
+        })
     return { conversationId: input.conversationId }
   })
 }

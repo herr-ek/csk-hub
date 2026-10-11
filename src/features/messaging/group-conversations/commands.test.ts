@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { MAX_GROUP_MEMBER_IDS_PER_REQUEST } from "../model/group-conversation"
 
 function rows(values: unknown[]) {
   const query = Object.assign([...values], {
     from: () => query,
     where: () => query,
+    orderBy: () => query,
     for: () => query,
     limit: async () => values
   })
@@ -46,11 +48,29 @@ beforeEach(() => {
   tx.insert.mockClear()
   tx.update.mockClear()
   tx.execute.mockClear()
+  tx.select.mockClear()
 })
 
 describe("Group Conversation commands", () => {
+  test("adding multiple members uses a bounded number of database calls", async () => {
+    const members = Array.from({ length: MAX_GROUP_MEMBER_IDS_PER_REQUEST }, (_, index) => ({
+      id: `member-${index}`,
+      banned: false
+    }))
+    selects.push([{ nextMessageSequence: 7 }], [{ leftAt: null }], members)
+    returningRows.push(members.map(({ id }) => ({ userId: id })))
+    await addGroupMembers({ conversationId: "group-1", memberIds: members.map(({ id }) => id).reverse() })
+    expect(tx.select).toHaveBeenCalledTimes(3)
+    expect(tx.insert).toHaveBeenCalledTimes(2)
+  })
   test("creates memberships and read cursors including the creator without requiring a Message", async () => {
-    selects.push([], [{ banned: false }], [{ banned: false }])
+    selects.push(
+      [],
+      [
+        { id: "creator", banned: false },
+        { id: "member", banned: false }
+      ]
+    )
     returningRows.push([{ id: "group-1" }])
     await expect(
       createGroupConversation({ name: "  Planning ", memberIds: ["member"], idempotencyKey: "intent-1" })
@@ -76,9 +96,16 @@ describe("Group Conversation commands", () => {
     ])
     expect(tx.insert).toHaveBeenCalledTimes(4)
     expect(tx.execute).toHaveBeenCalledTimes(1)
+    expect(tx.select).toHaveBeenCalledTimes(2)
   })
   test("rejects inactive recipients before creating anything", async () => {
-    selects.push([], [{ banned: false }], [{ banned: true }])
+    selects.push(
+      [],
+      [
+        { id: "creator", banned: false },
+        { id: "member", banned: true }
+      ]
+    )
     await expect(
       createGroupConversation({ name: "Planning", memberIds: ["member"], idempotencyKey: "intent-1" })
     ).rejects.toMatchObject({
@@ -96,6 +123,38 @@ describe("Group Conversation commands", () => {
       })
     }
     expect(db.transaction).not.toHaveBeenCalled()
+  })
+  test("rejects oversized creation and addition requests before opening a transaction", async () => {
+    db.transaction.mockClear()
+    const memberIds = Array.from({ length: 1_000 }, (_, index) => `member-${index}`)
+    for (const command of [
+      () => createGroupConversation({ name: "Planning", memberIds, idempotencyKey: "intent-1" }),
+      () => addGroupMembers({ conversationId: "group-1", memberIds })
+    ]) {
+      await expect(command()).rejects.toMatchObject({ kind: "group-members-too-many" })
+    }
+    expect(db.transaction).not.toHaveBeenCalled()
+  })
+  test("rejects a missing user in a batch before changing memberships", async () => {
+    selects.push([{ nextMessageSequence: 7 }], [{ leftAt: null }], [{ id: "first", banned: false }])
+    await expect(addGroupMembers({ conversationId: "group-1", memberIds: ["first", "missing"] })).rejects.toMatchObject(
+      { kind: "recipient-required" }
+    )
+    expect(inserts).toEqual([])
+  })
+  test("rejects an inactive user in a batch before changing memberships", async () => {
+    selects.push(
+      [{ nextMessageSequence: 7 }],
+      [{ leftAt: null }],
+      [
+        { id: "first", banned: false },
+        { id: "second", banned: true }
+      ]
+    )
+    await expect(addGroupMembers({ conversationId: "group-1", memberIds: ["first", "second"] })).rejects.toMatchObject({
+      kind: "recipient-inactive"
+    })
+    expect(inserts).toEqual([])
   })
   test("rejects additions and rename attempts from a former member", async () => {
     for (const command of [
@@ -120,15 +179,28 @@ describe("Group Conversation commands", () => {
     expect(inserts).toEqual([])
   })
   test("rejoining immediately marks retained history read", async () => {
-    selects.push([{ nextMessageSequence: 7 }], [{ leftAt: null }], [{ banned: false }])
+    selects.push([{ nextMessageSequence: 7 }], [{ leftAt: null }], [{ id: "member", banned: false }])
     returningRows.push([{ userId: "member" }])
     await addGroupMembers({ conversationId: "group-1", memberIds: ["member"] })
-    expect(inserts).toContainEqual({ conversationId: "group-1", userId: "member", lastReadSequence: 6 })
+    expect(inserts).toContainEqual([{ conversationId: "group-1", userId: "member", lastReadSequence: 6 }])
   })
   test("adding an already active member preserves their unread position", async () => {
-    selects.push([{ nextMessageSequence: 7 }], [{ leftAt: null }], [{ banned: false }])
+    selects.push([{ nextMessageSequence: 7 }], [{ leftAt: null }], [{ id: "member", banned: false }])
     returningRows.push([])
     await addGroupMembers({ conversationId: "group-1", memberIds: ["member"] })
     expect(inserts).toHaveLength(1)
+  })
+  test("a mixed batch initializes read cursors only for new and rejoined members", async () => {
+    selects.push(
+      [{ nextMessageSequence: 7 }],
+      [{ leftAt: null }],
+      ["active", "new", "rejoined"].map((id) => ({ id, banned: false }))
+    )
+    returningRows.push([{ userId: "new" }, { userId: "rejoined" }])
+    await addGroupMembers({ conversationId: "group-1", memberIds: ["rejoined", "active", "new", "active"] })
+    expect(inserts).toEqual([
+      ["active", "new", "rejoined"].map((userId) => ({ conversationId: "group-1", userId })),
+      ["new", "rejoined"].map((userId) => ({ conversationId: "group-1", userId, lastReadSequence: 6 }))
+    ])
   })
 })

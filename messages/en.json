@@ -463,7 +463,8 @@
       "conversation-not-found": "That conversation could not be found.",
       "read-position-invalid": "That read position is invalid.",
       "unexpected": "Unable to send your message. Please try again.",
-      "group-name-invalid": "Enter a group name of 1–100 characters."
+      "group-name-invalid": "Enter a group name of 1–100 characters.",
+      "group-members-too-many": "Choose at most 100 members at a time."
     },
     "conversations": "Conversations",
     "groupName": "Group name",
