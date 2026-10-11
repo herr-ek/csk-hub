@@ -77,10 +77,11 @@ export function MemberCombobox({
   }
 
   const loading = searchStatus === "loading"
+  const availableMembers = members.filter((member) => !excludedIds.includes(member.id))
 
   return (
     <Combobox
-      items={members.filter((member) => !excludedIds.includes(member.id))}
+      items={availableMembers}
       inputValue={value}
       disabled={disabled}
       itemToStringLabel={(member: Member | null) => (member ? `${member.name} ${member.username ?? ""}` : "")}
@@ -124,16 +125,14 @@ export function MemberCombobox({
               t("typeToSearch")
             )}
           </ComboboxEmpty>
-          {members
-            .filter((member) => !excludedIds.includes(member.id))
-            .map((member) => (
-              <ComboboxItem key={member.id} value={member}>
-                <span>{member.name}</span>
-                {member.username ? (
-                  <span className="text-muted-foreground">{t("usernameHandle", { username: member.username })}</span>
-                ) : null}
-              </ComboboxItem>
-            ))}
+          {availableMembers.map((member) => (
+            <ComboboxItem key={member.id} value={member}>
+              <span>{member.name}</span>
+              {member.username ? (
+                <span className="text-muted-foreground">{t("usernameHandle", { username: member.username })}</span>
+              ) : null}
+            </ComboboxItem>
+          ))}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>

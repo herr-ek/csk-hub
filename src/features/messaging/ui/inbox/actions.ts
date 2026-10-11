@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { createGroupConversation } from "../../group-conversations"
-import { MessagingAccessError } from "../../model/messaging-error"
+import { groupMemberIds } from "../../model/group-conversation"
 import { startDirectConversation } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { requireMessageSendingAvailable } from "../message-command-access"
@@ -21,16 +21,7 @@ export async function startConversationAction(
   const text = String(formData.get("text") ?? "")
   try {
     await requireMessageSendingAvailable()
-    const memberIds = [
-      ...new Set(
-        formData
-          .getAll("memberIds")
-          .map(String)
-          .map((id) => id.trim())
-          .filter(Boolean)
-      )
-    ]
-    if (!memberIds.length) throw new MessagingAccessError("recipient-required")
+    const memberIds = groupMemberIds(formData.getAll("memberIds").map(String))
     const result =
       memberIds.length === 1
         ? await startDirectConversation({
