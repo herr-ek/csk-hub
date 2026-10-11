@@ -162,14 +162,14 @@ describe("Group Conversation commands", () => {
       () => renameGroupConversation({ conversationId: "group-1", name: "New name" })
     ]) {
       selects.push([{ nextMessageSequence: 7 }], [{ leftAt: new Date() }])
-      await expect(command()).rejects.toMatchObject({ kind: "conversation-send-forbidden" })
+      await expect(command()).rejects.toMatchObject({ kind: "group-management-forbidden" })
     }
     expect(inserts).toEqual([])
     expect(sets).toEqual([])
   })
   test("rejects a nonmember's leave attempt", async () => {
     selects.push([{ nextMessageSequence: 7 }], [])
-    await expect(leaveGroupConversation("group-1")).rejects.toMatchObject({ kind: "conversation-send-forbidden" })
+    await expect(leaveGroupConversation("group-1")).rejects.toMatchObject({ kind: "group-management-forbidden" })
     expect(sets).toEqual([])
   })
   test("leaving stores the precise last committed Message sequence without deleting history", async () => {

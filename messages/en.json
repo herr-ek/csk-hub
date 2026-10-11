@@ -457,6 +457,7 @@
       "self-recipient": "You cannot start a conversation with yourself.",
       "recipient-inactive": "That recipient is no longer active.",
       "conversation-send-forbidden": "You cannot send messages in this conversation.",
+      "group-management-forbidden": "You cannot manage this group conversation.",
       "conversation-unavailable": "This conversation cannot receive messages.",
       "conversation-read-only": "This conversation is read-only.",
       "conversation-recipient-inactive": "This conversation is read-only while the other member is inactive.",

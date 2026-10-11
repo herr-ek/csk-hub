@@ -76,7 +76,7 @@ export async function addGroupMembers(input: { conversationId: string; memberIds
   const ids = groupMemberIds(input.memberIds)
   return db.transaction(async (tx) => {
     const row = await lockGroupConversation(tx, input.conversationId)
-    await requireActiveGroupMember(tx, input.conversationId, userId)
+    await requireActiveGroupMember(tx, input.conversationId, userId, "group-management-forbidden")
     await requireActiveUsers(tx, ids)
     const added = await tx
       .insert(groupMembership)
@@ -111,7 +111,7 @@ export async function renameGroupConversation(input: { conversationId: string; n
   const name = normalizeGroupName(input.name)
   return db.transaction(async (tx) => {
     await lockGroupConversation(tx, input.conversationId)
-    await requireActiveGroupMember(tx, input.conversationId, userId)
+    await requireActiveGroupMember(tx, input.conversationId, userId, "group-management-forbidden")
     await tx
       .update(groupConversation)
       .set({ name, updatedAt: new Date() })
@@ -124,7 +124,7 @@ export async function leaveGroupConversation(conversationId: string) {
   const userId = await requireAuthenticatedUser()
   return db.transaction(async (tx) => {
     const row = await lockGroupConversation(tx, conversationId)
-    await requireActiveGroupMember(tx, conversationId, userId)
+    await requireActiveGroupMember(tx, conversationId, userId, "group-management-forbidden")
     await tx
       .update(groupMembership)
       .set({ leftAt: new Date(), historyVisibleThroughSequence: row.nextMessageSequence - 1 })

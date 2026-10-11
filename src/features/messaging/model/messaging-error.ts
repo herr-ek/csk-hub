@@ -11,6 +11,7 @@ export type MessagingErrorKind =
   | "idempotency-key-reused"
   | "self-recipient"
   | "conversation-send-forbidden"
+  | "group-management-forbidden"
   | "conversation-recipient-inactive"
   | "conversation-unavailable"
   | "conversation-view-forbidden"

@@ -457,6 +457,7 @@
       "self-recipient": "Du kan inte starta en konversation med dig själv.",
       "recipient-inactive": "Mottagaren är inte längre aktiv.",
       "conversation-send-forbidden": "Du kan inte skicka meddelanden i den här konversationen.",
+      "group-management-forbidden": "Du kan inte hantera den här gruppkonversationen.",
       "conversation-unavailable": "Den här konversationen kan inte ta emot meddelanden.",
       "conversation-read-only": "Den här konversationen är skrivskyddad.",
       "conversation-recipient-inactive": "Den här konversationen är skrivskyddad eftersom den andra medlemmen är inaktiv.",

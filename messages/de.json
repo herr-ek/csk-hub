@@ -457,6 +457,7 @@
       "self-recipient": "Du kannst keine Unterhaltung mit dir selbst beginnen.",
       "recipient-inactive": "Dieser Empfänger ist nicht mehr aktiv.",
       "conversation-send-forbidden": "Du kannst in dieser Unterhaltung keine Nachrichten senden.",
+      "group-management-forbidden": "Du kannst diese Gruppenunterhaltung nicht verwalten.",
       "conversation-unavailable": "Diese Unterhaltung kann keine Nachrichten empfangen.",
       "conversation-read-only": "Diese Unterhaltung ist schreibgeschützt.",
       "conversation-recipient-inactive": "Diese Unterhaltung ist schreibgeschützt, weil das andere Mitglied inaktiv ist.",
