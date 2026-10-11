@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache"
 import {
   addGroupMembers,
-  createGroupConversation,
   leaveGroupConversation,
   renameGroupConversation
 } from "../../group-conversations"
@@ -24,13 +23,6 @@ export async function groupConversationAction(
     const operation = formData.get("operation")
     let result: { conversationId: string }
     switch (operation) {
-      case "create":
-        result = await createGroupConversation({
-          name,
-          memberIds,
-          idempotencyKey: String(formData.get("idempotencyKey") ?? "")
-        })
-        break
       case "add":
         result = await addGroupMembers({ conversationId, memberIds })
         break

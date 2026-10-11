@@ -1,12 +1,10 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import { Input } from "@/shared/ui/base/input"
 import { MAX_GROUP_NAME_LENGTH } from "../../model/group-conversation"
-import { createMessageIdempotencyKey } from "../composer/idempotency-key"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { MemberSelection } from "../member-selection"
 import { groupConversationAction } from "./group-actions"
@@ -14,7 +12,6 @@ import { groupConversationAction } from "./group-actions"
 type Member = { id: string; name: string }
 const initialState: MessageCommandState = { status: "idle" }
 const operationLabels = {
-  create: "createGroup",
   add: "addMembers",
   rename: "renameGroup"
 } as const
@@ -32,23 +29,19 @@ export function GroupCommandForm({
 }) {
   const t = useTranslations("Messages")
   const common = useTranslations("Common")
-  const router = useRouter()
   const nameInput = useRef<HTMLInputElement>(null)
   const [editing, setEditing] = useState(false)
   const [draftName, setDraftName] = useState(name ?? "")
   const [selected, setSelected] = useState<Member[]>([])
-  const [idempotencyKey, setIdempotencyKey] = useState(createMessageIdempotencyKey)
   const [state, action, pending] = useActionState(groupConversationAction, initialState)
-  const selectsMembers = operation === "create" || operation === "add"
-  const namesGroup = operation === "create"
+  const selectsMembers = operation === "add"
   const canRename = editing && draftName.trim().length > 0 && draftName.trim() !== (name ?? "").trim()
   useEffect(() => {
     if (state.status !== "success") return
-    if (operation === "create") router.push(`/messages/${state.conversationId}`)
     setSelected([])
     setEditing(false)
     setDraftName(name ?? "")
-  }, [state, operation, router, name])
+  }, [state, name])
   useEffect(() => {
     if (editing) nameInput.current?.focus()
   }, [editing])
@@ -56,20 +49,6 @@ export function GroupCommandForm({
     <form action={action} className="grid gap-3">
       <input type="hidden" name="operation" value={operation} />
       <input type="hidden" name="conversationId" value={conversationId ?? ""} />
-      {operation === "create" ? <input type="hidden" name="idempotencyKey" value={idempotencyKey} /> : null}
-      {namesGroup ? (
-        <Input
-          key={name}
-          name="name"
-          aria-label={t("groupName")}
-          placeholder={t("groupName")}
-          defaultValue={state.status === "error" ? state.text : name}
-          onChange={() => setIdempotencyKey(createMessageIdempotencyKey())}
-          required
-          maxLength={MAX_GROUP_NAME_LENGTH}
-          disabled={pending}
-        />
-      ) : null}
       {operation === "rename" ? (
         <div className="grid gap-2">
           <label htmlFor={`group-name-${conversationId}`} className="text-sm font-medium">
@@ -106,10 +85,7 @@ export function GroupCommandForm({
       {selectsMembers ? (
         <MemberSelection
           value={selected}
-          onChange={(members) => {
-            setSelected(members)
-            if (operation === "create") setIdempotencyKey(createMessageIdempotencyKey())
-          }}
+          onChange={setSelected}
           disabled={pending}
           excludedIds={members.map((member) => member.id)}
         />
@@ -119,7 +95,7 @@ export function GroupCommandForm({
           {t(state.error === "unexpected" ? "groupUpdateFailed" : `errors.${state.error}`)}
         </p>
       ) : null}
-      {state.status === "success" && operation !== "create" ? (
+      {state.status === "success" ? (
         <p role="status" className="text-sm text-muted-foreground">
           {t("groupUpdated")}
         </p>

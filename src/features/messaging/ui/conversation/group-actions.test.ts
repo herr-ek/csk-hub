@@ -9,7 +9,6 @@ mock.module("@/core/auth/session.server", () => ({
 }))
 mock.module("next/cache", () => ({ revalidatePath }))
 mock.module("../../group-conversations", () => ({
-  createGroupConversation: command,
   addGroupMembers: command,
   renameGroupConversation: command,
   leaveGroupConversation: command
@@ -21,22 +20,9 @@ beforeEach(() => {
   revalidatePath.mockClear()
 })
 
-test("group creation forwards the form's idempotency key", async () => {
-  const form = new FormData()
-  form.set("operation", "create")
-  form.set("name", "Planning")
-  form.append("memberIds", "member-1")
-  form.set("idempotencyKey", "intent-1")
-  await expect(groupConversationAction({ status: "idle" }, form)).resolves.toMatchObject({
-    status: "success",
-    conversationId: "group-1"
-  })
-  expect(command).toHaveBeenCalledWith({ name: "Planning", memberIds: ["member-1"], idempotencyKey: "intent-1" })
-})
-
 test("all Group Conversation mutations refuse support impersonation", async () => {
   getSession.mockResolvedValue({ session: { impersonatedBy: "admin" } })
-  for (const operation of ["create", "add", "rename", "leave"]) {
+  for (const operation of ["add", "rename", "leave"]) {
     const form = new FormData()
     form.set("operation", operation)
     form.set("conversationId", "group-1")

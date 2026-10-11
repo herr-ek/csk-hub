@@ -1,7 +1,6 @@
 "use client"
 
 import { LoaderCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
@@ -22,12 +21,11 @@ export function MemberCombobox({
   excludedIds = [],
   disabled = false
 }: {
-  onSelect?: (member: Member) => void
+  onSelect: (member: Member) => void
   excludedIds?: string[]
   disabled?: boolean
 }) {
   const t = useTranslations("Messages")
-  const router = useRouter()
   const [value, setValue] = useState("")
   const [members, setMembers] = useState<Member[]>([])
   const [searchStatus, setSearchStatus] = useState<"idle" | "loading" | "results" | "empty" | "error">("idle")
@@ -90,10 +88,8 @@ export function MemberCombobox({
       onValueChange={(member) => {
         const selected = member as Member | null
         if (selected) {
-          if (onSelect) {
-            onSelect(selected)
-            setValue("")
-          } else router.push(`/messages/new?recipientId=${selected.id}`)
+          onSelect(selected)
+          setValue("")
         }
       }}
       onInputValueChange={setValue}

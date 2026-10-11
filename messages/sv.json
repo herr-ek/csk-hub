@@ -471,7 +471,6 @@
     "conversations": "Konversationer",
     "groupName": "Gruppnamn",
     "createGroup": "Skapa gruppkonversation",
-    "createGroupDescription": "Välj ett namn och minst en annan medlem. Alla som läggs till kan läsa hela konversationshistoriken.",
     "selectedMembers": "Valda medlemmar",
     "removeSelectedMember": "Ta bort {name} från urvalet",
     "addMembers": "Lägg till medlemmar",

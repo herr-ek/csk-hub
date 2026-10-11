@@ -471,7 +471,6 @@
     "conversations": "Conversations",
     "groupName": "Group name",
     "createGroup": "Create group conversation",
-    "createGroupDescription": "Choose a name and at least one other member. Everyone added can read the full conversation history.",
     "selectedMembers": "Selected members",
     "removeSelectedMember": "Remove {name} from selection",
     "addMembers": "Add members",

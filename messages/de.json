@@ -471,7 +471,6 @@
     "conversations": "Unterhaltungen",
     "groupName": "Gruppenname",
     "createGroup": "Gruppenunterhaltung erstellen",
-    "createGroupDescription": "Wähle einen Namen und mindestens ein weiteres Mitglied. Alle hinzugefügten Mitglieder können den gesamten Verlauf lesen.",
     "selectedMembers": "Ausgewählte Mitglieder",
     "removeSelectedMember": "{name} aus der Auswahl entfernen",
     "addMembers": "Mitglieder hinzufügen",
