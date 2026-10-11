@@ -1,11 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import {
-  addGroupMembers,
-  leaveGroupConversation,
-  renameGroupConversation
-} from "../../group-conversations"
+import { addGroupMembers, leaveGroupConversation, renameGroupConversation } from "../../group-conversations"
 import { MessagingAccessError } from "../../model/messaging-error"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { requireMessageSendingAvailable } from "../message-command-access"

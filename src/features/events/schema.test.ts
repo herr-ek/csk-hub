@@ -22,9 +22,11 @@ import { createTestDatabase } from "../../../test/database"
 // that no module's checks can mask a missing one. The rules the scheme tags [app] are not tested here.
 
 const database = await createTestDatabase()
+// Bun still evaluates a skipped suite callback to register its tests.
+const db = database?.db ?? ({} as NonNullable<typeof database>["db"])
+const drop = database?.drop ?? (async () => {})
 
 describe.skipIf(!database)("events schema constraints", () => {
-  const { db, drop } = database as NonNullable<typeof database>
   afterAll(() => drop())
 
   async function newUser() {

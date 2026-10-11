@@ -10,9 +10,9 @@ describe("getMessageLayout", () => {
     expect(
       getMessageLayout(
         [
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:00:00Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:04:59Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:09:59Z") }
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:00:00Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:04:59Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:09:59Z") }
         ],
         calendarDay
       )
@@ -27,9 +27,9 @@ describe("getMessageLayout", () => {
     expect(
       getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-09-07T10:00:00Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:01:00Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T11:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T10:00:00Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:01:00Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T11:01:00Z") }
         ],
         calendarDay
       )
@@ -44,8 +44,8 @@ describe("getMessageLayout", () => {
     expect(
       getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-09-07T21:59:00Z") },
-          { isOwnMessage: false, sentAt: at("2026-09-07T22:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T21:59:00Z") },
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T22:01:00Z") }
         ],
         calendarDay
       )
@@ -61,8 +61,8 @@ describe("getMessageLayout", () => {
     expect(
       getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-09-07T21:59:00Z") },
-          { isOwnMessage: false, sentAt: at("2026-09-07T22:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T21:59:00Z") },
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T22:01:00Z") }
         ],
         stockholmDay
       )
@@ -75,8 +75,8 @@ describe("getMessageLayout", () => {
     expect(
       getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-03-29T00:59:00Z") },
-          { isOwnMessage: false, sentAt: at("2026-03-29T01:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-03-29T00:59:00Z") },
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-03-29T01:01:00Z") }
         ],
         stockholmDay
       )
@@ -90,6 +90,18 @@ test("separates Messages from two other Group Conversation authors", () => {
     [
       { sentAt: time, isOwnMessage: false, authorUserId: "alice" },
       { sentAt: time, isOwnMessage: false, authorUserId: "bob" }
+    ],
+    (date) => date.toISOString().slice(0, 10)
+  )
+  expect(layout[1].startsNewGroup).toBe(true)
+})
+
+test("starts a new group for each Message with erased authorship", () => {
+  const time = new Date("2026-10-04T12:00:00Z")
+  const layout = getMessageLayout(
+    [
+      { sentAt: time, isOwnMessage: false, authorUserId: null },
+      { sentAt: time, isOwnMessage: false, authorUserId: null }
     ],
     (date) => date.toISOString().slice(0, 10)
   )

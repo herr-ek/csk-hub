@@ -4,7 +4,7 @@ const TIME_SEPARATOR_MS = 60 * 60 * 1000
 type MessageLayoutInput = {
   sentAt: Date
   isOwnMessage: boolean
-  authorUserId?: string | null
+  authorUserId: string | null
 }
 
 export type MessageLayout = {

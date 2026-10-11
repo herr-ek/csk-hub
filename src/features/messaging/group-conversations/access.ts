@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq, sql, type SQL, type SQLWrapper } from "drizzle-orm"
+import { and, eq, type SQL, type SQLWrapper, sql } from "drizzle-orm"
 import { conversation, groupMembership } from "@/core/db/schema/messaging"
 import { MessagingAccessError, type MessagingErrorKind } from "../model/messaging-error"
 import type { MessageTransaction } from "../sending"
