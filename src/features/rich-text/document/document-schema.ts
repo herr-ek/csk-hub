@@ -49,6 +49,11 @@ function cellAlignment(requested: unknown): string | null {
   return requested === "left" || requested === "center" || requested === "right" ? requested : null
 }
 
+/** An ordered-list start the editor can render as an HTML list start. */
+function orderedListStart(requested: unknown): number {
+  return Number.isSafeInteger(requested) && (requested as number) > 0 ? (requested as number) : 1
+}
+
 function createNormalizer(schema: Schema, headingLevels: readonly HeadingLevel[]) {
   /**
    * Attribute values the schema cannot police on its own. A type absent here keeps
@@ -56,6 +61,7 @@ function createNormalizer(schema: Schema, headingLevels: readonly HeadingLevel[]
    */
   const attributeRules: Record<string, (attrs: UnknownRecord) => UnknownRecord> = {
     heading: (attrs) => ({ ...attrs, level: nearestLevel(headingLevels, attrs.level) }),
+    orderedList: (attrs) => ({ ...attrs, start: orderedListStart(attrs.start) }),
     tableHeader: (attrs) => ("align" in attrs ? { ...attrs, align: cellAlignment(attrs.align) } : attrs),
     tableCell: (attrs) => ("align" in attrs ? { ...attrs, align: cellAlignment(attrs.align) } : attrs)
   }

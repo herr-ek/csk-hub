@@ -79,7 +79,10 @@ const nodeMapping = {
   text: ({ node }) => node.text ?? null,
   heading: ({ node, children }) => createElement(headingTag(node.attrs?.level), null, children),
   bulletList: ({ children }) => <ul>{children}</ul>,
-  orderedList: ({ children }) => <ol>{children}</ol>,
+  orderedList: ({ node, children }) => {
+    const start = node.attrs?.start
+    return <ol start={Number.isSafeInteger(start) && start > 1 ? start : undefined}>{children}</ol>
+  },
   listItem: ({ children }) => <li>{children}</li>,
   blockquote: ({ children }) => <blockquote>{children}</blockquote>,
   horizontalRule: () => <hr />,

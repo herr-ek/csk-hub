@@ -74,6 +74,27 @@ function serverTags(document: RichTextDocument): string[] {
   return [...found].sort()
 }
 
+/** The ordered-list start the editor draws, in document order. */
+function editorOrderedListStarts(document: RichTextDocument): (number | null)[] {
+  const starts: (number | null)[] = []
+
+  Node.fromJSON(schema, document).descendants((child) => {
+    if (child.type.name !== "orderedList") return true
+    const [, attrs] = (child.type.spec.toDOM?.(child) ?? []) as [string?, { start?: number | null }?]
+    starts.push(attrs?.start ?? null)
+    return true
+  })
+
+  return starts
+}
+
+/** The ordered-list start the server draws, in document order. */
+function serverOrderedListStarts(document: RichTextDocument): (number | null)[] {
+  const html = renderToStaticMarkup(renderRichText(document))
+
+  return [...html.matchAll(/<ol\b([^>]*)>/g)].map(([, attrs]) => Number(/\bstart="(\d+)"/.exec(attrs)?.[1]) || null)
+}
+
 describe("the editor and the stored document are made of the same elements", () => {
   test.each([
     ["h2", doc(heading(2, text("Rehearsals in October")))],
@@ -109,6 +130,19 @@ describe("the editor and the stored document are made of the same elements", () 
     )
 
     expect(serverTags(document)).toEqual(editorTags(document))
+  })
+})
+
+describe("the editor and the stored document number ordered lists alike", () => {
+  test("a list starting at five", () => {
+    const document = doc({
+      type: "orderedList",
+      attrs: { start: 5 },
+      content: [listItem(paragraph(text("First item"))), listItem(paragraph(text("Second item")))]
+    })
+
+    expect(editorOrderedListStarts(document)).toEqual([5])
+    expect(serverOrderedListStarts(document)).toEqual(editorOrderedListStarts(document))
   })
 })
 
