@@ -52,3 +52,12 @@ Creation needs no Message. Joining or rejoining initializes the read cursor thro
 history; adding an already active member preserves their cursor. Empty groups remain retained,
 with no former member able to reactivate them. The UI uses the same update behavior as Direct
 Conversations; no polling, conversation subscriptions, or push delivery is introduced.
+
+Group creation requires an idempotency key scoped to the authenticated creator. Both creation
+forms retain their key across retries and generate a new key when the name or selected members
+change. A creator/key advisory lock serializes simultaneous submissions, and a database unique
+index prevents duplicate persisted intents. The original normalized name and sorted, deduplicated
+member IDs are hashed when the group is created. An exact retry returns the original Conversation;
+reusing the key with different details raises `idempotency-key-reused`. Renaming, membership changes
+and departure do not change that original fingerprint or cause a retry to reset group state.
+Groups created before this contract have no creation key or fingerprint.

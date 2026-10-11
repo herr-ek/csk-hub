@@ -14,6 +14,7 @@ const inserts: unknown[] = []
 const selects: unknown[][] = []
 const returningRows: unknown[][] = []
 const tx = {
+  execute: mock(async () => undefined),
   select: mock(() => rows(selects.shift() ?? [])),
   insert: mock(() => ({
     values: (value: unknown) => {
@@ -44,16 +45,25 @@ beforeEach(() => {
   returningRows.length = 0
   tx.insert.mockClear()
   tx.update.mockClear()
+  tx.execute.mockClear()
 })
 
 describe("Group Conversation commands", () => {
   test("creates memberships and read cursors including the creator without requiring a Message", async () => {
-    selects.push([{ banned: false }], [{ banned: false }])
+    selects.push([], [{ banned: false }], [{ banned: false }])
     returningRows.push([{ id: "group-1" }])
-    await expect(createGroupConversation({ name: "  Planning ", memberIds: ["member"] })).resolves.toEqual({
+    await expect(
+      createGroupConversation({ name: "  Planning ", memberIds: ["member"], idempotencyKey: "intent-1" })
+    ).resolves.toEqual({
       conversationId: "group-1"
     })
-    expect(inserts).toContainEqual({ conversationId: "group-1", name: "Planning", createdByUserId: "creator" })
+    expect(inserts).toContainEqual({
+      conversationId: "group-1",
+      name: "Planning",
+      createdByUserId: "creator",
+      creationIdempotencyKey: "intent-1",
+      creationPayloadHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+    })
     expect(inserts.filter(Array.isArray)).toEqual([
       [
         { conversationId: "group-1", userId: "creator" },
@@ -65,13 +75,27 @@ describe("Group Conversation commands", () => {
       ]
     ])
     expect(tx.insert).toHaveBeenCalledTimes(4)
+    expect(tx.execute).toHaveBeenCalledTimes(1)
   })
   test("rejects inactive recipients before creating anything", async () => {
-    selects.push([{ banned: false }], [{ banned: true }])
-    await expect(createGroupConversation({ name: "Planning", memberIds: ["member"] })).rejects.toMatchObject({
+    selects.push([], [{ banned: false }], [{ banned: true }])
+    await expect(
+      createGroupConversation({ name: "Planning", memberIds: ["member"], idempotencyKey: "intent-1" })
+    ).rejects.toMatchObject({
       kind: "recipient-inactive"
     })
     expect(inserts).toEqual([])
+  })
+  test("rejects a missing or blank creation key before opening a transaction", async () => {
+    db.transaction.mockClear()
+    for (const idempotencyKey of ["", "  "]) {
+      await expect(
+        createGroupConversation({ name: "Planning", memberIds: ["member"], idempotencyKey })
+      ).rejects.toMatchObject({
+        kind: "idempotency-key-required"
+      })
+    }
+    expect(db.transaction).not.toHaveBeenCalled()
   })
   test("rejects additions and rename attempts from a former member", async () => {
     for (const command of [

@@ -1,5 +1,6 @@
 import "server-only"
 
+import { createHash } from "node:crypto"
 import { and, eq, sql } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
@@ -19,16 +20,44 @@ async function requireActiveUsers(tx: MessageTransaction, ids: string[]) {
   }
 }
 
-export async function createGroupConversation(input: { name: unknown; memberIds: string[] }) {
+export async function createGroupConversation(input: { name: unknown; memberIds: string[]; idempotencyKey: string }) {
   const userId = await requireAuthenticatedUser()
   const name = normalizeGroupName(input.name)
   const ids = groupMemberIds(input.memberIds, userId)
+  if (!input.idempotencyKey.trim()) throw new MessagingAccessError("idempotency-key-required")
+  const payloadHash = createHash("sha256")
+    .update(JSON.stringify([name, ids]))
+    .digest("hex")
   return db.transaction(async (tx) => {
+    // Serialize retries for this creator/key before checking whether the original intent committed.
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${JSON.stringify(["group-creation", userId, input.idempotencyKey])}))`
+    )
+    const [existing] = await tx
+      .select({ conversationId: groupConversation.conversationId, payloadHash: groupConversation.creationPayloadHash })
+      .from(groupConversation)
+      .where(
+        and(
+          eq(groupConversation.createdByUserId, userId),
+          eq(groupConversation.creationIdempotencyKey, input.idempotencyKey)
+        )
+      )
+      .limit(1)
+    if (existing) {
+      if (existing.payloadHash !== payloadHash) throw new MessagingAccessError("idempotency-key-reused")
+      return { conversationId: existing.conversationId }
+    }
     await requireActiveUsers(tx, ids)
     const [created] = await tx.insert(conversation).values({ kind: "group" }).returning({ id: conversation.id })
     if (!created) throw new Error("Group Conversation creation did not return a record.")
     const conversationId = created.id
-    await tx.insert(groupConversation).values({ conversationId, name, createdByUserId: userId })
+    await tx.insert(groupConversation).values({
+      conversationId,
+      name,
+      createdByUserId: userId,
+      creationIdempotencyKey: input.idempotencyKey,
+      creationPayloadHash: payloadHash
+    })
     await tx.insert(groupMembership).values(ids.map((userId) => ({ conversationId, userId })))
     await tx.insert(conversationReadState).values(ids.map((userId) => ({ conversationId, userId })))
     return { conversationId }

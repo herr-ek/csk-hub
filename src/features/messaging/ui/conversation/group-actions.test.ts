@@ -3,8 +3,10 @@ import { beforeEach, expect, mock, test } from "bun:test"
 const getSession = mock(async () => ({ session: { impersonatedBy: null as string | null } }))
 const command = mock(async () => ({ conversationId: "group-1" }))
 const revalidatePath = mock()
-mock.module("@/core/auth", () => ({ auth: { api: { getSession } } }))
-mock.module("next/headers", () => ({ headers: async () => new Headers() }))
+mock.module("@/core/auth/session.server", () => ({
+  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
+  getRequestSession: getSession
+}))
 mock.module("next/cache", () => ({ revalidatePath }))
 mock.module("../../group-conversations", () => ({
   createGroupConversation: command,
@@ -17,6 +19,19 @@ beforeEach(() => {
   getSession.mockResolvedValue({ session: { impersonatedBy: null } })
   command.mockClear()
   revalidatePath.mockClear()
+})
+
+test("group creation forwards the form's idempotency key", async () => {
+  const form = new FormData()
+  form.set("operation", "create")
+  form.set("name", "Planning")
+  form.append("memberIds", "member-1")
+  form.set("idempotencyKey", "intent-1")
+  await expect(groupConversationAction({ status: "idle" }, form)).resolves.toMatchObject({
+    status: "success",
+    conversationId: "group-1"
+  })
+  expect(command).toHaveBeenCalledWith({ name: "Planning", memberIds: ["member-1"], idempotencyKey: "intent-1" })
 })
 
 test("all Group Conversation mutations refuse support impersonation", async () => {

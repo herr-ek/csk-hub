@@ -12,8 +12,10 @@ mock.module("../../group-conversations", () => ({
   requireActiveGroupMember: mock()
 }))
 mock.module("./member-search", () => ({ searchMembers: mock() }))
-mock.module("@/core/auth", () => ({ auth: { api: { getSession } } }))
-mock.module("next/headers", () => ({ headers: async () => new Headers() }))
+mock.module("@/core/auth/session.server", () => ({
+  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
+  getRequestSession: getSession
+}))
 mock.module("next/cache", () => ({ revalidatePath: mock() }))
 const { startConversationAction } = await import("./actions")
 beforeEach(() => {
@@ -40,7 +42,11 @@ test("multiple selected members create a named Group Conversation", async () => 
   await expect(startConversationAction({ status: "idle" }, form(["member-1", "member-2"]))).resolves.toMatchObject({
     conversationId: "group-1"
   })
-  expect(group).toHaveBeenCalledWith({ name: "Planning", memberIds: ["member-1", "member-2"] })
+  expect(group).toHaveBeenCalledWith({
+    name: "Planning",
+    memberIds: ["member-1", "member-2"],
+    idempotencyKey: "intent-1"
+  })
   expect(direct).not.toHaveBeenCalled()
 })
 test("no selected members cannot create a Conversation", async () => {

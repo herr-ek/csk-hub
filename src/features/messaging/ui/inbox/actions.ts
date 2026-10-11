@@ -60,7 +60,11 @@ export async function startConversationAction(
             text,
             idempotencyKey: String(formData.get("idempotencyKey") ?? "")
           })
-        : await createGroupConversation({ name: String(formData.get("name") ?? ""), memberIds })
+        : await createGroupConversation({
+            name: String(formData.get("name") ?? ""),
+            memberIds,
+            idempotencyKey: String(formData.get("idempotencyKey") ?? "")
+          })
     revalidatePath("/[locale]/(app)/messages", "page")
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {

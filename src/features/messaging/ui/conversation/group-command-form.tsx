@@ -6,6 +6,7 @@ import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import { Input } from "@/shared/ui/base/input"
 import { MAX_GROUP_NAME_LENGTH } from "../../model/group-conversation"
+import { createMessageIdempotencyKey } from "../composer/idempotency-key"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { MemberSelection } from "../member-selection"
 import { groupConversationAction } from "./group-actions"
@@ -36,6 +37,7 @@ export function GroupCommandForm({
   const [editing, setEditing] = useState(false)
   const [draftName, setDraftName] = useState(name ?? "")
   const [selected, setSelected] = useState<Member[]>([])
+  const [idempotencyKey, setIdempotencyKey] = useState(createMessageIdempotencyKey)
   const [state, action, pending] = useActionState(groupConversationAction, initialState)
   const selectsMembers = operation === "create" || operation === "add"
   const namesGroup = operation === "create"
@@ -54,6 +56,7 @@ export function GroupCommandForm({
     <form action={action} className="grid gap-3">
       <input type="hidden" name="operation" value={operation} />
       <input type="hidden" name="conversationId" value={conversationId ?? ""} />
+      {operation === "create" ? <input type="hidden" name="idempotencyKey" value={idempotencyKey} /> : null}
       {namesGroup ? (
         <Input
           key={name}
@@ -61,6 +64,7 @@ export function GroupCommandForm({
           aria-label={t("groupName")}
           placeholder={t("groupName")}
           defaultValue={state.status === "error" ? state.text : name}
+          onChange={() => setIdempotencyKey(createMessageIdempotencyKey())}
           required
           maxLength={MAX_GROUP_NAME_LENGTH}
           disabled={pending}
@@ -102,7 +106,10 @@ export function GroupCommandForm({
       {selectsMembers ? (
         <MemberSelection
           value={selected}
-          onChange={setSelected}
+          onChange={(members) => {
+            setSelected(members)
+            if (operation === "create") setIdempotencyKey(createMessageIdempotencyKey())
+          }}
           disabled={pending}
           excludedIds={members.map((member) => member.id)}
         />

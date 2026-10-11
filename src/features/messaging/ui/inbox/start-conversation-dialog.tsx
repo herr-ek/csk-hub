@@ -94,7 +94,10 @@ function StartConversationForm() {
           aria-label={t("groupName")}
           placeholder={t("groupName")}
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => {
+            setName(event.target.value)
+            setIdempotencyKey(createMessageIdempotencyKey())
+          }}
           required
           maxLength={MAX_GROUP_NAME_LENGTH}
           disabled={pending}

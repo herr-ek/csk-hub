@@ -25,7 +25,11 @@ export async function groupConversationAction(
     let result: { conversationId: string }
     switch (operation) {
       case "create":
-        result = await createGroupConversation({ name, memberIds })
+        result = await createGroupConversation({
+          name,
+          memberIds,
+          idempotencyKey: String(formData.get("idempotencyKey") ?? "")
+        })
         break
       case "add":
         result = await addGroupMembers({ conversationId, memberIds })
