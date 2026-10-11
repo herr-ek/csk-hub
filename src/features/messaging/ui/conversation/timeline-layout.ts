@@ -33,6 +33,8 @@ export function getMessageLayout(
       startsNewGroup:
         showsDayDivider ||
         previous.isOwnMessage !== message.isOwnMessage ||
+        previous.authorUserId == null ||
+        message.authorUserId == null ||
         previous.authorUserId !== message.authorUserId ||
         elapsed >= GROUP_BREAK_MS,
       showsDayDivider,
