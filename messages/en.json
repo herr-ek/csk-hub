@@ -136,7 +136,8 @@
       "adminNotifications": "Notifications",
       "adminOrgStructure": "Choirs and voices",
       "adminOrgStructureGroups": "Groups and positions"
-    }
+    },
+    "members": "Members"
   },
   "Posts": {
     "title": "News",
@@ -529,6 +530,55 @@
     "groupUpdated": "Conversation updated.",
     "savingGroup": "Saving…",
     "groupUpdateFailed": "Unable to update the conversation. Please try again."
+  },
+  "MemberProfiles": {
+    "directoryTitle": "Members",
+    "directoryDescription": "Meet the people who make up CSK.",
+    "searchLabel": "Find a member",
+    "searchPlaceholder": "Search name or username",
+    "search": "Search",
+    "clearSearch": "Clear search",
+    "memberCount": "{count, plural, one {# member} other {# members}}",
+    "noResults": "No members match your search.",
+    "emptyDirectory": "There are no other active members to show.",
+    "pagination": "Member directory pages",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {total}",
+    "choirSection": "{choir} · {section}",
+    "email": "Email",
+    "settings": "Account settings",
+    "message": "Message",
+    "positions": "Positions",
+    "choirs": "Choirs",
+    "section": "Section",
+    "assignedVoice": "Sings {voice}",
+    "memberSince": "Member since {date}",
+    "groups": "CSK-wide groups",
+    "canSing": "Can sing",
+    "notRecorded": "Not recorded",
+    "noChoirs": "No current Choir Memberships.",
+    "groupContext": "{group} ({choir})",
+    "association": "CSK",
+    "username": "@{username}",
+    "otherGroups": "Other groups",
+    "sectionVoice": "Section Voice: {voice}",
+    "searching": "Searching…",
+    "editProfile": "Edit profile",
+    "editProfileDescription": "Share which Voices you can sing.",
+    "capabilitiesDescription": "Select every Voice division you can sing. These are self-reported capabilities and do not change your Choir assignments. Clear the selection if you have no capabilities to record.",
+    "selfReported": "Self-reported",
+    "saveProfile": "Save profile",
+    "savingProfile": "Saving…",
+    "profileSaved": "Your profile has been saved.",
+    "backToProfile": "Back to profile",
+    "editErrors": {
+      "sign-in-required": "Sign in to edit your profile.",
+      "impersonation-unavailable": "You cannot change self-reported capabilities while impersonating another member.",
+      "inactive-user": "Your account is no longer active.",
+      "invalid-voices": "Choose only the listed Voice divisions.",
+      "unexpected": "Your profile could not be saved. Please try again."
+    }
   },
   "Groups": {
     "choirsPage": {

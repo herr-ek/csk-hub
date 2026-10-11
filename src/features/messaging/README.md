@@ -12,6 +12,7 @@ messaging/
   model/         small, universal messaging rules and validation
   group-conversations/  creation, additions, renaming, departure, and group write authorization
   sending/       server-only module that owns all Message-send behavior
+  reading/       shared read-only Direct Conversation lookup
   ui/            screens, screen-shaped reads, Server Actions, and client interaction
 ```
 
@@ -32,6 +33,9 @@ Routes import screens only through `@/features/messaging`. UI Server Actions cal
 - Change rendering, form behavior, navigation, or cache revalidation in `ui/`.
 - Keep reads shaped for a screen beside that screen. For example, the inbox query returns the inbox
   view model; it is not part of the sending interface.
+- `reading/` provides the active-pair lookup used when opening messaging from a profile.
+  An existing Direct Conversation opens directly; otherwise the shared conversation dialog opens
+  with that member selected. Looking up a destination creates neither a Conversation nor a Message.
 - Keep Next.js route files thin and import the feature through `index.ts`.
 
 The `ui/conversation/` name follows the domain language. “Thread” and “chat” are intentionally not

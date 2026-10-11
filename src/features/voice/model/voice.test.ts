@@ -20,6 +20,11 @@ describe("isVoiceDivision", () => {
     expect(isVoiceDivision("B1")).toBe(true)
     expect(isVoiceDivision("B")).toBe(false)
   })
+  test("refuses undeclared values from a profile form", () => {
+    for (const value of ["B3", "unknown", "", null, 1, {}, "toString"]) {
+      expect(isVoiceDivision(value)).toBe(false)
+    }
+  })
 })
 
 describe("contains", () => {

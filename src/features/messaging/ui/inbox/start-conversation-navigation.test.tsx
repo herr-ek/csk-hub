@@ -1,4 +1,4 @@
-import { expect, mock, test } from "bun:test"
+import { beforeEach, expect, mock, test } from "bun:test"
 import { registerDom } from "@test/dom"
 import { Activity, act, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
@@ -12,7 +12,7 @@ const router = { push }
 mock.module("next/navigation", () => ({ useRouter: () => router }))
 mock.module("@/core/i18n/translations", () => ({ useTranslations: () => (key: string) => key }))
 const startConversation = mock(
-  async (): Promise<MessageCommandState> => ({
+  async (_state: MessageCommandState, _formData: FormData): Promise<MessageCommandState> => ({
     status: "success",
     conversationId: "group-1"
   })
@@ -32,8 +32,48 @@ mock.module("@/shared/ui/base/dialog", () => ({
   DialogTrigger: () => null,
   DialogClose: () => null
 }))
-mock.module("../member-selection", () => ({ MemberSelection: () => null }))
+mock.module("../member-selection", () => ({
+  MemberSelection: ({ value }: { value: { id: string; name: string }[] }) => (
+    <>
+      {value.map((member) => (
+        <input key={member.id} type="hidden" name="memberIds" value={member.id} />
+      ))}
+    </>
+  )
+}))
 const { StartConversationDialog } = await import("./start-conversation-dialog")
+
+beforeEach(() => {
+  push.mockClear()
+  startConversation.mockClear()
+})
+
+test("starting from a profile preselects that member in the shared first-message composer", async () => {
+  const container = document.createElement("div")
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  try {
+    await act(async () => {
+      root.render(<StartConversationDialog initialMember={{ id: "member-1", name: "Ada" }} />)
+    })
+    const form = container.querySelector("form")
+    const textarea = container.querySelector("textarea")
+    if (!form || !textarea) throw new Error("The direct composer did not mount")
+    expect(container.querySelector('input[name="name"]')).toBeNull()
+    await act(async () => {
+      textarea.value = "Hello Ada"
+      textarea.dispatchEvent(new Event("input", { bubbles: true }))
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    })
+    const submitted = startConversation.mock.calls[0][1]
+    expect(submitted.getAll("memberIds")).toEqual(["member-1"])
+    expect(submitted.get("text")).toBe("Hello Ada")
+    expect(push).toHaveBeenCalledTimes(1)
+  } finally {
+    await act(async () => root.unmount())
+    container.remove()
+  }
+})
 
 test("returning to the inbox after creation does not reopen the conversation", async () => {
   const container = document.createElement("div")

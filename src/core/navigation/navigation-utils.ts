@@ -68,3 +68,7 @@ export function isActiveRoute(pathname: string, href: string) {
 export function newsPostEditPath(postId: string) {
   return `${newsPostPath(postId)}/edit`
 }
+
+export function memberProfilePath(userId: string) {
+  return `${ROUTES.members}/${encodeURIComponent(userId)}`
+}

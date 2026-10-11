@@ -8,8 +8,10 @@ export { endPositionHolding, replacePositionHolder, startPositionHolding } from 
 export {
   getCurrentPositionHolder,
   listChoirMembersByVoiceFamily,
+  listCurrentChoirAffiliationsOfUsers,
   listCurrentGroupMembers,
-  listCurrentGroupsOfUser
+  listCurrentGroupsOfUser,
+  listCurrentPositionsOfUser
 } from "./reads"
 export {
   allowPositionInGroupTypes,

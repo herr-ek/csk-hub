@@ -136,7 +136,8 @@
       "adminNotifications": "Notiser",
       "adminOrgStructure": "Körer och stämmor",
       "adminOrgStructureGroups": "Grupper och poster"
-    }
+    },
+    "members": "Medlemmar"
   },
   "Posts": {
     "title": "Nyheter",
@@ -529,6 +530,55 @@
     "groupUpdated": "Konversationen har uppdaterats.",
     "savingGroup": "Sparar…",
     "groupUpdateFailed": "Det gick inte att uppdatera konversationen. Försök igen."
+  },
+  "MemberProfiles": {
+    "directoryTitle": "Medlemmar",
+    "directoryDescription": "Möt människorna som utgör CSK.",
+    "searchLabel": "Hitta en medlem",
+    "searchPlaceholder": "Sök på namn eller användarnamn",
+    "search": "Sök",
+    "clearSearch": "Rensa sökning",
+    "memberCount": "{count, plural, one {# medlem} other {# medlemmar}}",
+    "noResults": "Inga medlemmar matchar din sökning.",
+    "emptyDirectory": "Det finns inga andra aktiva medlemmar att visa.",
+    "pagination": "Sidor i medlemskatalogen",
+    "previous": "Föregående",
+    "next": "Nästa",
+    "pageOf": "Sida {page} av {total}",
+    "choirSection": "{choir} · {section}",
+    "email": "E-post",
+    "settings": "Kontoinställningar",
+    "message": "Skicka meddelande",
+    "positions": "Poster",
+    "choirs": "Körer",
+    "section": "Stämgrupp",
+    "assignedVoice": "Sjunger {voice}",
+    "memberSince": "Medlem sedan {date}",
+    "groups": "CSK-gemensamma grupper",
+    "canSing": "Kan sjunga",
+    "notRecorded": "Inte registrerat",
+    "noChoirs": "Inga aktuella körmedlemskap.",
+    "groupContext": "{group} ({choir})",
+    "association": "CSK",
+    "username": "@{username}",
+    "otherGroups": "Övriga grupper",
+    "sectionVoice": "Stämgruppens stämma: {voice}",
+    "searching": "Söker…",
+    "editProfile": "Redigera profil",
+    "editProfileDescription": "Berätta vilka stämmor du kan sjunga.",
+    "capabilitiesDescription": "Välj alla delstämmor du kan sjunga. Uppgifterna är självrapporterade och ändrar inte din stämplacering i någon kör. Avmarkera alla om du inte har några uppgifter att registrera.",
+    "selfReported": "Självrapporterat",
+    "saveProfile": "Spara profil",
+    "savingProfile": "Sparar…",
+    "profileSaved": "Din profil har sparats.",
+    "backToProfile": "Tillbaka till profilen",
+    "editErrors": {
+      "sign-in-required": "Logga in för att redigera din profil.",
+      "impersonation-unavailable": "Du kan inte ändra självrapporterade uppgifter när du imiterar en annan medlem.",
+      "inactive-user": "Ditt konto är inte längre aktivt.",
+      "invalid-voices": "Välj endast de delstämmor som visas.",
+      "unexpected": "Det gick inte att spara din profil. Försök igen."
+    }
   },
   "Groups": {
     "choirsPage": {

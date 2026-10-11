@@ -66,7 +66,8 @@ races, never surface as thrown errors.
   `endLinkedPosition` for one office held in several Groups, such as the Board's Sexmästare
   who leads the Sexmästeri.
 - Reads: `listCurrentGroupMembers`, `listCurrentGroupsOfUser`, `getCurrentPositionHolder`,
-  `listChoirMembersByVoiceFamily`.
+  `listChoirMembersByVoiceFamily`, `listCurrentPositionsOfUser`, and
+  `listCurrentChoirAffiliationsOfUsers` (batched Choir/Section summaries).
 
 The structure every environment shares (MK, DK and KK with their Sections and Voices, Styret and
 the Position catalogue) comes from `bun run ops reference-data`, which can also run against
