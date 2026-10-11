@@ -16,6 +16,10 @@ Section Memberships.
 divisions only (someone who can sing B can sing B1 and B2), and `listVoiceCapabilities` reads it.
 A family returns `{ success: false, error: "capability-not-a-division" }`.
 
+Voice capabilities are self-reported. The members feature owns the `/me/edit` workflow
+and permits only the active, signed-in User to edit their own declarations. Support
+impersonation cannot submit them; Choir and Section assignments are separate.
+
 ## Database
 
 `src/core/db/schema/voice.ts` holds the `voice` enum and `voice_capability`. The migration adds

@@ -51,3 +51,7 @@ export function twoFactorPath(methods: string[], returnTo?: string) {
 export function newsPostPath(postId: string) {
   return `${ROUTES.news}/${encodeURIComponent(postId)}`
 }
+
+export function memberProfilePath(userId: string) {
+  return `${ROUTES.members}/${encodeURIComponent(userId)}`
+}
