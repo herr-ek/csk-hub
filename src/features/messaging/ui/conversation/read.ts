@@ -15,17 +15,19 @@ export async function markConversationRead(conversationId: string, sequence: num
     throw new MessagingAccessError("read-position-invalid")
 
   await db.transaction(async (tx) => {
-    // A departure must not race a stale read token into a post-departure cursor.
+    // Conversation kind is immutable; resolving it must not contend with sends.
     const [target] = await tx
       .select({ kind: conversation.kind })
       .from(conversation)
       .where(eq(conversation.id, conversationId))
-      .for("share")
+      .limit(1)
     if (target?.kind === "group") {
+      // Freeze this member's departure cutoff without locking the send sequence.
       const [membership] = await tx
         .select({ visibleThrough: groupMembership.historyVisibleThroughSequence })
         .from(groupMembership)
         .where(and(eq(groupMembership.conversationId, conversationId), eq(groupMembership.userId, userId)))
+        .for("share")
         .limit(1)
       if (!membership || (membership.visibleThrough !== null && sequence > membership.visibleThrough))
         throw new MessagingAccessError("conversation-view-forbidden")

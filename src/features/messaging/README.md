@@ -42,8 +42,10 @@ used as synonyms for Conversation.
 
 Active members can add or re-add Users and rename the Conversation. The creator's identity is
 attribution, not an ownership role. Membership changes and sends serialize on the Conversation row;
-departure stores the last visible Message sequence. Timeline reads hold a shared Conversation lock,
-and inbox queries apply the departure cutoff to both previews and unread counts. Former members
+departure stores the last visible Message sequence. Group timeline reads and read-marker updates
+hold a shared lock on the viewer's membership row to keep the departure cutoff stable without
+contending with sends on the Conversation row. Direct reads do not lock the Conversation row.
+Inbox queries apply the departure cutoff to both previews and unread counts. Former members
 receive the current name and their retained Messages, but no current member list.
 
 Creation needs no Message. Joining or rejoining initializes the read cursor through existing

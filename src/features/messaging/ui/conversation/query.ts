@@ -4,13 +4,7 @@ import { and, asc, desc, eq, isNull, lt, lte } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
-import {
-  conversation,
-  directConversation,
-  groupConversation,
-  groupMembership,
-  message
-} from "@/core/db/schema/messaging"
+import { directConversation, groupConversation, groupMembership, message } from "@/core/db/schema/messaging"
 import { canReceiveDirectMessages, getDirectCounterpartId } from "../../model/direct-conversation"
 import { MessagingAccessError } from "../../model/messaging-error"
 import { createReadToken } from "./read-token"
@@ -75,11 +69,10 @@ async function getDirectConversationPage(conversationId: string, beforeSequence?
   }
 }
 
-/** Group reads hold the same Conversation lock as departure until their window is loaded. */
+/** Keep the viewer's departure cutoff stable while loading their timeline window. */
 async function getGroupConversationPage(conversationId: string, beforeSequence?: number) {
   const userId = await requireAuthenticatedUser()
   return db.transaction(async (tx) => {
-    await tx.select({ id: conversation.id }).from(conversation).where(eq(conversation.id, conversationId)).for("share")
     const [membership] = await tx
       .select({
         name: groupConversation.name,
@@ -89,6 +82,7 @@ async function getGroupConversationPage(conversationId: string, beforeSequence?:
       .from(groupMembership)
       .innerJoin(groupConversation, eq(groupConversation.conversationId, groupMembership.conversationId))
       .where(and(eq(groupMembership.conversationId, conversationId), eq(groupMembership.userId, userId)))
+      .for("share", { of: groupMembership })
       .limit(1)
     if (!membership) throw new MessagingAccessError("conversation-view-forbidden")
     const rows = await tx
