@@ -97,6 +97,20 @@ describe("normalizing a document", () => {
     expect(alignOf(cellWith("red; background:url(x)"))).toBeNull()
   })
 
+  test("keeps a valid ordered-list start and resets an invalid one", () => {
+    const list = (start: unknown) =>
+      doc({
+        type: "orderedList",
+        attrs: { start },
+        content: [{ type: "listItem", content: [paragraph(text("First"))] }]
+      })
+    const normalizedStart = (document: object) => schema.normalize(document)?.content?.[0]?.attrs?.start
+
+    expect(normalizedStart(list(5))).toBe(5)
+    expect(normalizedStart(list("5"))).toBe(1)
+    expect(normalizedStart(list(-2))).toBe(1)
+  })
+
   test("keeps the words of a link that points somewhere unsafe, without the link", () => {
     const pasted = doc(paragraph(text("click", [{ type: "link", attrs: { href: "javascript:alert(1)" } }])))
 
