@@ -439,6 +439,7 @@
     "messageLabel": "Meddelande",
     "messagePlaceholder": "Skriv ett meddelande…",
     "starting": "Startar…",
+    "startConversationFailed": "Det gick inte att starta konversationen. Försök igen.",
     "sending": "Skickar…",
     "sendMessage": "Skicka meddelande",
     "otherMemberInactive": "Den andra medlemmen är inte längre aktiv.",

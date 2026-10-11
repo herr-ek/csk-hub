@@ -116,7 +116,7 @@ function StartConversationForm() {
       ) : null}
       {state.status === "error" ? (
         <p className="text-sm text-destructive" role="alert">
-          {t(state.error === "unexpected" ? "groupUpdateFailed" : `errors.${state.error}`)}
+          {t(state.error === "unexpected" ? "startConversationFailed" : `errors.${state.error}`)}
         </p>
       ) : null}
       <Button

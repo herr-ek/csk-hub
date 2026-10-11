@@ -439,6 +439,7 @@
     "messageLabel": "Nachricht",
     "messagePlaceholder": "Nachricht schreiben…",
     "starting": "Wird gestartet…",
+    "startConversationFailed": "Die Unterhaltung konnte nicht gestartet werden. Bitte versuche es erneut.",
     "sending": "Wird gesendet…",
     "sendMessage": "Nachricht senden",
     "otherMemberInactive": "Das andere Mitglied ist nicht mehr aktiv.",

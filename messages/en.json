@@ -439,6 +439,7 @@
     "messageLabel": "Message",
     "messagePlaceholder": "Write a message…",
     "starting": "Starting…",
+    "startConversationFailed": "Unable to start the conversation. Please try again.",
     "sending": "Sending…",
     "sendMessage": "Send message",
     "otherMemberInactive": "The other member is no longer active.",
