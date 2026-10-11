@@ -5,6 +5,8 @@ import { groupTypePosition, position, positionGroup, positionHolder } from "@/co
 import { findCurrentMembership, requireActiveGroup } from "./lookup"
 import { holdsElectedPosts, type IsoDate } from "./model"
 import {
+  lockPositionCatalogue,
+  lockPositionSlot,
   lockUser,
   type OrgStructureDatabase,
   type OrgStructureTransaction,
@@ -19,6 +21,8 @@ type HoldingInput = { userId: string; groupId: string; positionId: string }
 export function startPositionHolding(database: OrgStructureDatabase, input: HoldingInput & { startDate: IsoDate }) {
   return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
+    await lockPositionCatalogue(tx, input.positionId)
+    await lockPositionSlot(tx, input.groupId, input.positionId)
     await lockUser(tx, input.userId)
     await addHolding(tx, input, startDate)
   })
@@ -27,6 +31,8 @@ export function startPositionHolding(database: OrgStructureDatabase, input: Hold
 export function endPositionHolding(database: OrgStructureDatabase, input: HoldingInput & { endDate: IsoDate }) {
   return runOrgStructureCommand(database, async (tx) => {
     const endDate = requireDate(input.endDate)
+    await lockPositionCatalogue(tx, input.positionId)
+    await lockPositionSlot(tx, input.groupId, input.positionId)
     await lockUser(tx, input.userId)
     await closeHolding(tx, input, endDate)
   })
@@ -39,6 +45,27 @@ export function endPositionHolding(database: OrgStructureDatabase, input: Holdin
 export function replacePositionHolder(database: OrgStructureDatabase, input: HoldingInput & { startDate: IsoDate }) {
   return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
+    await lockPositionCatalogue(tx, input.positionId)
+    await lockPositionSlot(tx, input.groupId, input.positionId)
+
+    // Read the incumbent without locking its row. Every participating command takes user locks
+    // before holder-row locks, so departure and handover cannot invert the lock order.
+    const [observed] = await tx
+      .select({ userId: positionHolder.userId })
+      .from(positionHolder)
+      .where(
+        and(
+          eq(positionHolder.groupId, input.groupId),
+          eq(positionHolder.positionId, input.positionId),
+          isNull(positionHolder.endDate)
+        )
+      )
+    if (observed?.userId === input.userId) throw new RuleViolation("already-holding-position")
+
+    for (const userId of [input.userId, observed?.userId].filter((id): id is string => Boolean(id)).sort()) {
+      await lockUser(tx, userId)
+    }
+
     const [current] = await tx
       .select({ userId: positionHolder.userId })
       .from(positionHolder)
@@ -51,15 +78,12 @@ export function replacePositionHolder(database: OrgStructureDatabase, input: Hol
       )
       .for("update")
     if (current?.userId === input.userId) throw new RuleViolation("already-holding-position")
-
-    // Both users' locks, in a fixed order, so two handovers between the same people cannot deadlock.
-    for (const userId of [input.userId, current?.userId].filter(Boolean).sort()) await lockUser(tx, userId as string)
     if (current) await closeHolding(tx, { ...input, userId: current.userId }, startDate)
     await addHolding(tx, input, startDate)
   })
 }
 
-/** Starts a holding for a user already locked by the caller. */
+/** Starts a holding for an office and user already locked by the caller. */
 export async function addHolding(tx: OrgStructureTransaction, input: HoldingInput, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, input.groupId)
   const [found] = await tx.select({ id: position.id }).from(position).where(eq(position.id, input.positionId))
@@ -116,7 +140,6 @@ export async function addHolding(tx: OrgStructureTransaction, input: HoldingInpu
     .from(positionHolder)
     .where(
       and(
-        eq(positionHolder.userId, input.userId),
         eq(positionHolder.groupId, input.groupId),
         eq(positionHolder.positionId, input.positionId),
         or(gte(positionHolder.startDate, startDate), gt(positionHolder.endDate, startDate))
