@@ -138,9 +138,9 @@
       "adminOrgStructureGroups": "Gruppen und Ämter"
     },
     "members": "Mitglieder",
-    "menu": "Menü",
     "quickAccess": "Schnellzugriff",
-    "customizeQuickAccess": "Schnellzugriff anpassen"
+    "customizeQuickAccess": "Schnellzugriff anpassen",
+    "showQuickAccess": "Schnellzugriff anzeigen"
   },
   "Posts": {
     "title": "Neuigkeiten",
@@ -394,7 +394,8 @@
     "updateFailed": "Deine Verknüpfungen konnten gerade nicht gespeichert werden. Bitte versuche es erneut.",
     "added": "{name} wurde zur Leiste hinzugefügt.",
     "removed": "{name} wurde aus der Leiste entfernt.",
-    "moved": "{name} wurde an Position {position} von {count} verschoben."
+    "moved": "{name} wurde an Position {position} von {count} verschoben.",
+    "pwaNotice": "Der Schnellzugriff ist für CSK Hub als App auf deinem Home-Bildschirm gedacht. In einem mobilen Browser teilt er sich den Platz mit der Symbolleiste des Browsers."
   },
   "PushNotifications": {
     "settingsTitle": "Push-Benachrichtigungen",

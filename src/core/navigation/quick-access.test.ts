@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { moveShortcut, toggleShortcut, visibleQuickAccess } from "./quick-access"
+import { moveShortcut, slotIndexAt, toggleShortcut, visibleQuickAccess } from "./quick-access"
 
 describe("quick access", () => {
   test("hides admin shortcuts from members who are not admins", () => {
@@ -22,5 +22,13 @@ describe("quick access", () => {
     expect(moveShortcut(["news", "messages", "account"], "account", -1)).toEqual(["news", "account", "messages"])
     expect(moveShortcut(["news", "messages"], "news", -1)).toEqual(["news", "messages"])
     expect(moveShortcut(["news", "messages"], "messages", 1)).toEqual(["news", "messages"])
+  })
+
+  test("finds the slot under a dragging finger, clamped to the row", () => {
+    expect(slotIndexAt(10, 200, 4)).toBe(0)
+    expect(slotIndexAt(120, 200, 4)).toBe(2)
+    expect(slotIndexAt(199, 200, 4)).toBe(3)
+    expect(slotIndexAt(-30, 200, 4)).toBe(0)
+    expect(slotIndexAt(260, 200, 4)).toBe(3)
   })
 })
