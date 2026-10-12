@@ -1,22 +1,24 @@
 #!/usr/bin/env bun
-import { and, asc, eq, isNull, notExists, or } from "drizzle-orm"
+import { and, asc, count, eq, isNull, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
-import type { db as applicationDb } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { group, groupMember, section } from "@/core/db/schema/org-structure"
+import { voiceCapability } from "@/core/db/schema/voice"
 import { assertLocalDatabase } from "./ops/guards"
+import { SEED_USERS, type SeedDatabase } from "./ops/seed-data"
+import { seedGroupActivity } from "./ops/seed-group-activity"
 
 /**
  * Local example data on top of the reference data (`bun run ops reference-data`): the remaining
- * groups of the scheme's "Example placement", and a Section for every active user who belongs to no
- * group yet, dealt round the Choirs' Voices.
+ * groups of the scheme's "Example placement", balanced singer placements, and demo Membership
+ * and Position history. Scripts write directly, keeping the rules without importing features.
  *
  * It writes the tables directly, so scripts never depend on a feature. The rows it writes keep the
  * org-structure rules: a singer joins the Choir and one of its Sections, with a Voice the Section's
  * Voice contains.
  */
 
-type Database = typeof applicationDb | Parameters<Parameters<typeof applicationDb.transaction>[0]>[0]
+type Database = SeedDatabase
 type Division = NonNullable<typeof groupMember.$inferInsert.voice>
 
 const CHOIRS = ["MK", "DK", "KK"]
@@ -67,19 +69,52 @@ async function seed(database: Database) {
     .orderBy(user.createdAt)
 
   for (const [index, { id }] of unplaced.entries()) {
-    const slot = slots[index % slots.length] as (typeof slots)[number]
+    const choirId = [...new Set(slots.map((slot) => slot.choirId))].sort(
+      (a, b) =>
+        slots.filter((slot) => slot.choirId === a).reduce((sum, slot) => sum + slot.members, 0) -
+        slots.filter((slot) => slot.choirId === b).reduce((sum, slot) => sum + slot.members, 0)
+    )[0]
+    const slot = slots.filter((slot) => slot.choirId === choirId).sort((a, b) => a.members - b.members)[0]
+    if (!slot) throw new Error("No Section is available.")
+    const singer = SEED_USERS.find((singer) => singer.id === id)
+    const startDate = singer?.joined ?? SEED_START_DATE
+    const voice = slot.divisions[slot.members % slot.divisions.length] as Division
+    const changed = singer && index % 5 === 0
+    const previous =
+      slot.divisions.length > 1
+        ? slot
+        : slots.find((other) => other.choirId === choirId && other.sectionId !== slot.sectionId)
+    if (changed && previous) {
+      await database.insert(groupMember).values({
+        userId: id,
+        groupId: previous.sectionId,
+        startDate,
+        endDate: "2026-02-01",
+        voice: previous === slot ? slot.divisions.find((division) => division !== voice) : previous.divisions[0]
+      })
+    }
     await database.insert(groupMember).values([
-      { userId: id, groupId: slot.choirId, startDate: SEED_START_DATE },
-      { userId: id, groupId: slot.sectionId, startDate: SEED_START_DATE, voice: slot.voice }
+      { userId: id, groupId: slot.choirId, startDate },
+      { userId: id, groupId: slot.sectionId, startDate: changed ? "2026-02-01" : startDate, voice }
     ])
+    if (singer && index % 7 !== 0) {
+      const capabilities =
+        index % 3 === 0 ? [voice, `${voice[0]}${voice.endsWith("1") ? "2" : "1"}` as Division] : [voice]
+      await database
+        .insert(voiceCapability)
+        .values(capabilities.map((voice) => ({ userId: id, voice })))
+        .onConflictDoNothing()
+    }
+    slot.members++
   }
 
+  created.push(...(await seedGroupActivity(database)))
   return { created, placed: unplaced.length }
 }
 
 /**
- * One slot per Voice a singer can be placed with, in Choir and Section order. A Section singing a
- * whole family, as KKB sings B, deals its divisions, so seeded singers get B1 or B2.
+ * One slot per Section, so KK's undivided Sections do not get twice MK/DK's singers.
+ * Existing Section sizes keep successive runs balanced; KK alternates its two divisions.
  */
 async function sectionSlots(database: Database) {
   const choirGroup = alias(group, "choir_group")
@@ -88,17 +123,28 @@ async function sectionSlots(database: Database) {
     .from(section)
     .innerJoin(group, eq(group.id, section.groupId))
     .innerJoin(choirGroup, eq(choirGroup.id, group.choirId))
-    .where(and(eq(group.active, true), eq(choirGroup.active, true)))
+    .where(
+      and(eq(group.active, true), eq(choirGroup.active, true), or(...CHOIRS.map((name) => eq(choirGroup.name, name))))
+    )
     .orderBy(asc(choirGroup.name), asc(group.name))
-  if (sections.length === 0) throw new Error("No Sections exist; run `bun run ops reference-data` first.")
-
-  return sections.flatMap(({ choirId, sectionId, voice }) =>
-    ((voice.length === 1 ? [`${voice}1`, `${voice}2`] : [voice]) as Division[]).map((division) => ({
-      choirId,
-      sectionId,
-      voice: division
-    }))
-  )
+  if (
+    sections.length !== 12 ||
+    new Set(sections.map(({ choirId }) => choirId)).size !== 3 ||
+    sections.some(({ choirId }) => sections.filter((section) => section.choirId === choirId).length !== 4)
+  ) {
+    throw new Error("The three Choirs and their twelve Sections are required; run `bun run ops reference-data` first.")
+  }
+  const sizes = await database
+    .select({ groupId: groupMember.groupId, members: count() })
+    .from(groupMember)
+    .where(isNull(groupMember.endDate))
+    .groupBy(groupMember.groupId)
+  return sections.map(({ choirId, sectionId, voice }) => ({
+    choirId,
+    sectionId,
+    divisions: (voice.length === 1 ? [`${voice}1`, `${voice}2`] : [voice]) as Division[],
+    members: sizes.find(({ groupId }) => groupId === sectionId)?.members ?? 0
+  }))
 }
 
 async function requireChoir(database: Database, name: string) {
@@ -121,9 +167,11 @@ if (import.meta.main) {
   assertLocalDatabase("Seeding groups")
   const { db } = await import("@/core/db")
 
-  const { created, placed } = await seedGroups(db)
-  await db.$client.end()
-
-  console.log(created.length > 0 ? `Created groups: ${created.join(", ")}` : "Example groups already exist.")
-  console.log(`Placed ${placed} user(s) in a Section.`)
+  try {
+    const { created, placed } = await seedGroups(db)
+    console.log(created.length > 0 ? `Created groups: ${created.join(", ")}` : "Example groups already exist.")
+    console.log(`Placed ${placed} user(s) in a Section; added missing demo group and Position history.`)
+  } finally {
+    await db.$client.end()
+  }
 }

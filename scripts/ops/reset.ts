@@ -45,7 +45,7 @@ export async function resetLocalDatabase(
   }
 
   const code = await createReferenceData(database, { skipConfirmation: true })
-  if (code === 0) console.log("Seed it with: bun run ops seed-admin, seed-users, seed-groups")
+  if (code === 0) console.log("Seed it with: bun run ops seed-demo (or seed-admin for admin@example.com)")
   return code
 }
 
