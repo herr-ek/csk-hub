@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, asc, eq } from "drizzle-orm"
 import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
-import { changeVoice, endMembership, placeSinger, startMembership } from "./membership"
+import { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
 import { listChoirMembersByVoiceFamily, listCurrentGroupMembers, listCurrentGroupsOfUser } from "./reads"
 import { archiveGroup, createGroup } from "./structure"
@@ -34,13 +34,22 @@ describe.skipIf(!database)("groups membership", () => {
   }
 
   describe("startMembership", () => {
-    test("joining a Choir's group starts a Membership in that Choir when there is none", async () => {
+    test("refuses a Choir's group to someone who is not a current member of the Choir", async () => {
       const userId = await t.user()
+      const mk = await t.groupId("MK")
       const rodd = await choirGroup("MK")
-      expectSuccess(await startMembership(t.db, { userId, groupId: rodd, startDate: "2025-09-01" }))
+      expect(await startMembership(t.db, { userId, groupId: rodd, startDate: "2025-09-01" })).toEqual({
+        success: false,
+        error: "not-a-choir-member"
+      })
+      expect(await listCurrentGroupsOfUser(t.db, userId)).toEqual([])
 
-      const groups = await listCurrentGroupsOfUser(t.db, userId)
-      expect(groups.map(({ groupId }) => groupId).sort()).toEqual([await t.groupId("MK"), rodd].sort())
+      expectSuccess(await startMembership(t.db, { userId, groupId: mk, startDate: "2024-01-01" }))
+      expectSuccess(await endMembership(t.db, { userId, groupId: mk, endDate: "2025-01-01" }))
+      expect(await startMembership(t.db, { userId, groupId: rodd, startDate: "2025-09-01" })).toEqual({
+        success: false,
+        error: "not-a-choir-member"
+      })
     })
 
     test("keeps an existing Choir Membership as it is", async () => {
@@ -165,22 +174,6 @@ describe.skipIf(!database)("groups membership", () => {
       expect(sections.map(({ name }) => name).sort()).toEqual(["KKB", "MKB1"])
     })
 
-    test("places a singer not yet in a division with the family, where a Section sings the family", async () => {
-      const userId = await t.user()
-      const { sectionId } = expectSuccess(
-        await placeSinger(t.db, { userId, choirId: await t.groupId("KK"), voice: "B", startDate: "2025-01-01" })
-      )
-      expect(sectionId).toBe(await t.groupId("KKB"))
-      expect(
-        await placeSinger(t.db, {
-          userId: await t.user(),
-          choirId: await t.groupId("MK"),
-          voice: "B",
-          startDate: "2025-01-01"
-        })
-      ).toEqual({ success: false, error: "voice-not-sung-in-choir" })
-    })
-
     test("refuses a Voice the Choir does not sing, and a group that is not a Choir", async () => {
       const userId = await t.user()
       expect(
@@ -189,6 +182,36 @@ describe.skipIf(!database)("groups membership", () => {
       expect(
         await placeSinger(t.db, { userId, choirId: await t.groupId("MKB1"), voice: "B1", startDate: "2025-01-01" })
       ).toEqual({ success: false, error: "choir-not-found" })
+    })
+  })
+
+  describe("placeSingerInSection", () => {
+    test("places a singer in the given Section and its Choir", async () => {
+      const userId = await t.user()
+      const kkt = await t.groupId("KKT")
+      expectSuccess(await placeSingerInSection(t.db, { userId, sectionId: kkt, voice: "T2", startDate: "2025-01-01" }))
+      const names = (await listCurrentGroupsOfUser(t.db, userId)).map(({ name }) => name).sort()
+      expect(names).toEqual(["KK", "KKT"])
+    })
+
+    test("refuses a Voice the Section does not sing, and a group that is not a Section", async () => {
+      const userId = await t.user()
+      expect(
+        await placeSingerInSection(t.db, {
+          userId,
+          sectionId: await t.groupId("KKT"),
+          voice: "B1",
+          startDate: "2025-01-01"
+        })
+      ).toEqual({ success: false, error: "voice-not-sung-in-section" })
+      expect(
+        await placeSingerInSection(t.db, {
+          userId,
+          sectionId: await t.groupId("KK"),
+          voice: "B1",
+          startDate: "2025-01-01"
+        })
+      ).toEqual({ success: false, error: "group-not-found" })
     })
   })
 
@@ -212,23 +235,6 @@ describe.skipIf(!database)("groups membership", () => {
       ])
       const holdings = await t.db.select().from(positionHolder).where(eq(positionHolder.userId, userId))
       expect(holdings.map(({ endDate }) => endDate)).toEqual([null])
-    })
-
-    test("from the family to a division stays in the Section that sings the family", async () => {
-      const userId = await t.user()
-      const kk = await t.groupId("KK")
-      const kkb = await t.groupId("KKB")
-      expectSuccess(await placeSinger(t.db, { userId, choirId: kk, voice: "B", startDate: "2024-08-20" }))
-
-      const { sectionId } = expectSuccess(
-        await changeVoice(t.db, { userId, choirId: kk, voice: "B2", date: "2024-10-01" })
-      )
-
-      expect(sectionId).toBe(kkb)
-      expect((await historyOf(userId)).filter(({ groupId }) => groupId === kkb)).toEqual([
-        { groupId: kkb, startDate: "2024-08-20", endDate: "2024-10-01", voice: "B" },
-        { groupId: kkb, startDate: "2024-10-01", endDate: null, voice: "B2" }
-      ])
     })
 
     test("between Sections moves the singer and ends their Positions in the old Section", async () => {

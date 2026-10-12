@@ -1,9 +1,9 @@
 import "server-only"
 
 import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm"
-import { groupTypePosition, position, positionHolder } from "@/core/db/schema/org-structure"
+import { groupTypePosition, position, positionGroup, positionHolder } from "@/core/db/schema/org-structure"
 import { findCurrentMembership, requireActiveGroup } from "./lookup"
-import type { IsoDate } from "./model"
+import { holdsElectedPosts, type IsoDate } from "./model"
 import {
   lockUser,
   type OrgStructureDatabase,
@@ -32,6 +32,33 @@ export function endPositionHolding(database: OrgStructureDatabase, input: Holdin
   })
 }
 
+/**
+ * Gives a Position in a group to a current member. Any current holder's holding ends on the new
+ * holder's start date, so the handover leaves no gap and no overlap.
+ */
+export function replacePositionHolder(database: OrgStructureDatabase, input: HoldingInput & { startDate: IsoDate }) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const startDate = requireDate(input.startDate)
+    const [current] = await tx
+      .select({ userId: positionHolder.userId })
+      .from(positionHolder)
+      .where(
+        and(
+          eq(positionHolder.groupId, input.groupId),
+          eq(positionHolder.positionId, input.positionId),
+          isNull(positionHolder.endDate)
+        )
+      )
+      .for("update")
+    if (current?.userId === input.userId) throw new RuleViolation("already-holding-position")
+
+    // Both users' locks, in a fixed order, so two handovers between the same people cannot deadlock.
+    for (const userId of [input.userId, current?.userId].filter(Boolean).sort()) await lockUser(tx, userId as string)
+    if (current) await closeHolding(tx, { ...input, userId: current.userId }, startDate)
+    await addHolding(tx, input, startDate)
+  })
+}
+
 /** Starts a holding for a user already locked by the caller. */
 export async function addHolding(tx: OrgStructureTransaction, input: HoldingInput, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, input.groupId)
@@ -43,6 +70,14 @@ export async function addHolding(tx: OrgStructureTransaction, input: HoldingInpu
     .from(groupTypePosition)
     .where(and(eq(groupTypePosition.positionId, input.positionId), eq(groupTypePosition.type, row.type)))
   if (!allowed) throw new RuleViolation("position-not-allowed")
+
+  const limit = await tx
+    .select({ groupId: positionGroup.groupId })
+    .from(positionGroup)
+    .where(eq(positionGroup.positionId, input.positionId))
+  if (limit.length > 0 && !limit.some(({ groupId }) => groupId === input.groupId)) {
+    throw new RuleViolation("position-limited-to-other-groups")
+  }
 
   const membership = await findCurrentMembership(tx, input.userId, input.groupId)
   if (!membership) throw new RuleViolation("not-a-member")
@@ -59,6 +94,22 @@ export async function addHolding(tx: OrgStructureTransaction, input: HoldingInpu
       )
     )
   if (holder) throw new RuleViolation("position-taken")
+
+  if (holdsElectedPosts(row.type)) {
+    // The caller holds the user's lock, so no other holding for them can start meanwhile.
+    const [held] = await tx
+      .select({ positionId: positionHolder.positionId })
+      .from(positionHolder)
+      .where(
+        and(
+          eq(positionHolder.userId, input.userId),
+          eq(positionHolder.groupId, input.groupId),
+          isNull(positionHolder.endDate)
+        )
+      )
+      .limit(1)
+    if (held) throw new RuleViolation("already-holding-elected-post")
+  }
 
   const [overlap] = await tx
     .select({ startDate: positionHolder.startDate })

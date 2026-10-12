@@ -40,3 +40,10 @@ export function divisionsOf(family: VoiceFamily): VoiceDivision[] {
 export function contains(outer: Voice, inner: Voice): boolean {
   return outer === inner || (!isVoiceDivision(outer) && familyOf(inner) === outer)
 }
+
+const SCORE_ORDER: Voice[] = ["S", "S1", "S2", "A", "A1", "A2", "T", "T1", "T2", "B", "B1", "B2"]
+
+/** Orders Voices as a score lists them, top down: S, S1, S2, A … B2. */
+export function compareVoices(a: Voice, b: Voice) {
+  return SCORE_ORDER.indexOf(a) - SCORE_ORDER.indexOf(b)
+}

@@ -2,10 +2,10 @@
 
 import { useActionState, useEffect, useRef } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { DialogClose } from "@/shared/ui/base/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
-import { Input } from "@/shared/ui/base/input"
+import { FieldError, FieldGroup } from "@/shared/ui/base/field"
 import { toast } from "@/shared/ui/base/toast"
 import { type AddUserState, addUser } from "./actions"
 
@@ -37,14 +37,8 @@ export function AddUserForm() {
   return (
     <form ref={formRef} action={action} className="space-y-6">
       <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="user-name">{common("name")}</FieldLabel>
-          <Input id="user-name" name="name" type="text" autoComplete="name" required />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="user-email">{common("email")}</FieldLabel>
-          <Input id="user-email" name="email" type="email" autoComplete="email" required />
-        </Field>
+        <InputField label={common("name")} name="name" type="text" autoComplete="name" required />
+        <InputField label={common("email")} name="email" type="email" autoComplete="email" required />
         <FieldError>{state.status === "error" ? state.error : undefined}</FieldError>
       </FieldGroup>
       <div className="flex flex-wrap items-center gap-3">

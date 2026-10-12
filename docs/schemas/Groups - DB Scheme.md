@@ -181,7 +181,7 @@ Example, Sexmästeri:
 ### Rules (enforced in the app)
 
 - **Choir groups are always CSK-wide** (`choirId = null`); only non-choir groups can belong to a choir.
-- **Members of a choir's groups are members of that choir**: joining a group with `choirId = X` requires (or creates) membership in choir X. This means a news post to a choir already reaches everyone in its sections and other groups. No propagation logic needed.
+- **Members of a choir's groups are members of that choir**: joining a group with `choirId = X` requires a current membership in choir X; placing a singer in one of X's sections is how they join X, so only that creates it. This means a news post to a choir already reaches everyone in its sections and other groups. No propagation logic needed.
 - **Permissions follow the choir**: a position on a choir (e.g. Conductor) also gives rights in every group with that `choirId` (e.g. the KK conductor can publish to KKB).
 - **Recipients are deduplicated** (`SELECT DISTINCT userId`): a singer in both MK and KK gets a news post targeted at both only once.
 - **Sections**:
@@ -192,6 +192,7 @@ Example, Sexmästeri:
 - **Singers are members of the choir + exactly one section** in it, with `voice` set. The DB checks the voice is one the section sings; "one section per choir per singer" is an app rule (or trigger).
 - **`voice` is only set on Section memberships**, never on choir or other group memberships.
 - **Multiple choirs per singer** is allowed: one section (and one voice) in each.
+- **One elected post per person**: in the Board, whose positions are elected posts, a member holds at most one current position. In other groups a member may hold several. App rule (`holdsElectedPosts`).
 - **Position holders must be current members** of the group they hold the position in. When a membership ends, end that person's positions in the group too. App rule or trigger.
 - **One holder per position per group at a time**, enforced by the partial unique index. A person may hold several positions in the same group. Members without a position (medhjälpare) are simply members.
 - **Stämförälder** is a position on the section: one per section.
@@ -306,7 +307,7 @@ erDiagram
 Domain facts:
 - Every choir has exactly **four sections**.
 - MK sections: T1, T2, B1, B2. DK sections: S1, S2, A1, A2. KK sections: S, A, T, B.
-- A singer has **one** voice per choir, which must be **contained in** their section's voice (in KKB: B1 or B2, or B if not yet placed; in MKB1: only B1).
+- A singer has **one** voice per choir, which must be **contained in** their section's voice (in KKB: B1 or B2; in MKB1: only B1). A singer's voice is always a division, never a family.
 - Groups are either **CSK-wide** (`choirId = null`) or **belong to a choir**. No deeper hierarchy.
 - A person can hold **several positions in the same group**; each position has **one holder** per group at a time.
 - "Position" means an organisational position only. Standing order / formation, if ever modelled, is **Placement** / **Formation**.
@@ -337,8 +338,8 @@ CREATE DOMAIN voice_division AS voice CHECK (VALUE IN ('S1','S2','A1','A2','T1',
 
 | DB type          | TS type         | Used by                                          |
 | ---------------- | --------------- | ------------------------------------------------ |
-| `voice`          | `Voice`         | `Sections.voice`, `GroupMembers.voice`           |
-| `voice_division` | `VoiceDivision` | `VoiceCapabilities.voice`                        |
+| `voice`          | `Voice`         | `Sections.voice`                                 |
+| `voice_division` | `VoiceDivision` | `GroupMembers.voice`, `VoiceCapabilities.voice`  |
 | `voice_family`   | `VoiceFamily`   | `NewsTargets.voiceFamily` (news model)           |
 
 The family of a voice is always derived (`familyOf`), never stored separately.
@@ -409,6 +410,12 @@ GroupTypePositions(_type_, _positionId_)
 	type       -> GroupType
 	positionId -> Positions.id
 
+// Optional: the groups a position is limited to (Gigmästare KK: KK and the Gigmästeri).
+// Without rows, every group of an allowed type has the position.
+PositionGroups(_positionId_, _groupId_)
+	positionId -> Positions.id
+	groupId    -> Groups.id
+
 // Who holds which position, in which group, when
 PositionHolders(_userId_, _groupId_, _positionId_, _startDate_, endDate?)
 	userId     -> Users.id
@@ -449,6 +456,7 @@ VoiceCapabilities(_userId_, _voice_)
 - [trigger/app] A position holder must be a current member of the group.
 - [trigger/app] Ending a membership ends that user's current positions in that group.
 - [app] Optional: `positionId` must be allowed for the group's type via `GroupTypePositions`.
+- [app] When a position has `PositionGroups` rows, it is held only in those groups (each of an allowed type), so each choir's Gigmästare appears only in that choir and the Gigmästeri.
 - [app] Board positions that lead another group (e.g. Sexmästare in Styret also leads the Sexmästeri): two `PositionHolders` rows + membership in both, created/ended together.
 
 **Permissions and reach**

@@ -1,4 +1,5 @@
 export {
+  compareVoices,
   contains,
   divisionsOf,
   familyOf,

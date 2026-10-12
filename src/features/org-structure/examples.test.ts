@@ -123,10 +123,6 @@ describe.skipIf(!database)("Groups scheme examples", () => {
       { groupId: mkb1, startDate: "2024-08-22", voice: "B1" },
       { groupId: mk, startDate: "2024-08-22", voice: null }
     ])
-    // MK divides the basses, so no MK Section contains the family B.
-    expect(
-      await placeSinger(t.db, { userId: await t.user(), choirId: mk, voice: "B", startDate: "2024-08-22" })
-    ).toEqual({ success: false, error: "voice-not-sung-in-choir" })
   })
 
   test("the Sexmästeri: two Position holders, two helpers, the Sexmästare also on the Board", async () => {

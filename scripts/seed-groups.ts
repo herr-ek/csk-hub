@@ -17,11 +17,11 @@ import { assertLocalDatabase } from "./ops/guards"
  */
 
 type Database = typeof applicationDb | Parameters<Parameters<typeof applicationDb.transaction>[0]>[0]
+type Division = NonNullable<typeof groupMember.$inferInsert.voice>
 
 const CHOIRS = ["MK", "DK", "KK"]
 
 const EXAMPLE_GROUPS: { name: string; type: (typeof group.type.enumValues)[number]; choir?: string }[] = [
-  { name: "Gigmästeri", type: "Gigmästeri" },
   { name: "Sexmästeri", type: "Sexmästeri" },
   { name: "Konsertmästeri", type: "Konsertmästeri" },
   { name: "Valberedningen", type: "Valberedning" },
@@ -93,7 +93,7 @@ async function sectionSlots(database: Database) {
   if (sections.length === 0) throw new Error("No Sections exist; run `bun run ops reference-data` first.")
 
   return sections.flatMap(({ choirId, sectionId, voice }) =>
-    (voice.length === 1 ? ([`${voice}1`, `${voice}2`] as (typeof voice)[]) : [voice]).map((division) => ({
+    ((voice.length === 1 ? [`${voice}1`, `${voice}2`] : [voice]) as Division[]).map((division) => ({
       choirId,
       sectionId,
       voice: division

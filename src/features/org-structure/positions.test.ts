@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm"
 import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { endLinkedPosition, startLinkedPosition } from "./linked-positions"
 import { startMembership } from "./membership"
-import { endPositionHolding, startPositionHolding } from "./positions"
+import { endPositionHolding, replacePositionHolder, startPositionHolding } from "./positions"
 import { getCurrentPositionHolder } from "./reads"
 import { createGroup } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
@@ -179,6 +179,96 @@ describe.skipIf(!database)("groups positions", () => {
       expect(await getCurrentPositionHolder(t.db, sexmasteri, sexmastare)).toBeNull()
       const memberships = await t.db.select().from(groupMember).where(eq(groupMember.userId, userId))
       expect(memberships.map(({ endDate }) => endDate)).toEqual([null, null])
+    })
+  })
+
+  test("a Board member holds one elected post, while other groups allow several Positions", async () => {
+    const styret = await newGroup("Board")
+    const userId = await member(styret)
+    const [ordforande, gigmastare] = [await t.positionId("Ordförande"), await t.positionId("Gigmästare")]
+    expectSuccess(
+      await startPositionHolding(t.db, { userId, groupId: styret, positionId: ordforande, startDate: "2025-02-01" })
+    )
+
+    expect(
+      await startPositionHolding(t.db, { userId, groupId: styret, positionId: gigmastare, startDate: "2025-02-01" })
+    ).toEqual({ success: false, error: "already-holding-elected-post" })
+    expect(
+      await replacePositionHolder(t.db, { userId, groupId: styret, positionId: gigmastare, startDate: "2025-02-01" })
+    ).toEqual({ success: false, error: "already-holding-elected-post" })
+
+    expectSuccess(
+      await endPositionHolding(t.db, { userId, groupId: styret, positionId: ordforande, endDate: "2025-06-01" })
+    )
+    expectSuccess(
+      await startPositionHolding(t.db, { userId, groupId: styret, positionId: gigmastare, startDate: "2025-06-01" })
+    )
+
+    const sexmasteri = await newGroup("Sexmästeri")
+    const sexmastare = await member(sexmasteri)
+    for (const name of ["Sexmästare", "Sexmästarinna"]) {
+      expectSuccess(
+        await startPositionHolding(t.db, {
+          userId: sexmastare,
+          groupId: sexmasteri,
+          positionId: await t.positionId(name),
+          startDate: "2025-02-01"
+        })
+      )
+    }
+  })
+
+  describe("replacePositionHolder", () => {
+    test("hands the Position over on the new holder's start date", async () => {
+      const dk = await t.groupId("DK")
+      const [outgoing, incoming] = [await member(dk), await member(dk)]
+      const konsertmastare = await t.positionId("Konsertmästare")
+      expectSuccess(
+        await startPositionHolding(t.db, {
+          userId: outgoing,
+          groupId: dk,
+          positionId: konsertmastare,
+          startDate: "2025-01-01"
+        })
+      )
+
+      expectSuccess(
+        await replacePositionHolder(t.db, {
+          userId: incoming,
+          groupId: dk,
+          positionId: konsertmastare,
+          startDate: "2026-01-01"
+        })
+      )
+
+      expect(await getCurrentPositionHolder(t.db, dk, konsertmastare)).toEqual({
+        userId: incoming,
+        startDate: "2026-01-01"
+      })
+      const [ended] = await t.db.select().from(positionHolder).where(eq(positionHolder.userId, outgoing))
+      expect(ended?.endDate).toBe("2026-01-01")
+    })
+
+    test("assigns a vacant Position, and refuses the current holder or a non-member", async () => {
+      const dk = await t.groupId("DK")
+      const userId = await member(dk)
+      const notfiskal = await t.positionId("Notfiskal")
+      expectSuccess(
+        await replacePositionHolder(t.db, { userId, groupId: dk, positionId: notfiskal, startDate: "2025-02-01" })
+      )
+
+      expect(
+        await replacePositionHolder(t.db, { userId, groupId: dk, positionId: notfiskal, startDate: "2025-03-01" })
+      ).toEqual({ success: false, error: "already-holding-position" })
+      expect(
+        await replacePositionHolder(t.db, {
+          userId: await t.user(),
+          groupId: dk,
+          positionId: notfiskal,
+          startDate: "2025-03-01"
+        })
+      ).toEqual({ success: false, error: "not-a-member" })
+      expect((await getCurrentPositionHolder(t.db, dk, notfiskal))?.userId).toBe(userId)
     })
   })
 })

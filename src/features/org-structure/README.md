@@ -18,14 +18,19 @@ The rules below are not database constraints, so going around this module breaks
 silently:
 
 - A Choir is always CSK-wide. Other Groups are CSK-wide or belong directly to one Choir.
-- Joining a Group that belongs to a Choir starts a Choir Membership when there is none.
+- Only current members of a Choir can join a Group that belongs to it. Placing a singer in a
+  Section is how they join the Choir, so it starts the Choir Membership when there is none.
 - Every Choir has exactly four Sections, each singing one Voice, and no two overlap (B rules
   out B1 in the same Choir). Sections are created only with their Choir.
-- A singer is in the Choir and exactly one of its Sections, with one Voice that the
-  Section's Voice contains.
+- A singer is in the Choir and exactly one of its Sections, with one Voice division that the
+  Section's Voice contains: B1 or B2 in KKB, which sings B.
 - A Position holder is a current member, the Group's type allows the Position, and ending a
-  Membership ends the holder's Positions in that Group. Leaving a Choir ends Memberships, and
-  Positions, in every Group that belongs to it.
+  Membership ends the holder's Positions in that Group. In a Group of elected posts, the Board
+  (`holdsElectedPosts`), a member holds at most one Position; elsewhere they may hold several.
+  Leaving a Choir ends Memberships, and Positions, in every Group that belongs to it.
+- A Position may be limited to some Groups of its types, as Gigmästare KK to KK and the
+  Gigmästeri; without a limit, every Group of an allowed type has it. A Group cannot leave the
+  limit while someone holds the Position there.
 - A Voice change ends one Membership row and starts another; history is never rewritten.
   Leaving a Section ends Positions in it, while a change within one Section keeps them.
 - Groups are archived, never deleted. Archiving a Choir archives its Sections.
@@ -35,7 +40,8 @@ one current Membership per user and Group; one current holder per Position and G
 active Group names unique per Choir. Two things are added by hand to the migration because
 Drizzle cannot express them, and are marked in the schema file: `NULLS NOT DISTINCT` on the
 name index, and the `group_member_voice_check` trigger, which requires a Voice exactly on
-Section Memberships and checks that the Section's Voice contains it.
+Section Memberships and checks that the Section's Voice contains it. `group_member.voice` is a
+`voice_division`, so the database refuses a family on its own.
 
 ## Interface
 
@@ -49,11 +55,14 @@ savepoint. Commands return `{ success: true, data }` or `{ success: false, error
 `error` is an `OrgStructureViolation`. Rule violations, including constraint violations from
 races, never surface as thrown errors.
 
-- Structure: `createChoir`, `createGroup`, `archiveGroup`, `createPosition`,
-  `allowPositionInGroupTypes`.
+- Structure: `createChoir`, `createGroup`, `renameGroup`, `archiveGroup`, `createPosition`,
+  `updatePosition` (`renamePosition`, `setPositionGroupTypes` and `setPositionGroups`, as one
+  change), `allowPositionInGroupTypes`.
 - Membership: `startMembership`, `endMembership`, `placeSinger` (the Voice decides the
-  Section: the one whose Voice contains it), `changeVoice`.
-- Positions: `startPositionHolding`, `endPositionHolding`, and `startLinkedPosition` /
+  Section: the one whose Voice contains it), `placeSingerInSection` (refuses a Voice the
+  Section's Voice does not contain), `changeVoice`.
+- Positions: `startPositionHolding`, `endPositionHolding`, `replacePositionHolder` (a handover
+  on the new holder's start date), and `startLinkedPosition` /
   `endLinkedPosition` for one office held in several Groups, such as the Board's Sexmästare
   who leads the Sexmästeri.
 - Reads: `listCurrentGroupMembers`, `listCurrentGroupsOfUser`, `getCurrentPositionHolder`,
@@ -65,6 +74,30 @@ production. `bun run ops seed-groups` adds local example data on top. Both live 
 
 "Current" means no end date. Dates are calendar dates, `YYYY-MM-DD`; a period may end on the
 day the next one starts.
+
+## Admin pages
+
+The Admin surface over this module is split by task. `/admin/org-structure` lists the Choirs and
+their Sections, where singers are placed and change Voice; `/admin/org-structure/groups` lists every
+other group and the Position catalogue. Both link to `/admin/org-structure/[groupId]`, whose back
+link returns to the page that lists the group. The feature entrypoint exports their screens;
+everything else lives in `ui/`:
+
+```text
+ui/
+  choirs/      the Choirs and their Sections, for placing singers
+  groups/      every other group, and creating, renaming and archiving groups
+  detail/      one group's Members and Position holders, with their history
+  catalogue/   the Positions, the group types each is allowed in, and any limit to groups
+  group-summaries.ts, group-list.tsx   what both overviews show of a group
+  command-dialog.tsx, run-command.ts   the shared shape of every admin command
+```
+
+Every Server Action goes through `runGroupCommand`: `requireAdmin`, validate the form, run one
+module command, and return its violation as `{ status: "error", error }`. The client translates
+the kind from `Groups.errors`, so adding an `OrgStructureViolation` means adding its message to
+every catalogue; the typed translation keys fail the typecheck until you do. Reads for a screen
+live beside it (`query.ts`) and are shaped for that screen.
 
 ## Tests
 

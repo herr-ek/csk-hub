@@ -5,12 +5,14 @@ import { announce, type Database } from "./target"
 
 /**
  * The org structure every environment shares: the three Choirs with their four Sections and the
- * Voice each sings, the Board, and the Position catalogue with the group types each is allowed in.
+ * Voice each sings, the Board and the Gigmästeri, and the Position catalogue with the group types
+ * each is allowed in. A Position may also be limited to some CSK-wide groups by name, as each
+ * Choir's Gigmästare is to that Choir and the Gigmästeri.
  */
 export const REFERENCE_DATA: {
   choirs: { name: string; sections: { name: string; voice: string }[] }[]
   groups: { name: string; type: string }[]
-  positions: { name: string; groupTypes: string[] }[]
+  positions: { name: string; groupTypes: string[]; groups?: string[] }[]
 } = {
   choirs: [
     {
@@ -41,7 +43,10 @@ export const REFERENCE_DATA: {
       ]
     }
   ],
-  groups: [{ name: "Styret 25/26", type: "Board" }],
+  groups: [
+    { name: "Styret 25/26", type: "Board" },
+    { name: "Gigmästeri", type: "Gigmästeri" }
+  ],
   positions: [
     { name: "Ordförande", groupTypes: ["Board"] },
     { name: "Vice Ordförande", groupTypes: ["Board", "Rekryteringskommitté"] },
@@ -55,7 +60,9 @@ export const REFERENCE_DATA: {
     { name: "Dirigent", groupTypes: ["Choir"] },
     { name: "Notfiskal", groupTypes: ["Choir"] },
     { name: "Konsertmästare", groupTypes: ["Choir", "Konsertmästeri"] },
-    { name: "DelkörsGigmästare", groupTypes: ["Choir", "Gigmästeri"] },
+    { name: "Gigmästare MK", groupTypes: ["Choir", "Gigmästeri"], groups: ["MK", "Gigmästeri"] },
+    { name: "Gigmästare DK", groupTypes: ["Choir", "Gigmästeri"], groups: ["DK", "Gigmästeri"] },
+    { name: "Gigmästare KK", groupTypes: ["Choir", "Gigmästeri"], groups: ["KK", "Gigmästeri"] },
     { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] },
     { name: "Ekonomiskt Ansvarig", groupTypes: ["Turnékommitté"] }
   ]
@@ -134,6 +141,19 @@ export async function insertReferenceData(client: ClientBase): Promise<string[]>
           [type, position.name]
         )
       }
+      for (const groupName of position.groups ?? []) {
+        const { rowCount: matched } = await client.query(
+          `insert into "position_group" ("position_id", "group_id")
+           select p."id", g."id" from "position" p, "group" g
+           where p."name" = $1 and g."name" = $2 and g."active" and g."choir_id" is null
+           on conflict do nothing`,
+          [position.name, groupName]
+        )
+        // Nothing inserted is either an existing limit or a missing group; only the second is wrong.
+        if (!matched && !(await activeCskWideGroupExists(client, groupName))) {
+          throw new Error(`The Position ${position.name} is limited to ${groupName}, which is not an active group.`)
+        }
+      }
     }
 
     await client.query("COMMIT")
@@ -151,6 +171,14 @@ async function activeGroupId(client: ClientBase, name: string, type: string, cho
     [name, type, choirId]
   )
   return rows[0]?.id
+}
+
+async function activeCskWideGroupExists(client: ClientBase, name: string) {
+  const { rowCount } = await client.query(
+    `select 1 from "group" where "name" = $1 and "active" and "choir_id" is null`,
+    [name]
+  )
+  return Boolean(rowCount)
 }
 
 async function insertGroup(client: ClientBase, name: string, type: string, choirId: string | null) {

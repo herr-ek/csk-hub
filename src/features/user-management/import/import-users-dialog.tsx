@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/shared/ui/base/dialog"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/shared/ui/base/field"
+import { FieldError, FieldGroup } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
@@ -124,18 +125,15 @@ export function ImportUsersDialog() {
         </DialogHeader>
         <form ref={formRef} action={submit} className="space-y-6">
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="user-csv">{t("csvFile")}</FieldLabel>
-              <Input
-                id="user-csv"
-                name="file"
-                type="file"
-                accept=".csv,text/csv"
-                required
-                onChange={(event) => void chooseFile(event.target.files?.[0])}
-              />
-              <FieldDescription>{fileName || t("csvColumns")}</FieldDescription>
-            </Field>
+            <InputField
+              label={t("csvFile")}
+              name="file"
+              type="file"
+              accept=".csv,text/csv"
+              required
+              onChange={(event) => void chooseFile(event.target.files?.[0])}
+              description={fileName || t("csvColumns")}
+            />
             <FieldError>{error}</FieldError>
           </FieldGroup>
           {rows ? <input type="hidden" name="users" value={JSON.stringify(readyRows)} /> : null}

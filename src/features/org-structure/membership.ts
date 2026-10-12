@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm"
 import { group, groupMember, section } from "@/core/db/schema/org-structure"
-import { familyOf, type Voice } from "@/features/voice/model"
+import { contains, familyOf, type VoiceDivision } from "@/features/voice/model"
 import { findCurrentMembership, requireActiveGroup, requireChoir, requireGroup } from "./lookup"
 import type { IsoDate } from "./model"
 import {
@@ -18,8 +18,8 @@ import { endHoldingsInGroups } from "./positions"
 type StartMembershipInput = { userId: string; groupId: string; startDate: IsoDate }
 
 /**
- * Starts a Membership in any group but a Section. Joining a group that belongs to a Choir also
- * starts a Membership in that Choir when the user has none.
+ * Starts a Membership in any group but a Section. A group that belongs to a Choir takes only
+ * current members of that Choir; someone joins a Choir by being placed in one of its Sections.
  */
 export function startMembership(database: OrgStructureDatabase, input: StartMembershipInput) {
   return runOrgStructureCommand(database, async (tx) => {
@@ -36,35 +36,53 @@ export function startMembership(database: OrgStructureDatabase, input: StartMemb
 export async function addMembership(tx: OrgStructureTransaction, userId: string, groupId: string, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, groupId)
   if (row.type === "Section") throw new RuleViolation("section-requires-placement")
-  if (row.choirId) await ensureChoirMembership(tx, userId, row.choirId, startDate)
+  if (row.choirId) await requireChoirMembership(tx, userId, row.choirId, startDate)
   await insertMembership(tx, { userId, groupId, startDate, voice: null })
 }
 
-type PlaceSingerInput = { userId: string; choirId: string; voice: Voice; startDate: IsoDate }
+type PlaceSingerInput = { userId: string; choirId: string; voice: VoiceDivision; startDate: IsoDate }
 
 /**
  * Places a singer in a Choir, in the Section whose Voice contains theirs: B1 in KK goes to KKB,
- * which sings B. The Sections of a Choir never overlap, so the Voice decides the Section. A family
- * is a valid Voice for a singer not yet placed in a division (B in KKB), but not where the Choir
- * divides it (B in MK).
+ * which sings B. The Sections of a Choir never overlap, so the Voice decides the Section. A singer
+ * is always placed in a division, even in a Section that sings the whole family.
  */
 export function placeSinger(database: OrgStructureDatabase, input: PlaceSingerInput) {
   return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
     await requireChoir(tx, input.choirId)
     await lockUser(tx, input.userId)
-
-    if (await findCurrentSectionMembership(tx, input.userId, input.choirId)) {
-      throw new RuleViolation("already-in-section")
-    }
-    const sectionId = await sectionSinging(tx, input.choirId, input.voice)
-    await ensureChoirMembership(tx, input.userId, input.choirId, startDate)
-    await insertMembership(tx, { userId: input.userId, groupId: sectionId, startDate, voice: input.voice })
-    return { sectionId }
+    return addSinger(tx, input, startDate)
   })
 }
 
-type ChangeVoiceInput = { userId: string; choirId: string; voice: Voice; date: IsoDate }
+type PlaceSingerInSectionInput = { userId: string; sectionId: string; voice: VoiceDivision; startDate: IsoDate }
+
+/** Places a singer in a given Section, refusing a Voice that Section does not sing. */
+export function placeSingerInSection(database: OrgStructureDatabase, input: PlaceSingerInSectionInput) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const startDate = requireDate(input.startDate)
+    const sectionGroup = await requireActiveGroup(tx, input.sectionId)
+    if (sectionGroup.type !== "Section" || !sectionGroup.choirId) throw new RuleViolation("group-not-found")
+    const [sung] = await tx.select({ voice: section.voice }).from(section).where(eq(section.groupId, input.sectionId))
+    if (!sung || !contains(sung.voice, input.voice)) throw new RuleViolation("voice-not-sung-in-section")
+
+    await lockUser(tx, input.userId)
+    return addSinger(tx, { userId: input.userId, choirId: sectionGroup.choirId, voice: input.voice }, startDate)
+  })
+}
+
+async function addSinger(tx: OrgStructureTransaction, input: Omit<PlaceSingerInput, "startDate">, startDate: IsoDate) {
+  if (await findCurrentSectionMembership(tx, input.userId, input.choirId)) {
+    throw new RuleViolation("already-in-section")
+  }
+  const sectionId = await sectionSinging(tx, input.choirId, input.voice)
+  await ensureChoirMembership(tx, input.userId, input.choirId, startDate)
+  await insertMembership(tx, { userId: input.userId, groupId: sectionId, startDate, voice: input.voice })
+  return { sectionId }
+}
+
+type ChangeVoiceInput = { userId: string; choirId: string; voice: VoiceDivision; date: IsoDate }
 
 /**
  * Changes a singer's Voice in a Choir from `date`. The current Section Membership ends and a new
@@ -120,7 +138,20 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
   })
 }
 
-/** A Membership in a Choir's group requires one in the Choir, so it is started when missing. */
+/** A Membership in a Choir's group requires a current one in the Choir, begun no later. */
+async function requireChoirMembership(
+  tx: OrgStructureTransaction,
+  userId: string,
+  choirId: string,
+  startDate: IsoDate
+) {
+  const current = await findCurrentMembership(tx, userId, choirId)
+  if (!current) throw new RuleViolation("not-a-choir-member")
+  // The group Membership would begin before the Choir Membership that it depends on.
+  if (current.startDate > startDate) throw new RuleViolation("period-conflict")
+}
+
+/** Placing a singer in a Section is how they join its Choir, so the Choir Membership is started when missing. */
 async function ensureChoirMembership(tx: OrgStructureTransaction, userId: string, choirId: string, startDate: IsoDate) {
   const current = await findCurrentMembership(tx, userId, choirId)
   if (!current) {
@@ -175,8 +206,8 @@ async function findCurrentSectionMembership(tx: OrgStructureTransaction, userId:
   return row
 }
 
-/** The active Section of the Choir whose Voice contains `voice`: the Voice itself, or its family. */
-async function sectionSinging(tx: OrgStructureTransaction, choirId: string, voice: Voice) {
+/** The active Section of the Choir whose Voice contains `voice`: the division itself, or its family. */
+async function sectionSinging(tx: OrgStructureTransaction, choirId: string, voice: VoiceDivision) {
   const [row] = await tx
     .select({ sectionId: section.groupId })
     .from(section)
@@ -186,7 +217,7 @@ async function sectionSinging(tx: OrgStructureTransaction, choirId: string, voic
         eq(group.choirId, choirId),
         eq(group.type, "Section"),
         eq(group.active, true),
-        inArray(section.voice, [...new Set([voice, familyOf(voice)])])
+        inArray(section.voice, [voice, familyOf(voice)])
       )
     )
   if (!row) throw new RuleViolation("voice-not-sung-in-choir")

@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
 import { Client } from "pg"
-import { choir, group, groupTypePosition, position, section } from "@/core/db/schema/org-structure"
+import { choir, group, groupTypePosition, position, positionGroup, section } from "@/core/db/schema/org-structure"
 import { createTestDatabase } from "../../test/database"
 import { createReferenceData, insertReferenceData, REFERENCE_DATA } from "./reference-data"
 
@@ -53,6 +53,15 @@ describe.skipIf(!database)("reference data", () => {
       .innerJoin(position, eq(position.id, groupTypePosition.positionId))
     expect(allowed.map(({ name, type }) => `${name}:${type}`).sort()).toEqual(
       REFERENCE_DATA.positions.flatMap(({ name, groupTypes }) => groupTypes.map((type) => `${name}:${type}`)).sort()
+    )
+
+    const limits = await t.db
+      .select({ name: position.name, group: group.name })
+      .from(positionGroup)
+      .innerJoin(position, eq(position.id, positionGroup.positionId))
+      .innerJoin(group, eq(group.id, positionGroup.groupId))
+    expect(limits.map(({ name, group }) => `${name}:${group}`).sort()).toEqual(
+      REFERENCE_DATA.positions.flatMap(({ name, groups = [] }) => groups.map((group) => `${name}:${group}`)).sort()
     )
   })
 

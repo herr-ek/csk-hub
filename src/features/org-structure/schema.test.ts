@@ -16,17 +16,15 @@ describe.skipIf(!database)("groups schema constraints", () => {
     const userId = await t.user()
     const mkb1 = await t.groupId("MKB1")
 
-    for (const voice of ["B2", "B"] as const) {
-      await expect(
-        t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice }).execute()
-      ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
-    }
+    await expect(
+      t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice: "B2" }).execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
     await t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice: "B1" })
   })
 
-  test("accepts the family or any of its divisions in a Section that sings the family", async () => {
+  test("accepts any division of the family in a Section that sings the family", async () => {
     const kkb = await t.groupId("KKB")
-    for (const voice of ["B", "B1", "B2"] as const) {
+    for (const voice of ["B1", "B2"] as const) {
       await t.db.insert(groupMember).values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice })
     }
     await expect(
@@ -35,6 +33,16 @@ describe.skipIf(!database)("groups schema constraints", () => {
         .values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice: "T1" })
         .execute()
     ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
+  })
+
+  test("records a singer's Voice in divisions only, through the voice_division domain", async () => {
+    const kkb = await t.groupId("KKB")
+    await expect(
+      t.db
+        .insert(groupMember)
+        .values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice: "B" as never })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "voice_division_check" } })
   })
 
   test("rechecks the Voice when a Membership is updated", async () => {
