@@ -12,7 +12,10 @@ export async function QuickAccessSettings() {
 
   const [isAdmin, preferences] = await Promise.all([isUserAdmin(session), getUserPreferences(session.user.id)])
   // Hidden admin shortcuts are left out of the editor, so saving cannot carry routes the member may not pin.
-  const saved = visibleQuickAccess(preferences.quickAccess, { isAdmin })
+  const saved = {
+    enabled: preferences.quickAccessEnabled,
+    shortcuts: visibleQuickAccess(preferences.quickAccess, { isAdmin })
+  }
   const eligible = MENU_ROUTE_IDS.filter((id) => isAdmin || !isAdminRoute(id))
 
   return <QuickAccessSettingsCard saved={saved} eligible={eligible} />

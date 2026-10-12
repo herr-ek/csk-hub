@@ -22,3 +22,19 @@ export async function updateQuickAccess(shortcuts: MenuRouteId[]) {
   refresh()
   return { success: true as const }
 }
+
+/**
+ * Turns the current member's quick-access bar on or off, keeping their shortcuts, and refreshes the page to match.
+ *
+ * @param enabled - Whether the bar should be shown.
+ * @returns Whether an authenticated member was available and the preference was saved.
+ * @throws A database error when the update cannot be persisted.
+ */
+export async function updateQuickAccessEnabled(enabled: boolean) {
+  const session = await getRequestSession()
+  if (!session) return { success: false as const }
+
+  await updateUserPreferences(session.user.id, { quickAccessEnabled: enabled })
+  refresh()
+  return { success: true as const }
+}

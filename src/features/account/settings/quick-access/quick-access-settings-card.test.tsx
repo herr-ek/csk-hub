@@ -13,7 +13,8 @@ mock.module("@/core/i18n/translations", () => ({
     values ? `${key}(${Object.values(values).join(",")})` : key
 }))
 const updateQuickAccess = mock(async (_shortcuts: MenuRouteId[]) => ({ success: true as const }))
-mock.module("./actions", () => ({ updateQuickAccess }))
+const updateQuickAccessEnabled = mock(async (_enabled: boolean) => ({ success: true as const }))
+mock.module("./actions", () => ({ updateQuickAccess, updateQuickAccessEnabled }))
 
 const { QuickAccessSettingsCard } = await import("./QuickAccessSettingsCard")
 
@@ -21,12 +22,12 @@ const eligible: MenuRouteId[] = ["news", "newsCompose", "messages", "account", "
 let root: Root | undefined
 let container: HTMLElement | undefined
 
-async function renderCard(saved: MenuRouteId[]) {
+async function renderCard(shortcuts: MenuRouteId[], enabled = true) {
   container = document.createElement("div")
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
-    root?.render(<QuickAccessSettingsCard saved={saved} eligible={eligible} />)
+    root?.render(<QuickAccessSettingsCard saved={{ enabled, shortcuts }} eligible={eligible} />)
   })
   return container
 }
@@ -42,6 +43,7 @@ afterEach(async () => {
   await act(async () => root?.unmount())
   container?.remove()
   updateQuickAccess.mockClear()
+  updateQuickAccessEnabled.mockClear()
 })
 
 describe("QuickAccessSettingsCard", () => {
@@ -55,6 +57,27 @@ describe("QuickAccessSettingsCard", () => {
     const view = await renderCard(["news", "newsCompose", "messages", "account"])
     expect(checkbox(view, "accountSettings").getAttribute("aria-disabled")).toBe("true")
     expect(checkbox(view, "news").getAttribute("aria-disabled")).not.toBe("true")
+  })
+
+  test("turning the bar off saves the switch and hides the shortcut editor", async () => {
+    const view = await renderCard(["news", "messages"])
+    const toggle = view.querySelector('[role="switch"]')
+    if (!(toggle instanceof HTMLElement)) throw new Error("No quick-access switch")
+    await act(async () => toggle.click())
+    expect(updateQuickAccessEnabled).toHaveBeenLastCalledWith(false)
+    expect(view.querySelector("ol")).toBeNull()
+    expect(view.querySelector('[role="checkbox"]')).toBeNull()
+    expect(updateQuickAccess).not.toHaveBeenCalled()
+  })
+
+  test("shows the shortcut editor again when the bar is turned back on", async () => {
+    const view = await renderCard(["news"], false)
+    expect(view.querySelector("ol")).toBeNull()
+    const toggle = view.querySelector('[role="switch"]')
+    if (!(toggle instanceof HTMLElement)) throw new Error("No quick-access switch")
+    await act(async () => toggle.click())
+    expect(updateQuickAccessEnabled).toHaveBeenLastCalledWith(true)
+    expect([...view.querySelectorAll("ol li")].map((item) => item.textContent)).toEqual(["news"])
   })
 
   test("saves the new order when a shortcut moves", async () => {

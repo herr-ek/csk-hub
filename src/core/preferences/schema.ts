@@ -14,7 +14,9 @@ const quickAccessSchema = z
 
 const preferenceValuesSchema = z.object({
   locale: localeSchema.nullable(),
-  /** The member's quick-access shortcuts in bar order. Empty means the member turned the bar off. */
+  /** Whether the quick-access bar is shown. Turning it off keeps the chosen shortcuts for when it is turned back on. */
+  quickAccessEnabled: z.boolean(),
+  /** The member's quick-access shortcuts in bar order. An empty list also leaves the bar hidden. */
   quickAccess: quickAccessSchema
 })
 
@@ -23,6 +25,7 @@ export type UserPreferences = z.infer<typeof preferenceValuesSchema>
 /** Complete application defaults for users with missing or older stored preferences. */
 export const userPreferencesDefaults = {
   locale: null,
+  quickAccessEnabled: true,
   quickAccess: ["news", "messages"]
 } satisfies UserPreferences
 
@@ -44,7 +47,10 @@ const storedQuickAccessSchema = z
  * Missing fields are merged with the defaults, unknown future fields are ignored, and malformed documents fall back.
  */
 export const userPreferencesSchema = preferenceValuesSchema
-  .extend({ quickAccess: storedQuickAccessSchema })
+  .extend({
+    quickAccessEnabled: z.boolean().catch(userPreferencesDefaults.quickAccessEnabled),
+    quickAccess: storedQuickAccessSchema
+  })
   .partial()
   .transform(
     (preferences): UserPreferences => ({
