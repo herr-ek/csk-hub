@@ -14,5 +14,5 @@ export const IDLE: GroupCommandState = { status: "idle" }
 
 /** The detail page of one group. */
 export function groupDetailPath(groupId: string) {
-  return `${ROUTES.adminGroups}/${groupId}`
+  return `${ROUTES.adminOrgStructure}/${groupId}`
 }

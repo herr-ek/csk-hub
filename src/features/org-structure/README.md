@@ -71,7 +71,7 @@ day the next one starts.
 
 ## Admin pages
 
-`/admin/groups` and `/admin/groups/[groupId]` are the Admin surface over this module. The
+`/admin/org-structure` and `/admin/org-structure/[groupId]` are the Admin surface over this module. The
 feature entrypoint exports their screens; everything else lives in `ui/`:
 
 ```text

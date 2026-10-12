@@ -29,11 +29,14 @@ export async function runGroupCommand<Schema extends z.ZodType>(
   try {
     result = await command(input.data)
   } catch (error) {
-    logger.error(`admin.groups.${name}-failed`, { errorCode: getErrorCode(error), errorName: getErrorName(error) })
+    logger.error(`admin.org-structure.${name}-failed`, {
+      errorCode: getErrorCode(error),
+      errorName: getErrorName(error)
+    })
     return { status: "error", error: "unexpected" }
   }
   if (!result.success) return { status: "error", error: result.error }
 
-  revalidatePath(ROUTES.adminGroups, "layout")
+  revalidatePath(ROUTES.adminOrgStructure, "layout")
   return { status: "success", completedAt: Date.now() }
 }

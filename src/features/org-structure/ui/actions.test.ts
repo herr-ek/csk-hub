@@ -86,7 +86,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
         form({ name: "KK roddgrupp", type: "Roddgrupp", choirId: await t.groupId("KK") })
       )
       expect(created).toMatchObject({ status: "success" })
-      expect(revalidatePath).toHaveBeenCalledWith("/admin/groups", "layout")
+      expect(revalidatePath).toHaveBeenCalledWith("/admin/org-structure", "layout")
       const row = await groupNamed("KK roddgrupp")
       expect(row?.choirId).toBe(await t.groupId("KK"))
 
