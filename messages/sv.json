@@ -137,9 +137,9 @@
       "adminOrgStructure": "Körer och stämmor",
       "adminOrgStructureGroups": "Grupper och poster"
     },
-    "menu": "Meny",
     "quickAccess": "Snabbåtkomst",
-    "customizeQuickAccess": "Anpassa snabbåtkomst"
+    "customizeQuickAccess": "Anpassa snabbåtkomst",
+    "showQuickAccess": "Visa snabbåtkomst"
   },
   "Posts": {
     "title": "Nyheter",
@@ -366,7 +366,8 @@
     "updateFailed": "Det gick inte att spara dina genvägar just nu. Försök igen.",
     "added": "{name} har lagts till i fältet.",
     "removed": "{name} har tagits bort från fältet.",
-    "moved": "{name} flyttades till plats {position} av {count}."
+    "moved": "{name} flyttades till plats {position} av {count}.",
+    "pwaNotice": "Snabbåtkomst är gjord för CSK Hub installerad som app på hemskärmen. I en mobilwebbläsare delar den plats med webbläsarens eget verktygsfält."
   },
   "AccountProfile": {
     "title": "Mitt konto",

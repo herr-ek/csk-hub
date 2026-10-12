@@ -26,12 +26,17 @@ export interface MobileNavigationProps {
   isImpersonating: boolean
   /** Replaces the default header menu button, e.g. with the quick-access bar's Menu slot. */
   trigger?: { render: ReactElement; children: ReactNode }
+  /** Controls the sheet from outside, e.g. when a drag along the quick-access bar ends on its Menu slot. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /** The signed-in menu on small screens: a menu button that opens the nav links, theme and logout in a side sheet. */
-export function MobileNavigation({ items, isImpersonating, trigger }: MobileNavigationProps) {
+export function MobileNavigation({ items, isImpersonating, trigger, ...control }: MobileNavigationProps) {
   const t = useTranslations("Navigation")
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = control.open ?? uncontrolledOpen
+  const setOpen = control.onOpenChange ?? setUncontrolledOpen
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

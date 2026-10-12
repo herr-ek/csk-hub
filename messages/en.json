@@ -137,9 +137,9 @@
       "adminOrgStructure": "Choirs and voices",
       "adminOrgStructureGroups": "Groups and positions"
     },
-    "menu": "Menu",
     "quickAccess": "Quick access",
-    "customizeQuickAccess": "Customize quick access"
+    "customizeQuickAccess": "Customize quick access",
+    "showQuickAccess": "Show quick access"
   },
   "Posts": {
     "title": "News",
@@ -366,7 +366,8 @@
     "updateFailed": "Unable to save your shortcuts right now. Please try again.",
     "added": "{name} added to the bar.",
     "removed": "{name} removed from the bar.",
-    "moved": "{name} moved to position {position} of {count}."
+    "moved": "{name} moved to position {position} of {count}.",
+    "pwaNotice": "Quick access is made for CSK Hub installed as an app on your home screen. In a mobile browser it shares space with the browser's own toolbar."
   },
   "AccountProfile": {
     "title": "My account",
