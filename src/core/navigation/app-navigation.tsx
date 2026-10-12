@@ -39,10 +39,17 @@ export type NavigationConfig = {
   impersonatingUserName?: string
 }
 
+/**
+ * Something to show beside a navigation link, such as a feature's unread count. Supplied by
+ * the app layout, since the navigation itself must not depend on features.
+ */
+export type NavigationBadges = Partial<Record<NavigationRouteId, React.ReactNode>>
+
 export interface AppNavigationTemplateProps {
   config: NavigationConfig | null
+  badges?: NavigationBadges
 }
-export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
+export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateProps) {
   const t = useTranslations("Navigation")
   const items = getNavigationItems(config, t)
 
@@ -61,6 +68,7 @@ export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
                 className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "max-w-full")}
               >
                 {item.label}
+                {config ? badges?.[item.id] : null}
               </Link>
             ))}
             {config ? <LogoutButton isImpersonating={Boolean(config.impersonatingUserName)} /> : null}
@@ -77,19 +85,20 @@ export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
   )
 }
 
-export function AppNavigation() {
+export function AppNavigation({ badges }: { badges?: NavigationBadges }) {
   return (
     <Suspense fallback={<AppNavigationTemplate config={null} />}>
-      <RuntimeAppNavigation />
+      <RuntimeAppNavigation badges={badges} />
     </Suspense>
   )
 }
 
-export async function RuntimeAppNavigation() {
+export async function RuntimeAppNavigation({ badges }: { badges?: NavigationBadges }) {
   const session = await getRequestSession()
   const isAdmin = await isUserAdmin(session)
   return (
     <AppNavigationTemplate
+      badges={badges}
       config={{
         showAdmin: isAdmin,
         ...(session?.session.impersonatedBy ? { impersonatingUserName: session.user.name } : {})

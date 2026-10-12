@@ -44,3 +44,14 @@ export const post = pgTable(
     index("post_body_search_idx").using("gin", table.bodySearch)
   ]
 )
+
+// How far into the News feed a User has seen, which is all the unread badge needs: the
+// feed is identical for everyone, so one instant per User says what is new to them. No
+// row means the User has never opened the feed. Owned by the posts feature, not a column
+// on `user`, which is the credentials record behind a User.
+export const newsFeedReadState = pgTable("news_feed_read_state", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull()
+})

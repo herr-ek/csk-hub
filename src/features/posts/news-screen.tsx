@@ -12,6 +12,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/ba
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostByline } from "./post-byline"
 import { listNewsFeed } from "./service"
+import { NewsFeedSeenMarker } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
   const t = useTranslations("Posts")
@@ -42,6 +43,8 @@ export async function NewsScreen() {
           </Link>
         ) : null}
       </NewsHeader>
+
+      {entries[0] ? <NewsFeedSeenMarker latestPostId={entries[0].id} /> : null}
 
       {entries.length === 0 ? (
         <Empty>
