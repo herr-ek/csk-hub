@@ -367,7 +367,8 @@
     "added": "{name} added to the bar.",
     "removed": "{name} removed from the bar.",
     "moved": "{name} moved to position {position} of {count}.",
-    "pwaNotice": "Quick access is made for CSK Hub installed as an app on your home screen. In a mobile browser it shares space with the browser's own toolbar."
+    "pwaNotice": "Quick access is made for CSK Hub installed as an app on your home screen. In a mobile browser it shares space with the browser's own toolbar.",
+    "enabled": "Show the quick-access bar"
   },
   "AccountProfile": {
     "title": "My account",

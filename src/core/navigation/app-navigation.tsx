@@ -120,6 +120,8 @@ async function RuntimeQuickAccessBar() {
     getUserPreferences(session.user.id),
     getTranslations("Navigation")
   ])
+  if (!preferences.quickAccessEnabled) return null
+
   const shortcuts = visibleQuickAccess(preferences.quickAccess, { isAdmin }).map((id) => ({
     id,
     href: ROUTES[id],

@@ -367,7 +367,8 @@
     "added": "{name} wurde zur Leiste hinzugefügt.",
     "removed": "{name} wurde aus der Leiste entfernt.",
     "moved": "{name} wurde an Position {position} von {count} verschoben.",
-    "pwaNotice": "Der Schnellzugriff ist für CSK Hub als App auf deinem Home-Bildschirm gedacht. In einem mobilen Browser teilt er sich den Platz mit der Symbolleiste des Browsers."
+    "pwaNotice": "Der Schnellzugriff ist für CSK Hub als App auf deinem Home-Bildschirm gedacht. In einem mobilen Browser teilt er sich den Platz mit der Symbolleiste des Browsers.",
+    "enabled": "Schnellzugriffsleiste anzeigen"
   },
   "AccountProfile": {
     "title": "Mein Konto",

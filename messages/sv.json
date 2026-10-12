@@ -367,7 +367,8 @@
     "added": "{name} har lagts till i fältet.",
     "removed": "{name} har tagits bort från fältet.",
     "moved": "{name} flyttades till plats {position} av {count}.",
-    "pwaNotice": "Snabbåtkomst är gjord för CSK Hub installerad som app på hemskärmen. I en mobilwebbläsare delar den plats med webbläsarens eget verktygsfält."
+    "pwaNotice": "Snabbåtkomst är gjord för CSK Hub installerad som app på hemskärmen. I en mobilwebbläsare delar den plats med webbläsarens eget verktygsfält.",
+    "enabled": "Visa snabbåtkomstfältet"
   },
   "AccountProfile": {
     "title": "Mitt konto",
