@@ -1,14 +1,13 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { createTestDatabase } from "@test/database"
-import { eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { newsFeedReadState, post } from "@/core/db/schema/posts"
+import { post } from "@/core/db/schema/posts"
 
 const database = await createTestDatabase()
 
 mock.module("@/core/db", () => ({ db: database?.db }))
 
-const { countUnreadPosts, markNewsFeedSeen } = await import("./service")
+const { countUnreadPosts, listUnreadPostIds, markPostRead } = await import("./service")
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -38,68 +37,55 @@ describe.skipIf(!database)("unread Posts", () => {
     return (created as { id: string }).id
   }
 
-  async function lastSeenAt(userId: string) {
-    const [row] = await db.select().from(newsFeedReadState).where(eq(newsFeedReadState.userId, userId))
-    return row?.lastSeenAt
-  }
+  test("a Post from the last month is unread until the User opens it", async () => {
+    const userId = await createUser()
+    const opened = await publish(daysAgo(2))
+    const unopened = await publish(daysAgo(1))
 
-  test("a User who has never opened the feed counts only the last month's Posts", async () => {
+    expect(await markPostRead(userId, opened)).toBe(true)
+
+    expect(await countUnreadPosts(userId)).toBe(1)
+    expect(await listUnreadPostIds(userId)).toEqual(new Set([unopened]))
+  })
+
+  test("Posts older than a month are no longer unread", async () => {
     const userId = await createUser()
     await publish(daysAgo(40))
-    await publish(daysAgo(10))
-    await publish(daysAgo(1))
+    const recent = await publish(daysAgo(10))
 
-    expect(await countUnreadPosts(userId)).toBe(2)
-  })
-
-  test("unpublished Posts never count", async () => {
-    const userId = await createUser()
-    await publish(null)
-
-    expect(await countUnreadPosts(userId)).toBe(0)
-  })
-
-  test("seeing the feed clears the Posts it showed and keeps later ones unread", async () => {
-    const userId = await createUser()
-    await publish(daysAgo(3))
-    const newest = await publish(daysAgo(2))
-
-    expect(await markNewsFeedSeen(userId, newest)).toBe(true)
-    expect(await countUnreadPosts(userId)).toBe(0)
-
-    // Published after the feed rendered, so the User has not seen it yet.
-    await publish(daysAgo(1))
     expect(await countUnreadPosts(userId)).toBe(1)
+    expect(await listUnreadPostIds(userId)).toEqual(new Set([recent]))
   })
 
-  test("a stale feed does not move the stamp back", async () => {
-    const userId = await createUser()
-    const newerAt = daysAgo(2)
-    const older = await publish(daysAgo(3))
-    const newer = await publish(newerAt)
-    await markNewsFeedSeen(userId, newer)
-
-    expect(await markNewsFeedSeen(userId, older)).toBe(false)
-    expect(await markNewsFeedSeen(userId, newer)).toBe(false)
-    expect(await lastSeenAt(userId)).toEqual(newerAt)
-  })
-
-  test("ignores ids that are not published Posts", async () => {
+  test("unpublished Posts are never unread and cannot be marked read", async () => {
     const userId = await createUser()
     const draft = await publish(null)
 
-    expect(await markNewsFeedSeen(userId, draft)).toBe(false)
-    expect(await markNewsFeedSeen(userId, "not-a-uuid")).toBe(false)
-    expect(await markNewsFeedSeen(userId, crypto.randomUUID())).toBe(false)
-    expect(await lastSeenAt(userId)).toBeUndefined()
+    expect(await countUnreadPosts(userId)).toBe(0)
+    expect(await markPostRead(userId, draft)).toBe(false)
   })
 
-  test("another User's visit does not clear the badge", async () => {
+  test("opening a Post again reports no change", async () => {
+    const userId = await createUser()
+    const postId = await publish(daysAgo(1))
+
+    expect(await markPostRead(userId, postId)).toBe(true)
+    expect(await markPostRead(userId, postId)).toBe(false)
+  })
+
+  test("ignores ids that are not Posts", async () => {
+    const userId = await createUser()
+
+    expect(await markPostRead(userId, "not-a-uuid")).toBe(false)
+    expect(await markPostRead(userId, crypto.randomUUID())).toBe(false)
+  })
+
+  test("one User opening a Post leaves it unread for others", async () => {
     const reader = await createUser()
     const other = await createUser()
     const postId = await publish(daysAgo(1))
 
-    await markNewsFeedSeen(reader, postId)
+    await markPostRead(reader, postId)
 
     expect(await countUnreadPosts(reader)).toBe(0)
     expect(await countUnreadPosts(other)).toBe(1)
