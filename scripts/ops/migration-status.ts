@@ -36,12 +36,24 @@ export async function statusFor(target: Target): Promise<TargetStatus> {
   return statusOf(database)
 }
 
-/** The ledger status of an already-resolved database; never `not-configured`. */
-export async function statusOf(database: Database): Promise<Exclude<TargetStatus, { kind: "not-configured" }>> {
+/**
+ * The ledger status of an already-resolved database; never `not-configured`.
+ *
+ * Connecting and the ledger query are each bounded by `timeout` milliseconds, so a database
+ * that stops answering, or a lock held on the ledger, reports `unreachable` rather than
+ * hanging. Ending the client while the timed-out query is still active destroys the socket.
+ */
+export async function statusOf(
+  database: Database,
+  { timeout = 10_000 }: { timeout?: number } = {}
+): Promise<Exclude<TargetStatus, { kind: "not-configured" }>> {
   const { host } = database
   const entries = readJournal()
-  // Bounded so a database that never answers fails the check instead of hanging it.
-  const client = new Client({ ...secureConnection(database.url), connectionTimeoutMillis: 10_000 })
+  const client = new Client({
+    ...secureConnection(database.url),
+    connectionTimeoutMillis: timeout,
+    query_timeout: timeout
+  })
 
   try {
     await client.connect()

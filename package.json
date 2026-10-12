@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "bun run scripts/ops/pre-build.ts",
     "build": "next build",
     "start": "next start",
     "tst": "bun test --dots",

@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, spyOn, test } from "bun:test"
 import { sql } from "drizzle-orm"
+import { Client } from "pg"
 import { createTestDatabase } from "../../test/database"
 import { readJournal } from "./migration-status"
 import { checkProductionMigrations } from "./pre-build"
@@ -7,11 +8,11 @@ import { checkProductionMigrations } from "./pre-build"
 const database = await createTestDatabase()
 
 /** Runs the check with its console output captured, so the messages can be asserted. */
-async function check(environment: Parameters<typeof checkProductionMigrations>[0]) {
+async function check(...args: Parameters<typeof checkProductionMigrations>) {
   const log = spyOn(console, "log").mockImplementation(() => {})
   const error = spyOn(console, "error").mockImplementation(() => {})
   try {
-    const code = await checkProductionMigrations(environment)
+    const code = await checkProductionMigrations(...args)
     return { code, output: [...log.mock.calls, ...error.mock.calls].flat().join("\n") }
   } finally {
     log.mockRestore()
@@ -62,5 +63,26 @@ describe.skipIf(!database)("checkProductionMigrations", () => {
     )
 
     expect((await check(environment)).code).toBe(0)
+  })
+
+  test("stops instead of hanging when the ledger query stalls after connecting", async () => {
+    // Another session holds the ledger exclusively, so the check connects but its select waits.
+    const holder = new Client({ connectionString: t.url })
+    await holder.connect()
+    await holder.query("begin")
+    await holder.query("lock table drizzle.__drizzle_migrations in access exclusive mode")
+
+    try {
+      const started = performance.now()
+      const { code, output } = await check({ VERCEL_ENV: "production", POSTGRES_URL: t.url }, { timeout: 300 })
+
+      expect(code).toBe(1)
+      expect(output).toContain("Query read timeout")
+      // The stalled connection is destroyed rather than waited on until the lock is released.
+      expect(performance.now() - started).toBeLessThan(2_000)
+    } finally {
+      await holder.query("rollback")
+      await holder.end()
+    }
   })
 })

@@ -8,15 +8,16 @@ import { deploymentDatabase } from "./target"
  *
  *   bun run scripts/ops/pre-build.ts
  *
- * Vercel runs it before `next build` (see `vercel.json`). It holds no state: once the
- * migrations are applied, redeploying the same commit passes. Preview and local builds are
- * not checked.
+ * It is the `prebuild` hook in `package.json`, so `bun run build` runs it before
+ * `next build` and stops if it fails. It holds no state: once the migrations are applied,
+ * redeploying the same commit passes. Preview and local builds are not checked.
  *
  * It fails closed. A production build that cannot read the ledger stops too, because "we
  * could not tell" is not evidence that the database is ready.
  */
 export async function checkProductionMigrations(
-  environment: Record<string, string | undefined> = process.env
+  environment: Record<string, string | undefined> = process.env,
+  { timeout }: { timeout?: number } = {}
 ): Promise<number> {
   if (environment.VERCEL_ENV !== "production") {
     console.log(
@@ -31,7 +32,7 @@ export async function checkProductionMigrations(
     return 1
   }
 
-  const status = await statusOf(database)
+  const status = await statusOf(database, { timeout })
 
   if (status.kind === "unreachable") {
     console.error(`✖ Could not read the migration ledger of ${status.host}: ${status.reason}`)
