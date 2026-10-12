@@ -198,13 +198,12 @@ export function PasskeySettings() {
           <FieldGroup>
             <InputField
               label={t("newPasskeyName")}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
+              name="name"
               placeholder={t("passkeyPlaceholder")}
-              disabled={pending}
+              disabled={pending !== null}
             />
-            <Button type="submit" disabled={pending}>
-              {pending ? t("waitingForPasskey") : t("addPasskey")}
+            <Button type="submit" disabled={pending !== null}>
+              {pending === "add" ? t("waitingForPasskey") : t("addPasskey")}
             </Button>
           </FieldGroup>
         </form>
