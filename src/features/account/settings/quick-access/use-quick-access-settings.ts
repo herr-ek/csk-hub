@@ -4,13 +4,14 @@ import { useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { moveShortcut, toggleShortcut } from "@/core/navigation/quick-access"
 import type { MenuRouteId } from "@/core/navigation/site"
-import { updateQuickAccess } from "./actions"
+import { updateQuickAccess, updateQuickAccessEnabled } from "./actions"
 
-/** Edits the member's shortcuts optimistically, saving each change and rolling back if the save fails. */
-export function useQuickAccessSettings(saved: MenuRouteId[]) {
+/** Edits the member's bar switch and shortcuts optimistically, saving each change and rolling back if the save fails. */
+export function useQuickAccessSettings(saved: { enabled: boolean; shortcuts: MenuRouteId[] }) {
   const t = useTranslations("QuickAccess")
   const routes = useTranslations("Navigation.routes")
-  const [shortcuts, setShortcuts] = useState(saved)
+  const [enabled, setEnabled] = useState(saved.enabled)
+  const [shortcuts, setShortcuts] = useState(saved.shortcuts)
   const [error, setError] = useState<string>()
   const [announcement, setAnnouncement] = useState("")
 
@@ -29,6 +30,19 @@ export function useQuickAccessSettings(saved: MenuRouteId[]) {
     setError(t("updateFailed"))
   }
 
+  async function setBarEnabled(next: boolean) {
+    setEnabled(next)
+    setError(undefined)
+    setAnnouncement("")
+    try {
+      const result = await updateQuickAccessEnabled(next)
+      if (result.success) return
+    } catch {}
+
+    setEnabled(!next)
+    setError(t("updateFailed"))
+  }
+
   function toggle(id: MenuRouteId) {
     const next = toggleShortcut(shortcuts, id)
     if (next.length === shortcuts.length) return
@@ -41,5 +55,5 @@ export function useQuickAccessSettings(saved: MenuRouteId[]) {
     void save(next, t("moved", { name: routes(id), position: next.indexOf(id) + 1, count: next.length }))
   }
 
-  return { shortcuts, error, announcement, toggle, move }
+  return { enabled, setBarEnabled, shortcuts, error, announcement, toggle, move }
 }

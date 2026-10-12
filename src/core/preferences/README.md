@@ -38,8 +38,9 @@ Adding an optional stored field without a read-time default would leak storage h
 required field in `UserPreferences` plus a default at this module's seam. If a preference genuinely has an explicit
 “unset” state, model that state in its schema rather than using a missing legacy field to represent it.
 
-`quickAccess` lists the member's quick-access bar shortcuts as menu route ids, in bar order, defaulting to News and
-Messages. An empty list is a deliberate choice that turns the bar off. Writes must be valid, unique, and within
+`quickAccessEnabled` (default `true`) is the member's switch for the quick-access bar. It is kept separate from the
+shortcuts so turning the bar off and on again restores them. `quickAccess` lists those shortcuts as menu route ids, in
+bar order, defaulting to News and Messages; an empty list also leaves the bar hidden. Writes must be valid, unique, and within
 `QUICK_ACCESS_LIMIT`. Reads are lenient for this one field: unknown and repeated ids are dropped and the list is capped,
 so retiring a route costs members that shortcut rather than resetting their whole document. Admin routes are stored
 as-is; callers hide them from members who are not admins.
