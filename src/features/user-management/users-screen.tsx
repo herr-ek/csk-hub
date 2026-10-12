@@ -1,5 +1,6 @@
 import { app } from "@/core/config/app"
 import { getTranslations } from "@/core/i18n/server"
+import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import { AddUserDialog } from "./add/add-user-dialog"
@@ -13,6 +14,7 @@ export async function UsersScreen() {
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <PageBreadcrumb route="adminUsers" />
       <div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -36,6 +38,7 @@ export async function UsersScreenSkeleton() {
   const common = await getTranslations("Common")
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
+      <PageBreadcrumb route="adminUsers" />
       <div>
         <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("description", { appName: app.name })}</p>

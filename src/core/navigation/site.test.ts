@@ -1,11 +1,48 @@
 import { describe, expect, test } from "bun:test"
 import {
   getPostLoginPath,
+  isActiveRoute,
   isSafeInternalPath,
   loginPath,
   parseSafeInternalPath,
   twoFactorPath
 } from "./navigation-utils"
+import { ROUTE_PARENTS, ROUTES, type RouteId, routeTrail } from "./site"
+
+describe("route hierarchy", () => {
+  test("a top-level section is its own trail", () => {
+    expect(routeTrail("news")).toEqual(["news"])
+  })
+
+  test("nested routes list their ancestors from the top", () => {
+    expect(routeTrail("newsCompose")).toEqual(["news", "newsCompose"])
+    expect(routeTrail("adminOrgStructureGroups")).toEqual(["admin", "adminOrgStructureGroups"])
+  })
+
+  test("every parent is a known route", () => {
+    for (const parent of Object.values(ROUTE_PARENTS)) {
+      expect(Object.keys(ROUTES)).toContain(parent as RouteId)
+    }
+  })
+})
+
+describe("active route", () => {
+  test("matches the page and its descendants", () => {
+    expect(isActiveRoute("/news", "/news")).toBe(true)
+    expect(isActiveRoute("/news/abc", "/news")).toBe(true)
+    expect(isActiveRoute("/newsletter", "/news")).toBe(false)
+  })
+
+  test("home only matches itself", () => {
+    expect(isActiveRoute("/", "/")).toBe(true)
+    expect(isActiveRoute("/news", "/")).toBe(false)
+  })
+
+  test("ignores the internal locale segment", () => {
+    expect(isActiveRoute("/sv/admin/users", "/admin")).toBe(true)
+    expect(isActiveRoute("/en", "/")).toBe(true)
+  })
+})
 
 describe("site navigation", () => {
   test("uses a safe requested destination after sign-in", () => {

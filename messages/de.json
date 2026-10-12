@@ -121,7 +121,22 @@
     "stoppingImpersonation": "Imitierung wird beendet…",
     "stopImpersonationFailed": "Die Imitierung konnte gerade nicht beendet werden. Bitte versuche es erneut.",
     "language": "Sprache",
-    "messages": "Nachrichten"
+    "messages": "Nachrichten",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen",
+    "breadcrumb": "Brotkrümelnavigation",
+    "routes": {
+      "news": "Neuigkeiten",
+      "newsCompose": "Beitrag schreiben",
+      "messages": "Nachrichten",
+      "account": "Mein Konto",
+      "accountSettings": "Einstellungen",
+      "admin": "Verwaltung",
+      "adminUsers": "Mitglieder",
+      "adminNotifications": "Benachrichtigungen",
+      "adminOrgStructure": "Chöre und Stimmen",
+      "adminOrgStructureGroups": "Gruppen und Ämter"
+    }
   },
   "Posts": {
     "title": "Neuigkeiten",
@@ -131,7 +146,6 @@
     "emptyDescription": "Beiträge des Vorstands werden hier angezeigt.",
     "formerMember": "Ehemaliges Mitglied",
     "bylineSeparator": "·",
-    "allNews": "Alle Neuigkeiten",
     "publishDescription": "Durch das Veröffentlichen wird der Beitrag sofort allen Mitgliedern angezeigt.",
     "titleLabel": "Titel",
     "bodyLabel": "Beitrag",
@@ -434,7 +448,6 @@
     "searching": "Suche…",
     "searchFailed": "Mitglieder können gerade nicht gesucht werden.",
     "retrySearch": "Erneut suchen",
-    "backToHome": "Zurück zur Startseite",
     "firstMessageLabel": "Erste Nachricht",
     "messageLabel": "Nachricht",
     "messagePlaceholder": "Nachricht schreiben…",
@@ -543,8 +556,6 @@
       "save": "Speichern"
     },
     "detail": {
-      "backToChoirs": "Alle Chöre",
-      "backToGroups": "Alle Gruppen",
       "typeInChoir": "{type} in {choir}",
       "typeCskWide": "{type}, ganz CSK",
       "archivedNotice": "Diese Gruppe ist archiviert. Ihr Verlauf bleibt erhalten, aber sie kann nicht mehr geändert werden.",

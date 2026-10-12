@@ -121,7 +121,22 @@
     "stoppingImpersonation": "Stopping impersonation…",
     "stopImpersonationFailed": "Unable to stop impersonating right now. Please try again.",
     "language": "Language",
-    "messages": "Messages"
+    "messages": "Messages",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "breadcrumb": "Breadcrumb",
+    "routes": {
+      "news": "News",
+      "newsCompose": "Write a post",
+      "messages": "Messages",
+      "account": "My account",
+      "accountSettings": "Settings",
+      "admin": "Admin",
+      "adminUsers": "Members",
+      "adminNotifications": "Notifications",
+      "adminOrgStructure": "Choirs and voices",
+      "adminOrgStructureGroups": "Groups and positions"
+    }
   },
   "Posts": {
     "title": "News",
@@ -131,7 +146,6 @@
     "emptyDescription": "Posts from the board will show up here.",
     "formerMember": "Former member",
     "bylineSeparator": "·",
-    "allNews": "All news",
     "publishDescription": "Publishing shows the post to every member right away.",
     "titleLabel": "Title",
     "bodyLabel": "Post",
@@ -434,7 +448,6 @@
     "searching": "Searching…",
     "searchFailed": "Member search is unavailable right now.",
     "retrySearch": "Retry search",
-    "backToHome": "Back to home",
     "firstMessageLabel": "First message",
     "messageLabel": "Message",
     "messagePlaceholder": "Write a message…",
@@ -543,8 +556,6 @@
       "save": "Save"
     },
     "detail": {
-      "backToChoirs": "All choirs",
-      "backToGroups": "All groups",
       "typeInChoir": "{type} in {choir}",
       "typeCskWide": "{type}, CSK-wide",
       "archivedNotice": "This group is archived. Its history is kept, but it can no longer be changed.",

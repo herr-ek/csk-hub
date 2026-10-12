@@ -1,11 +1,13 @@
 import { Suspense } from "react"
 import { getTranslations } from "@/core/i18n/server"
+import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { AccountSettings, AccountSettingsSkeleton } from "@/features/account/settings"
 
 export default async function SettingsPage() {
   const t = await getTranslations("AccountSettings")
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <PageBreadcrumb route="accountSettings" />
       <div>
         <h1 className="font-heading text-2xl font-semibold">{t("pageTitle")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("pageDescription")}</p>

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
+import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PositionCatalogue } from "../catalogue/position-catalogue"
@@ -21,6 +22,7 @@ export async function GroupsScreen() {
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <PageBreadcrumb route="adminOrgStructureGroups" />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-semibold">{t("groupsPage.title")}</h1>
@@ -45,6 +47,7 @@ export async function GroupsScreenSkeleton() {
   const t = await getTranslations("Groups")
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
+      <PageBreadcrumb route="adminOrgStructureGroups" />
       <div>
         <h1 className="font-heading text-2xl font-semibold">{t("groupsPage.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("groupsPage.description")}</p>

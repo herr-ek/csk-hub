@@ -121,7 +121,22 @@
     "stoppingImpersonation": "Avslutar imitiering…",
     "stopImpersonationFailed": "Det gick inte att avsluta imitieringen just nu. Försök igen.",
     "language": "Språk",
-    "messages": "Meddelanden"
+    "messages": "Meddelanden",
+    "openMenu": "Öppna menyn",
+    "closeMenu": "Stäng menyn",
+    "breadcrumb": "Brödsmulor",
+    "routes": {
+      "news": "Nyheter",
+      "newsCompose": "Skriv ett inlägg",
+      "messages": "Meddelanden",
+      "account": "Mitt konto",
+      "accountSettings": "Inställningar",
+      "admin": "Administratör",
+      "adminUsers": "Medlemmar",
+      "adminNotifications": "Notiser",
+      "adminOrgStructure": "Körer och stämmor",
+      "adminOrgStructureGroups": "Grupper och poster"
+    }
   },
   "Posts": {
     "title": "Nyheter",
@@ -131,7 +146,6 @@
     "emptyDescription": "Inlägg från styrelsen visas här.",
     "formerMember": "Tidigare medlem",
     "bylineSeparator": "·",
-    "allNews": "Alla nyheter",
     "publishDescription": "När du publicerar visas inlägget genast för alla medlemmar.",
     "titleLabel": "Titel",
     "bodyLabel": "Inlägg",
@@ -434,7 +448,6 @@
     "searching": "Söker…",
     "searchFailed": "Det går inte att söka efter medlemmar just nu.",
     "retrySearch": "Försök söka igen",
-    "backToHome": "Tillbaka till startsidan",
     "firstMessageLabel": "Första meddelandet",
     "messageLabel": "Meddelande",
     "messagePlaceholder": "Skriv ett meddelande…",
@@ -543,8 +556,6 @@
       "save": "Spara"
     },
     "detail": {
-      "backToChoirs": "Alla körer",
-      "backToGroups": "Alla grupper",
       "typeInChoir": "{type} i {choir}",
       "typeCskWide": "{type}, hela CSK",
       "archivedNotice": "Gruppen är arkiverad. Historiken finns kvar, men gruppen kan inte längre ändras.",

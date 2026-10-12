@@ -70,9 +70,6 @@ export async function MessagesScreen() {
       ) : (
         <p className="text-sm text-muted-foreground">{t("empty")}</p>
       )}
-      <Link href="/" className="text-sm text-muted-foreground underline">
-        {t("backToHome")}
-      </Link>
     </main>
   )
 }

@@ -1,4 +1,5 @@
 import { getTranslations } from "@/core/i18n/server"
+import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { PublishPostForm } from "./publish-post-form"
 
@@ -16,6 +17,7 @@ async function ComposeHeader() {
 export function PublishPostScreen() {
   return (
     <ContentPage fill>
+      <PageBreadcrumb route="newsCompose" />
       <ComposeHeader />
       <PublishPostForm />
     </ContentPage>
