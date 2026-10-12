@@ -7,7 +7,7 @@ import {
   parseSafeInternalPath,
   twoFactorPath
 } from "./navigation-utils"
-import { ROUTE_PARENTS, ROUTES, type RouteId, routeTrail } from "./site"
+import { isAdminRoute, ROUTE_PARENTS, ROUTES, type RouteId, routeTrail } from "./site"
 
 describe("route hierarchy", () => {
   test("a top-level section is its own trail", () => {
@@ -17,6 +17,12 @@ describe("route hierarchy", () => {
   test("nested routes list their ancestors from the top", () => {
     expect(routeTrail("newsCompose")).toEqual(["news", "newsCompose"])
     expect(routeTrail("adminOrgStructureGroups")).toEqual(["admin", "adminOrgStructureGroups"])
+  })
+
+  test("admin routes are recognised through their section", () => {
+    expect(isAdminRoute("admin")).toBe(true)
+    expect(isAdminRoute("adminOrgStructureGroups")).toBe(true)
+    expect(isAdminRoute("newsCompose")).toBe(false)
   })
 
   test("every parent is a known route", () => {

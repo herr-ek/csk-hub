@@ -136,7 +136,10 @@
       "adminNotifications": "Notiser",
       "adminOrgStructure": "Körer och stämmor",
       "adminOrgStructureGroups": "Grupper och poster"
-    }
+    },
+    "menu": "Meny",
+    "quickAccess": "Snabbåtkomst",
+    "customizeQuickAccess": "Anpassa snabbåtkomst"
   },
   "Posts": {
     "title": "Nyheter",
@@ -350,6 +353,20 @@
     "profileTab": "Profil",
     "securityTab": "Säkerhet",
     "notificationsTab": "Notiser"
+  },
+  "QuickAccess": {
+    "title": "Snabbåtkomst",
+    "description": "Fäst upp till fyra sidor i fältet längst ner på skärmen i mobilen.",
+    "inBar": "I ditt fält",
+    "available": "Sidor",
+    "limit": "Välj upp till {count} genvägar.",
+    "moveUp": "Flytta upp {name}",
+    "moveDown": "Flytta ner {name}",
+    "empty": "Inga genvägar är fästa, så fältet visas inte.",
+    "updateFailed": "Det gick inte att spara dina genvägar just nu. Försök igen.",
+    "added": "{name} har lagts till i fältet.",
+    "removed": "{name} har tagits bort från fältet.",
+    "moved": "{name} flyttades till plats {position} av {count}."
   },
   "AccountProfile": {
     "title": "Mitt konto",
