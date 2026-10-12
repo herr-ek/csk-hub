@@ -13,11 +13,8 @@ import {
   positionHolder,
   section
 } from "@/core/db/schema/org-structure"
-import { divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
+import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
 import type { GroupType, IsoDate } from "../../model"
-
-const VOICE_ORDER: Voice[] = ["S", "S1", "S2", "A", "A1", "A2", "T", "T1", "T2", "B", "B1", "B2"]
-const byVoice = (a: Voice, b: Voice) => VOICE_ORDER.indexOf(a) - VOICE_ORDER.indexOf(b)
 
 /** The Voices a singer can have in a Section singing `voice`: the division itself, or the family's divisions. */
 const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) ? [voice] : divisionsOf(voice))
@@ -42,7 +39,7 @@ export async function getGroupDetail(groupId: string) {
   if (!row) return null
   const choirMember = alias(groupMember, "choir_member")
 
-  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates] = await Promise.all([
+  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates, singers] = await Promise.all([
     db
       .select({
         userId: groupMember.userId,
@@ -125,8 +122,17 @@ export async function getGroupDetail(groupId: string) {
             : undefined
         )
       )
-      .orderBy(asc(user.name))
+      .orderBy(asc(user.name)),
+    // On a Choir's page, each member's Voice comes from their current Section Membership in it.
+    row.type === "Choir"
+      ? db
+          .select({ userId: groupMember.userId, voice: groupMember.voice })
+          .from(groupMember)
+          .innerJoin(group, eq(group.id, groupMember.groupId))
+          .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
+      : Promise.resolve([])
   ])
+  const singerVoices = new Map(singers.map(({ userId, voice }) => [userId, voice]))
 
   const current = holdings.filter(({ endDate }) => endDate === null)
   return {
@@ -149,7 +155,7 @@ export async function getGroupDetail(groupId: string) {
         name: member.name,
         email: member.email,
         startDate: member.startDate as IsoDate,
-        voice: member.voice,
+        voice: member.voice ?? singerVoices.get(member.userId) ?? null,
         positions: current.filter(({ userId }) => userId === member.userId).map(({ position }) => position)
       })),
     pastMembers: memberships
@@ -188,7 +194,7 @@ async function choirVoicesOf(choirId: string): Promise<VoiceDivision[]> {
     .from(section)
     .innerJoin(group, eq(group.id, section.groupId))
     .where(and(eq(group.choirId, choirId), eq(group.type, "Section"), eq(group.active, true)))
-  return rows.flatMap(({ voice }) => voicesWithin(voice)).sort(byVoice)
+  return rows.flatMap(({ voice }) => voicesWithin(voice)).sort(compareVoices)
 }
 
 /** The Choir a group belongs to, for commands that are addressed by Choir. */

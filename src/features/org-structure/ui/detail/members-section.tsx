@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { compareVoices, type Voice } from "@/features/voice/model"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -8,15 +9,46 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import { CommandDialog } from "../command-dialog"
+import { SortableHead, useSortedRows } from "../sortable-table"
 import { addMemberAction, changeVoiceAction, endMembershipAction } from "./actions"
 import type { GroupDetail } from "./query"
 
 type Member = GroupDetail["members"][number]
+type PastMember = GroupDetail["pastMembers"][number]
+
+const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, "sv")
+const byVoice = (a: { voice: Voice | null }, b: { voice: Voice | null }) =>
+  compareVoices(a.voice as Voice, b.voice as Voice)
+
+// Every column breaks ties by name. A member with no Voice or no Position sorts last.
+const MEMBER_ORDER = {
+  member: byName,
+  voice: (a: Member, b: Member) => byVoice(a, b) || byName(a, b),
+  since: (a: Member, b: Member) => a.startDate.localeCompare(b.startDate) || byName(a, b),
+  positions: (a: Member, b: Member) =>
+    a.positions.join(", ").localeCompare(b.positions.join(", "), "sv") || byName(a, b)
+}
+const MEMBER_MISSING = {
+  voice: (member: Member) => member.voice === null,
+  positions: (member: Member) => member.positions.length === 0
+}
+
+const PAST_MEMBER_ORDER = {
+  member: byName,
+  voice: (a: PastMember, b: PastMember) => byVoice(a, b) || byName(a, b),
+  period: (a: PastMember, b: PastMember) =>
+    a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate) || byName(a, b)
+}
+const PAST_MEMBER_MISSING = { voice: (past: PastMember) => past.voice === null }
 
 export function MembersSection({ detail, today }: { detail: GroupDetail; today: string }) {
   const t = useTranslations("Groups.detail")
   const { group } = detail
   const isSection = group.type === "Section"
+  // A Section shows the Voice each member sings in it; a Choir the Voice from their Section.
+  const showsVoice = isSection || group.type === "Choir"
+  const members = useSortedRows(detail.members, MEMBER_ORDER, "member", MEMBER_MISSING)
+  const pastMembers = useSortedRows(detail.pastMembers, PAST_MEMBER_ORDER, "member", PAST_MEMBER_MISSING)
 
   return (
     <Card>
@@ -31,21 +63,31 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("member")}</TableHead>
-                {isSection ? <TableHead>{t("voice")}</TableHead> : null}
-                <TableHead>{t("since")}</TableHead>
-                <TableHead>{t("positions")}</TableHead>
+                <SortableHead column="member" sort={members.sort} onSort={members.sortBy}>
+                  {t("member")}
+                </SortableHead>
+                {showsVoice ? (
+                  <SortableHead column="voice" sort={members.sort} onSort={members.sortBy}>
+                    {t("voice")}
+                  </SortableHead>
+                ) : null}
+                <SortableHead column="since" sort={members.sort} onSort={members.sortBy}>
+                  {t("since")}
+                </SortableHead>
+                <SortableHead column="positions" sort={members.sort} onSort={members.sortBy}>
+                  {t("positions")}
+                </SortableHead>
                 <TableHead className="sr-only">{t("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {detail.members.map((member) => (
+              {members.sorted.map((member) => (
                 <TableRow key={member.userId}>
                   <TableCell>
                     <div className="font-medium">{member.name}</div>
                     <div className="text-xs text-muted-foreground">{member.email}</div>
                   </TableCell>
-                  {isSection ? <TableCell>{member.voice}</TableCell> : null}
+                  {showsVoice ? <TableCell>{member.voice}</TableCell> : null}
                   <TableCell>{member.startDate}</TableCell>
                   <TableCell>{member.positions.join(", ")}</TableCell>
                   <TableCell>
@@ -73,13 +115,21 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("member")}</TableHead>
-                    {isSection ? <TableHead>{t("voice")}</TableHead> : null}
-                    <TableHead>{t("period")}</TableHead>
+                    <SortableHead column="member" sort={pastMembers.sort} onSort={pastMembers.sortBy}>
+                      {t("member")}
+                    </SortableHead>
+                    {isSection ? (
+                      <SortableHead column="voice" sort={pastMembers.sort} onSort={pastMembers.sortBy}>
+                        {t("voice")}
+                      </SortableHead>
+                    ) : null}
+                    <SortableHead column="period" sort={pastMembers.sort} onSort={pastMembers.sortBy}>
+                      {t("period")}
+                    </SortableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {detail.pastMembers.map((past) => (
+                  {pastMembers.sorted.map((past) => (
                     <TableRow key={`${past.userId}-${past.startDate}`}>
                       <TableCell>{past.name}</TableCell>
                       {isSection ? <TableCell>{past.voice}</TableCell> : null}
