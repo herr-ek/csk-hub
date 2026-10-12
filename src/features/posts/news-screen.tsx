@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { canCurrentUser } from "@/core/auth/permissions.server"
+import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
-import { newsPostPath } from "@/core/navigation/navigation-utils"
+import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
@@ -10,8 +11,9 @@ import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
-import { listNewsFeed } from "./service"
+import { listDraftsByAuthor, listNewsFeed } from "./service"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
   const t = useTranslations("Posts")
@@ -23,6 +25,38 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
       </div>
       {children}
     </div>
+  )
+}
+
+/** The reader's own unpublished Posts. Nobody else's drafts are ever shown here. */
+async function OwnDrafts() {
+  const [drafts, t] = await Promise.all([
+    requireAuthenticatedUser().then((authorId) => listDraftsByAuthor(authorId)),
+    getTranslations("Posts")
+  ])
+  if (drafts.length === 0) return null
+
+  return (
+    <section aria-labelledby="own-drafts" className="flex flex-col gap-2">
+      <h2 id="own-drafts" className="text-sm font-medium text-muted-foreground">
+        {t("yourDrafts")}
+      </h2>
+      <ul className="flex flex-col divide-y rounded-xl border">
+        {drafts.map((draft) => (
+          <li key={draft.id}>
+            <Link
+              href={newsPostEditPath(draft.id)}
+              className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+            >
+              <span className="font-medium break-words">{draft.title}</span>
+              <span className="text-sm text-muted-foreground">
+                {t("draftSaved")} <PostTime date={draft.savedAt} />
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -43,6 +77,8 @@ export async function NewsScreen() {
         ) : null}
       </NewsHeader>
 
+      {canPublish ? <OwnDrafts /> : null}
+
       {entries.length === 0 ? (
         <Empty>
           <EmptyHeader>
@@ -59,7 +95,11 @@ export async function NewsScreen() {
                   <CardHeader>
                     <CardTitle className="text-lg break-words">{entry.title}</CardTitle>
                     <CardDescription>
-                      <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
+                      <PostByline
+                        authorName={entry.authorName}
+                        publishedAt={entry.publishedAt}
+                        editedAt={entry.editedAt}
+                      />
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

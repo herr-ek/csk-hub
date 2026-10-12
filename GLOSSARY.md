@@ -45,6 +45,19 @@ A written announcement an Admin publishes to every User. A Post has no audience 
 own.
 _Avoid_: Article, news item, blog post, announcement email
 
+**Draft**:
+A Post that is not published, visible only to its author — whether it was never
+published or has been Unpublished. Drafts are never shared; joint writing happens outside
+the Hub. An author who no longer wants a Draft discards it: it is gone from every view, but,
+like every Post, never deleted.
+_Avoid_: Unpublished post, hidden post, shared draft, deleted draft
+
+**Unpublish**:
+To recall a published Post: it leaves the News feed and its permalink and becomes its
+author's Draft again. Nothing was sent, so nothing else needs undoing. Not a delete;
+Posts are never deleted.
+_Avoid_: Delete, archive, hide, retract
+
 **News feed**:
 The shared, reverse-chronological list of published Posts, identical for every User. It
 holds information published in the Hub; the monthly email remains separate.

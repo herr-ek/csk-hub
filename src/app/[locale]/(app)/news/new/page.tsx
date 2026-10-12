@@ -1,5 +1,5 @@
-import { PublishPostScreen } from "@/features/posts"
+import { NewPostScreen } from "@/features/posts"
 
-export default function PublishPostPage() {
-  return <PublishPostScreen />
+export default function NewPostPage() {
+  return <NewPostScreen />
 }
