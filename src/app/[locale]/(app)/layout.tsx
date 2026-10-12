@@ -1,4 +1,4 @@
-import { AppNavigation } from "@/core/navigation/app-navigation"
+import { AppBottomBarPrototype, AppNavigation } from "@/core/navigation/app-navigation"
 
 export default function AuthenticatedAppLayout({
   children
@@ -9,6 +9,7 @@ export default function AuthenticatedAppLayout({
     <>
       <AppNavigation />
       {children}
+      <AppBottomBarPrototype />
     </>
   )
 }

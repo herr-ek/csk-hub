@@ -136,7 +136,8 @@
       "adminNotifications": "Notiser",
       "adminOrgStructure": "Körer och stämmor",
       "adminOrgStructureGroups": "Grupper och poster"
-    }
+    },
+    "menu": "Meny"
   },
   "Posts": {
     "title": "Nyheter",

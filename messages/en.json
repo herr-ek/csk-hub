@@ -136,7 +136,8 @@
       "adminNotifications": "Notifications",
       "adminOrgStructure": "Choirs and voices",
       "adminOrgStructureGroups": "Groups and positions"
-    }
+    },
+    "menu": "Menu"
   },
   "Posts": {
     "title": "News",
