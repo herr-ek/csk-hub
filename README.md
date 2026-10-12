@@ -85,7 +85,8 @@ password `password`:
 bun run ops seed-admin
 ```
 
-`bun run ops seed-users` adds ten further example users with the same password.
+`bun run ops seed-users` adds 100 named, verified example Users with the same password:
+`singer-001@example.com` through `singer-100@example.com`. The first three are Admins.
 
 Both are local-development conveniences only. Change the password immediately,
 and do not use these credentials in a deployed environment. Seeding refuses to
@@ -94,8 +95,20 @@ run against production.
 `bun run ops reference-data` creates the Choirs MK, DK and KK with their Sections,
 Styret and the Positions; run it once after migrating (it also runs against production
 with `--prod`). `bun run ops reset` starts the local database over: it erases it, migrates
-it from scratch and creates the reference data. `bun run ops seed-groups` then adds example groups and places every user
-who is in no group yet in a Section. Running either again changes nothing.
+it from scratch and creates the reference data.
+
+For a populated development environment after migrating, run:
+
+```bash
+bun run ops seed-demo
+```
+
+This creates the reference data, 100 singers split evenly across the three Choirs and their
+Sections, active and archived groups, dated Memberships and Position handovers, Voice
+capabilities, and 24 published example Posts. It is safe to repeat and preserves existing
+credentials and edited Posts. Existing Users are retained, so a populated database can have
+more than 100 Users. The individual `seed-users`, `seed-groups` and `seed-posts` commands are
+also available; see [local demo data](scripts/ops/README.md#local-demo-data).
 
 ## Routes
 
