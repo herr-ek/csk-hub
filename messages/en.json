@@ -126,6 +126,7 @@
     "closeMenu": "Close menu",
     "breadcrumb": "Breadcrumb",
     "routes": {
+      "home": "Home",
       "news": "News",
       "newsCompose": "Write a post",
       "messages": "Messages",

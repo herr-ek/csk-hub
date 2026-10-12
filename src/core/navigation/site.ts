@@ -23,6 +23,7 @@ export type NavigationRouteId = Exclude<RouteId, "home">
 
 /** Signed-in routes that have a place in the menu hierarchy, each labelled by `Navigation.routes.<id>`. */
 export const MENU_ROUTE_IDS = [
+  "home",
   "news",
   "newsCompose",
   "messages",

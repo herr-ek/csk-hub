@@ -24,7 +24,7 @@ export interface QuickAccessBarProps {
 
 /** Liquid Glass material: a clear grey tint (darkening light pages, lightening dark ones) with a light blur, a rim lit top and bottom, and a soft shadow. */
 const glass =
-  "relative border border-white/50 bg-neutral-250/25 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(255_255_255/0.2),0_8px_24px_rgb(0_0_0/0.12)] backdrop-blur-sm backdrop-saturate-[1.1] dark:border-white/15 dark:bg-neutral-500/20 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.18),inset_0_-1px_0_rgb(255_255_255/0.06),0_8px_24px_rgb(0_0_0/0.4)]"
+  "relative border border-white/50 bg-neutral-250/25 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(255_255_255/0.2),0_8px_24px_rgb(0_0_0/0.12)] backdrop-blur-sm backdrop-saturate-[1.1] dark:border-white/15 dark:bg-neutral-700/25 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.18),inset_0_-1px_0_rgb(255_255_255/0.06),0_8px_24px_rgb(0_0_0/0.4)]"
 
 /** A faint top-down sheen, as if light catches the upper edge of the glass. */
 const sheen =
@@ -130,7 +130,7 @@ function Bar({ shortcuts, items, isImpersonating, pathname }: QuickAccessBarProp
               className={cn(
                 "pointer-events-none absolute top-px -left-1 h-[2.875rem] w-14 rounded-full bg-foreground/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.4)] motion-safe:transition-[translate,scale,opacity] motion-safe:duration-200 motion-safe:ease-out dark:bg-white/15",
                 lensIndex === -1 && "opacity-0",
-                (dragIndex !== null || lensMoving) && "scale-[1.12]",
+                (dragIndex !== null || lensMoving) && "scale-[1.15]",
                 dragIndex !== null && "bg-foreground/15 dark:bg-white/25"
               )}
               style={{ translate: `${Math.max(lensIndex, 0) * SLOT_PITCH_REM}rem 0` }}

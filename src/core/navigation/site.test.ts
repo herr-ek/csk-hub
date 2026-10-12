@@ -12,6 +12,7 @@ import { isAdminRoute, ROUTE_PARENTS, ROUTES, type RouteId, routeTrail } from ".
 describe("route hierarchy", () => {
   test("a top-level section is its own trail", () => {
     expect(routeTrail("news")).toEqual(["news"])
+    expect(routeTrail("home")).toEqual(["home"])
   })
 
   test("nested routes list their ancestors from the top", () => {
@@ -23,6 +24,7 @@ describe("route hierarchy", () => {
     expect(isAdminRoute("admin")).toBe(true)
     expect(isAdminRoute("adminOrgStructureGroups")).toBe(true)
     expect(isAdminRoute("newsCompose")).toBe(false)
+    expect(isAdminRoute("home")).toBe(false)
   })
 
   test("every parent is a known route", () => {

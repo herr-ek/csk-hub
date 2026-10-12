@@ -126,6 +126,7 @@
     "closeMenu": "Stäng menyn",
     "breadcrumb": "Brödsmulor",
     "routes": {
+      "home": "Hem",
       "news": "Nyheter",
       "newsCompose": "Skriv ett inlägg",
       "messages": "Meddelanden",

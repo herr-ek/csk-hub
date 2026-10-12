@@ -126,6 +126,7 @@
     "closeMenu": "Menü schließen",
     "breadcrumb": "Brotkrümelnavigation",
     "routes": {
+      "home": "Startseite",
       "news": "Neuigkeiten",
       "newsCompose": "Beitrag schreiben",
       "messages": "Nachrichten",
