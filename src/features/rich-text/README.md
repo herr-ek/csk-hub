@@ -21,6 +21,9 @@ export const postDocument = createDocumentSchema([richText.headings([2, 3]), ric
 // Writing: the editor emits the document as JSON into a form field.
 <RichTextEditor schema={postDocument} name="body" labelledBy={labelId} placeholder={t("bodyPlaceholder")} />
 
+// Writing, while keeping a copy elsewhere — say, so a reload does not lose it.
+<RichTextEditor {...props} onChange={(document) => keep(document)} />
+
 // Receiving: never store what the browser sent; store what the schema makes of it.
 const document = postDocument.parse(formData.get("body"))   // RichTextDocument | null
 
