@@ -7,7 +7,7 @@ import { buttonVariants } from "@/shared/ui/base/button"
 import { cn } from "@/shared/utils"
 import { isActiveRoute } from "./navigation-utils"
 
-export type NavLinkItem = { id: string; href: string; label: string }
+export type NavLinkItem = { id: string; href: string; label: string; badge?: React.ReactNode }
 
 export interface NavLinksProps {
   items: NavLinkItem[]
@@ -53,6 +53,7 @@ function NavLinkList({
               )}
             >
               {item.label}
+              {item.badge}
             </Link>
           </li>
         )

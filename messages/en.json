@@ -147,6 +147,7 @@
     "emptyDescription": "Posts from the board will show up here.",
     "formerMember": "Former member",
     "bylineSeparator": "·",
+    "unreadCount": "{count, plural, one {# new post} other {# new posts}}",
     "titleLabel": "Title",
     "bodyLabel": "Post",
     "bodyPlaceholder": "Write the post. Type ## for a heading, - for a list.",

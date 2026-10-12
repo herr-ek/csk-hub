@@ -147,6 +147,7 @@
     "emptyDescription": "Beiträge des Vorstands werden hier angezeigt.",
     "formerMember": "Ehemaliges Mitglied",
     "bylineSeparator": "·",
+    "unreadCount": "{count, plural, one {# neuer Beitrag} other {# neue Beiträge}}",
     "titleLabel": "Titel",
     "bodyLabel": "Beitrag",
     "bodyPlaceholder": "Schreibe den Beitrag. Tippe ## für eine Überschrift, - für eine Liste.",

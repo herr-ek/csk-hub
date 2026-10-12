@@ -14,6 +14,7 @@ import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
 import { listDraftsByAuthor, listNewsFeed } from "./service"
+import { NewsFeedSeenMarker } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
   const t = useTranslations("Posts")
@@ -78,6 +79,7 @@ export async function NewsScreen() {
       </NewsHeader>
 
       {canPublish ? <OwnDrafts /> : null}
+      {entries[0] ? <NewsFeedSeenMarker latestPostId={entries[0].id} /> : null}
 
       {entries.length === 0 ? (
         <Empty>
