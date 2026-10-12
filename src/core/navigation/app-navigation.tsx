@@ -68,7 +68,7 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
                 className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "max-w-full")}
               >
                 {item.label}
-                {config ? badges?.[item.id] : null}
+                {badges?.[item.id]}
               </Link>
             ))}
             {config ? <LogoutButton isImpersonating={Boolean(config.impersonatingUserName)} /> : null}

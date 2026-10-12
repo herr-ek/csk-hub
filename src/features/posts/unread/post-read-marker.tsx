@@ -9,6 +9,8 @@ import { markPostReadAction } from "./actions"
  */
 export function PostReadMarker({ postId }: { postId: string }) {
   useEffect(() => {
+    // The action logs its own failures; what reaches here is the network, and the badge
+    // simply stays until the next visit.
     void markPostReadAction(postId).catch(() => {})
   }, [postId])
   return null

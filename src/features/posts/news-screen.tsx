@@ -62,34 +62,37 @@ export async function NewsScreen() {
         </Empty>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
-                <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                  <CardHeader>
-                    <CardTitle className={cn("text-lg break-words", unread.has(entry.id) && "font-semibold")}>
-                      {entry.title}
-                    </CardTitle>
-                    {unread.has(entry.id) ? (
-                      <CardAction>
-                        <Badge>{t("unread")}</Badge>
-                      </CardAction>
-                    ) : null}
-                    <CardDescription>
-                      <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <RichTextContent
-                      document={entry.body}
-                      linksAsText
-                      className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
-                    />
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
-          ))}
+          {entries.map((entry) => {
+            const isUnread = unread.has(entry.id)
+            return (
+              <li key={entry.id}>
+                <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
+                  <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                    <CardHeader>
+                      <CardTitle className={cn("text-lg break-words", isUnread && "font-semibold")}>
+                        {entry.title}
+                      </CardTitle>
+                      {isUnread ? (
+                        <CardAction>
+                          <Badge>{t("unread")}</Badge>
+                        </CardAction>
+                      ) : null}
+                      <CardDescription>
+                        <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RichTextContent
+                        document={entry.body}
+                        linksAsText
+                        className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
+                      />
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </ContentPage>
