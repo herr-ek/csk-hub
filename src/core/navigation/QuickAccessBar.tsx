@@ -21,23 +21,35 @@ export interface QuickAccessBarProps {
   items: NavLinkItem[]
 }
 
-/** Liquid Glass material: translucent tint, heavy blur and saturation, a light rim, top highlight and soft shadow. */
+/** Liquid Glass material: a clear grey tint (darkening light pages, lightening dark ones) with a light blur, a rim lit top and bottom, and a soft shadow. */
 const glass =
-  "relative border border-white/40 bg-background/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.55),0_8px_32px_rgb(0_0_0/0.18)] backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-background/30 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_8px_32px_rgb(0_0_0/0.5)]"
+  "relative border border-white/50 bg-neutral-250/25 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(255_255_255/0.2),0_8px_24px_rgb(0_0_0/0.12)] backdrop-blur-sm backdrop-saturate-[1.1] dark:border-white/15 dark:bg-neutral-500/20 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.18),inset_0_-1px_0_rgb(255_255_255/0.06),0_8px_24px_rgb(0_0_0/0.4)]"
 
 /** A faint top-down sheen, as if light catches the upper edge of the glass. */
 const sheen =
-  "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-linear-to-b before:from-white/35 before:to-transparent before:to-60% dark:before:from-white/8"
+  "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-linear-to-b before:from-white/15 before:to-transparent before:to-60% dark:before:from-white/8"
 
-/** Each slot is 2.75rem (a 44px touch target) with a 0.25rem gap, so slot `i` starts at `i * 3rem`. */
-const SLOT_PITCH_REM = 3
-/** The pill's padding plus border around the slots; collapsed, the pill is one slot wide, i.e. a circle. */
-const PILL_INSET = "calc(0.5rem + 2px)"
+/** Expanded, each slot is a 3rem (48px) circle with a 0.5rem gap, so slot `i` starts at `i * 3.5rem`. */
+const SLOT_REM = 3
+const SLOT_GAP_REM = 0.5
+const SLOT_PITCH_REM = SLOT_REM + SLOT_GAP_REM
+/** Collapsed, the pill is a small horizontal capsule: 2rem (32px) wide and 1.5rem (24px) tall inside its insets. */
+const COLLAPSED_WIDTH_REM = 2
+const COLLAPSED_HEIGHT_REM = 1.5
+/**
+ * The pill's padding plus border around its contents. The sides get a little more room than top and bottom so the lens,
+ * which is wider than a slot, is not clipped at either end even while it swells.
+ */
+const PILL_INSET_X = "calc(0.75rem + 2px)"
+const PILL_INSET_Y = "calc(0.5rem + 2px)"
+/** Explicit corner radii (half the height) let the shape morph smoothly between the two capsules. */
+const EXPANDED_RADIUS = `calc((${SLOT_REM}rem + ${PILL_INSET_Y}) / 2)`
+const COLLAPSED_RADIUS = `calc((${COLLAPSED_HEIGHT_REM}rem + ${PILL_INSET_Y}) / 2)`
 
 /** Sits low, just clear of the iPhone home indicator, like a native tab bar. */
 const BAR_BOTTOM = "max(env(safe-area-inset-bottom) - 0.75rem, 0.5rem)"
 /** How far the bar reaches up from the bottom edge; toasts read it to stay clear of the bar. */
-const BAR_OFFSET = `calc(${BAR_BOTTOM} + 3.25rem + 2px)`
+const BAR_OFFSET = `calc(${BAR_BOTTOM} + ${SLOT_REM}rem + ${PILL_INSET_Y})`
 
 /** How far a finger must travel along the bar before a press becomes a drag. */
 const DRAG_THRESHOLD_PX = 8
@@ -45,7 +57,7 @@ const DRAG_THRESHOLD_PX = 8
 /**
  * The member's quick-access shortcuts in a floating glass pill on small screens, with the menu in the last slot.
  * Sliding a finger along the pill drags the highlight across the slots and opens the one it is released on.
- * While the page scrolls down the pill collapses into a single round button; tapping it or scrolling up restores it.
+ * While the page scrolls down the pill collapses into a single small button; tapping it or scrolling up restores it.
  * Renders nothing when the member has no shortcuts.
  */
 export function QuickAccessBar(props: QuickAccessBarProps) {
@@ -77,6 +89,7 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
     else setMenuOpen(true)
   })
   const lensIndex = dragIndex ?? activeIndex
+  const lensMoving = useIsMoving(lensIndex)
 
   return (
     <>
@@ -91,27 +104,33 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
           className={cn(
             glass,
             sheen,
-            "pointer-events-auto flex items-center justify-center overflow-hidden rounded-full p-1 motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+            "pointer-events-auto flex items-center justify-center overflow-hidden px-1.5 py-1 motion-safe:transition-[width,height,border-radius] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.2,0.8,0.2,1)]"
           )}
           style={{
-            width: `calc(${collapsed ? 2.75 : slotCount * SLOT_PITCH_REM - 0.25}rem + ${PILL_INSET})`
+            width: `calc(${collapsed ? COLLAPSED_WIDTH_REM : slotCount * SLOT_PITCH_REM - SLOT_GAP_REM}rem + ${PILL_INSET_X})`,
+            height: `calc(${collapsed ? COLLAPSED_HEIGHT_REM : SLOT_REM}rem + ${PILL_INSET_Y})`,
+            borderRadius: collapsed ? COLLAPSED_RADIUS : EXPANDED_RADIUS
           }}
         >
           <div
             {...handlers}
             inert={collapsed}
             className={cn(
-              "relative flex shrink-0 touch-none items-center gap-1 motion-safe:transition-[opacity,scale] motion-safe:duration-200",
+              "relative flex shrink-0 touch-none items-center gap-2 motion-safe:transition-[opacity,scale] motion-safe:duration-200",
               collapsed && "pointer-events-none scale-75 opacity-0"
             )}
           >
-            {/* The lens: one glass chip that rests on the current page and follows a dragging finger. */}
+            {/*
+              The lens: one horizontal glass capsule, a little wider than its slot and centred on it, that rests on the
+              current page, follows a dragging finger, and swells slightly while it is on the move.
+            */}
             <span
               aria-hidden="true"
               className={cn(
-                "pointer-events-none absolute top-0 left-0 size-11 rounded-full bg-foreground/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.4)] motion-safe:transition-[translate,scale,opacity] motion-safe:duration-200 motion-safe:ease-out dark:bg-white/15",
+                "pointer-events-none absolute top-px -left-1 h-[2.875rem] w-14 rounded-full bg-foreground/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.4)] motion-safe:transition-[translate,scale,opacity] motion-safe:duration-200 motion-safe:ease-out dark:bg-white/15",
                 lensIndex === -1 && "opacity-0",
-                dragIndex !== null && "scale-110 bg-foreground/15 dark:bg-white/25"
+                (dragIndex !== null || lensMoving) && "scale-[1.12]",
+                dragIndex !== null && "bg-foreground/15 dark:bg-white/25"
               )}
               style={{ translate: `${Math.max(lensIndex, 0) * SLOT_PITCH_REM}rem 0` }}
             />
@@ -125,7 +144,7 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
                   aria-current={index === activeIndex ? "page" : undefined}
                   className={slotClass(index === lensIndex)}
                 >
-                  <Icon className="size-5" aria-hidden="true" />
+                  <Icon className="size-6" aria-hidden="true" />
                 </Link>
               )
             })}
@@ -141,7 +160,7 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
                     className={slotClass(dragIndex === shortcuts.length)}
                   />
                 ),
-                children: <MenuIcon className="size-5" aria-hidden="true" />
+                children: <MenuIcon className="size-6" aria-hidden="true" />
               }}
             />
           </div>
@@ -151,7 +170,7 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
             inert={!collapsed}
             onClick={() => setCollapsed(false)}
             className={cn(
-              "absolute inset-0 flex items-center justify-center rounded-full text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-[opacity,scale] motion-safe:duration-200",
+              "absolute inset-0 flex items-center justify-center rounded-[inherit] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-[opacity,scale] motion-safe:duration-200",
               collapsed ? "opacity-100" : "pointer-events-none scale-50 opacity-0"
             )}
           >
@@ -165,7 +184,7 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
 
 function slotClass(highlighted: boolean) {
   return cn(
-    "relative flex size-11 items-center justify-center rounded-full text-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors",
+    "relative flex size-12 items-center justify-center rounded-full text-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors",
     highlighted && "text-foreground"
   )
 }
@@ -224,6 +243,23 @@ function useDragToSelect(slotCount: number, onSelect: (index: number) => void) {
   }
 
   return { dragIndex, handlers }
+}
+
+/** True for a moment after `index` changes from one slot to another, while the lens slides across. */
+function useIsMoving(index: number, duration = 250) {
+  const [moving, setMoving] = useState(false)
+  const previous = useRef(index)
+
+  useEffect(() => {
+    const from = previous.current
+    previous.current = index
+    if (from === index || from === -1 || index === -1) return
+    setMoving(true)
+    const timer = window.setTimeout(() => setMoving(false), duration)
+    return () => window.clearTimeout(timer)
+  }, [index, duration])
+
+  return moving
 }
 
 /** Collapsed once the page scrolls down past the top; restored on the way up, after navigating, or on request. */
