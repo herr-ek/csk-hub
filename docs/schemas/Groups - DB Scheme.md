@@ -306,7 +306,7 @@ erDiagram
 Domain facts:
 - Every choir has exactly **four sections**.
 - MK sections: T1, T2, B1, B2. DK sections: S1, S2, A1, A2. KK sections: S, A, T, B.
-- A singer has **one** voice per choir, which must be **contained in** their section's voice (in KKB: B1 or B2, or B if not yet placed; in MKB1: only B1).
+- A singer has **one** voice per choir, which must be **contained in** their section's voice (in KKB: B1 or B2; in MKB1: only B1). A singer's voice is always a division, never a family.
 - Groups are either **CSK-wide** (`choirId = null`) or **belong to a choir**. No deeper hierarchy.
 - A person can hold **several positions in the same group**; each position has **one holder** per group at a time.
 - "Position" means an organisational position only. Standing order / formation, if ever modelled, is **Placement** / **Formation**.
@@ -337,8 +337,8 @@ CREATE DOMAIN voice_division AS voice CHECK (VALUE IN ('S1','S2','A1','A2','T1',
 
 | DB type          | TS type         | Used by                                          |
 | ---------------- | --------------- | ------------------------------------------------ |
-| `voice`          | `Voice`         | `Sections.voice`, `GroupMembers.voice`           |
-| `voice_division` | `VoiceDivision` | `VoiceCapabilities.voice`                        |
+| `voice`          | `Voice`         | `Sections.voice`                                 |
+| `voice_division` | `VoiceDivision` | `GroupMembers.voice`, `VoiceCapabilities.voice`  |
 | `voice_family`   | `VoiceFamily`   | `NewsTargets.voiceFamily` (news model)           |
 
 The family of a voice is always derived (`familyOf`), never stored separately.

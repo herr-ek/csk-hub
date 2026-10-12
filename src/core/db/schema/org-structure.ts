@@ -13,7 +13,7 @@ import {
   uuid
 } from "drizzle-orm/pg-core"
 import { user } from "./auth"
-import { voice } from "./voice"
+import { voice, voiceDivision } from "./voice"
 
 // Groups, their Memberships, and the Positions held in them: the organisation's structure. Every
 // write to these tables goes through `src/features/org-structure`, which enforces the rules the
@@ -23,7 +23,8 @@ import { voice } from "./voice"
 // written by hand for these tables, each marked "Hand-written in drizzle/0011_groups.sql" here and
 // "Added by hand" there ((1), the voice domains, is described in `./voice.ts`):
 //   2. NULLS NOT DISTINCT on `group_name_choir_active_unique`
-//   3. the `group_member_voice_check` trigger and its function
+//   3. the `group_member_voice_check` trigger and its function, replaced in
+//      `drizzle/0013_member-voice-division.sql` when `group_member.voice` became a division
 // drizzle-kit neither generates nor diffs them. A regenerated migration loses them unless they are
 // copied back, and changing one later takes a hand-written migration.
 
@@ -97,11 +98,12 @@ export const groupMember = pgTable(
     startDate: date("start_date").notNull(),
     // Null while the Membership is current.
     endDate: date("end_date"),
-    // Set exactly on Section Memberships, and contained in the Section's Voice (B1, B2 or B in KKB).
+    // Set exactly on Section Memberships: a division, by the column's `voice_division` domain (see
+    // ./voice.ts), contained in the Section's Voice (B1 or B2 in KKB, which sings B).
     // Hand-written in drizzle/0011_groups.sql (3): the `group_member_voice_check` trigger checks
     // both on insert and update, raising `group_member_voice_section_check` or
     // `group_member_voice_containment_check`. Drizzle cannot express triggers.
-    voice: voice("voice")
+    voice: voiceDivision("voice")
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.groupId, table.startDate] }),

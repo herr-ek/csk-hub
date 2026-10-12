@@ -12,7 +12,8 @@ import { user } from "./auth"
 //   1. the `voice_family` and `voice_division` domains over the `voice` enum
 
 // A Voice is a family (S, A, T, B) or one of its divisions (S1 … B2). The family of a division is
-// derived, never stored.
+// derived, never stored. A Section may sing a family; a singer's Voice, in a Section Membership or
+// a capability, is always a division.
 export const voice = pgEnum("voice", ["S", "A", "T", "B", "S1", "S2", "A1", "A2", "T1", "T2", "B1", "B2"])
 
 // Hand-written in drizzle/0011_groups.sql (1): `voice_family` and `voice_division` are Postgres
@@ -20,7 +21,7 @@ export const voice = pgEnum("voice", ["S", "A", "T", "B", "S1", "S2", "A1", "A2"
 // domain for drizzle-kit; it does not create it. Postgres has no `=` for a domain over an enum, so
 // a filter on such a column casts it first: `${voiceCapability.voice}::voice = 'B1'`. Keys,
 // ORDER BY and DISTINCT need no cast.
-const voiceDivision = customType<{ data: Exclude<(typeof voice.enumValues)[number], "S" | "A" | "T" | "B"> }>({
+export const voiceDivision = customType<{ data: Exclude<(typeof voice.enumValues)[number], "S" | "A" | "T" | "B"> }>({
   dataType: () => "voice_division"
 })
 

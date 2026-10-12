@@ -165,22 +165,6 @@ describe.skipIf(!database)("groups membership", () => {
       expect(sections.map(({ name }) => name).sort()).toEqual(["KKB", "MKB1"])
     })
 
-    test("places a singer not yet in a division with the family, where a Section sings the family", async () => {
-      const userId = await t.user()
-      const { sectionId } = expectSuccess(
-        await placeSinger(t.db, { userId, choirId: await t.groupId("KK"), voice: "B", startDate: "2025-01-01" })
-      )
-      expect(sectionId).toBe(await t.groupId("KKB"))
-      expect(
-        await placeSinger(t.db, {
-          userId: await t.user(),
-          choirId: await t.groupId("MK"),
-          voice: "B",
-          startDate: "2025-01-01"
-        })
-      ).toEqual({ success: false, error: "voice-not-sung-in-choir" })
-    })
-
     test("refuses a Voice the Choir does not sing, and a group that is not a Choir", async () => {
       const userId = await t.user()
       expect(
@@ -242,23 +226,6 @@ describe.skipIf(!database)("groups membership", () => {
       ])
       const holdings = await t.db.select().from(positionHolder).where(eq(positionHolder.userId, userId))
       expect(holdings.map(({ endDate }) => endDate)).toEqual([null])
-    })
-
-    test("from the family to a division stays in the Section that sings the family", async () => {
-      const userId = await t.user()
-      const kk = await t.groupId("KK")
-      const kkb = await t.groupId("KKB")
-      expectSuccess(await placeSinger(t.db, { userId, choirId: kk, voice: "B", startDate: "2024-08-20" }))
-
-      const { sectionId } = expectSuccess(
-        await changeVoice(t.db, { userId, choirId: kk, voice: "B2", date: "2024-10-01" })
-      )
-
-      expect(sectionId).toBe(kkb)
-      expect((await historyOf(userId)).filter(({ groupId }) => groupId === kkb)).toEqual([
-        { groupId: kkb, startDate: "2024-08-20", endDate: "2024-10-01", voice: "B" },
-        { groupId: kkb, startDate: "2024-10-01", endDate: null, voice: "B2" }
-      ])
     })
 
     test("between Sections moves the singer and ends their Positions in the old Section", async () => {

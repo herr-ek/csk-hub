@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { groupType } from "@/core/db/schema/org-structure"
 import { voice } from "@/core/db/schema/voice"
+import { isVoiceDivision, type VoiceDivision } from "@/features/voice/model"
 import { NAME_MAX_LENGTH } from "./limits"
 
 /** Form field schemas shared by the admin groups Server Actions. */
@@ -9,7 +10,8 @@ export const fields = {
   userId: z.string().trim().min(1),
   name: z.string().trim().min(1).max(NAME_MAX_LENGTH),
   date: z.iso.date(),
-  voice: z.enum(voice.enumValues),
+  /** A singer's Voice, which is always a division. */
+  voice: z.enum(voice.enumValues.filter(isVoiceDivision) as [VoiceDivision, ...VoiceDivision[]]),
   groupType: z.enum(groupType.enumValues),
   /** A type a group can be created with; Choirs and Sections are created only with their Choir. */
   creatableGroupType: z.enum(groupType.enumValues).exclude(["Choir", "Section"])

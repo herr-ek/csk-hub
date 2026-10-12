@@ -20,7 +20,8 @@ A family returns `{ success: false, error: "capability-not-a-division" }`.
 
 `src/core/db/schema/voice.ts` holds the `voice` enum and `voice_capability`. The migration adds
 two Postgres domains over the enum by hand, `voice_family` and `voice_division`;
-`voice_capability.voice` is a `voice_division`, so the database refuses families on its own.
+`voice_capability.voice` and `group_member.voice` are `voice_division`s, so the database refuses
+families on its own.
 
 Postgres has no `=` for a domain over an enum, so a query filtering on `voice_capability.voice`
 casts it first (`${voiceCapability.voice}::voice = 'B1'`), or it fails with "operator does not

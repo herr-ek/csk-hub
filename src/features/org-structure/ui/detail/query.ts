@@ -12,14 +12,14 @@ import {
   positionHolder,
   section
 } from "@/core/db/schema/org-structure"
-import { divisionsOf, isVoiceDivision, type Voice } from "@/features/voice/model"
+import { divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
 import type { GroupType, IsoDate } from "../../model"
 
 const VOICE_ORDER: Voice[] = ["S", "S1", "S2", "A", "A1", "A2", "T", "T1", "T2", "B", "B1", "B2"]
 const byVoice = (a: Voice, b: Voice) => VOICE_ORDER.indexOf(a) - VOICE_ORDER.indexOf(b)
 
-/** The Voices a singer can have in a Section singing `voice`: the Voice itself and, for a family, its divisions. */
-const voicesWithin = (voice: Voice): Voice[] => (isVoiceDivision(voice) ? [voice] : [voice, ...divisionsOf(voice)])
+/** The Voices a singer can have in a Section singing `voice`: the division itself, or the family's divisions. */
+const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) ? [voice] : divisionsOf(voice))
 
 export type GroupDetail = NonNullable<Awaited<ReturnType<typeof getGroupDetail>>>
 
@@ -150,7 +150,7 @@ export async function getGroupDetail(groupId: string) {
 }
 
 /** Every Voice a singer can have in the Choir's active Sections, for changing a singer's Voice or Section. */
-async function choirVoicesOf(choirId: string): Promise<Voice[]> {
+async function choirVoicesOf(choirId: string): Promise<VoiceDivision[]> {
   const rows = await db
     .select({ voice: section.voice })
     .from(section)

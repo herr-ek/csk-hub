@@ -17,6 +17,7 @@ import { assertLocalDatabase } from "./ops/guards"
  */
 
 type Database = typeof applicationDb | Parameters<Parameters<typeof applicationDb.transaction>[0]>[0]
+type Division = NonNullable<typeof groupMember.$inferInsert.voice>
 
 const CHOIRS = ["MK", "DK", "KK"]
 
@@ -93,7 +94,7 @@ async function sectionSlots(database: Database) {
   if (sections.length === 0) throw new Error("No Sections exist; run `bun run ops reference-data` first.")
 
   return sections.flatMap(({ choirId, sectionId, voice }) =>
-    (voice.length === 1 ? ([`${voice}1`, `${voice}2`] as (typeof voice)[]) : [voice]).map((division) => ({
+    ((voice.length === 1 ? [`${voice}1`, `${voice}2`] : [voice]) as Division[]).map((division) => ({
       choirId,
       sectionId,
       voice: division

@@ -70,8 +70,9 @@ is the letter before its number (B1 → B).
 _Avoid_: Part, Section
 
 **Voice division**:
-S1, S2, A1, A2, T1, T2, B1 or B2: a Voice when its family splits, as B1 in TTBB. What a singer
-can sing is recorded in divisions only; someone who can sing B can sing B1 and B2.
+S1, S2, A1, A2, T1, T2, B1 or B2: a Voice when its family splits, as B1 in TTBB. A singer's
+Voice in a Section, and what they can sing, are recorded in divisions only; someone who can sing
+B can sing B1 and B2.
 _Avoid_: Part, sub-voice
 
 **Part**:
@@ -81,7 +82,7 @@ _Avoid_: Voice family, Section
 **Section**:
 The people in one Choir who sing a given Voice, such as MKB1 (B1) or KKB (B); every Choir has
 four non-overlapping Sections. A singer belongs to exactly one Section in each Choir they sing
-in, and their Voice must be contained by that Section's Voice.
+in, and their Voice is a Voice division contained by that Section's Voice: B1 or B2 in KKB.
 _Avoid_: Voice, part, stämma
 
 **Membership**:

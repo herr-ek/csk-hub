@@ -21,8 +21,8 @@ silently:
 - Joining a Group that belongs to a Choir starts a Choir Membership when there is none.
 - Every Choir has exactly four Sections, each singing one Voice, and no two overlap (B rules
   out B1 in the same Choir). Sections are created only with their Choir.
-- A singer is in the Choir and exactly one of its Sections, with one Voice that the
-  Section's Voice contains.
+- A singer is in the Choir and exactly one of its Sections, with one Voice division that the
+  Section's Voice contains: B1 or B2 in KKB, which sings B.
 - A Position holder is a current member, the Group's type allows the Position, and ending a
   Membership ends the holder's Positions in that Group. Leaving a Choir ends Memberships, and
   Positions, in every Group that belongs to it.
@@ -35,7 +35,8 @@ one current Membership per user and Group; one current holder per Position and G
 active Group names unique per Choir. Two things are added by hand to the migration because
 Drizzle cannot express them, and are marked in the schema file: `NULLS NOT DISTINCT` on the
 name index, and the `group_member_voice_check` trigger, which requires a Voice exactly on
-Section Memberships and checks that the Section's Voice contains it.
+Section Memberships and checks that the Section's Voice contains it. `group_member.voice` is a
+`voice_division`, so the database refuses a family on its own.
 
 ## Interface
 

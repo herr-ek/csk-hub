@@ -92,6 +92,13 @@
       "when": 1791467277942,
       "tag": "0012_events",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791799777614,
+      "tag": "0013_member-voice-division",
+      "breakpoints": true
     }
   ]
 }
