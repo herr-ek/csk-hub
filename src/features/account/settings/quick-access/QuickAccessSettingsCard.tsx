@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, SmartphoneIcon } from "lucide-react"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTE_ICONS } from "@/core/navigation/route-icons"
 import { type MenuRouteId, routeTrail } from "@/core/navigation/site"
@@ -32,6 +32,10 @@ export function QuickAccessSettingsCard({ saved, eligible }: QuickAccessSettings
         <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
+        <Alert role="note">
+          <SmartphoneIcon />
+          <AlertDescription>{t("pwaNotice")}</AlertDescription>
+        </Alert>
         <section aria-labelledby="quick-access-in-bar" className="flex flex-col gap-2">
           <h3 id="quick-access-in-bar" className="text-sm font-medium">
             {t("inBar")}
