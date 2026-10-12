@@ -88,6 +88,7 @@ describe("user preferences validation", () => {
 
   test("rejects shortcut updates that are unknown, repeated or too many", () => {
     expect(userPreferencesUpdateSchema.safeParse({ quickAccess: ["news", "adminUsers"] }).success).toBe(true)
+    expect(userPreferencesUpdateSchema.safeParse({ quickAccess: ["home", "messages"] }).success).toBe(true)
     expect(userPreferencesUpdateSchema.safeParse({ quickAccess: [] }).success).toBe(true)
     expect(userPreferencesUpdateSchema.safeParse({ quickAccess: ["login"] }).success).toBe(false)
     expect(userPreferencesUpdateSchema.safeParse({ quickAccess: ["news", "news"] }).success).toBe(false)
