@@ -1,5 +1,5 @@
 {
-  "id": "fa0199c6-220f-4979-af9e-644a66771d50",
+  "id": "90283ede-73a8-4123-a74e-063f96a042b5",
   "prevId": "3bc92383-3eb0-4dfa-83d4-36eee63c5465",
   "version": "7",
   "dialect": "postgresql",
@@ -3685,7 +3685,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "post_read_post_id_idx": {
+          "name": "post_read_post_id_idx",
+          "columns": [
+            {
+              "expression": "post_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "post_read_user_id_user_id_fk": {
           "name": "post_read_user_id_user_id_fk",

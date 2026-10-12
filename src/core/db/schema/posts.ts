@@ -69,5 +69,9 @@ export const postRead = pgTable(
       .references(() => post.id, { onDelete: "cascade" }),
     readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull()
   },
-  (table) => [primaryKey({ columns: [table.userId, table.postId] })]
+  (table) => [
+    primaryKey({ columns: [table.userId, table.postId] }),
+    // The key leads with the User; deleting a Post looks its reads up by Post.
+    index("post_read_post_id_idx").on(table.postId)
+  ]
 )

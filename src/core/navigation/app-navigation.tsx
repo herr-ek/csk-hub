@@ -57,7 +57,7 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
     id: item.id,
     href: ROUTES[item.id],
     label: item.label,
-    badge: config ? badges?.[item.id] : null
+    badge: badges?.[item.id]
   }))
   const isImpersonating = Boolean(config?.impersonatingUserName)
 

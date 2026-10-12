@@ -3,11 +3,19 @@ import { createTestDatabase } from "@test/database"
 import { user } from "@/core/db/schema/auth"
 import { post } from "@/core/db/schema/posts"
 
+type TestSession = { user: { id: string }; session: { impersonatedBy: string | null } }
+
 const database = await createTestDatabase()
+let currentSession: TestSession | null = null
+const refresh = mock(() => undefined)
+const revalidatePath = mock(() => undefined)
 
 mock.module("@/core/db", () => ({ db: database?.db }))
+mock.module("@/core/auth/session.server", () => ({ getRequestSession: async () => currentSession }))
+mock.module("next/cache", () => ({ refresh, revalidatePath }))
 
 const { countUnreadPosts, listUnreadPostIds, markPostRead } = await import("./service")
+const { markPostReadAction } = await import("./actions")
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -21,6 +29,9 @@ describe.skipIf(!database)("unread Posts", () => {
 
   beforeEach(async () => {
     await db.delete(post)
+    currentSession = null
+    refresh.mockClear()
+    revalidatePath.mockClear()
   })
 
   async function createUser() {
@@ -89,5 +100,38 @@ describe.skipIf(!database)("unread Posts", () => {
 
     expect(await countUnreadPosts(reader)).toBe(0)
     expect(await countUnreadPosts(other)).toBe(1)
+  })
+
+  test("a Post published in the future is not unread yet", async () => {
+    const userId = await createUser()
+    await publish(daysAgo(-1))
+
+    expect(await countUnreadPosts(userId)).toBe(0)
+  })
+
+  test("opening a Post refreshes the badges and the feed the User came from", async () => {
+    const userId = await createUser()
+    const postId = await publish(daysAgo(1))
+    currentSession = { user: { id: userId }, session: { impersonatedBy: null } }
+
+    await markPostReadAction(postId)
+
+    expect(await countUnreadPosts(userId)).toBe(0)
+    expect(revalidatePath).toHaveBeenCalledWith("/news")
+    expect(refresh).toHaveBeenCalledTimes(1)
+
+    await markPostReadAction(postId)
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  test("an Admin impersonating a User does not mark Posts read for them", async () => {
+    const userId = await createUser()
+    const postId = await publish(daysAgo(1))
+    currentSession = { user: { id: userId }, session: { impersonatedBy: "admin" } }
+
+    await markPostReadAction(postId)
+
+    expect(await countUnreadPosts(userId)).toBe(1)
+    expect(refresh).not.toHaveBeenCalled()
   })
 })
