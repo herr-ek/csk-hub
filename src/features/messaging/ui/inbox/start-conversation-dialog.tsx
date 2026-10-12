@@ -2,7 +2,7 @@
 
 import { PlusIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useState } from "react"
+import { useActionState, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import {
@@ -27,8 +27,9 @@ const initialState: MessageCommandState = { status: "idle" }
 export function StartConversationDialog() {
   const t = useTranslations("Messages")
   const common = useTranslations("Common")
+  const [open, setOpen] = useState(false)
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
           <Button type="button" variant="outline" size="icon" aria-label={t("startTitle")} title={t("startTitle")} />
@@ -54,24 +55,29 @@ export function StartConversationDialog() {
         >
           <XIcon aria-hidden="true" />
         </DialogClose>
-        <StartConversationForm />
+        <StartConversationForm onStarted={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   )
 }
 
-function StartConversationForm() {
+function StartConversationForm({ onStarted }: { onStarted: () => void }) {
   const t = useTranslations("Messages")
   const router = useRouter()
   const [selected, setSelected] = useState<SelectedMember[]>([])
   const [idempotencyKey, setIdempotencyKey] = useState(createMessageIdempotencyKey)
   const [name, setName] = useState("")
   const [text, setText] = useState("")
-  const [state, action, pending] = useActionState(startConversationAction, initialState)
+  const [state, action, pending] = useActionState(async (previous: MessageCommandState, formData: FormData) => {
+    const result = await startConversationAction(previous, formData)
+    if (result.status === "success") {
+      // Activity restores effects on browser Back; navigate only when this submission completes.
+      onStarted()
+      router.push(`/messages/${result.conversationId}`)
+    }
+    return result
+  }, initialState)
   const isGroup = selected.length > 1
-  useEffect(() => {
-    if (state.status === "success") router.push(`/messages/${state.conversationId}`)
-  }, [state, router])
   return (
     <form action={action} className="grid gap-3">
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
