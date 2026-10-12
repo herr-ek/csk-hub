@@ -155,8 +155,10 @@
     "membersDescription": "View and manage Hub members.",
     "notifications": "Notifications",
     "notificationsDescription": "Send push notifications to members.",
-    "groups": "Groups",
-    "groupsDescription": "Choirs, Sections, groups, members and Positions."
+    "choirs": "Choirs and voices",
+    "choirsDescription": "Place singers in Choirs and Sections, and change their Voice.",
+    "groups": "Groups and positions",
+    "groupsDescription": "The Board, committees and other groups, with their members and Positions."
   },
   "Members": {
     "title": "Members",
@@ -464,11 +466,19 @@
     }
   },
   "Groups": {
-    "title": "Groups",
-    "description": "The CSK structure: Choirs and their Sections, and every other group.",
+    "choirsPage": {
+      "title": "Choirs and voices",
+      "description": "Each Choir and its Sections. Open a Section to place singers or change their Voice.",
+      "groupsLink": "Groups and positions",
+      "noChoirs": "No Choirs yet."
+    },
+    "groupsPage": {
+      "title": "Groups and positions",
+      "description": "The Board, committees and every other group, and the Positions they can have.",
+      "choirsLink": "Choirs and voices"
+    },
     "saved": "Saved",
     "saving": "Saving…",
-    "structure": "Structure",
     "showArchived": "Show archived groups",
     "sections": "Sections",
     "choirGroups": "Other groups",
@@ -500,7 +510,8 @@
       "save": "Save"
     },
     "detail": {
-      "back": "All groups",
+      "backToChoirs": "All choirs",
+      "backToGroups": "All groups",
       "typeInChoir": "{type} in {choir}",
       "typeCskWide": "{type}, CSK-wide",
       "archivedNotice": "This group is archived. Its history is kept, but it can no longer be changed.",

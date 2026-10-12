@@ -155,8 +155,10 @@
     "membersDescription": "Hub-Mitglieder ansehen und verwalten.",
     "notifications": "Benachrichtigungen",
     "notificationsDescription": "Push-Benachrichtigungen an Mitglieder senden.",
-    "groups": "Gruppen",
-    "groupsDescription": "Chöre, Stimmgruppen, Gruppen, Mitglieder und Ämter."
+    "choirs": "Chöre und Stimmen",
+    "choirsDescription": "Sänger in Chöre und Stimmgruppen einteilen und ihre Stimme ändern.",
+    "groups": "Gruppen und Ämter",
+    "groupsDescription": "Vorstand, Ausschüsse und andere Gruppen mit ihren Mitgliedern und Ämtern."
   },
   "Members": {
     "title": "Mitglieder",
@@ -464,11 +466,19 @@
     }
   },
   "Groups": {
-    "title": "Gruppen",
-    "description": "Die Struktur von CSK: die Chöre mit ihren Stimmgruppen und alle anderen Gruppen.",
+    "choirsPage": {
+      "title": "Chöre und Stimmen",
+      "description": "Jeder Chor mit seinen Stimmgruppen. Öffne eine Stimmgruppe, um Sänger einzuteilen oder ihre Stimme zu ändern.",
+      "groupsLink": "Gruppen und Ämter",
+      "noChoirs": "Noch keine Chöre."
+    },
+    "groupsPage": {
+      "title": "Gruppen und Ämter",
+      "description": "Vorstand, Ausschüsse und alle anderen Gruppen sowie die Ämter, die sie haben können.",
+      "choirsLink": "Chöre und Stimmen"
+    },
     "saved": "Gespeichert",
     "saving": "Speichern…",
-    "structure": "Struktur",
     "showArchived": "Archivierte Gruppen anzeigen",
     "sections": "Stimmgruppen",
     "choirGroups": "Weitere Gruppen",
@@ -500,7 +510,8 @@
       "save": "Speichern"
     },
     "detail": {
-      "back": "Alle Gruppen",
+      "backToChoirs": "Alle Chöre",
+      "backToGroups": "Alle Gruppen",
       "typeInChoir": "{type} in {choir}",
       "typeCskWide": "{type}, ganz CSK",
       "archivedNotice": "Diese Gruppe ist archiviert. Ihr Verlauf bleibt erhalten, aber sie kann nicht mehr geändert werden.",

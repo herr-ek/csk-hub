@@ -4,8 +4,8 @@ import { useTranslations } from "@/core/i18n/translations"
 import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { CommandDialog } from "../command-dialog"
+import { archiveGroupAction, renameGroupAction } from "../groups/actions"
 import { NAME_MAX_LENGTH } from "../limits"
-import { archiveGroupAction, renameGroupAction } from "../structure/actions"
 import type { GroupDetail } from "./query"
 
 export function GroupHeaderActions({ group }: { group: GroupDetail["group"] }) {

@@ -1,17 +1,17 @@
 import { Suspense } from "react"
 import { requireAdmin } from "@/core/auth/permissions.server"
-import { GroupsScreen, GroupsScreenSkeleton } from "@/features/org-structure"
+import { ChoirsScreen, ChoirsScreenSkeleton } from "@/features/org-structure"
 
-async function AdminGroups() {
+async function AdminChoirs() {
   await requireAdmin()
 
-  return <GroupsScreen />
+  return <ChoirsScreen />
 }
 
-export default function AdminGroupsPage() {
+export default function AdminChoirsPage() {
   return (
-    <Suspense fallback={<GroupsScreenSkeleton />}>
-      <AdminGroups />
+    <Suspense fallback={<ChoirsScreenSkeleton />}>
+      <AdminChoirs />
     </Suspense>
   )
 }

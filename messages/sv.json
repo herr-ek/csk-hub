@@ -155,8 +155,10 @@
     "membersDescription": "Visa och hantera Hub-medlemmar.",
     "notifications": "Notiser",
     "notificationsDescription": "Skicka pushnotiser till medlemmar.",
-    "groups": "Grupper",
-    "groupsDescription": "Körer, stämgrupper, grupper, medlemmar och poster."
+    "choirs": "Körer och stämmor",
+    "choirsDescription": "Placera sångare i körer och stämgrupper, och byt stämma.",
+    "groups": "Grupper och poster",
+    "groupsDescription": "Styrelsen, kommittéer och andra grupper, med medlemmar och poster."
   },
   "Members": {
     "title": "Medlemmar",
@@ -464,11 +466,19 @@
     }
   },
   "Groups": {
-    "title": "Grupper",
-    "description": "CSK:s struktur: körerna och deras stämgrupper, och alla andra grupper.",
+    "choirsPage": {
+      "title": "Körer och stämmor",
+      "description": "Varje kör och dess stämgrupper. Öppna en stämgrupp för att placera sångare eller byta stämma.",
+      "groupsLink": "Grupper och poster",
+      "noChoirs": "Inga körer än."
+    },
+    "groupsPage": {
+      "title": "Grupper och poster",
+      "description": "Styrelsen, kommittéer och alla andra grupper, och posterna de kan ha.",
+      "choirsLink": "Körer och stämmor"
+    },
     "saved": "Sparat",
     "saving": "Sparar…",
-    "structure": "Struktur",
     "showArchived": "Visa arkiverade grupper",
     "sections": "Stämgrupper",
     "choirGroups": "Övriga grupper",
@@ -500,7 +510,8 @@
       "save": "Spara"
     },
     "detail": {
-      "back": "Alla grupper",
+      "backToChoirs": "Alla körer",
+      "backToGroups": "Alla grupper",
       "typeInChoir": "{type} i {choir}",
       "typeCskWide": "{type}, hela CSK",
       "archivedNotice": "Gruppen är arkiverad. Historiken finns kvar, men gruppen kan inte längre ändras.",

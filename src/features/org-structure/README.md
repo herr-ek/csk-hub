@@ -72,14 +72,19 @@ day the next one starts.
 
 ## Admin pages
 
-`/admin/org-structure` and `/admin/org-structure/[groupId]` are the Admin surface over this module. The
-feature entrypoint exports their screens; everything else lives in `ui/`:
+The Admin surface over this module is split by task. `/admin/org-structure` lists the Choirs and
+their Sections, where singers are placed and change Voice; `/admin/org-structure/groups` lists every
+other group and the Position catalogue. Both link to `/admin/org-structure/[groupId]`, whose back
+link returns to the page that lists the group. The feature entrypoint exports their screens;
+everything else lives in `ui/`:
 
 ```text
 ui/
-  structure/   the overview, and creating, renaming and archiving groups
+  choirs/      the Choirs and their Sections, for placing singers
+  groups/      every other group, and creating, renaming and archiving groups
   detail/      one group's Members and Position holders, with their history
   catalogue/   the Positions and the group types each is allowed in
+  group-summaries.ts, group-list.tsx   what both overviews show of a group
   command-dialog.tsx, run-command.ts   the shared shape of every admin command
 ```
 

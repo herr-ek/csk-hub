@@ -1,4 +1,4 @@
-import { Bell, User, Users } from "lucide-react"
+import { Bell, Music, User, Users } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { requireAdmin } from "@/core/auth/permissions.server"
@@ -60,7 +60,8 @@ export default async function AdminRoot() {
   const t = await getTranslations("Admin")
   const resources = [
     { href: ROUTES.adminUsers, title: t("members"), description: t("membersDescription"), icon: User },
-    { href: ROUTES.adminOrgStructure, title: t("groups"), description: t("groupsDescription"), icon: Users },
+    { href: ROUTES.adminOrgStructure, title: t("choirs"), description: t("choirsDescription"), icon: Music },
+    { href: ROUTES.adminOrgStructureGroups, title: t("groups"), description: t("groupsDescription"), icon: Users },
     {
       href: ROUTES.adminNotifications,
       title: t("notifications"),

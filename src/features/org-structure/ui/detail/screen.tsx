@@ -23,17 +23,28 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
   ])
   if (!detail) notFound()
   const { group } = detail
+  const isChoirOrSection = group.type === "Choir" || group.type === "Section"
   const date = today()
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-2">
-        <Link
-          href={ROUTES.adminOrgStructure}
-          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-        >
-          {t("detail.back")}
-        </Link>
+        {/* Choirs and Sections are listed on the Choirs page, every other group on the groups page. */}
+        {isChoirOrSection ? (
+          <Link
+            href={ROUTES.adminOrgStructure}
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            {t("detail.backToChoirs")}
+          </Link>
+        ) : (
+          <Link
+            href={ROUTES.adminOrgStructureGroups}
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            {t("detail.backToGroups")}
+          </Link>
+        )}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="flex flex-wrap items-center gap-2 font-heading text-2xl font-semibold">
