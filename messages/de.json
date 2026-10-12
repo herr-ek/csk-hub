@@ -469,6 +469,8 @@
       "group-members-too-many": "Wähle höchstens 100 Mitglieder auf einmal."
     },
     "conversations": "Unterhaltungen",
+    "directConversation": "Direkte Unterhaltung",
+    "groupConversation": "Gruppenunterhaltung",
     "groupName": "Gruppenname",
     "createGroup": "Gruppenunterhaltung erstellen",
     "selectedMembers": "Ausgewählte Mitglieder",

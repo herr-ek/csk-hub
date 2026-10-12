@@ -1,3 +1,4 @@
+import { UserRoundIcon, UsersRoundIcon } from "lucide-react"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
 import { Card, CardContent } from "@/shared/ui/base/card"
@@ -31,7 +32,7 @@ export async function MessagesScreen() {
                 className="block rounded-xl border bg-card p-4 transition-colors hover:bg-accent"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="wrap-break-word font-medium">{conversation.otherMemberName ?? t("formerMember")}</p>
                     <p className="mt-1 truncate text-sm text-muted-foreground">
                       {conversation.preview ?? t("noMessages")}
@@ -40,8 +41,19 @@ export async function MessagesScreen() {
                       <p className="mt-1 text-sm text-muted-foreground">{t("readOnly")}</p>
                     ) : null}
                   </div>
-                  <div className="shrink-0 text-right text-sm text-muted-foreground">
-                    <time dateTime={conversation.sentAt.toISOString()}>
+                  <div className="flex shrink-0 flex-col items-end text-right text-sm text-muted-foreground">
+                    <span
+                      role="img"
+                      aria-label={t(conversation.kind === "group" ? "groupConversation" : "directConversation")}
+                      title={t(conversation.kind === "group" ? "groupConversation" : "directConversation")}
+                    >
+                      {conversation.kind === "group" ? (
+                        <UsersRoundIcon className="size-4" aria-hidden="true" />
+                      ) : (
+                        <UserRoundIcon className="size-4" aria-hidden="true" />
+                      )}
+                    </span>
+                    <time className="mt-1" dateTime={conversation.sentAt.toISOString()}>
                       {formatMessageSentAt(format, conversation.sentAt)}
                     </time>
                     {conversation.unreadCount ? (

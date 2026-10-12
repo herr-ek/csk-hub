@@ -469,6 +469,8 @@
       "group-members-too-many": "Choose at most 100 members at a time."
     },
     "conversations": "Conversations",
+    "directConversation": "Direct conversation",
+    "groupConversation": "Group conversation",
     "groupName": "Group name",
     "createGroup": "Create group conversation",
     "selectedMembers": "Selected members",

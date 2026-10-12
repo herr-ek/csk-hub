@@ -469,6 +469,8 @@
       "group-members-too-many": "Välj högst 100 medlemmar åt gången."
     },
     "conversations": "Konversationer",
+    "directConversation": "Direktkonversation",
+    "groupConversation": "Gruppkonversation",
     "groupName": "Gruppnamn",
     "createGroup": "Skapa gruppkonversation",
     "selectedMembers": "Valda medlemmar",

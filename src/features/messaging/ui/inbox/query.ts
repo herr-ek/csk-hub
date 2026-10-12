@@ -111,6 +111,7 @@ async function listGroupConversations() {
     .where(eq(groupMembership.userId, userId))
   return rows.map((row) => ({
     ...row,
+    kind: "group" as const,
     sentAt: new Date(row.sentAt),
     unreadCount: Number(row.unreadCount),
     canSend: row.leftAt === null
