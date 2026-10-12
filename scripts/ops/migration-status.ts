@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { Client } from "pg"
 import { secureConnection } from "@/core/db/tls"
-import { databaseFor, type Target } from "./target"
+import { type Database, databaseFor, type Target } from "./target"
 
 /**
  * Compares the migration files on disk against the ledger a database has actually
@@ -33,9 +33,15 @@ export async function statusFor(target: Target): Promise<TargetStatus> {
   const database = databaseFor(target)
   if (!database) return { kind: "not-configured" }
 
+  return statusOf(database)
+}
+
+/** The ledger status of an already-resolved database; never `not-configured`. */
+export async function statusOf(database: Database): Promise<Exclude<TargetStatus, { kind: "not-configured" }>> {
   const { host } = database
   const entries = readJournal()
-  const client = new Client(secureConnection(database.url))
+  // Bounded so a database that never answers fails the check instead of hanging it.
+  const client = new Client({ ...secureConnection(database.url), connectionTimeoutMillis: 10_000 })
 
   try {
     await client.connect()
