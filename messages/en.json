@@ -175,7 +175,10 @@
       "adminEventsNew": "New Event",
       "adminEventLocations": "Locations"
     },
-    "members": "Members"
+    "members": "Members",
+    "menu": "Menu",
+    "quickAccess": "Quick access",
+    "customizeQuickAccess": "Customize quick access"
   },
   "Posts": {
     "title": "News",
@@ -457,6 +460,20 @@
       "renameFailed": "Unable to rename the passkey right now. Please try again.",
       "deleteFailed": "Unable to delete the passkey right now. Please try again."
     }
+  },
+  "QuickAccess": {
+    "title": "Quick access",
+    "description": "Pin up to four pages to the bar at the bottom of the screen on your phone.",
+    "inBar": "In your bar",
+    "available": "Pages",
+    "limit": "Choose up to {count} shortcuts.",
+    "moveUp": "Move {name} up",
+    "moveDown": "Move {name} down",
+    "empty": "No shortcuts pinned, so the bar is hidden.",
+    "updateFailed": "Unable to save your shortcuts right now. Please try again.",
+    "added": "{name} added to the bar.",
+    "removed": "{name} removed from the bar.",
+    "moved": "{name} moved to position {position} of {count}."
   },
   "PushNotifications": {
     "settingsTitle": "Push notifications",

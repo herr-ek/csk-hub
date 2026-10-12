@@ -1,4 +1,4 @@
-import { AppNavigation } from "@/core/navigation/app-navigation"
+import { AppNavigation, AppQuickAccessBar } from "@/core/navigation/app-navigation"
 import type { UnreadSources } from "@/core/navigation/unread-sources"
 import { countUnreadConversations } from "@/features/messaging/unread"
 import { countUnreadPosts } from "@/features/posts/unread"
@@ -15,6 +15,7 @@ export default function AuthenticatedAppLayout({
     <>
       <AppNavigation unreadSources={unreadSources} />
       {children}
+      <AppQuickAccessBar />
     </>
   )
 }
