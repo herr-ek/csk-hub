@@ -1,6 +1,6 @@
 import type { JSONContent } from "@tiptap/core"
 import { sql } from "drizzle-orm"
-import { check, customType, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { check, customType, index, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
 /** Postgres's full-text type; Drizzle has no built-in for it. Read only, never written by the app. */
@@ -56,13 +56,18 @@ export const post = pgTable(
   ]
 )
 
-// How far into the News feed a User has seen, which is all the unread badge needs: the
-// feed is identical for everyone, so one instant per User says what is new to them. No
-// row means the User has never opened the feed. Owned by the posts feature, not a column
-// on `user`, which is the credentials record behind a User.
-export const newsFeedReadState = pgTable("news_feed_read_state", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => user.id, { onDelete: "cascade" }),
-  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull()
-})
+// That a User has opened a Post, which is what takes it off their unread badge. Private to
+// that User: it answers "what is new to me", never "who has read this".
+export const postRead = pgTable(
+  "post_read",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => post.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.postId] })]
+)

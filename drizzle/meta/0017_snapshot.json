@@ -1,5 +1,5 @@
 {
-  "id": "13881da2-942f-4e7f-9c47-2dbad8dd815b",
+  "id": "fa0199c6-220f-4979-af9e-644a66771d50",
   "prevId": "3bc92383-3eb0-4dfa-83d4-36eee63c5465",
   "version": "7",
   "dialect": "postgresql",
@@ -3531,45 +3531,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.news_feed_read_state": {
-      "name": "news_feed_read_state",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "last_seen_at": {
-          "name": "last_seen_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "news_feed_read_state_user_id_user_id_fk": {
-          "name": "news_feed_read_state_user_id_user_id_fk",
-          "tableFrom": "news_feed_read_state",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.post": {
       "name": "post",
       "schema": "",
@@ -3698,6 +3659,73 @@
           "value": "\"post\".\"discarded_at\" is null or \"post\".\"published_at\" is null"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.post_read": {
+      "name": "post_read",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "post_id": {
+          "name": "post_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "read_at": {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "post_read_user_id_user_id_fk": {
+          "name": "post_read_user_id_user_id_fk",
+          "tableFrom": "post_read",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "post_read_post_id_post_id_fk": {
+          "name": "post_read_post_id_post_id_fk",
+          "tableFrom": "post_read",
+          "tableTo": "post",
+          "columnsFrom": [
+            "post_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "post_read_user_id_post_id_pk": {
+          "name": "post_read_user_id_post_id_pk",
+          "columns": [
+            "user_id",
+            "post_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.user_preferences": {

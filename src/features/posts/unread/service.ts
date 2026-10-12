@@ -1,72 +1,68 @@
 import "server-only"
 
-import { and, count, eq, gt, isNotNull, lt, sql } from "drizzle-orm"
+import { and, count, eq, gt, isNotNull, notExists, sql } from "drizzle-orm"
 import { z } from "zod"
 import { db } from "@/core/db"
-import { newsFeedReadState, post } from "@/core/db/schema/posts"
+import { post, postRead } from "@/core/db/schema/posts"
 
 /**
- * How far back the badge reaches for a User who has never opened the News feed. Counting
- * every Post ever published would greet a newly invited User with a number that means
- * nothing, and zero would hide the announcements they most need; the last month is what
- * is still worth reading.
+ * How long a Post stays unread for a User who has not opened it. Without a horizon every
+ * Post ever published would greet a newly invited User as unread; an announcement older
+ * than a month is no longer news.
  */
-const UNVISITED_LOOKBACK_DAYS = 30
+const UNREAD_HORIZON_DAYS = 30
 
 const postIdSchema = z.uuid()
 
-/**
- * The number of published Posts the User has not seen in the News feed: those published
- * after the newest Post the feed last showed them or, if they have never opened it, within
- * the last {@link UNVISITED_LOOKBACK_DAYS} days. Posts without a publication instant never
- * count.
- */
-export async function countUnreadPosts(userId: string): Promise<number> {
-  const lastSeenAt = db
-    .select({ lastSeenAt: newsFeedReadState.lastSeenAt })
-    .from(newsFeedReadState)
-    .where(eq(newsFeedReadState.userId, userId))
-
-  const [row] = await db
-    .select({ unread: count() })
-    .from(post)
-    .where(
-      and(
-        isNotNull(post.publishedAt),
-        gt(post.publishedAt, sql`coalesce((${lastSeenAt}), now() - make_interval(days => ${UNVISITED_LOOKBACK_DAYS}))`)
-      )
+/** A Post is unread when it was published within the horizon and the User has not opened it. */
+function unreadBy(userId: string) {
+  return and(
+    isNotNull(post.publishedAt),
+    gt(post.publishedAt, sql`now() - make_interval(days => ${UNREAD_HORIZON_DAYS})`),
+    notExists(
+      db
+        .select({ postId: postRead.postId })
+        .from(postRead)
+        .where(and(eq(postRead.userId, userId), eq(postRead.postId, post.id)))
     )
-
-  return row?.unread ?? 0
+  )
 }
 
 /**
- * Records that the News feed has shown the User every Post up to and including `postId`,
- * the newest one it rendered. The stamp is that Post's publication instant rather than the
- * time of the call, so a Post published while the feed was loading still counts as unread.
- *
- * Only moves forward, and ignores ids that are not published Posts. Returns whether the
- * stamp changed, so a caller can skip refreshing a badge that already reads zero.
+ * The number of published Posts from the last {@link UNREAD_HORIZON_DAYS} days that the User
+ * has not opened. Posts without a publication instant never count.
  */
-export async function markNewsFeedSeen(userId: string, postId: string): Promise<boolean> {
+export async function countUnreadPosts(userId: string): Promise<number> {
+  const [row] = await db.select({ unread: count() }).from(post).where(unreadBy(userId))
+  return row?.unread ?? 0
+}
+
+/** The ids of the Posts {@link countUnreadPosts} counts, for marking them in the feed. */
+export async function listUnreadPostIds(userId: string): Promise<Set<string>> {
+  const rows = await db.select({ id: post.id }).from(post).where(unreadBy(userId))
+  return new Set(rows.map((row) => row.id))
+}
+
+/**
+ * Records that the User has opened the Post. Ignores ids that are not published Posts.
+ * Returns whether this was the first time, so a caller can skip refreshing a badge that
+ * has not changed.
+ */
+export async function markPostRead(userId: string, postId: string): Promise<boolean> {
   if (!postIdSchema.safeParse(postId).success) return false
 
-  const [seen] = await db
-    .select({ publishedAt: post.publishedAt })
+  const [published] = await db
+    .select({ id: post.id })
     .from(post)
     .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
     .limit(1)
-  if (!seen?.publishedAt) return false
+  if (!published) return false
 
-  const stamped = await db
-    .insert(newsFeedReadState)
-    .values({ userId, lastSeenAt: seen.publishedAt })
-    .onConflictDoUpdate({
-      target: newsFeedReadState.userId,
-      set: { lastSeenAt: seen.publishedAt },
-      setWhere: lt(newsFeedReadState.lastSeenAt, seen.publishedAt)
-    })
-    .returning({ userId: newsFeedReadState.userId })
+  const inserted = await db
+    .insert(postRead)
+    .values({ userId, postId })
+    .onConflictDoNothing()
+    .returning({ postId: postRead.postId })
 
-  return stamped.length > 0
+  return inserted.length > 0
 }

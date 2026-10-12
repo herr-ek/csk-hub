@@ -1,20 +1,22 @@
 import Link from "next/link"
 import { canCurrentUser } from "@/core/auth/permissions.server"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
+import { getRequestSession, requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
+import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { cn } from "@/shared/utils"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
 import { listDraftsByAuthor, listNewsFeed } from "./service"
-import { NewsFeedSeenMarker } from "./unread"
+import { listUnreadPostIds } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
   const t = useTranslations("Posts")
@@ -61,9 +63,15 @@ async function OwnDrafts() {
   )
 }
 
+async function listUnreadForCurrentUser() {
+  const session = await getRequestSession()
+  return session ? listUnreadPostIds(session.user.id) : new Set<string>()
+}
+
 export async function NewsScreen() {
-  const [entries, canPublish, t] = await Promise.all([
+  const [entries, unread, canPublish, t] = await Promise.all([
     listNewsFeed(),
+    listUnreadForCurrentUser(),
     canCurrentUser({ resource: "post", action: "create" }),
     getTranslations("Posts")
   ])
@@ -79,7 +87,6 @@ export async function NewsScreen() {
       </NewsHeader>
 
       {canPublish ? <OwnDrafts /> : null}
-      {entries[0] ? <NewsFeedSeenMarker latestPostId={entries[0].id} /> : null}
 
       {entries.length === 0 ? (
         <Empty>
@@ -95,7 +102,14 @@ export async function NewsScreen() {
               <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
                 <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
                   <CardHeader>
-                    <CardTitle className="text-lg break-words">{entry.title}</CardTitle>
+                    <CardTitle className={cn("text-lg break-words", unread.has(entry.id) && "font-semibold")}>
+                      {entry.title}
+                    </CardTitle>
+                    {unread.has(entry.id) ? (
+                      <CardAction>
+                        <Badge>{t("unread")}</Badge>
+                      </CardAction>
+                    ) : null}
                     <CardDescription>
                       <PostByline
                         authorName={entry.authorName}
