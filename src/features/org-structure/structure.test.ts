@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
-import { choir, group, groupTypePosition, position, section } from "@/core/db/schema/org-structure"
+import { choir, group, groupTypePosition, position, positionGroup, section } from "@/core/db/schema/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
@@ -248,6 +248,47 @@ describe.skipIf(!database)("groups structure", () => {
       })
       const [row] = await t.db.select({ name: position.name }).from(position).where(eq(position.id, id))
       expect(row?.name).toBe(name)
+    })
+
+    test("limits a Position to some groups of its types, and keeps a group someone holds it in", async () => {
+      const [kk, mk] = [await t.groupId("KK"), await t.groupId("MK")]
+      const { id: gigmasteri } = expectSuccess(
+        await createGroup(t.db, { name: uniqueName("Gigmästeri"), type: "Gigmästeri" })
+      )
+      const name = uniqueName("Gigmästare KK")
+      const groupTypes: ("Choir" | "Gigmästeri")[] = ["Choir", "Gigmästeri"]
+      const { id } = expectSuccess(await createPosition(t.db, { name, groupTypes, groupIds: [kk, gigmasteri] }))
+      const limit = async () =>
+        (await t.db.select().from(positionGroup).where(eq(positionGroup.positionId, id))).map(({ groupId }) => groupId)
+      expect((await limit()).sort()).toEqual([kk, gigmasteri].sort())
+
+      expect(
+        await createPosition(t.db, {
+          name: uniqueName("Gigmästare"),
+          groupTypes,
+          groupIds: [await t.groupId("Styret")]
+        })
+      ).toEqual({ success: false, error: "position-limit-type-not-allowed" })
+
+      const [inKk, inMk] = [await t.user(), await t.user()]
+      expectSuccess(await startMembership(t.db, { userId: inKk, groupId: kk, startDate: "2025-01-01" }))
+      expectSuccess(await startMembership(t.db, { userId: inMk, groupId: mk, startDate: "2025-01-01" }))
+      expectSuccess(
+        await startPositionHolding(t.db, { userId: inKk, groupId: kk, positionId: id, startDate: "2025-02-01" })
+      )
+      expect(
+        await startPositionHolding(t.db, { userId: inMk, groupId: mk, positionId: id, startDate: "2025-02-01" })
+      ).toEqual({ success: false, error: "position-limited-to-other-groups" })
+
+      expect(await updatePosition(t.db, { positionId: id, name, groupTypes, groupIds: [gigmasteri] })).toEqual({
+        success: false,
+        error: "position-held-outside-limit"
+      })
+      expectSuccess(await updatePosition(t.db, { positionId: id, name, groupTypes, groupIds: [] }))
+      expect(await limit()).toEqual([])
+      expectSuccess(
+        await startPositionHolding(t.db, { userId: inMk, groupId: mk, positionId: id, startDate: "2025-02-01" })
+      )
     })
   })
 })

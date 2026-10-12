@@ -8,21 +8,22 @@ import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"
 
 const groupTypes = z.array(fields.groupType)
+const groupIds = z.array(fields.id)
 
-const createPositionSchema = z.object({ name: fields.name, groupTypes })
+const createPositionSchema = z.object({ name: fields.name, groupTypes, groupIds })
 
 export async function createPositionAction(_state: GroupCommandState, formData: FormData) {
   return runGroupCommand(
     "create-position",
     createPositionSchema,
-    { name: value(formData, "name"), groupTypes: formData.getAll("groupTypes") },
+    { name: value(formData, "name"), groupTypes: formData.getAll("groupTypes"), groupIds: formData.getAll("groupIds") },
     (input) => createPosition(db, input)
   )
 }
 
-const updatePositionSchema = z.object({ positionId: fields.id, name: fields.name, groupTypes })
+const updatePositionSchema = z.object({ positionId: fields.id, name: fields.name, groupTypes, groupIds })
 
-/** Renames a Position and replaces the GroupTypes it may be held in, as one edit. */
+/** Renames a Position and replaces the GroupTypes it may be held in and its limit to groups, as one edit. */
 export async function updatePositionAction(_state: GroupCommandState, formData: FormData) {
   return runGroupCommand(
     "update-position",
@@ -30,7 +31,8 @@ export async function updatePositionAction(_state: GroupCommandState, formData: 
     {
       positionId: value(formData, "positionId"),
       name: value(formData, "name"),
-      groupTypes: formData.getAll("groupTypes")
+      groupTypes: formData.getAll("groupTypes"),
+      groupIds: formData.getAll("groupIds")
     },
     (input) => updatePosition(db, input)
   )

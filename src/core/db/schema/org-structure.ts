@@ -137,6 +137,27 @@ export const groupTypePosition = pgTable(
   (table) => [primaryKey({ columns: [table.type, table.positionId] })]
 )
 
+/**
+ * The groups a Position is limited to, if any: with rows here, the Position is held only in these
+ * groups, and still only where their type allows it, as Gigmästare KK in KK and the Gigmästeri.
+ * Without rows, every group of an allowed type has it.
+ */
+export const positionGroup = pgTable(
+  "position_group",
+  {
+    positionId: uuid("position_id")
+      .notNull()
+      .references(() => position.id, { onDelete: "restrict" }),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => group.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.positionId, table.groupId] }),
+    index("position_group_groupId_idx").on(table.groupId)
+  ]
+)
+
 export const positionHolder = pgTable(
   "position_holder",
   {
@@ -187,7 +208,13 @@ export const groupMemberRelations = relations(groupMember, ({ one }) => ({
 
 export const positionRelations = relations(position, ({ many }) => ({
   groupTypes: many(groupTypePosition),
+  groups: many(positionGroup),
   holders: many(positionHolder)
+}))
+
+export const positionGroupRelations = relations(positionGroup, ({ one }) => ({
+  position: one(position, { fields: [positionGroup.positionId], references: [position.id] }),
+  group: one(group, { fields: [positionGroup.groupId], references: [group.id] })
 }))
 
 export const groupTypePositionRelations = relations(groupTypePosition, ({ one }) => ({

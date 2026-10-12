@@ -22,7 +22,6 @@ type Division = NonNullable<typeof groupMember.$inferInsert.voice>
 const CHOIRS = ["MK", "DK", "KK"]
 
 const EXAMPLE_GROUPS: { name: string; type: (typeof group.type.enumValues)[number]; choir?: string }[] = [
-  { name: "Gigmästeri", type: "Gigmästeri" },
   { name: "Sexmästeri", type: "Sexmästeri" },
   { name: "Konsertmästeri", type: "Konsertmästeri" },
   { name: "Valberedningen", type: "Valberedning" },

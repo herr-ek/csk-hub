@@ -47,7 +47,7 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
   a deactivated user stays deactivated.
 - `reference-data` against production also requires typing `prod`. It is allowed there
   because every environment needs the same org structure (the Choirs, their Sections,
-  Styret and the Position catalogue), and it fabricates no people. It only creates what
+  Styret, the Gigmästeri and the Position catalogue), and it fabricates no people. It only creates what
   is missing, matching existing groups and Positions by name, in one transaction.
 - `reset` refuses outright with `--prod`, and refuses any `POSTGRES_URL` that is not a
   local database. Locally it asks before erasing; `--yes` skips the question, and without a

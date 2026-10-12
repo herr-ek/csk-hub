@@ -1,7 +1,15 @@
 import "server-only"
 
-import { and, eq, isNull, notInArray } from "drizzle-orm"
-import { choir, group, groupTypePosition, position, positionHolder, section } from "@/core/db/schema/org-structure"
+import { and, eq, inArray, isNull, notInArray } from "drizzle-orm"
+import {
+  choir,
+  group,
+  groupTypePosition,
+  position,
+  positionGroup,
+  positionHolder,
+  section
+} from "@/core/db/schema/org-structure"
 import { contains, type Voice } from "@/features/voice/model"
 import { requireChoir, requireGroup } from "./lookup"
 import type { GroupType } from "./model"
@@ -113,6 +121,8 @@ type CreatePositionInput = {
   name: string
   /** The GroupTypes this Position may be held in. */
   groupTypes: GroupType[]
+  /** The groups it is limited to, each of an allowed type; omitted or empty for every such group. */
+  groupIds?: string[]
 }
 
 export function createPosition(database: OrgStructureDatabase, input: CreatePositionInput) {
@@ -120,6 +130,7 @@ export function createPosition(database: OrgStructureDatabase, input: CreatePosi
     const [created] = await tx.insert(position).values({ name: input.name.trim() }).returning({ id: position.id })
     if (!created) throw new Error("Position creation did not return a record.")
     await allowPosition(tx, created.id, input.groupTypes)
+    await applyPositionGroups(tx, created.id, input.groupIds ?? [])
     return created
   })
 }
@@ -153,14 +164,24 @@ export function setPositionGroupTypes(database: OrgStructureDatabase, positionId
   return runOrgStructureCommand(database, (tx) => applyPositionGroupTypes(tx, positionId, groupTypes))
 }
 
-/** Renames a Position and replaces its GroupTypes as one change, or neither. */
+/**
+ * Replaces the groups a Position is limited to; an empty list lifts the limit. Each group must be
+ * of a type the Position is allowed in, and a group cannot be left out while someone currently
+ * holds the Position there.
+ */
+export function setPositionGroups(database: OrgStructureDatabase, positionId: string, groupIds: string[]) {
+  return runOrgStructureCommand(database, (tx) => applyPositionGroups(tx, positionId, groupIds))
+}
+
+/** Renames a Position and replaces its GroupTypes and its limit to groups as one change, or none. */
 export function updatePosition(
   database: OrgStructureDatabase,
-  input: { positionId: string; name: string; groupTypes: GroupType[] }
+  input: { positionId: string; name: string; groupTypes: GroupType[]; groupIds?: string[] }
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     await applyPositionName(tx, input.positionId, input.name)
     await applyPositionGroupTypes(tx, input.positionId, input.groupTypes)
+    await applyPositionGroups(tx, input.positionId, input.groupIds ?? [])
   })
 }
 
@@ -201,4 +222,50 @@ async function applyPositionGroupTypes(tx: OrgStructureTransaction, positionId: 
       )
     )
   await allowPosition(tx, positionId, kept)
+}
+
+async function applyPositionGroups(tx: OrgStructureTransaction, positionId: string, groupIds: string[]) {
+  const [row] = await tx.select({ id: position.id }).from(position).where(eq(position.id, positionId)).for("update")
+  if (!row) throw new RuleViolation("position-not-found")
+
+  const kept = [...new Set(groupIds)]
+  if (kept.length > 0) {
+    const groups = await tx.select({ id: group.id, type: group.type }).from(group).where(inArray(group.id, kept))
+    if (groups.length < kept.length) throw new RuleViolation("group-not-found")
+    const allowed = await tx
+      .select({ type: groupTypePosition.type })
+      .from(groupTypePosition)
+      .where(eq(groupTypePosition.positionId, positionId))
+    if (!groups.every(({ type }) => allowed.some((allowedType) => allowedType.type === type))) {
+      throw new RuleViolation("position-limit-type-not-allowed")
+    }
+
+    const [heldElsewhere] = await tx
+      .select({ groupId: positionHolder.groupId })
+      .from(positionHolder)
+      .where(
+        and(
+          eq(positionHolder.positionId, positionId),
+          isNull(positionHolder.endDate),
+          notInArray(positionHolder.groupId, kept)
+        )
+      )
+      .limit(1)
+    if (heldElsewhere) throw new RuleViolation("position-held-outside-limit")
+  }
+
+  await tx
+    .delete(positionGroup)
+    .where(
+      and(
+        eq(positionGroup.positionId, positionId),
+        kept.length > 0 ? notInArray(positionGroup.groupId, kept) : undefined
+      )
+    )
+  if (kept.length > 0) {
+    await tx
+      .insert(positionGroup)
+      .values(kept.map((groupId) => ({ positionId, groupId })))
+      .onConflictDoNothing()
+  }
 }

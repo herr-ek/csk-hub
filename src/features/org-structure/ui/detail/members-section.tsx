@@ -105,13 +105,19 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
     <CommandDialog
       trigger={<Button type="button">{t("addMember")}</Button>}
       title={t("addMemberTitle", { name: group.name })}
-      description={group.choir ? t("choirMembershipNotice", { choir: group.choir.name }) : undefined}
+      description={
+        group.choir
+          ? t(isSection ? "choirMembershipNotice" : "choirMembersOnly", { choir: group.choir.name })
+          : undefined
+      }
       action={addMemberAction}
       submitLabel={t("addMember")}
     >
       <input type="hidden" name="groupId" value={group.id} />
       {detail.candidates.length === 0 ? (
-        <FieldDescription>{t("noCandidates")}</FieldDescription>
+        <FieldDescription>
+          {group.choir && !isSection ? t("noChoirCandidates", { choir: group.choir.name }) : t("noCandidates")}
+        </FieldDescription>
       ) : (
         <SelectField
           label={t("member")}

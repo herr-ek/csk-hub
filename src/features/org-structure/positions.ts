@@ -1,9 +1,9 @@
 import "server-only"
 
 import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm"
-import { groupTypePosition, position, positionHolder } from "@/core/db/schema/org-structure"
+import { groupTypePosition, position, positionGroup, positionHolder } from "@/core/db/schema/org-structure"
 import { findCurrentMembership, requireActiveGroup } from "./lookup"
-import type { IsoDate } from "./model"
+import { holdsElectedPosts, type IsoDate } from "./model"
 import {
   lockUser,
   type OrgStructureDatabase,
@@ -71,6 +71,14 @@ export async function addHolding(tx: OrgStructureTransaction, input: HoldingInpu
     .where(and(eq(groupTypePosition.positionId, input.positionId), eq(groupTypePosition.type, row.type)))
   if (!allowed) throw new RuleViolation("position-not-allowed")
 
+  const limit = await tx
+    .select({ groupId: positionGroup.groupId })
+    .from(positionGroup)
+    .where(eq(positionGroup.positionId, input.positionId))
+  if (limit.length > 0 && !limit.some(({ groupId }) => groupId === input.groupId)) {
+    throw new RuleViolation("position-limited-to-other-groups")
+  }
+
   const membership = await findCurrentMembership(tx, input.userId, input.groupId)
   if (!membership) throw new RuleViolation("not-a-member")
   if (membership.startDate > startDate) throw new RuleViolation("period-conflict")
@@ -86,6 +94,22 @@ export async function addHolding(tx: OrgStructureTransaction, input: HoldingInpu
       )
     )
   if (holder) throw new RuleViolation("position-taken")
+
+  if (holdsElectedPosts(row.type)) {
+    // The caller holds the user's lock, so no other holding for them can start meanwhile.
+    const [held] = await tx
+      .select({ positionId: positionHolder.positionId })
+      .from(positionHolder)
+      .where(
+        and(
+          eq(positionHolder.userId, input.userId),
+          eq(positionHolder.groupId, input.groupId),
+          isNull(positionHolder.endDate)
+        )
+      )
+      .limit(1)
+    if (held) throw new RuleViolation("already-holding-elected-post")
+  }
 
   const [overlap] = await tx
     .select({ startDate: positionHolder.startDate })

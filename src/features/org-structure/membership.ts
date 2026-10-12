@@ -18,8 +18,8 @@ import { endHoldingsInGroups } from "./positions"
 type StartMembershipInput = { userId: string; groupId: string; startDate: IsoDate }
 
 /**
- * Starts a Membership in any group but a Section. Joining a group that belongs to a Choir also
- * starts a Membership in that Choir when the user has none.
+ * Starts a Membership in any group but a Section. A group that belongs to a Choir takes only
+ * current members of that Choir; someone joins a Choir by being placed in one of its Sections.
  */
 export function startMembership(database: OrgStructureDatabase, input: StartMembershipInput) {
   return runOrgStructureCommand(database, async (tx) => {
@@ -36,7 +36,7 @@ export function startMembership(database: OrgStructureDatabase, input: StartMemb
 export async function addMembership(tx: OrgStructureTransaction, userId: string, groupId: string, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, groupId)
   if (row.type === "Section") throw new RuleViolation("section-requires-placement")
-  if (row.choirId) await ensureChoirMembership(tx, userId, row.choirId, startDate)
+  if (row.choirId) await requireChoirMembership(tx, userId, row.choirId, startDate)
   await insertMembership(tx, { userId, groupId, startDate, voice: null })
 }
 
@@ -138,7 +138,20 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
   })
 }
 
-/** A Membership in a Choir's group requires one in the Choir, so it is started when missing. */
+/** A Membership in a Choir's group requires a current one in the Choir, begun no later. */
+async function requireChoirMembership(
+  tx: OrgStructureTransaction,
+  userId: string,
+  choirId: string,
+  startDate: IsoDate
+) {
+  const current = await findCurrentMembership(tx, userId, choirId)
+  if (!current) throw new RuleViolation("not-a-choir-member")
+  // The group Membership would begin before the Choir Membership that it depends on.
+  if (current.startDate > startDate) throw new RuleViolation("period-conflict")
+}
+
+/** Placing a singer in a Section is how they join its Choir, so the Choir Membership is started when missing. */
 async function ensureChoirMembership(tx: OrgStructureTransaction, userId: string, choirId: string, startDate: IsoDate) {
   const current = await findCurrentMembership(tx, userId, choirId)
   if (!current) {

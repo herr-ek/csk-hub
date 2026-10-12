@@ -1,9 +1,11 @@
 "use client"
 
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import Link from "next/link"
 import { useId } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Badge } from "@/shared/ui/base/badge"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { Label } from "@/shared/ui/base/label"
 import { Switch } from "@/shared/ui/base/switch"
 import { groupDetailPath } from "./command-state"
@@ -22,30 +24,34 @@ export function ShowArchivedToggle({ checked, onChange }: { checked: boolean; on
 }
 
 export function GroupList({ title, groups }: { title: string; groups: GroupSummary[] }) {
-  const t = useTranslations("Groups")
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-      {groups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("noGroups")}</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {groups.map((group) => (
-            <li key={group.id} className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <GroupLink group={group} />
-                {group.voices.map((voice) => (
-                  <Badge key={voice} variant="outline">
-                    {voice}
-                  </Badge>
-                ))}
-              </div>
-              <GroupFacts group={group} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <GroupItems groups={groups} />
     </div>
+  )
+}
+
+/** The groups of a list, each with its Voices, member count and Position holders. */
+export function GroupItems({ groups }: { groups: GroupSummary[] }) {
+  const t = useTranslations("Groups")
+  if (groups.length === 0) return <p className="text-sm text-muted-foreground">{t("noGroups")}</p>
+  return (
+    <ul className="flex flex-col gap-3">
+      {groups.map((group) => (
+        <li key={group.id} className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <GroupLink group={group} />
+            {group.voices.map((voice) => (
+              <Badge key={voice} variant="outline">
+                {voice}
+              </Badge>
+            ))}
+          </div>
+          <GroupFacts group={group} />
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -61,15 +67,42 @@ export function GroupLink({ group }: { group: GroupSummary }) {
   )
 }
 
-/** Member count and current Position holders, inline. */
+/** The member count, with the current Position holders one per line behind it. */
 export function GroupFacts({ group }: { group: GroupSummary }) {
   const t = useTranslations("Groups")
+  const members = t("memberCount", { count: group.memberCount })
+  if (group.holders.length === 0) return <p className="text-xs text-muted-foreground">{members}</p>
+
   return (
-    <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-      <span>{t("memberCount", { count: group.memberCount })}</span>
-      {group.holders.map(({ position, holder }) => (
-        <span key={position}>{t("holderInline", { position, holder })}</span>
-      ))}
-    </p>
+    <Collapsible>
+      <CollapsibleTrigger className={`${EXPAND_TRIGGER} text-xs`}>
+        {t("groupFacts", { members, positions: t("positionCount", { count: group.holders.length }) })}
+        <ExpandChevron />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+          {group.holders.map(({ position, holder }) => (
+            <div key={position} className="contents">
+              <dt className="text-muted-foreground">{position}</dt>
+              <dd>{holder}</dd>
+            </div>
+          ))}
+        </dl>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+/** The look of a `CollapsibleTrigger` in the overviews; pair it with `ExpandChevron`. */
+export const EXPAND_TRIGGER =
+  "group/expand flex items-center gap-1 self-start text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+
+/** Down while collapsed, up while expanded, inside an `EXPAND_TRIGGER`. */
+export function ExpandChevron() {
+  return (
+    <>
+      <ChevronDownIcon className="size-3.5 shrink-0 group-aria-expanded/expand:hidden" aria-hidden="true" />
+      <ChevronUpIcon className="hidden size-3.5 shrink-0 group-aria-expanded/expand:inline" aria-hidden="true" />
+    </>
   )
 }

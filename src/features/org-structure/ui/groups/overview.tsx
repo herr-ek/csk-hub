@@ -4,8 +4,8 @@ import { useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Badge } from "@/shared/ui/base/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
-import type { GroupType } from "../../model"
-import { GroupList, ShowArchivedToggle } from "../group-list"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
+import { EXPAND_TRIGGER, ExpandChevron, GroupItems, GroupList, ShowArchivedToggle } from "../group-list"
 import type { GroupSummary } from "../group-summaries"
 import type { GroupsOverview as Overview } from "./query"
 
@@ -47,14 +47,29 @@ export function GroupsOverview({ overview }: { overview: Overview }) {
         <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {cskWideTypes.length === 0 ? <p className="text-sm text-muted-foreground">{t("noGroups")}</p> : null}
           {cskWideTypes.map((type) => (
-            <GroupList
-              key={type}
-              title={types(type as GroupType)}
-              groups={cskWide.filter((group) => group.type === type)}
-            />
+            <TypeGroups key={type} title={types(type)} groups={cskWide.filter((group) => group.type === type)} />
           ))}
         </CardContent>
       </Card>
     </section>
+  )
+}
+
+/** Above this many groups, a type starts collapsed, so one type with many groups, as the gig groups, does not stretch the card. */
+const COLLAPSE_ABOVE = 3
+
+function TypeGroups({ title, groups }: { title: string; groups: GroupSummary[] }) {
+  const t = useTranslations("Groups")
+  if (groups.length <= COLLAPSE_ABOVE) return <GroupList title={title} groups={groups} />
+  return (
+    <Collapsible className="flex flex-col gap-2">
+      <CollapsibleTrigger className={`${EXPAND_TRIGGER} text-sm font-medium`}>
+        {t("typeWithCount", { type: title, count: groups.length })}
+        <ExpandChevron />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <GroupItems groups={groups} />
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

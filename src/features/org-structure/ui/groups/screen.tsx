@@ -10,7 +10,7 @@ import { getGroupsOverview } from "./query"
 
 /** The groups beside the Choirs' Sections, and the Positions they can have. */
 export async function GroupsScreen() {
-  const [overview, positions, t] = await Promise.all([
+  const [overview, catalogue, t] = await Promise.all([
     getGroupsOverview(),
     listPositionCatalogue(),
     getTranslations("Groups")
@@ -36,7 +36,7 @@ export async function GroupsScreen() {
       </div>
 
       <GroupsOverview overview={overview} />
-      <PositionCatalogue positions={positions} />
+      <PositionCatalogue catalogue={catalogue} />
     </main>
   )
 }

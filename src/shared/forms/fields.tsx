@@ -16,6 +16,15 @@ type FieldChrome = {
   errors?: ComponentProps<typeof FieldError>["errors"]
 }
 
+/**
+ * A key for an uncontrolled control, from its default. A new default, as after a Server Action
+ * revalidates the page while a dialog closes, starts a fresh control instead of changing the
+ * default of an initialised one, which Base UI warns about.
+ */
+function defaultKey(defaultValue: unknown) {
+  return defaultValue === undefined ? undefined : String(defaultValue)
+}
+
 function FieldMessages({ description, error, errors }: Omit<FieldChrome, "label" | "invalid">) {
   return (
     <>
@@ -40,7 +49,7 @@ export function InputField({
   return (
     <Field data-invalid={invalid}>
       <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
-      <Input id={inputId} aria-invalid={invalid} {...inputProps} />
+      <Input key={defaultKey(inputProps.defaultValue)} id={inputId} aria-invalid={invalid} {...inputProps} />
       <FieldMessages description={description} error={error} errors={errors} />
     </Field>
   )
@@ -64,10 +73,11 @@ export function SelectField({
   required?: boolean
 }) {
   const id = useId()
+  const initial = defaultValue ?? options[0]?.value
   return (
     <Field data-invalid={invalid}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select name={name} items={options} defaultValue={defaultValue ?? options[0]?.value} required={required}>
+      <Select key={defaultKey(initial)} name={name} items={options} defaultValue={initial} required={required}>
         <SelectTrigger id={id} aria-invalid={invalid} className="w-full">
           <SelectValue />
         </SelectTrigger>

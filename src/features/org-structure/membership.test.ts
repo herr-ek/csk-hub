@@ -34,13 +34,22 @@ describe.skipIf(!database)("groups membership", () => {
   }
 
   describe("startMembership", () => {
-    test("joining a Choir's group starts a Membership in that Choir when there is none", async () => {
+    test("refuses a Choir's group to someone who is not a current member of the Choir", async () => {
       const userId = await t.user()
+      const mk = await t.groupId("MK")
       const rodd = await choirGroup("MK")
-      expectSuccess(await startMembership(t.db, { userId, groupId: rodd, startDate: "2025-09-01" }))
+      expect(await startMembership(t.db, { userId, groupId: rodd, startDate: "2025-09-01" })).toEqual({
+        success: false,
+        error: "not-a-choir-member"
+      })
+      expect(await listCurrentGroupsOfUser(t.db, userId)).toEqual([])
 
-      const groups = await listCurrentGroupsOfUser(t.db, userId)
-      expect(groups.map(({ groupId }) => groupId).sort()).toEqual([await t.groupId("MK"), rodd].sort())
+      expectSuccess(await startMembership(t.db, { userId, groupId: mk, startDate: "2024-01-01" }))
+      expectSuccess(await endMembership(t.db, { userId, groupId: mk, endDate: "2025-01-01" }))
+      expect(await startMembership(t.db, { userId, groupId: rodd, startDate: "2025-09-01" })).toEqual({
+        success: false,
+        error: "not-a-choir-member"
+      })
     })
 
     test("keeps an existing Choir Membership as it is", async () => {

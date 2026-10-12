@@ -19,6 +19,7 @@ export {
   createPosition,
   renameGroup,
   renamePosition,
+  setPositionGroups,
   setPositionGroupTypes,
   updatePosition
 } from "./structure"

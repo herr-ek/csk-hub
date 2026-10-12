@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, desc, eq, isNotNull, isNull, notExists, or } from "drizzle-orm"
+import { and, asc, desc, eq, exists, isNotNull, isNull, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
@@ -9,6 +9,7 @@ import {
   groupMember,
   groupTypePosition,
   position,
+  positionGroup,
   positionHolder,
   section
 } from "@/core/db/schema/org-structure"
@@ -39,6 +40,7 @@ export async function getGroupDetail(groupId: string) {
     .leftJoin(choirGroup, eq(choirGroup.id, group.choirId))
     .where(eq(group.id, groupId))
   if (!row) return null
+  const choirMember = alias(groupMember, "choir_member")
 
   const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates] = await Promise.all([
     db
@@ -68,15 +70,31 @@ export async function getGroupDetail(groupId: string) {
       .innerJoin(user, eq(user.id, positionHolder.userId))
       .where(eq(positionHolder.groupId, groupId))
       .orderBy(desc(positionHolder.startDate)),
+    // The Positions the group's type allows, but not those limited to other groups.
     db
       .select({ id: position.id, name: position.name })
       .from(groupTypePosition)
       .innerJoin(position, eq(position.id, groupTypePosition.positionId))
-      .where(eq(groupTypePosition.type, row.type))
+      .where(
+        and(
+          eq(groupTypePosition.type, row.type),
+          or(
+            notExists(db.select().from(positionGroup).where(eq(positionGroup.positionId, position.id))),
+            exists(
+              db
+                .select()
+                .from(positionGroup)
+                .where(and(eq(positionGroup.positionId, position.id), eq(positionGroup.groupId, groupId)))
+            )
+          )
+        )
+      )
       .orderBy(asc(position.name)),
     db.select({ voice: section.voice }).from(section).where(eq(section.groupId, groupId)),
     row.choirId ? choirVoicesOf(row.choirId) : Promise.resolve([]),
-    // Active Users who are not current members, for the add-member picker.
+    // Active Users who are not current members, for the add-member picker. A Choir's group other
+    // than a Section takes only current members of the Choir; placing a singer in a Section is
+    // how they join it.
     db
       .select({ id: user.id, name: user.name, email: user.email })
       .from(user)
@@ -90,7 +108,21 @@ export async function getGroupDetail(groupId: string) {
               .where(
                 and(eq(groupMember.userId, user.id), eq(groupMember.groupId, groupId), isNull(groupMember.endDate))
               )
-          )
+          ),
+          row.choirId && row.type !== "Section"
+            ? exists(
+                db
+                  .select()
+                  .from(choirMember)
+                  .where(
+                    and(
+                      eq(choirMember.userId, user.id),
+                      eq(choirMember.groupId, row.choirId),
+                      isNull(choirMember.endDate)
+                    )
+                  )
+              )
+            : undefined
         )
       )
       .orderBy(asc(user.name))

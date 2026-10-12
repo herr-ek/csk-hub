@@ -93,8 +93,11 @@ _Avoid_: Enrolment, role
 
 **Position**:
 A named organisational position in a Group (Swedish: *post*), such as Ordförande, Dirigent,
-Notfiskal, Konsertmästare, Stämförälder, or Sexmästare. A Position is distinct from a
-permission role; use Post only for a news announcement.
+Notfiskal, Konsertmästare, Stämförälder, or Sexmästare. A Position is allowed in Group types, and
+may be limited to some Groups of them, as Gigmästare KK to KK and the Gigmästeri. A member may
+hold several Positions in a Group, except where Positions are elected posts, as on the Board:
+there each member holds one. A Position is distinct from a permission role; use Post only for a
+news announcement.
 _Avoid_: Post, role, title, Admin
 
 **Position holder**:

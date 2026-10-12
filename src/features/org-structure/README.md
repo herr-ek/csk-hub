@@ -18,14 +18,19 @@ The rules below are not database constraints, so going around this module breaks
 silently:
 
 - A Choir is always CSK-wide. Other Groups are CSK-wide or belong directly to one Choir.
-- Joining a Group that belongs to a Choir starts a Choir Membership when there is none.
+- Only current members of a Choir can join a Group that belongs to it. Placing a singer in a
+  Section is how they join the Choir, so it starts the Choir Membership when there is none.
 - Every Choir has exactly four Sections, each singing one Voice, and no two overlap (B rules
   out B1 in the same Choir). Sections are created only with their Choir.
 - A singer is in the Choir and exactly one of its Sections, with one Voice division that the
   Section's Voice contains: B1 or B2 in KKB, which sings B.
 - A Position holder is a current member, the Group's type allows the Position, and ending a
-  Membership ends the holder's Positions in that Group. Leaving a Choir ends Memberships, and
-  Positions, in every Group that belongs to it.
+  Membership ends the holder's Positions in that Group. In a Group of elected posts, the Board
+  (`holdsElectedPosts`), a member holds at most one Position; elsewhere they may hold several.
+  Leaving a Choir ends Memberships, and Positions, in every Group that belongs to it.
+- A Position may be limited to some Groups of its types, as Gigmästare KK to KK and the
+  Gigmästeri; without a limit, every Group of an allowed type has it. A Group cannot leave the
+  limit while someone holds the Position there.
 - A Voice change ends one Membership row and starts another; history is never rewritten.
   Leaving a Section ends Positions in it, while a change within one Section keeps them.
 - Groups are archived, never deleted. Archiving a Choir archives its Sections.
@@ -51,8 +56,8 @@ savepoint. Commands return `{ success: true, data }` or `{ success: false, error
 races, never surface as thrown errors.
 
 - Structure: `createChoir`, `createGroup`, `renameGroup`, `archiveGroup`, `createPosition`,
-  `updatePosition` (`renamePosition` plus `setPositionGroupTypes`, as one change),
-  `allowPositionInGroupTypes`.
+  `updatePosition` (`renamePosition`, `setPositionGroupTypes` and `setPositionGroups`, as one
+  change), `allowPositionInGroupTypes`.
 - Membership: `startMembership`, `endMembership`, `placeSinger` (the Voice decides the
   Section: the one whose Voice contains it), `placeSingerInSection` (refuses a Voice the
   Section's Voice does not contain), `changeVoice`.
@@ -83,7 +88,7 @@ ui/
   choirs/      the Choirs and their Sections, for placing singers
   groups/      every other group, and creating, renaming and archiving groups
   detail/      one group's Members and Position holders, with their history
-  catalogue/   the Positions and the group types each is allowed in
+  catalogue/   the Positions, the group types each is allowed in, and any limit to groups
   group-summaries.ts, group-list.tsx   what both overviews show of a group
   command-dialog.tsx, run-command.ts   the shared shape of every admin command
 ```

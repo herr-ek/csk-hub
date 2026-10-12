@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
+import { holdsElectedPosts } from "../../model"
 import { CommandDialog } from "../command-dialog"
 import { assignHolderAction, endHoldingAction } from "./actions"
 import type { GroupDetail } from "./query"
@@ -105,7 +106,11 @@ function AssignHolderDialog({
   today: string
 }) {
   const t = useTranslations("Groups.detail")
-  const candidates = detail.members.filter(({ userId }) => userId !== position.holder?.userId)
+  const electedPosts = holdsElectedPosts(detail.group.type)
+  // In a group of elected posts, a member who already holds a post cannot take another.
+  const candidates = detail.members.filter(
+    ({ userId, positions }) => userId !== position.holder?.userId && !(electedPosts && positions.length > 0)
+  )
 
   return (
     <CommandDialog
@@ -121,6 +126,9 @@ function AssignHolderDialog({
     >
       <input type="hidden" name="groupId" value={detail.group.id} />
       <input type="hidden" name="positionId" value={position.id} />
+      {electedPosts ? (
+        <FieldDescription>{t("electedPostNotice", { group: detail.group.name })}</FieldDescription>
+      ) : null}
       {candidates.length === 0 ? (
         <FieldDescription>{t("noHolderCandidates")}</FieldDescription>
       ) : (

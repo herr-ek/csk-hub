@@ -182,6 +182,42 @@ describe.skipIf(!database)("groups positions", () => {
     })
   })
 
+  test("a Board member holds one elected post, while other groups allow several Positions", async () => {
+    const styret = await newGroup("Board")
+    const userId = await member(styret)
+    const [ordforande, gigmastare] = [await t.positionId("Ordförande"), await t.positionId("Gigmästare")]
+    expectSuccess(
+      await startPositionHolding(t.db, { userId, groupId: styret, positionId: ordforande, startDate: "2025-02-01" })
+    )
+
+    expect(
+      await startPositionHolding(t.db, { userId, groupId: styret, positionId: gigmastare, startDate: "2025-02-01" })
+    ).toEqual({ success: false, error: "already-holding-elected-post" })
+    expect(
+      await replacePositionHolder(t.db, { userId, groupId: styret, positionId: gigmastare, startDate: "2025-02-01" })
+    ).toEqual({ success: false, error: "already-holding-elected-post" })
+
+    expectSuccess(
+      await endPositionHolding(t.db, { userId, groupId: styret, positionId: ordforande, endDate: "2025-06-01" })
+    )
+    expectSuccess(
+      await startPositionHolding(t.db, { userId, groupId: styret, positionId: gigmastare, startDate: "2025-06-01" })
+    )
+
+    const sexmasteri = await newGroup("Sexmästeri")
+    const sexmastare = await member(sexmasteri)
+    for (const name of ["Sexmästare", "Sexmästarinna"]) {
+      expectSuccess(
+        await startPositionHolding(t.db, {
+          userId: sexmastare,
+          groupId: sexmasteri,
+          positionId: await t.positionId(name),
+          startDate: "2025-02-01"
+        })
+      )
+    }
+  })
+
   describe("replacePositionHolder", () => {
     test("hands the Position over on the new holder's start date", async () => {
       const dk = await t.groupId("DK")
