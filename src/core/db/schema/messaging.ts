@@ -54,10 +54,25 @@ export const groupConversation = pgTable(
       .references(() => conversation.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    // Null for legacy groups; the original intent remains stable across rename and membership changes.
+    creationIdempotencyKey: text("creation_idempotency_key"),
+    creationPayloadHash: text("creation_payload_hash"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
-  (table) => [check("groupConversation_name_not_blank_check", sql`length(btrim(${table.name})) > 0`)]
+  (table) => [
+    check("groupConversation_name_not_blank_check", sql`length(btrim(${table.name})) > 0`),
+    uniqueIndex("groupConversation_creator_creation_key_unique").on(
+      table.createdByUserId,
+      table.creationIdempotencyKey
+    ),
+    check(
+      "groupConversation_creation_intent_check",
+      sql`(${table.creationIdempotencyKey} IS NULL AND ${table.creationPayloadHash} IS NULL)
+        OR (${table.creationIdempotencyKey} IS NOT NULL AND length(btrim(${table.creationIdempotencyKey})) > 0
+          AND ${table.creationPayloadHash} IS NOT NULL)`
+    )
+  ]
 )
 
 export const groupMembership = pgTable(

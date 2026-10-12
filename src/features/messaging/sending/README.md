@@ -21,7 +21,7 @@ into localized command state.
 
 `index.ts` is the module seam. The remaining files are implementation:
 
-- `send-message.ts` sends to an existing Direct Conversation.
+- `send-message.ts` sends to an existing Direct or Group Conversation.
 - `start-direct-conversation.ts` finds or creates a Direct Conversation and sends its first Message.
 - `direct-recipient.ts` authorizes membership and locks the other User while checking availability.
 - `append-message.ts` provides the common atomic persistence operation.
@@ -74,8 +74,10 @@ predictable application flow, while the unique index remains the final invariant
 
 ## Atomic append and ordering
 
-`appendMessage` assumes its caller has already established that the sender may write to the
-Conversation. It owns the persistence guarantees shared by every sending workflow:
+For Direct Conversations, `appendMessage` assumes its caller has established sending authority.
+For Group Conversations, the caller supplies an authorization callback that runs after the sender/key
+and Conversation locks are acquired, before retry lookup or persistence. Group membership changes
+use the same Conversation lock, so a concurrent departure and send have one unambiguous order. It owns the persistence guarantees shared by every sending workflow:
 
 - The Conversation row is locked with `FOR UPDATE`, serializing appends to that Conversation without
   blocking unrelated Conversations.

@@ -28,14 +28,3 @@ export async function searchMembers(query: string) {
     .orderBy(asc(user.name), asc(user.username))
     .limit(MEMBER_SEARCH_LIMIT)
 }
-
-export async function getMember(id: string) {
-  const userId = await requireAuthenticatedUser()
-  const [member] = await db
-    .select({ id: user.id, name: user.name, username: user.username })
-    .from(user)
-    .where(and(eq(user.id, id), ne(user.id, userId), or(eq(user.banned, false), isNull(user.banned))))
-    .limit(1)
-
-  return member ?? null
-}

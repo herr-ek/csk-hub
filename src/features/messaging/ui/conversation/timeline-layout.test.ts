@@ -1,23 +1,23 @@
 import { describe, expect, test } from "bun:test"
-import { getDirectMessageLayout } from "./timeline-layout"
+import { getMessageLayout } from "./timeline-layout"
 import { createMessageCalendarDayKey } from "./timestamp"
 
 const at = (value: string) => new Date(value)
 const calendarDay = createMessageCalendarDayKey("Europe/Stockholm")
 
-describe("getDirectMessageLayout", () => {
+describe("getMessageLayout", () => {
   test("keeps consecutive messages from one person compact for five minutes", () => {
     expect(
-      getDirectMessageLayout(
+      getMessageLayout(
         [
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:00:00Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:04:59Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:09:59Z") }
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:00:00Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:04:59Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:09:59Z") }
         ],
         calendarDay
       )
     ).toEqual([
-      { startsNewGroup: false, showsDayDivider: true, showsTimeSeparator: false },
+      { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false },
       { startsNewGroup: false, showsDayDivider: false, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: false, showsTimeSeparator: false }
     ])
@@ -25,16 +25,16 @@ describe("getDirectMessageLayout", () => {
 
   test("starts a group when the sender changes and marks a one-hour pause", () => {
     expect(
-      getDirectMessageLayout(
+      getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-09-07T10:00:00Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T10:01:00Z") },
-          { isOwnMessage: true, sentAt: at("2026-09-07T11:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T10:00:00Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T10:01:00Z") },
+          { isOwnMessage: true, authorUserId: "me", sentAt: at("2026-09-07T11:01:00Z") }
         ],
         calendarDay
       )
     ).toEqual([
-      { startsNewGroup: false, showsDayDivider: true, showsTimeSeparator: false },
+      { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: false, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: false, showsTimeSeparator: true }
     ])
@@ -42,15 +42,15 @@ describe("getDirectMessageLayout", () => {
 
   test("uses a date divider instead of a time separator across days", () => {
     expect(
-      getDirectMessageLayout(
+      getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-09-07T21:59:00Z") },
-          { isOwnMessage: false, sentAt: at("2026-09-07T22:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T21:59:00Z") },
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T22:01:00Z") }
         ],
         calendarDay
       )
     ).toEqual([
-      { startsNewGroup: false, showsDayDivider: true, showsTimeSeparator: false },
+      { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false },
       { startsNewGroup: true, showsDayDivider: true, showsTimeSeparator: false }
     ])
   })
@@ -59,10 +59,10 @@ describe("getDirectMessageLayout", () => {
     const stockholmDay = createMessageCalendarDayKey("Europe/Stockholm")
 
     expect(
-      getDirectMessageLayout(
+      getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-09-07T21:59:00Z") },
-          { isOwnMessage: false, sentAt: at("2026-09-07T22:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T21:59:00Z") },
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-09-07T22:01:00Z") }
         ],
         stockholmDay
       )
@@ -73,13 +73,37 @@ describe("getDirectMessageLayout", () => {
     const stockholmDay = createMessageCalendarDayKey("Europe/Stockholm")
 
     expect(
-      getDirectMessageLayout(
+      getMessageLayout(
         [
-          { isOwnMessage: false, sentAt: at("2026-03-29T00:59:00Z") },
-          { isOwnMessage: false, sentAt: at("2026-03-29T01:01:00Z") }
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-03-29T00:59:00Z") },
+          { isOwnMessage: false, authorUserId: "them", sentAt: at("2026-03-29T01:01:00Z") }
         ],
         stockholmDay
       )
     ).toMatchObject([{ showsDayDivider: true }, { showsDayDivider: false }])
   })
+})
+
+test("separates Messages from two other Group Conversation authors", () => {
+  const time = new Date("2026-10-04T12:00:00Z")
+  const layout = getMessageLayout(
+    [
+      { sentAt: time, isOwnMessage: false, authorUserId: "alice" },
+      { sentAt: time, isOwnMessage: false, authorUserId: "bob" }
+    ],
+    (date) => date.toISOString().slice(0, 10)
+  )
+  expect(layout[1].startsNewGroup).toBe(true)
+})
+
+test("starts a new group for each Message with erased authorship", () => {
+  const time = new Date("2026-10-04T12:00:00Z")
+  const layout = getMessageLayout(
+    [
+      { sentAt: time, isOwnMessage: false, authorUserId: null },
+      { sentAt: time, isOwnMessage: false, authorUserId: null }
+    ],
+    (date) => date.toISOString().slice(0, 10)
+  )
+  expect(layout[1].startsNewGroup).toBe(true)
 })

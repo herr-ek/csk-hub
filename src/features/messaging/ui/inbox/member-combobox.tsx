@@ -1,7 +1,6 @@
 "use client"
 
 import { LoaderCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
@@ -17,9 +16,16 @@ import { searchMembersAction } from "./actions"
 
 type Member = { id: string; name: string; username: string | null }
 
-export function MemberCombobox() {
+export function MemberCombobox({
+  onSelect,
+  excludedIds = [],
+  disabled = false
+}: {
+  onSelect: (member: Member) => void
+  excludedIds?: string[]
+  disabled?: boolean
+}) {
   const t = useTranslations("Messages")
-  const router = useRouter()
   const [value, setValue] = useState("")
   const [members, setMembers] = useState<Member[]>([])
   const [searchStatus, setSearchStatus] = useState<"idle" | "loading" | "results" | "empty" | "error">("idle")
@@ -71,15 +77,21 @@ export function MemberCombobox() {
   }
 
   const loading = searchStatus === "loading"
+  const availableMembers = members.filter((member) => !excludedIds.includes(member.id))
 
   return (
     <Combobox
-      items={members}
+      items={availableMembers}
+      inputValue={value}
+      disabled={disabled}
       itemToStringLabel={(member: Member | null) => (member ? `${member.name} ${member.username ?? ""}` : "")}
       value={null}
       onValueChange={(member) => {
         const selected = member as Member | null
-        if (selected) router.push(`/messages/new?recipientId=${selected.id}`)
+        if (selected) {
+          onSelect(selected)
+          setValue("")
+        }
       }}
       onInputValueChange={setValue}
     >
@@ -113,7 +125,7 @@ export function MemberCombobox() {
               t("typeToSearch")
             )}
           </ComboboxEmpty>
-          {members.map((member) => (
+          {availableMembers.map((member) => (
             <ComboboxItem key={member.id} value={member}>
               <span>{member.name}</span>
               {member.username ? (

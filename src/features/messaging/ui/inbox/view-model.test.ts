@@ -26,6 +26,7 @@ describe("Messages inbox", () => {
 
     expect(conversations).toEqual([
       {
+        kind: "direct",
         id: "newer",
         otherMemberName: "Bea",
         preview: "Most recent message",
@@ -34,6 +35,7 @@ describe("Messages inbox", () => {
         canSend: true
       },
       {
+        kind: "direct",
         id: "older",
         otherMemberName: "Ada",
         preview: "Earlier message",

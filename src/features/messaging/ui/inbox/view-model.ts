@@ -11,6 +11,7 @@ export type InboxConversationRow = {
 }
 
 export type InboxConversation = {
+  kind: "direct"
   id: string
   otherMemberName: string | null
   preview: string
@@ -22,6 +23,7 @@ export type InboxConversation = {
 export function toInboxConversations(rows: readonly InboxConversationRow[]): InboxConversation[] {
   return rows
     .map((row) => ({
+      kind: "direct" as const,
       id: row.conversationId,
       otherMemberName: row.otherMemberName,
       preview: row.latestMessageText,
