@@ -137,7 +137,10 @@
       "adminOrgStructure": "Chöre und Stimmen",
       "adminOrgStructureGroups": "Gruppen und Ämter"
     },
-    "members": "Mitglieder"
+    "members": "Mitglieder",
+    "menu": "Menü",
+    "quickAccess": "Schnellzugriff",
+    "customizeQuickAccess": "Schnellzugriff anpassen"
   },
   "Posts": {
     "title": "Neuigkeiten",
@@ -378,6 +381,20 @@
     "profileTab": "Profil",
     "securityTab": "Sicherheit",
     "notificationsTab": "Benachrichtigungen"
+  },
+  "QuickAccess": {
+    "title": "Schnellzugriff",
+    "description": "Hefte bis zu vier Seiten an die Leiste unten auf dem Bildschirm deines Handys.",
+    "inBar": "In deiner Leiste",
+    "available": "Seiten",
+    "limit": "Wähle bis zu {count} Verknüpfungen.",
+    "moveUp": "{name} nach oben verschieben",
+    "moveDown": "{name} nach unten verschieben",
+    "empty": "Keine Verknüpfungen angeheftet, daher ist die Leiste ausgeblendet.",
+    "updateFailed": "Deine Verknüpfungen konnten gerade nicht gespeichert werden. Bitte versuche es erneut.",
+    "added": "{name} wurde zur Leiste hinzugefügt.",
+    "removed": "{name} wurde aus der Leiste entfernt.",
+    "moved": "{name} wurde an Position {position} von {count} verschoben."
   },
   "PushNotifications": {
     "settingsTitle": "Push-Benachrichtigungen",
