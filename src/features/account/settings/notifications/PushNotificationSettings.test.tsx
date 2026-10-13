@@ -8,7 +8,12 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 const getBinding = mock(async (): Promise<"bound" | "unbound" | "unsupported"> => "unbound")
 const unsubscribe = mock(async () => true)
-const subscription = { endpoint: "https://unsupported.example/channel", unsubscribe }
+const browserData = {
+  endpoint: "https://fcm.googleapis.com/send/test",
+  keys: { p256dh: "test-key", auth: "test-auth" }
+}
+const subscription = { endpoint: browserData.endpoint, unsubscribe, toJSON: () => browserData }
+const subscribe = mock(async () => ({ success: true }))
 const getSubscription = mock(async () => subscription)
 const registration = { pushManager: { getSubscription } }
 const register = mock(async () => registration)
@@ -21,7 +26,7 @@ const translate = (key: string) => key
 mock.module("@/core/i18n/translations", () => ({ useTranslations: () => translate }))
 mock.module("./push-notification-actions", () => ({
   getPushSubscriptionBinding: getBinding,
-  subscribeUserToPush: mock(),
+  subscribeUserToPush: subscribe,
   unsubscribeUserFromPush: mock(),
   sendPushNotificationTest: mock()
 }))
@@ -32,10 +37,14 @@ let container: HTMLDivElement
 beforeEach(() => {
   getBinding.mockReset().mockResolvedValue("unbound")
   unsubscribe.mockReset().mockResolvedValue(true)
+  subscribe.mockReset().mockResolvedValue({ success: true })
   register.mockReset().mockResolvedValue(registration)
   getRegistration.mockReset().mockResolvedValue(registration)
   getSubscription.mockReset().mockResolvedValue(subscription)
-  Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: { register, getRegistration } })
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: { register, getRegistration, ready: Promise.resolve(registration) }
+  })
   Object.defineProperty(window, "PushManager", { configurable: true, value: class {} })
   Object.defineProperty(window, "Notification", { configurable: true, value: { permission: "granted" } })
   container = document.createElement("div")
@@ -111,4 +120,24 @@ test("focus refresh rechecks ownership without registering the service worker ag
   expect(getRegistration).toHaveBeenCalledTimes(2)
   expect(register).toHaveBeenCalledTimes(1)
   expect(container.textContent).toContain("enabled")
+})
+
+test("an existing browser subscription is only rebound after explicit consent", async () => {
+  await renderSettings()
+  expect(subscribe).not.toHaveBeenCalled()
+  await clickButton("reconnect")
+  expect(subscribe).toHaveBeenCalledWith(browserData)
+  expect(container.textContent).toContain("enabled")
+})
+
+test("a failed server write remains repairable after refreshing browser state", async () => {
+  subscribe.mockRejectedValueOnce(new Error("Storage unavailable"))
+  await renderSettings()
+  await clickButton("reconnect")
+  expect(container.textContent).toContain("subscribeFailed")
+  expect(container.textContent).not.toContain("enabled")
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  await clickButton("reconnect")
+  expect(container.textContent).toContain("enabled")
+  expect(subscribe).toHaveBeenCalledTimes(2)
 })
