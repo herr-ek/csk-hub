@@ -4,7 +4,7 @@ import { and, eq, ilike, or } from "drizzle-orm"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
-import { normalizePushEndpoint, parseNotificationSubscription } from "./subscription-validation"
+import { parseNotificationSubscription, parsePushEndpoint } from "./subscription-validation"
 
 /**
  * Stores a User's browser subscription by endpoint, reactivating and refreshing
@@ -37,7 +37,7 @@ export async function subscribe(userId: string, subscription: unknown) {
 
 /** Removes a browser subscription only when it belongs to the specified User. */
 export async function unsubscribe(userId: string, endpoint: string) {
-  const normalizedEndpoint = normalizePushEndpoint(endpoint)
+  const normalizedEndpoint = parsePushEndpoint(endpoint)
   const [deleted] = await db
     .delete(pushSubscription)
     .where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.endpoint, normalizedEndpoint)))
@@ -48,7 +48,7 @@ export async function unsubscribe(userId: string, endpoint: string) {
 
 /** Checks whether an endpoint is actively bound to the specified User without revealing its owner. */
 export async function hasActiveSubscription(userId: string, endpoint: string) {
-  const normalizedEndpoint = normalizePushEndpoint(endpoint)
+  const normalizedEndpoint = parsePushEndpoint(endpoint)
   const [subscription] = await db
     .select({ id: pushSubscription.id })
     .from(pushSubscription)
