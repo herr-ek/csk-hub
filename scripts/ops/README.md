@@ -11,17 +11,16 @@ bun run ops status               # local and production migration status side by
 bun run ops migrate              # apply pending migrations locally
 bun run ops studio               # Drizzle Studio against the local database
 bun run ops grant-admin <email>  # make an existing user an admin
-bun run ops reference-data       # Choirs, Sections, Styret and Positions; also with --prod
-bun run ops reset                # erase the local database, migrate it and add the reference data
+bun run ops seed-org-structure   # all local groups, Positions and user placement
+bun run ops reset                # erase local data, migrate and seed organisation structure
 bun run ops seed-admin           # local admin account
 bun run ops seed-users           # ten local example users
-bun run ops seed-groups          # example groups, and a Section for every unplaced user
 
 bun run ops --prod               # the menu, targeting production
 bun run ops migrate --prod       # asks you to type "prod" first
 bun run ops migrate --prod --yes # unattended, e.g. in CI
 bun run ops grant-admin <email> --prod  # regain admin access in production
-bun run ops reference-data --prod       # the shared org structure, in production
+bun run ops seed-org-structure --prod   # shared structure only; requires confirmation
 ```
 
 ## Targets
@@ -45,16 +44,24 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
   regain admin access, and it is allowed in production because it creates no account
   and no credentials. The user must already exist; their existing roles are kept, and
   a deactivated user stays deactivated.
-- `reference-data` against production also requires typing `prod`. It is allowed there
-  because every environment needs the same org structure (the Choirs, their Sections,
-  Styret, the Gigmästeri and the Position catalogue), and it fabricates no people. It only creates what
-  is missing, matching existing groups and Positions by name, in one transaction.
+- `seed-org-structure` runs the entire organisation seed in one transaction and is safe
+  to repeat. Locally it creates the shared Choirs, Sections, Styret, Gigmästeri and Position catalogue,
+  adds example groups and places active users with no membership history in a Choir and
+  a Section. Existing structure and memberships are preserved. Concurrent runs serialize
+  with a transaction-scoped advisory lock. A local target refuses a non-local URL.
+- `seed-org-structure --prod` requires typing `prod` (or `--yes` unattended). It creates
+  only the shared structure; it never creates example groups, users or memberships.
 - `reset` refuses outright with `--prod`, and refuses any `POSTGRES_URL` that is not a
   local database. Locally it asks before erasing; `--yes` skips the question, and without a
   terminal it refuses instead of waiting. It drops the `public` and `drizzle` schemas, runs
-  every migration and creates the reference data, but seeds nothing.
-- Seeding refuses outright and exits non-zero with `--prod`. The seed scripts also refuse
-  any `POSTGRES_URL` that is not a local database, including when run by hand.
+  every migration and seeds the organisation structure, including local example groups.
+  It creates no users. Create users with `seed-admin` / `seed-users`, then rerun
+  `seed-org-structure` to place them.
+- `seed-admin` and `seed-users` refuse outright and exit non-zero with `--prod`. Their
+  scripts also refuse any non-local `POSTGRES_URL`, including when run by hand.
+
+`seed-org-structure` replaces the former `reference-data` and `seed-groups` commands;
+there is no prerequisite structure command to run first.
 
 TLS verification follows the shared policy in `src/core/db/tls.ts`; see
 `src/core/db/README.md`.

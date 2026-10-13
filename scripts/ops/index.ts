@@ -5,8 +5,8 @@ import { intro, isCancel, log, outro, select, spinner, text } from "@clack/promp
 import { openStudio, runMigrations } from "./drizzle-kit"
 import { grantAdmin } from "./grant-admin"
 import { statusFor, type TargetStatus } from "./migration-status"
-import { createReferenceData } from "./reference-data"
 import { resetLocalDatabase } from "./reset"
+import { seedOrgStructure } from "./seed-org-structure"
 import { childEnvironment, databaseOrExit, type Target, variableFor } from "./target"
 
 /**
@@ -14,7 +14,7 @@ import { childEnvironment, databaseOrExit, type Target, variableFor } from "./ta
  *
  *   bun run ops [command] [--prod] [--yes]
  *   bun run ops grant-admin <email> [--prod] [--yes]
- *   bun run ops reference-data [--prod] [--yes]
+ *   bun run ops seed-org-structure [--prod] [--yes]
  *   bun run ops reset [--yes]
  *
  * With no command it shows the status and, in a terminal, opens a menu. `--prod` is the
@@ -32,19 +32,17 @@ const COMMANDS = [
   "migrate",
   "studio",
   "grant-admin",
-  "reference-data",
+  "seed-org-structure",
   "reset",
   "seed-admin",
-  "seed-users",
-  "seed-groups"
+  "seed-users"
 ] as const
 type Command = (typeof COMMANDS)[number]
 
 // Bun arguments per seed.
 const SEED_SCRIPTS: Record<string, string[]> = {
   "seed-admin": ["run", "scripts/seed-admin.ts"],
-  "seed-users": ["run", "scripts/seed-users.ts"],
-  "seed-groups": ["run", "scripts/seed-groups.ts"]
+  "seed-users": ["run", "scripts/seed-users.ts"]
 }
 
 const { values: flags, positionals } = parseArgs({
@@ -104,7 +102,7 @@ async function run(choice: Command): Promise<number> {
     return grantAdmin(database, email, { skipConfirmation: flags.yes })
   }
 
-  if (choice === "reference-data") return createReferenceData(database, { skipConfirmation: flags.yes })
+  if (choice === "seed-org-structure") return seedOrgStructure(database, { skipConfirmation: flags.yes })
 
   if (choice === "migrate") {
     const code = await runMigrations(database, { skipConfirmation: flags.yes })
@@ -139,14 +137,13 @@ async function menu(): Promise<void> {
         { value: "studio", label: "Open Studio", hint: `against ${target}` },
         { value: "grant-admin", label: "Grant admin", hint: `existing user, against ${target}` },
         {
-          value: "reference-data",
-          label: "Create reference data",
-          hint: `Choirs, Sections, Styret, Positions, against ${target}`
+          value: "seed-org-structure",
+          label: "Seed organisation structure",
+          hint: target === "local" ? "all groups, Positions and user placement" : "shared groups and Positions"
         },
         localOnlyOption("reset", "Reset local database"),
         localOnlyOption("seed-admin", "Seed admin"),
         localOnlyOption("seed-users", "Seed users"),
-        localOnlyOption("seed-groups", "Seed groups"),
         { value: "exit", label: "Exit" }
       ]
     })

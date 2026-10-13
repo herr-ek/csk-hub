@@ -1,18 +1,15 @@
-import { afterAll, describe, expect, spyOn, test } from "bun:test"
+import { describe, expect, spyOn } from "bun:test"
+import { databaseTest } from "@test/database-test"
 import { sql } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { group } from "@/core/db/schema/org-structure"
-import { createTestDatabase } from "../../test/database"
 import { readJournal } from "./migration-status"
 import { resetLocalDatabase } from "./reset"
 
-const database = await createTestDatabase()
+const test = databaseTest()
 
-describe.skipIf(!database)("resetLocalDatabase", () => {
-  const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
-
-  test("refuses production and any database that is not local", async () => {
+describe("resetLocalDatabase", () => {
+  test("refuses production and any database that is not local", async (t) => {
     await t.db.insert(user).values({ id: "kept", name: "Kept", email: "kept@example.com" })
 
     const consoleError = spyOn(console, "error").mockImplementation(() => {})
@@ -34,12 +31,20 @@ describe.skipIf(!database)("resetLocalDatabase", () => {
     expect(await t.db.select().from(user)).toHaveLength(1)
   })
 
-  test("empties the database, runs every migration and creates the reference data", async () => {
-    expect(await resetLocalDatabase({ target: "local", url: t.url, host: "test" }, { skipConfirmation: true })).toBe(0)
+  test("empties the database, runs every migration and seeds the organisation structure", async (t) => {
+    await t.db.insert(user).values({ id: "removed", name: "Removed", email: "removed@example.com" })
+    expect(
+      await resetLocalDatabase(
+        { target: "local", url: t.url, host: "test" },
+        { skipConfirmation: true, captureOutput: true }
+      )
+    ).toBe(0)
 
     expect(await t.db.select().from(user)).toEqual([])
     const { rows } = await t.db.execute(sql`select count(*)::int as applied from drizzle.__drizzle_migrations`)
     expect(rows).toEqual([{ applied: readJournal().length }])
-    expect((await t.db.select({ name: group.name }).from(group)).map(({ name }) => name)).toContain("KKB")
+    const names = (await t.db.select({ name: group.name }).from(group)).map(({ name }) => name)
+    expect(names).toContain("KKB")
+    expect(names).toContain("KK roddgrupp")
   }, 60_000)
 })

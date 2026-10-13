@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, test } from "bun:test"
+import { describe, expect } from "bun:test"
+import { databaseTest } from "@test/database-test"
 import { eq } from "drizzle-orm"
 import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { endLinkedPosition, startLinkedPosition } from "./linked-positions"
@@ -6,29 +7,26 @@ import { startMembership } from "./membership"
 import { endPositionHolding, replacePositionHolder, startPositionHolding } from "./positions"
 import { getCurrentPositionHolder } from "./reads"
 import { createGroup } from "./structure"
-import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
+import { expectSuccess, type OrgStructureTestDatabase, orgStructureFixture, uniqueName } from "./test-support"
 
-const database = await createOrgStructureTestDatabase()
+const test = databaseTest(orgStructureFixture)
 
-describe.skipIf(!database)("groups positions", () => {
-  const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
-
-  async function member(groupId: string, startDate = "2025-01-01") {
+describe("groups positions", () => {
+  async function member(t: OrgStructureTestDatabase, groupId: string, startDate = "2025-01-01") {
     const userId = await t.user()
     expectSuccess(await startMembership(t.db, { userId, groupId, startDate }))
     return userId
   }
 
-  async function newGroup(type: "Board" | "Sexmästeri" | "Festgrupp") {
+  async function newGroup(t: OrgStructureTestDatabase, type: "Board" | "Sexmästeri" | "Festgrupp") {
     const { id } = expectSuccess(await createGroup(t.db, { name: uniqueName(type), type }))
     return id
   }
 
-  test("a member holds a Position allowed in the group's type", async () => {
+  test("a member holds a Position allowed in the group's type", async (t) => {
     const kk = await t.groupId("KK")
     const conductor = await t.positionId("Dirigent")
-    const userId = await member(kk)
+    const userId = await member(t, kk)
 
     expectSuccess(
       await startPositionHolding(t.db, { userId, groupId: kk, positionId: conductor, startDate: "2025-02-01" })
@@ -36,7 +34,7 @@ describe.skipIf(!database)("groups positions", () => {
     expect(await getCurrentPositionHolder(t.db, kk, conductor)).toEqual({ userId, startDate: "2025-02-01" })
   })
 
-  test("requires a current Membership in the group", async () => {
+  test("requires a current Membership in the group", async (t) => {
     const userId = await t.user()
     const dk = await t.groupId("DK")
     expect(
@@ -49,9 +47,9 @@ describe.skipIf(!database)("groups positions", () => {
     ).toEqual({ success: false, error: "not-a-member" })
   })
 
-  test("cannot start before the Membership does", async () => {
+  test("cannot start before the Membership does", async (t) => {
     const dk = await t.groupId("DK")
-    const userId = await member(dk, "2025-01-01")
+    const userId = await member(t, dk, "2025-01-01")
     expect(
       await startPositionHolding(t.db, {
         userId,
@@ -62,9 +60,9 @@ describe.skipIf(!database)("groups positions", () => {
     ).toEqual({ success: false, error: "period-conflict" })
   })
 
-  test("refuses a Position the group's type does not allow", async () => {
-    const fest = await newGroup("Festgrupp")
-    const userId = await member(fest)
+  test("refuses a Position the group's type does not allow", async (t) => {
+    const fest = await newGroup(t, "Festgrupp")
+    const userId = await member(t, fest)
     expect(
       await startPositionHolding(t.db, {
         userId,
@@ -75,9 +73,9 @@ describe.skipIf(!database)("groups positions", () => {
     ).toEqual({ success: false, error: "position-not-allowed" })
   })
 
-  test("one holder per Position per group, while one person may hold several", async () => {
+  test("one holder per Position per group, while one person may hold several", async (t) => {
     const mk = await t.groupId("MK")
-    const [first, second] = [await member(mk), await member(mk)]
+    const [first, second] = [await member(t, mk), await member(t, mk)]
     const [notfiskal, konsertmastare] = [await t.positionId("Notfiskal"), await t.positionId("Konsertmästare")]
 
     expectSuccess(
@@ -104,9 +102,9 @@ describe.skipIf(!database)("groups positions", () => {
     expect((await getCurrentPositionHolder(t.db, mk, notfiskal))?.userId).toBe(second)
   })
 
-  test("ending a holding the user does not hold is refused", async () => {
+  test("ending a holding the user does not hold is refused", async (t) => {
     const kk = await t.groupId("KK")
-    const userId = await member(kk)
+    const userId = await member(t, kk)
     expect(
       await endPositionHolding(t.db, {
         userId,
@@ -118,10 +116,10 @@ describe.skipIf(!database)("groups positions", () => {
   })
 
   describe("linked positions", () => {
-    test("starts the Position and any missing Membership in every group together", async () => {
-      const [board, sexmasteri] = [await newGroup("Board"), await newGroup("Sexmästeri")]
+    test("starts the Position and any missing Membership in every group together", async (t) => {
+      const [board, sexmasteri] = [await newGroup(t, "Board"), await newGroup(t, "Sexmästeri")]
       const sexmastare = await t.positionId("Sexmästare")
-      const userId = await member(board)
+      const userId = await member(t, board)
 
       expectSuccess(
         await startLinkedPosition(t.db, {
@@ -138,10 +136,10 @@ describe.skipIf(!database)("groups positions", () => {
       expect(memberships.map(({ groupId }) => groupId).sort()).toEqual([board, sexmasteri].sort())
     })
 
-    test("starts nothing when any group refuses", async () => {
-      const [board, sexmasteri] = [await newGroup("Board"), await newGroup("Sexmästeri")]
+    test("starts nothing when any group refuses", async (t) => {
+      const [board, sexmasteri] = [await newGroup(t, "Board"), await newGroup(t, "Sexmästeri")]
       const sexmastare = await t.positionId("Sexmästare")
-      const incumbent = await member(sexmasteri)
+      const incumbent = await member(t, sexmasteri)
       expectSuccess(
         await startPositionHolding(t.db, {
           userId: incumbent,
@@ -164,8 +162,8 @@ describe.skipIf(!database)("groups positions", () => {
       expect(await t.db.select().from(positionHolder).where(eq(positionHolder.userId, userId))).toEqual([])
     })
 
-    test("ends the Position in every group together, leaving Memberships", async () => {
-      const [board, sexmasteri] = [await newGroup("Board"), await newGroup("Sexmästeri")]
+    test("ends the Position in every group together, leaving Memberships", async (t) => {
+      const [board, sexmasteri] = [await newGroup(t, "Board"), await newGroup(t, "Sexmästeri")]
       const sexmastare = await t.positionId("Sexmästare")
       const userId = await t.user()
       const groupIds = [board, sexmasteri]
@@ -182,9 +180,9 @@ describe.skipIf(!database)("groups positions", () => {
     })
   })
 
-  test("a Board member holds one elected post, while other groups allow several Positions", async () => {
-    const styret = await newGroup("Board")
-    const userId = await member(styret)
+  test("a Board member holds one elected post, while other groups allow several Positions", async (t) => {
+    const styret = await newGroup(t, "Board")
+    const userId = await member(t, styret)
     const [ordforande, gigmastare] = [await t.positionId("Ordförande"), await t.positionId("Gigmästare")]
     expectSuccess(
       await startPositionHolding(t.db, { userId, groupId: styret, positionId: ordforande, startDate: "2025-02-01" })
@@ -204,8 +202,8 @@ describe.skipIf(!database)("groups positions", () => {
       await startPositionHolding(t.db, { userId, groupId: styret, positionId: gigmastare, startDate: "2025-06-01" })
     )
 
-    const sexmasteri = await newGroup("Sexmästeri")
-    const sexmastare = await member(sexmasteri)
+    const sexmasteri = await newGroup(t, "Sexmästeri")
+    const sexmastare = await member(t, sexmasteri)
     for (const name of ["Sexmästare", "Sexmästarinna"]) {
       expectSuccess(
         await startPositionHolding(t.db, {
@@ -219,9 +217,9 @@ describe.skipIf(!database)("groups positions", () => {
   })
 
   describe("replacePositionHolder", () => {
-    test("hands the Position over on the new holder's start date", async () => {
+    test("hands the Position over on the new holder's start date", async (t) => {
       const dk = await t.groupId("DK")
-      const [outgoing, incoming] = [await member(dk), await member(dk)]
+      const [outgoing, incoming] = [await member(t, dk), await member(t, dk)]
       const konsertmastare = await t.positionId("Konsertmästare")
       expectSuccess(
         await startPositionHolding(t.db, {
@@ -249,9 +247,9 @@ describe.skipIf(!database)("groups positions", () => {
       expect(ended?.endDate).toBe("2026-01-01")
     })
 
-    test("assigns a vacant Position, and refuses the current holder or a non-member", async () => {
+    test("assigns a vacant Position, and refuses the current holder or a non-member", async (t) => {
       const dk = await t.groupId("DK")
-      const userId = await member(dk)
+      const userId = await member(t, dk)
       const notfiskal = await t.positionId("Notfiskal")
       expectSuccess(
         await replacePositionHolder(t.db, { userId, groupId: dk, positionId: notfiskal, startDate: "2025-02-01" })

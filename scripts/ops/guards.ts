@@ -5,7 +5,7 @@ import type { Database } from "./target"
 /**
  * Refuse to run a local-only action against anything but a local database.
  *
- * A refusal rather than a prompt: seeding fabricates users, and there is no circumstance
+ * A refusal rather than a prompt: user seeding fabricates users, and there is no circumstance
  * in which the right answer to "seed production?" is yes. The seed scripts call this on
  * their own POSTGRES_URL too, so running one by hand is held to the same rule.
  */

@@ -1,4 +1,6 @@
-import { afterAll, describe, expect, test } from "bun:test"
+import { describe, expect } from "bun:test"
+import type { TestDatabase } from "@test/database"
+import { databaseTest } from "@test/database-test"
 import { eq, inArray } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import {
@@ -16,61 +18,17 @@ import {
   rehearsal
 } from "@/core/db/schema/events"
 import { group } from "@/core/db/schema/org-structure"
-import { createTestDatabase } from "../../../test/database"
 
 // The constraints and triggers the database enforces by itself for Events, written to directly so
 // that no module's checks can mask a missing one. The rules the scheme tags [app] are not tested here.
 
-const database = await createTestDatabase()
-// Bun still evaluates a skipped suite callback to register its tests.
-const db = database?.db ?? ({} as NonNullable<typeof database>["db"])
-const drop = database?.drop ?? (async () => {})
+const test = databaseTest(eventFixture)
 
-describe.skipIf(!database)("events schema constraints", () => {
-  afterAll(() => drop())
-
-  async function newUser() {
-    const id = crypto.randomUUID()
-    await db.insert(user).values({ id, name: "Singer", email: `${id}@example.com` })
-    return id
-  }
-
-  async function newEvent(values: Partial<typeof event.$inferInsert> = {}) {
-    const [row] = await db
-      .insert(event)
-      .values({
-        type: "Rehearsal",
-        status: "Published",
-        title: "KK rep",
-        startsAt: new Date("2026-10-07T16:00:00Z"),
-        endsAt: new Date("2026-10-07T19:00:00Z"),
-        participationMode: "ResponseRequiredStrict",
-        ...values
-      })
-      .returning({ id: event.id })
-    return row.id
-  }
-
-  async function newQuestion(eventId: string, kind: "Text" | "SingleChoice" | "Checkbox" = "Text") {
-    const [row] = await db
-      .insert(eventRegistrationQuestion)
-      .values({ eventId, label: "Allergies", kind, sortOrder: 1 })
-      .returning({ id: eventRegistrationQuestion.id })
-    return row.id
-  }
-
-  async function newRegistration(eventId: string, userId: string, comment?: string) {
-    const [row] = await db
-      .insert(eventRegistration)
-      .values({ eventId, userId, comment })
-      .returning({ id: eventRegistration.id })
-    return row.id
-  }
-
+describe("events schema constraints", () => {
   const socialEvent = { type: "Social", participationMode: "Registration" } as const
 
   describe("Events", () => {
-    test("rejects an Event that ends before it starts, or is called after it starts", async () => {
+    test("rejects an Event that ends before it starts, or is called after it starts", async ({ newEvent }) => {
       await expect(newEvent({ endsAt: new Date("2026-10-07T16:00:00Z") })).rejects.toMatchObject({
         cause: { constraint: "event_period_check" }
       })
@@ -80,7 +38,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       await newEvent({ callTime: new Date("2026-10-07T15:30:00Z") })
     })
 
-    test("rejects a deadline after the start, or on an Event that collects nothing", async () => {
+    test("rejects a deadline after the start, or on an Event that collects nothing", async ({ newEvent }) => {
       await expect(newEvent({ respondBy: new Date("2026-10-08T00:00:00Z") })).rejects.toMatchObject({
         cause: { constraint: "event_respond_by_check" }
       })
@@ -89,7 +47,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "event_respond_by_mode_check" } })
     })
 
-    test("attaches an extension row only to an Event of its type, and then pins the type", async () => {
+    test("attaches an extension row only to an Event of its type, and then pins the type", async ({ db, newEvent }) => {
       const gigId = await newEvent({ type: "Gig", participationMode: "ResponseRequired" })
       await expect(db.insert(rehearsal).values({ eventId: gigId }).execute()).rejects.toMatchObject({
         cause: { constraint: "rehearsal_event_id_type_event_id_type_fk" }
@@ -101,7 +59,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "gig_event_id_type_event_id_type_fk" } })
     })
 
-    test("deletes a Draft with its extension row, targets and details", async () => {
+    test("deletes a Draft with its extension row, targets and details", async ({ db, newEvent }) => {
       const eventId = await newEvent({ status: "Draft" })
       await db.insert(rehearsal).values({ eventId })
       await db.insert(eventTarget).values({ eventId, voiceFamily: "B" })
@@ -112,14 +70,14 @@ describe.skipIf(!database)("events schema constraints", () => {
   })
 
   describe("Targets", () => {
-    test("needs a group, a Voice family or both", async () => {
+    test("needs a group, a Voice family or both", async ({ db, newEvent }) => {
       const eventId = await newEvent()
       await expect(db.insert(eventTarget).values({ eventId }).execute()).rejects.toMatchObject({
         cause: { constraint: "event_target_not_empty_check" }
       })
     })
 
-    test("takes a Voice family, never a division", async () => {
+    test("takes a Voice family, never a division", async ({ db, newEvent }) => {
       const eventId = await newEvent()
       await expect(
         db
@@ -129,7 +87,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "voice_family_check" } })
     })
 
-    test("rejects the same rule twice, also when one side is empty", async () => {
+    test("rejects the same rule twice, also when one side is empty", async ({ db, newEvent }) => {
       const eventId = await newEvent()
       const [kk] = await db.insert(group).values({ name: "KK targets", type: "GigGroup" }).returning({ id: group.id })
       await db.insert(eventTarget).values([
@@ -152,7 +110,7 @@ describe.skipIf(!database)("events schema constraints", () => {
   })
 
   describe("Responses", () => {
-    test("go only to Published Events in a response mode", async () => {
+    test("go only to Published Events in a response mode", async ({ db, newUser, newEvent }) => {
       const userId = await newUser()
       for (const values of [{ status: "Draft" }, { status: "Cancelled" }, socialEvent] as const) {
         const eventId = await newEvent(values)
@@ -162,7 +120,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       }
     })
 
-    test("are Yes, or No with exactly one reason, in ResponseRequiredStrict", async () => {
+    test("are Yes, or No with exactly one reason, in ResponseRequiredStrict", async ({ db, newUser, newEvent }) => {
       const eventId = await newEvent()
       const [sick] = await db.insert(absenceReason).values({ label: "Sick" }).returning({ id: absenceReason.id })
 
@@ -188,7 +146,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       ])
     })
 
-    test("take any answer, and a reason only with No, in ResponseRequired", async () => {
+    test("take any answer, and a reason only with No, in ResponseRequired", async ({ db, newUser, newEvent }) => {
       const eventId = await newEvent({ type: "Gig", participationMode: "ResponseRequired" })
       await db.insert(eventResponse).values([
         { eventId, userId: await newUser(), answer: "Maybe" },
@@ -202,7 +160,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "event_response_reason_only_with_no_check" } })
     })
 
-    test("allow one Response per User and Event", async () => {
+    test("allow one Response per User and Event", async ({ db, newUser, newEvent }) => {
       const [eventId, userId] = [await newEvent(), await newUser()]
       await db.insert(eventResponse).values({ eventId, userId, answer: "Yes" })
       await expect(db.insert(eventResponse).values({ eventId, userId, answer: "Yes" }).execute()).rejects.toMatchObject(
@@ -210,7 +168,11 @@ describe.skipIf(!database)("events schema constraints", () => {
       )
     })
 
-    test("keep the Event in a response mode, though they survive a switch between the two", async () => {
+    test("keep the Event in a response mode, though they survive a switch between the two", async ({
+      db,
+      newUser,
+      newEvent
+    }) => {
       const eventId = await newEvent({ type: "Gig", participationMode: "ResponseRequired" })
       await db.insert(eventResponse).values({ eventId, userId: await newUser(), answer: "Maybe" })
 
@@ -224,7 +186,11 @@ describe.skipIf(!database)("events schema constraints", () => {
   })
 
   describe("Registrations", () => {
-    test("go only to Events in Registration mode, and register only while Published", async () => {
+    test("go only to Events in Registration mode, and register only while Published", async ({
+      newUser,
+      newEvent,
+      newRegistration
+    }) => {
       const userId = await newUser()
       await expect(newRegistration(await newEvent(), userId)).rejects.toMatchObject({
         cause: { constraint: "event_registration_mode_check" }
@@ -234,7 +200,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       })
     })
 
-    test("can be withdrawn after cancellation, but not renewed", async () => {
+    test("can be withdrawn after cancellation, but not renewed", async ({ db, newUser, newEvent, newRegistration }) => {
       const eventId = await newEvent(socialEvent)
       const registrationId = await newRegistration(eventId, await newUser())
       await db.update(event).set({ status: "Cancelled" }).where(eq(event.id, eventId))
@@ -252,7 +218,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "event_registration_mode_check" } })
     })
 
-    test("carry a withdrawal time exactly while Withdrawn", async () => {
+    test("carry a withdrawal time exactly while Withdrawn", async ({ db, newUser, newEvent }) => {
       const eventId = await newEvent(socialEvent)
       await expect(
         db
@@ -268,7 +234,7 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "event_registration_withdrawn_check" } })
     })
 
-    test("keep the Event in Registration mode once it has questions", async () => {
+    test("keep the Event in Registration mode once it has questions", async ({ db, newEvent, newQuestion }) => {
       const eventId = await newEvent({ ...socialEvent, status: "Draft" })
       await newQuestion(eventId)
       await expect(
@@ -280,7 +246,13 @@ describe.skipIf(!database)("events schema constraints", () => {
       })
     })
 
-    test("answer only their own Event's questions, and choose only that question's options", async () => {
+    test("answer only their own Event's questions, and choose only that question's options", async ({
+      db,
+      newUser,
+      newEvent,
+      newQuestion,
+      newRegistration
+    }) => {
       const eventId = await newEvent(socialEvent)
       const registrationId = await newRegistration(eventId, await newUser())
       const mainCourse = await newQuestion(eventId, "SingleChoice")
@@ -311,7 +283,13 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "event_registration_answer_choice_option_fk" } })
     })
 
-    test("keep an answered question, and its chosen options, from being deleted", async () => {
+    test("keep an answered question, and its chosen options, from being deleted", async ({
+      db,
+      newUser,
+      newEvent,
+      newQuestion,
+      newRegistration
+    }) => {
       const eventId = await newEvent(socialEvent)
       const registrationId = await newRegistration(eventId, await newUser())
       const [allergies, mainCourse] = [await newQuestion(eventId), await newQuestion(eventId, "SingleChoice")]
@@ -335,7 +313,13 @@ describe.skipIf(!database)("events schema constraints", () => {
       ).rejects.toMatchObject({ cause: { constraint: "event_registration_answer_choice_option_fk" } })
     })
 
-    test("rejects an answer with both a text and a checkbox value", async () => {
+    test("rejects an answer with both a text and a checkbox value", async ({
+      db,
+      newUser,
+      newEvent,
+      newQuestion,
+      newRegistration
+    }) => {
       const eventId = await newEvent(socialEvent)
       const registrationId = await newRegistration(eventId, await newUser())
       const questionId = await newQuestion(eventId)
@@ -346,7 +330,7 @@ describe.skipIf(!database)("events schema constraints", () => {
   })
 
   describe("Attendance", () => {
-    test("is recorded once per User and Event", async () => {
+    test("is recorded once per User and Event", async ({ db, newUser, newEvent }) => {
       const [eventId, userId] = [await newEvent(), await newUser()]
       await db.insert(eventAttendance).values({ eventId, userId, status: "Present" })
       await expect(
@@ -355,7 +339,13 @@ describe.skipIf(!database)("events schema constraints", () => {
     })
   })
 
-  test("deleting an Event deletes everything recorded for it", async () => {
+  test("deleting an Event deletes everything recorded for it", async ({
+    db,
+    newUser,
+    newEvent,
+    newQuestion,
+    newRegistration
+  }) => {
     const rehearsalId = await newEvent()
     await db.insert(eventResponse).values({ eventId: rehearsalId, userId: await newUser(), answer: "Yes" })
     await db.insert(eventAttendance).values({ eventId: rehearsalId, userId: await newUser(), status: "Present" })
@@ -382,7 +372,13 @@ describe.skipIf(!database)("events schema constraints", () => {
     ).toEqual([])
   })
 
-  test("Erasure keeps participation anonymously and wipes the free text", async () => {
+  test("Erasure keeps participation anonymously and wipes the free text", async ({
+    db,
+    newUser,
+    newEvent,
+    newQuestion,
+    newRegistration
+  }) => {
     const [erased, recorder] = [await newUser(), await newUser()]
     const [exam] = await db.insert(absenceReason).values({ label: "Exam" }).returning({ id: absenceReason.id })
 
@@ -444,3 +440,45 @@ describe.skipIf(!database)("events schema constraints", () => {
     expect(erasedRehearsal.leaderUserId).toBeNull()
   })
 })
+
+function eventFixture({ db }: TestDatabase) {
+  async function newUser() {
+    const id = crypto.randomUUID()
+    await db.insert(user).values({ id, name: "Singer", email: `${id}@example.com` })
+    return id
+  }
+
+  async function newEvent(values: Partial<typeof event.$inferInsert> = {}) {
+    const [row] = await db
+      .insert(event)
+      .values({
+        type: "Rehearsal",
+        status: "Published",
+        title: "KK rep",
+        startsAt: new Date("2026-10-07T16:00:00Z"),
+        endsAt: new Date("2026-10-07T19:00:00Z"),
+        participationMode: "ResponseRequiredStrict",
+        ...values
+      })
+      .returning({ id: event.id })
+    return row.id
+  }
+
+  async function newQuestion(eventId: string, kind: "Text" | "SingleChoice" | "Checkbox" = "Text") {
+    const [row] = await db
+      .insert(eventRegistrationQuestion)
+      .values({ eventId, label: "Allergies", kind, sortOrder: 1 })
+      .returning({ id: eventRegistrationQuestion.id })
+    return row.id
+  }
+
+  async function newRegistration(eventId: string, userId: string, comment?: string) {
+    const [row] = await db
+      .insert(eventRegistration)
+      .values({ eventId, userId, comment })
+      .returning({ id: eventRegistration.id })
+    return row.id
+  }
+
+  return { db, newUser, newEvent, newQuestion, newRegistration }
+}
