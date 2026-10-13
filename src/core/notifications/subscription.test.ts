@@ -8,11 +8,11 @@ import { InvalidNotificationSubscriptionError } from "./subscription-validation"
 
 const database = await createTestDatabase()
 if (database) mock.module("@/core/db", () => ({ db: database.db }))
-const operations = database ? await import("./subscription") : undefined
+const operations = await import("./subscription")
 
 describe.skipIf(!database)("push subscription ownership", () => {
   const t = database as NonNullable<typeof database>
-  const { subscribe, unsubscribe, hasActiveSubscription } = operations as NonNullable<typeof operations>
+  const { subscribe, unsubscribe, hasActiveSubscription } = operations
   const firstUser = crypto.randomUUID()
   const secondUser = crypto.randomUUID()
   const ecdh = createECDH("prime256v1")
