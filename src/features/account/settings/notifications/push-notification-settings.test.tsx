@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test"
+import { registerDom } from "@test/dom"
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
-import { registerDom } from "@test/dom"
 
 registerDom()
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -12,6 +12,7 @@ const subscription = { endpoint: "https://unsupported.example/channel", unsubscr
 const getSubscription = mock(async () => subscription)
 const registration = { pushManager: { getSubscription } }
 const register = mock(async () => registration)
+const getRegistration = mock(async (): Promise<typeof registration | undefined> => registration)
 const originalServiceWorker = Object.getOwnPropertyDescriptor(navigator, "serviceWorker")
 const originalPushManager = Object.getOwnPropertyDescriptor(window, "PushManager")
 const originalNotification = Object.getOwnPropertyDescriptor(window, "Notification")
@@ -32,8 +33,9 @@ beforeEach(() => {
   getBinding.mockReset().mockResolvedValue("unbound")
   unsubscribe.mockReset().mockResolvedValue(true)
   register.mockReset().mockResolvedValue(registration)
+  getRegistration.mockReset().mockResolvedValue(registration)
   getSubscription.mockReset().mockResolvedValue(subscription)
-  Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: { register } })
+  Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: { register, getRegistration } })
   Object.defineProperty(window, "PushManager", { configurable: true, value: class {} })
   Object.defineProperty(window, "Notification", { configurable: true, value: { permission: "granted" } })
   container = document.createElement("div")
@@ -97,4 +99,16 @@ test("an unbound subscription offers reconnect but never reports enabled", async
   await renderSettings()
   expect(container.textContent).toContain("reconnect")
   expect(container.textContent).not.toContain("enabled")
+})
+
+test("focus refresh rechecks ownership without registering the service worker again", async () => {
+  getRegistration.mockResolvedValueOnce(undefined)
+  await renderSettings()
+  expect(register).toHaveBeenCalledTimes(1)
+  getBinding.mockResolvedValue("bound")
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  expect(getBinding).toHaveBeenCalledTimes(2)
+  expect(getRegistration).toHaveBeenCalledTimes(2)
+  expect(register).toHaveBeenCalledTimes(1)
+  expect(container.textContent).toContain("enabled")
 })
