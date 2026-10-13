@@ -5,7 +5,7 @@ import { Socket } from "node:net"
 const requireAdmin = mock(async () => undefined)
 let subscriptions: Record<string, unknown>[] = []
 const where = mock(async () => subscriptions)
-const select = mock(() => ({ from: () => ({ where }) }))
+const select = mock(() => ({ from: () => ({ innerJoin: () => ({ where }) }) }))
 const updateWhere = mock(async () => undefined)
 const set = mock(() => ({ where: updateWhere }))
 const update = mock(() => ({ set }))

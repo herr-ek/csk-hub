@@ -1,11 +1,12 @@
 import "server-only"
 
 import https from "node:https"
-import { and, eq, inArray, sql } from "drizzle-orm"
+import { and, eq, getTableColumns, inArray, isNull, or, sql } from "drizzle-orm"
 import webpush from "web-push"
 import { app } from "@/core/config/app"
 import { env } from "@/core/config/env"
 import { db } from "@/core/db"
+import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
 import { InvalidNotificationSubscriptionError, parseNotificationSubscription } from "./subscription-validation"
 import type {
@@ -237,16 +238,24 @@ export async function sendToUsers(userIds: string[], message: string): Promise<N
   if (userIds.length === 0) {
     return { success: false, error: "noRecipients", accepted: 0, failed: 0, failureCategories: {} }
   }
-  const subscriptions = await db
-    .select()
-    .from(pushSubscription)
-    .where(and(inArray(pushSubscription.userId, userIds), eq(pushSubscription.status, "active")))
-
-  return sendToSubscriptions(subscriptions, message)
+  return sendToSubscriptions(await listDeliverySubscriptions(userIds), message)
 }
 
-/** Delivers a message to every active push subscription, succeeding when at least one accepts it. */
+/** Delivers a message to every eligible active User's push subscriptions. */
 export async function sendToAll(message: string) {
-  const subscriptions = await db.select().from(pushSubscription).where(eq(pushSubscription.status, "active"))
-  return sendToSubscriptions(subscriptions, message)
+  return sendToSubscriptions(await listDeliverySubscriptions(), message)
+}
+
+function listDeliverySubscriptions(userIds?: string[]) {
+  return db
+    .select(getTableColumns(pushSubscription))
+    .from(pushSubscription)
+    .innerJoin(user, eq(user.id, pushSubscription.userId))
+    .where(
+      and(
+        eq(pushSubscription.status, "active"),
+        or(eq(user.banned, false), isNull(user.banned)),
+        userIds ? inArray(user.id, userIds) : undefined
+      )
+    )
 }
