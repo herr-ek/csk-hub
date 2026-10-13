@@ -11,7 +11,6 @@ export type NotificationDeliveryFailureCategory =
   | "subscriptionGone"
   | "providerRejected"
   | "timeout"
-  | "deadline"
   | "transport"
   | "bookkeeping"
 
