@@ -37,16 +37,31 @@ export async function getPushSubscriptionBinding(endpoint: string): Promise<"bou
   }
 }
 
+/**
+ * Binds validated browser subscription data to the signed-in User. Throws
+ * `Unauthorized` without a session, rejects impersonation, and propagates
+ * `InvalidNotificationSubscriptionError` or persistence failures.
+ */
 export async function subscribeUserToPush(subscription: NotificationSubscription) {
   await subscribe(await requireUserId(), subscription)
   return { success: true }
 }
 
+/**
+ * Removes only the signed-in User's endpoint binding and reports whether it existed.
+ * Throws `Unauthorized` without a session, rejects impersonation, and propagates
+ * `InvalidNotificationSubscriptionError` or persistence failures.
+ */
 export async function unsubscribeUserFromPush(endpoint: string) {
   const removed = await unsubscribe(await requireUserId(), endpoint)
   return { success: true, removed }
 }
 
+/**
+ * Sends a test to the signed-in User's active subscriptions and returns provider
+ * acceptance counts. Throws `Unauthorized` without a session, rejects
+ * impersonation, and propagates subscription lookup failures.
+ */
 export async function sendPushNotificationTest(message: string) {
   return sendToUser(await requireUserId(), message)
 }
