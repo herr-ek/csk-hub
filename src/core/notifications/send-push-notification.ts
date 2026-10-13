@@ -66,7 +66,12 @@ function failureCategory(error: unknown): NotificationDeliveryFailureCategory {
 }
 
 async function recordFailure(stored: StoredSubscription, category: NotificationDeliveryFailureCategory) {
-  const permanentlyInvalid = category === "invalidSubscription" || category === "subscriptionGone"
+  const disabledReasons: Partial<Record<NotificationDeliveryFailureCategory, string>> = {
+    invalidSubscription: "Stored push subscription failed validation",
+    subscriptionGone: "Push provider returned HTTP 404 or 410"
+  }
+  const disabledReason = disabledReasons[category] ?? null
+  const permanentlyInvalid = disabledReason !== null
   const now = new Date()
 
   await db
@@ -76,12 +81,7 @@ async function recordFailure(stored: StoredSubscription, category: NotificationD
       lastFailureAt: now,
       failureCount: sql`${pushSubscription.failureCount} + 1`,
       disabledAt: permanentlyInvalid ? now : null,
-      disabledReason:
-        category === "invalidSubscription"
-          ? "Stored push subscription failed validation"
-          : category === "subscriptionGone"
-            ? "Push provider returned HTTP 404 or 410"
-            : null,
+      disabledReason,
       updatedAt: now
     })
     .where(eq(pushSubscription.id, stored.id))
@@ -112,6 +112,14 @@ async function bestEffortBookkeeping(operation: Promise<unknown>) {
   }
 }
 
+async function recordFailedAttempt(
+  stored: StoredSubscription,
+  category: NotificationDeliveryFailureCategory
+): Promise<DeliveryAttempt> {
+  const recorded = await bestEffortBookkeeping(recordFailure(stored, category))
+  return { accepted: false, failureCategory: category, bookkeepingFailed: !recorded }
+}
+
 async function deliverOne(stored: StoredSubscription, message: string): Promise<DeliveryAttempt> {
   let subscription: ReturnType<typeof parseNotificationSubscription>
   try {
@@ -120,9 +128,7 @@ async function deliverOne(stored: StoredSubscription, message: string): Promise<
       keys: { p256dh: stored.p256dh, auth: stored.auth }
     })
   } catch (error) {
-    const category = failureCategory(error)
-    const recorded = await bestEffortBookkeeping(recordFailure(stored, category))
-    return { accepted: false, failureCategory: category, bookkeepingFailed: !recorded }
+    return recordFailedAttempt(stored, failureCategory(error))
   }
 
   const agent = createDeadlineAgent()
@@ -133,9 +139,7 @@ async function deliverOne(stored: StoredSubscription, message: string): Promise<
       { timeout: SOCKET_IDLE_TIMEOUT_MS, agent }
     )
   } catch (error) {
-    const category = failureCategory(error)
-    const recorded = await bestEffortBookkeeping(recordFailure(stored, category))
-    return { accepted: false, failureCategory: category, bookkeepingFailed: !recorded }
+    return recordFailedAttempt(stored, failureCategory(error))
   } finally {
     agent.destroy()
   }
@@ -147,13 +151,14 @@ async function deliverOne(stored: StoredSubscription, message: string): Promise<
 
 async function deliverWithConcurrency(
   subscriptions: StoredSubscription[],
-  message: string,
-  concurrency: number
+  message: string
 ): Promise<DeliveryAttempt[]> {
   const results = new Array<DeliveryAttempt>(subscriptions.length)
+  // Stop starting sends after 30s; in-flight sends may still need their socket
+  // deadline (10s) and bookkeeping wait (2s). This is not an end-to-end timeout.
   const deadline = Date.now() + BATCH_DEADLINE_MS
   let nextIndex = 0
-  const workerCount = Math.min(concurrency, subscriptions.length)
+  const workerCount = Math.min(DEFAULT_CONCURRENCY, subscriptions.length)
 
   await Promise.all(
     Array.from({ length: workerCount }, async () => {
@@ -200,7 +205,7 @@ async function sendToSubscriptions(
     return { success: false, error: "noActiveSubscriptions", accepted: 0, failed: 0, failureCategories: {} }
   }
 
-  const attempts = await deliverWithConcurrency(subscriptions, message, DEFAULT_CONCURRENCY)
+  const attempts = await deliverWithConcurrency(subscriptions, message)
   const failureCategories: NotificationDeliveryDiagnostics["failureCategories"] = {}
   let accepted = 0
 
