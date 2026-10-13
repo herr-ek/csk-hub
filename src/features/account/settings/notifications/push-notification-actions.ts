@@ -8,6 +8,7 @@ import {
   subscribe,
   unsubscribe
 } from "@/core/notifications"
+import { InvalidNotificationSubscriptionError } from "@/core/notifications/subscription-validation"
 
 async function requireUserId() {
   const session = await getRequestSession()
@@ -20,8 +21,20 @@ async function requireUserId() {
   return session.user.id
 }
 
-export async function isPushSubscriptionBoundToCurrentUser(endpoint: string) {
-  return hasActiveSubscription(await requireUserId(), endpoint)
+/**
+ * Checks the signed-in User's binding without revealing another owner's identity.
+ * Unsupported endpoints return `unsupported` so the browser can offer removal.
+ * Throws `Unauthorized` without a session, rejects impersonation, and propagates
+ * lookup failures rather than reporting them as an absent binding.
+ */
+export async function getPushSubscriptionBinding(endpoint: string): Promise<"bound" | "unbound" | "unsupported"> {
+  const userId = await requireUserId()
+  try {
+    return (await hasActiveSubscription(userId, endpoint)) ? "bound" : "unbound"
+  } catch (error) {
+    if (error instanceof InvalidNotificationSubscriptionError) return "unsupported"
+    throw error
+  }
 }
 
 export async function subscribeUserToPush(subscription: NotificationSubscription) {
