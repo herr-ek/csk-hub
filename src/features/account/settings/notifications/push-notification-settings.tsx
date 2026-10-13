@@ -34,11 +34,15 @@ export function PushNotificationSettings() {
 
   const loadSubscriptionState = useCallback(async () => {
     setBinding("unknown")
+    setError(null)
+    setStatus(null)
     try {
-      const registration = await navigator.serviceWorker.register("/service-worker.js", {
-        scope: "/",
-        updateViaCache: "none"
-      })
+      const registration =
+        (await navigator.serviceWorker.getRegistration("/")) ??
+        (await navigator.serviceWorker.register("/service-worker.js", {
+          scope: "/",
+          updateViaCache: "none"
+        }))
       const browserSubscription = await registration.pushManager.getSubscription()
       setSubscription(browserSubscription)
       setBinding(browserSubscription ? await getPushSubscriptionBinding(browserSubscription.endpoint) : "unbound")
