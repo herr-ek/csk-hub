@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
 import {
-  isPushSubscriptionBoundToCurrentUser,
+  getPushSubscriptionBinding,
   sendPushNotificationTest,
   subscribeUserToPush,
   unsubscribeUserFromPush
@@ -25,7 +25,7 @@ export function PushNotificationSettings() {
   const t = useTranslations("PushNotifications")
   const [isSupported, setIsSupported] = useState(false)
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
-  const [isBound, setIsBound] = useState<boolean | null>(null)
+  const [binding, setBinding] = useState<"unknown" | "bound" | "unbound" | "unsupported">("unknown")
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +33,7 @@ export function PushNotificationSettings() {
   const [isPending, setIsPending] = useState(false)
 
   const loadSubscriptionState = useCallback(async () => {
-    setIsBound(null)
+    setBinding("unknown")
     try {
       const registration = await navigator.serviceWorker.register("/service-worker.js", {
         scope: "/",
@@ -41,7 +41,7 @@ export function PushNotificationSettings() {
       })
       const browserSubscription = await registration.pushManager.getSubscription()
       setSubscription(browserSubscription)
-      setIsBound(browserSubscription ? await isPushSubscriptionBoundToCurrentUser(browserSubscription.endpoint) : false)
+      setBinding(browserSubscription ? await getPushSubscriptionBinding(browserSubscription.endpoint) : "unbound")
     } finally {
       setIsLoading(false)
     }
@@ -61,6 +61,16 @@ export function PushNotificationSettings() {
     window.addEventListener("focus", refreshOnFocus)
     return () => window.removeEventListener("focus", refreshOnFocus)
   }, [loadSubscriptionState, t])
+
+  async function retrySubscriptionState() {
+    setError(null)
+    setIsLoading(true)
+    try {
+      await loadSubscriptionState()
+    } catch {
+      setError(t("deviceEnableFailed"))
+    }
+  }
 
   async function subscribeToPush() {
     if (isPending) return
@@ -96,10 +106,10 @@ export function PushNotificationSettings() {
         })
       }
       setSubscription(nextSubscription)
-      setIsBound(false)
+      setBinding("unbound")
       await subscribeUserToPush(JSON.parse(JSON.stringify(nextSubscription)))
       setSubscription(nextSubscription)
-      setIsBound(true)
+      setBinding("bound")
       setStatus(t("enabled"))
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "NotAllowedError") {
@@ -113,7 +123,7 @@ export function PushNotificationSettings() {
   }
 
   async function unsubscribeFromPush() {
-    if (!subscription || isPending || !isBound) return
+    if (!subscription || isPending || binding !== "bound") return
     setError(null)
     setStatus(null)
     setIsPending(true)
@@ -121,10 +131,10 @@ export function PushNotificationSettings() {
       const endpoint = subscription.endpoint
       const result = await unsubscribeUserFromPush(endpoint)
       if (!result.removed) {
-        setIsBound(false)
+        setBinding("unbound")
         return
       }
-      setIsBound(false)
+      setBinding("unbound")
       const removedFromBrowser = await subscription.unsubscribe()
       if (removedFromBrowser) setSubscription(null)
       setStatus(t("disabled"))
@@ -136,7 +146,7 @@ export function PushNotificationSettings() {
   }
 
   async function removeUnboundSubscription() {
-    if (!subscription || isPending || isBound !== false) return
+    if (!subscription || isPending || binding === "bound") return
     setError(null)
     setStatus(null)
     setIsPending(true)
@@ -144,7 +154,7 @@ export function PushNotificationSettings() {
       const removedFromBrowser = await subscription.unsubscribe()
       if (!removedFromBrowser) throw new Error("Browser did not remove the push subscription")
       setSubscription(null)
-      setIsBound(false)
+      setBinding("unbound")
       setStatus(t("disabled"))
     } catch {
       setError(t("unsubscribeFailed"))
@@ -154,7 +164,7 @@ export function PushNotificationSettings() {
   }
 
   async function sendTest() {
-    if (!subscription || isPending || !isBound) return
+    if (!subscription || isPending || binding !== "bound") return
     setError(null)
     setStatus(null)
     setIsPending(true)
@@ -184,7 +194,7 @@ export function PushNotificationSettings() {
       <CardContent className="flex flex-col gap-4">
         {isLoading ? (
           <Spinner aria-label={t("saving")} />
-        ) : isBound === null ? null : subscription && isBound ? (
+        ) : subscription && binding === "bound" ? (
           <>
             <p className="text-sm text-muted-foreground">{t("enabled")}</p>
             <div className="flex flex-wrap gap-2">
@@ -206,18 +216,32 @@ export function PushNotificationSettings() {
           </>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">{subscription ? t("unbound") : t("disabled")}</p>
-            <Button type="button" onClick={subscribeToPush} className="w-fit" disabled={isPending}>
-              {isPending ? <Spinner aria-hidden="true" /> : null}
-              {isPending
-                ? subscription
-                  ? t("reconnecting")
-                  : t("enabling")
-                : subscription
-                  ? t("reconnect")
-                  : t("enable")}
-            </Button>
-            {subscription && isBound === false ? (
+            <p className="text-sm text-muted-foreground">
+              {binding === "unsupported"
+                ? t("unsupportedSubscription")
+                : binding === "unknown"
+                  ? t("bindingUnknown")
+                  : subscription
+                    ? t("unbound")
+                    : t("disabled")}
+            </p>
+            {binding === "unknown" ? (
+              <Button type="button" onClick={retrySubscriptionState} disabled={isPending}>
+                {t("retry")}
+              </Button>
+            ) : binding !== "unsupported" ? (
+              <Button type="button" onClick={subscribeToPush} className="w-fit" disabled={isPending}>
+                {isPending ? <Spinner aria-hidden="true" /> : null}
+                {isPending
+                  ? subscription
+                    ? t("reconnecting")
+                    : t("enabling")
+                  : subscription
+                    ? t("reconnect")
+                    : t("enable")}
+              </Button>
+            ) : null}
+            {subscription && binding !== "bound" ? (
               <Button type="button" variant="outline" onClick={removeUnboundSubscription} disabled={isPending}>
                 {isPending ? t("saving") : t("removeFromBrowser")}
               </Button>

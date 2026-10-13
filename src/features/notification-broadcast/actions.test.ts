@@ -18,7 +18,8 @@ const getSession = mock(
   })
 )
 const subscribe = mock(async () => undefined)
-const unsubscribe = mock(async () => undefined)
+const unsubscribe = mock(async () => false)
+const hasActiveSubscription = mock(async () => true)
 
 mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
 mock.module("@/core/i18n/server", () => ({ getTranslations }))
@@ -35,15 +36,14 @@ mock.module("web-push", () => ({
 const delivery = await import("@/core/notifications/send-push-notification")
 mock.module("@/core/notifications", () => ({
   ...delivery,
-  hasActiveSubscription: mock(async () => true),
+  hasActiveSubscription,
   subscribe,
   unsubscribe,
   listUsersWithActiveSubscriptions: mock(async () => [])
 }))
 const { sendTestNotificationToAll, sendTestNotificationToUsers } = await import("./actions")
-const { sendPushNotificationTest, subscribeUserToPush, unsubscribeUserFromPush } = await import(
-  "../account/settings/notifications/push-notification-actions"
-)
+const { getPushSubscriptionBinding, sendPushNotificationTest, subscribeUserToPush, unsubscribeUserFromPush } =
+  await import("../account/settings/notifications/push-notification-actions")
 
 beforeEach(() => {
   subscriptions = []
@@ -57,7 +57,8 @@ beforeEach(() => {
   sendNotification.mockReset()
   sendNotification.mockResolvedValue(undefined)
   subscribe.mockClear()
-  unsubscribe.mockClear()
+  unsubscribe.mockReset().mockResolvedValue(false)
+  hasActiveSubscription.mockReset().mockResolvedValue(true)
 })
 
 const activeSubscription = {
@@ -184,4 +185,60 @@ describe("notification actions without a translation context", () => {
     expect(select).not.toHaveBeenCalled()
     expect(getTranslations).not.toHaveBeenCalled()
   })
+})
+
+const { InvalidNotificationSubscriptionError } = await import("@/core/notifications/subscription-validation")
+const { revokePushBindingBeforeLogout } = await import("@/core/navigation/logout-actions")
+
+test("binding lookup distinguishes owned, missing, unsupported, and unavailable", async () => {
+  expect(await getPushSubscriptionBinding(activeSubscription.endpoint)).toBe("bound")
+  expect(hasActiveSubscription).toHaveBeenCalledWith("user-1", activeSubscription.endpoint)
+  hasActiveSubscription.mockResolvedValue(false)
+  expect(await getPushSubscriptionBinding(activeSubscription.endpoint)).toBe("unbound")
+  hasActiveSubscription.mockRejectedValue(new InvalidNotificationSubscriptionError())
+  expect(await getPushSubscriptionBinding(activeSubscription.endpoint)).toBe("unsupported")
+  hasActiveSubscription.mockRejectedValue(new Error("Database unavailable"))
+  await expect(getPushSubscriptionBinding(activeSubscription.endpoint)).rejects.toThrow("Database unavailable")
+})
+
+test("impersonation cannot inspect, rebind, remove, or test push subscriptions", async () => {
+  getSession.mockResolvedValue({ user: { id: "user-1" }, session: { impersonatedBy: "admin-1" } })
+  for (const operation of [
+    () => getPushSubscriptionBinding(activeSubscription.endpoint),
+    () =>
+      subscribeUserToPush({
+        endpoint: activeSubscription.endpoint,
+        keys: { p256dh: activeSubscription.p256dh, auth: activeSubscription.auth }
+      }),
+    () => unsubscribeUserFromPush(activeSubscription.endpoint),
+    () => sendPushNotificationTest("Hello")
+  ]) {
+    await expect(operation()).rejects.toThrow("Push notifications are unavailable while impersonating")
+  }
+  expect(hasActiveSubscription).not.toHaveBeenCalled()
+  expect(subscribe).not.toHaveBeenCalled()
+  expect(unsubscribe).not.toHaveBeenCalled()
+  expect(select).not.toHaveBeenCalled()
+})
+
+test("signed-out binding lookup rejects before inspecting subscriptions", async () => {
+  getSession.mockResolvedValue(null)
+  await expect(getPushSubscriptionBinding(activeSubscription.endpoint)).rejects.toThrow("Unauthorized")
+  expect(hasActiveSubscription).not.toHaveBeenCalled()
+})
+
+test("logout revocation uses only the authenticated owner and reports whether removal occurred", async () => {
+  unsubscribe.mockResolvedValue(true)
+  expect(await revokePushBindingBeforeLogout(activeSubscription.endpoint)).toBe(true)
+  expect(unsubscribe).toHaveBeenCalledWith("user-1", activeSubscription.endpoint)
+  unsubscribe.mockResolvedValue(false)
+  expect(await revokePushBindingBeforeLogout(activeSubscription.endpoint)).toBe(false)
+})
+
+test("logout revocation refuses signed-out sessions and leaves impersonation untouched", async () => {
+  getSession.mockResolvedValue(null)
+  await expect(revokePushBindingBeforeLogout(activeSubscription.endpoint)).rejects.toThrow("Unauthorized")
+  getSession.mockResolvedValue({ user: { id: "user-1" }, session: { impersonatedBy: "admin-1" } })
+  expect(await revokePushBindingBeforeLogout(activeSubscription.endpoint)).toBe(false)
+  expect(unsubscribe).not.toHaveBeenCalled()
 })
