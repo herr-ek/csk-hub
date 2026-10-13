@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, jest, mock, spyOn, test } from "bun:test"
+import https from "node:https"
+import { Socket } from "node:net"
 
 const requireAdmin = mock(async () => undefined)
 let subscriptions: Record<string, unknown>[] = []
@@ -7,7 +9,10 @@ const select = mock(() => ({ from: () => ({ where }) }))
 const updateWhere = mock(async () => undefined)
 const set = mock(() => ({ where: updateWhere }))
 const update = mock(() => ({ set }))
-const sendNotification = mock(async () => undefined)
+const sendNotification = mock(
+  async (_subscription: unknown, _payload: string, _options: { agent: https.Agent; timeout: number }): Promise<void> =>
+    undefined
+)
 const getTranslations = mock(async () => {
   throw new Error("Notification actions must not resolve a rendering locale")
 })
@@ -53,6 +58,7 @@ beforeEach(() => {
   getSession.mockResolvedValue({ user: { id: "user-1" }, session: {} })
   getTranslations.mockClear()
   select.mockClear()
+  updateWhere.mockClear()
   set.mockClear()
   sendNotification.mockReset()
   sendNotification.mockResolvedValue(undefined)
@@ -107,7 +113,7 @@ describe("notification actions without a translation context", () => {
         keys: { p256dh: activeSubscription.p256dh, auth: activeSubscription.auth }
       },
       JSON.stringify({ title: "CSK Hub", body: "Hello" }),
-      expect.objectContaining({ timeout: 7_000, agent: expect.any(Object) })
+      expect.objectContaining({ agent: expect.any(Object) })
     )
     expect(getTranslations).not.toHaveBeenCalled()
   })
@@ -241,4 +247,97 @@ test("logout revocation refuses signed-out sessions and leaves impersonation unt
   getSession.mockResolvedValue({ user: { id: "user-1" }, session: { impersonatedBy: "admin-1" } })
   expect(await revokePushBindingBeforeLogout(activeSubscription.endpoint)).toBe(false)
   expect(unsubscribe).not.toHaveBeenCalled()
+})
+
+afterEach(() => jest.useRealTimers())
+
+test("delivery processes the queue with at most five simultaneous sends", async () => {
+  subscriptions = Array.from({ length: 7 }, (_, index) => ({ ...activeSubscription, id: `subscription-${index}` }))
+  const releases: (() => void)[] = []
+  let inFlight = 0
+  let maximumInFlight = 0
+  sendNotification.mockImplementation(async () => {
+    inFlight += 1
+    maximumInFlight = Math.max(maximumInFlight, inFlight)
+    await new Promise<void>((resolve) => releases.push(resolve))
+    inFlight -= 1
+  })
+  const result = delivery.sendToAll("Hello")
+  await Bun.sleep(0)
+  expect(sendNotification).toHaveBeenCalledTimes(5)
+  for (const release of releases.splice(0)) release()
+  await Bun.sleep(0)
+  expect(sendNotification).toHaveBeenCalledTimes(7)
+  for (const release of releases.splice(0)) release()
+  expect(await result).toMatchObject({ accepted: 7, failed: 0 })
+  expect(maximumInFlight).toBe(5)
+})
+
+test("the batch deadline skips queued sends while allowing in-flight acceptance", async () => {
+  jest.useFakeTimers()
+  subscriptions = Array.from({ length: 7 }, (_, index) => ({ ...activeSubscription, id: `subscription-${index}` }))
+  const releases: (() => void)[] = []
+  sendNotification.mockImplementation(() => new Promise<void>((resolve) => releases.push(resolve)))
+  const result = delivery.sendToAll("Hello")
+  while (releases.length < 5) await Promise.resolve()
+  jest.advanceTimersByTime(30_000)
+  for (const release of releases) release()
+  expect(await result).toMatchObject({ accepted: 5, failed: 2, failureCategories: { deadline: 2 } })
+  expect(sendNotification).toHaveBeenCalledTimes(5)
+})
+
+test("an unresponsive request socket is destroyed and reported as a timeout", async () => {
+  jest.useFakeTimers()
+  subscriptions = [activeSubscription]
+  const socket = new Socket()
+  const createConnection = spyOn(https.Agent.prototype, "createConnection").mockReturnValue(socket)
+  try {
+    sendNotification.mockImplementation(
+      (_subscription, _payload, options) =>
+        new Promise<void>((_resolve, reject) => {
+          socket.once("error", reject)
+          options.agent.createConnection({}, () => undefined)
+        })
+    )
+    const result = delivery.sendToAll("Hello")
+    while (createConnection.mock.calls.length === 0) await Promise.resolve()
+    jest.advanceTimersByTime(9_999)
+    expect(socket.destroyed).toBe(false)
+    jest.advanceTimersByTime(1)
+    expect(await result).toMatchObject({ accepted: 0, failed: 1, failureCategories: { timeout: 1 } })
+    expect(socket.destroyed).toBe(true)
+  } finally {
+    createConnection.mockRestore()
+    socket.destroy()
+  }
+})
+
+test("a stalled bookkeeping write cannot turn provider acceptance into a delivery failure", async () => {
+  jest.useFakeTimers()
+  subscriptions = [activeSubscription]
+  updateWhere.mockImplementationOnce(() => new Promise<undefined>(() => undefined))
+  const result = delivery.sendToAll("Hello")
+  while (updateWhere.mock.calls.length === 0) await Promise.resolve()
+  jest.advanceTimersByTime(2_000)
+  expect(await result).toMatchObject({ success: true, accepted: 1, failed: 0, failureCategories: { bookkeeping: 1 } })
+  expect(sendNotification).toHaveBeenCalledTimes(1)
+})
+
+test("stored WNS subscriptions remain deliverable after endpoint validation", async () => {
+  subscriptions = [{ ...activeSubscription, endpoint: "https://cloud.notify.windows.com/?token=existing-channel" }]
+  expect(await delivery.sendToAll("Hello")).toMatchObject({ accepted: 1, failed: 0 })
+  expect(set).not.toHaveBeenCalledWith(expect.objectContaining({ status: "disabled" }))
+})
+
+test("unsafe stored endpoints are disabled without contacting a provider", async () => {
+  subscriptions = [{ ...activeSubscription, endpoint: "https://127.0.0.1/private" }]
+  expect(await delivery.sendToAll("Hello")).toMatchObject({
+    accepted: 0,
+    failed: 1,
+    failureCategories: { invalidSubscription: 1 }
+  })
+  expect(sendNotification).not.toHaveBeenCalled()
+  expect(set).toHaveBeenCalledWith(
+    expect.objectContaining({ status: "disabled", disabledReason: "Stored push subscription failed validation" })
+  )
 })
