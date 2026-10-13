@@ -119,7 +119,16 @@ type Diagnostics = {
 
 When a provider returns HTTP 404 or 410, or stored subscription data fails validation, this module marks that subscription disabled so future sends skip it. It also tracks delivery timestamps and atomically increments failure counts in SQL, avoiding lost increments from concurrent sends. Sanitized failure counts are logged without endpoint, key, or message contents. Features must not mutate those lifecycle fields directly.
 
-Provider sends use concurrency capped at five, a 7-second socket inactivity timeout, and a 10-second request socket deadline. The 30-second batch deadline stops starting new sends; it does not cancel in-flight sends. Those can take approximately 12 seconds more (10 seconds for the socket plus 2 seconds for bookkeeping). This is not a hard end-to-end deadline: the initial subscription query, connection setup, and event-loop scheduling are outside that estimate. Lifecycle bookkeeping is best effort and bounded to 2 seconds per update. Provider acceptance is recorded independently: if an accepted send cannot update its database metadata, the result still counts it as accepted, records a sanitized `bookkeeping` diagnostic, and does not trigger an automatic resend.
+Provider sends use concurrency capped at five, a 7-second socket inactivity timeout,
+and a 10-second overall deadline per send. Each attempt uses its own HTTPS agent;
+deadline expiry closes its sockets. Every selected subscription is attempted—there
+is no batch cutoff that skips recipients. Total delivery time grows with the number
+of subscriptions, roughly 12 seconds per group of five at worst, excluding the
+initial database query and scheduling overhead.
+
+Lifecycle bookkeeping is best effort, with a 2-second wait limit per update.
+Provider acceptance remains acceptance even if that write fails or times out;
+a sanitized `bookkeeping` diagnostic records the problem without triggering a resend.
 
 ## Finding subscribed Users
 
