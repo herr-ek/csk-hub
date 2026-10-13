@@ -277,9 +277,16 @@ test("the batch deadline skips queued sends while allowing in-flight acceptance"
   jest.useFakeTimers()
   subscriptions = Array.from({ length: 7 }, (_, index) => ({ ...activeSubscription, id: `subscription-${index}` }))
   const releases: (() => void)[] = []
-  sendNotification.mockImplementation(() => new Promise<void>((resolve) => releases.push(resolve)))
+  const started = Promise.withResolvers<void>()
+  sendNotification.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        releases.push(resolve)
+        if (releases.length === 5) started.resolve()
+      })
+  )
   const result = delivery.sendToAll("Hello")
-  while (releases.length < 5) await Promise.resolve()
+  await started.promise
   jest.advanceTimersByTime(30_000)
   for (const release of releases) release()
   expect(await result).toMatchObject({ accepted: 5, failed: 2, failureCategories: { deadline: 2 } })
@@ -290,6 +297,7 @@ test("an unresponsive request socket is destroyed and reported as a timeout", as
   jest.useFakeTimers()
   subscriptions = [activeSubscription]
   const socket = new Socket()
+  const started = Promise.withResolvers<void>()
   const createConnection = spyOn(https.Agent.prototype, "createConnection").mockReturnValue(socket)
   try {
     sendNotification.mockImplementation(
@@ -297,10 +305,11 @@ test("an unresponsive request socket is destroyed and reported as a timeout", as
         new Promise<void>((_resolve, reject) => {
           socket.once("error", reject)
           options.agent.createConnection({}, () => undefined)
+          started.resolve()
         })
     )
     const result = delivery.sendToAll("Hello")
-    while (createConnection.mock.calls.length === 0) await Promise.resolve()
+    await started.promise
     jest.advanceTimersByTime(9_999)
     expect(socket.destroyed).toBe(false)
     jest.advanceTimersByTime(1)
@@ -315,9 +324,13 @@ test("an unresponsive request socket is destroyed and reported as a timeout", as
 test("a stalled bookkeeping write cannot turn provider acceptance into a delivery failure", async () => {
   jest.useFakeTimers()
   subscriptions = [activeSubscription]
-  updateWhere.mockImplementationOnce(() => new Promise<undefined>(() => undefined))
+  const started = Promise.withResolvers<void>()
+  updateWhere.mockImplementationOnce(() => {
+    started.resolve()
+    return new Promise<undefined>(() => undefined)
+  })
   const result = delivery.sendToAll("Hello")
-  while (updateWhere.mock.calls.length === 0) await Promise.resolve()
+  await started.promise
   jest.advanceTimersByTime(2_000)
   expect(await result).toMatchObject({ success: true, accepted: 1, failed: 0, failureCategories: { bookkeeping: 1 } })
   expect(sendNotification).toHaveBeenCalledTimes(1)
