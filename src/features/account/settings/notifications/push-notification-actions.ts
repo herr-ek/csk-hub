@@ -1,13 +1,7 @@
 "use server"
 
 import { getRequestSession } from "@/core/auth/session.server"
-import {
-  hasActiveSubscription,
-  type NotificationSubscription,
-  sendToUser,
-  subscribe,
-  unsubscribe
-} from "@/core/notifications"
+import { hasActiveSubscription, sendToUser, subscribe, unsubscribe } from "@/core/notifications"
 import { InvalidNotificationSubscriptionError } from "@/core/notifications/subscription-validation"
 
 async function requireUserId() {
@@ -42,7 +36,7 @@ export async function getPushSubscriptionBinding(endpoint: string): Promise<"bou
  * `Unauthorized` without a session, rejects impersonation, and propagates
  * `InvalidNotificationSubscriptionError` or persistence failures.
  */
-export async function subscribeUserToPush(subscription: NotificationSubscription) {
+export async function subscribeUserToPush(subscription: unknown) {
   await subscribe(await requireUserId(), subscription)
   return { success: true }
 }
