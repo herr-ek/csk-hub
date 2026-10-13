@@ -7,8 +7,9 @@ const MAX_USER_AGENT_LENGTH = 1024
 const MAX_DEVICE_LABEL_LENGTH = 120
 
 const EXACT_PUSH_HOSTS = new Set(["fcm.googleapis.com"])
-const PUSH_HOST_SUFFIXES = ["push.services.mozilla.com", "push.apple.com"]
+const PUSH_HOST_SUFFIXES = ["push.services.mozilla.com", "push.apple.com", "notify.windows.com"]
 
+/** Raised when subscription data or its endpoint violates the supported push contract. */
 export class InvalidNotificationSubscriptionError extends Error {
   constructor() {
     super("Invalid push subscription")
@@ -27,7 +28,12 @@ function isAllowedPushHost(hostname: string) {
   )
 }
 
-function validateEndpoint(value: unknown) {
+/**
+ * Validates an untrusted HTTPS endpoint against supported push providers and
+ * returns its canonical URL. WNS also supports root URLs with a channel token.
+ * Throws `InvalidNotificationSubscriptionError` for unsupported or unsafe URLs.
+ */
+export function parsePushEndpoint(value: unknown) {
   if (typeof value !== "string" || value.length === 0 || value.length > MAX_ENDPOINT_LENGTH || value.trim() !== value)
     throw new InvalidNotificationSubscriptionError()
 
@@ -44,17 +50,17 @@ function validateEndpoint(value: unknown) {
     endpoint.password !== "" ||
     endpoint.port !== "" ||
     endpoint.hash !== "" ||
-    endpoint.pathname === "/" ||
+    (endpoint.pathname === "/" &&
+      !(
+        (endpoint.hostname === "notify.windows.com" || endpoint.hostname.endsWith(".notify.windows.com")) &&
+        endpoint.searchParams.get("token")
+      )) ||
     !isAllowedPushHost(endpoint.hostname)
   ) {
     throw new InvalidNotificationSubscriptionError()
   }
 
   return endpoint.href
-}
-
-export function normalizePushEndpoint(value: unknown) {
-  return validateEndpoint(value)
 }
 
 function validateKey(value: unknown, expectedBytes: number) {
@@ -79,6 +85,11 @@ function validateOptionalText(value: unknown, maxLength: number) {
   return value
 }
 
+/**
+ * Parses untrusted browser or stored subscription data, canonicalizing the URL
+ * and base64url keys. Optional metadata is bounded. Throws
+ * `InvalidNotificationSubscriptionError` for invalid shape, keys, metadata, or endpoint.
+ */
 export function parseNotificationSubscription(input: unknown): NotificationSubscription {
   if (!isRecord(input) || !isRecord(input.keys)) throw new InvalidNotificationSubscriptionError()
 
@@ -102,7 +113,7 @@ export function parseNotificationSubscription(input: unknown): NotificationSubsc
   const deviceLabel = validateOptionalText(input.deviceLabel, MAX_DEVICE_LABEL_LENGTH)
 
   return {
-    endpoint: normalizePushEndpoint(input.endpoint),
+    endpoint: parsePushEndpoint(input.endpoint),
     expirationTime,
     keys: { p256dh: p256dh.toString("base64url"), auth: auth.toString("base64url") },
     userAgent,
