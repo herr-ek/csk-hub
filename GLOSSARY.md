@@ -75,6 +75,11 @@ Voice in a Section, and what they can sing, are recorded in divisions only; some
 B can sing B1 and B2.
 _Avoid_: Part, sub-voice
 
+**Voice capability**:
+A User's self-reported ability to sing a Voice division, independent of their Section
+Memberships. Being able to sing a whole Voice family means being able to sing both of its divisions.
+_Avoid_: Section Membership, vocal range
+
 **Part**:
 A line in a specific arrangement (*stämma* in a score), labelled with a Voice.
 _Avoid_: Voice family, Section

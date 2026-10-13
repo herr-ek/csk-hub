@@ -14,8 +14,10 @@ bun run ops grant-admin <email>  # make an existing user an admin
 bun run ops reference-data       # Choirs, Sections, Styret and Positions; also with --prod
 bun run ops reset                # erase the local database, migrate it and add the reference data
 bun run ops seed-admin           # local admin account
-bun run ops seed-users           # ten local example users
-bun run ops seed-groups          # example groups, and a Section for every unplaced user
+bun run ops seed-users           # 100 verified local example accounts, including three Admins
+bun run ops seed-groups          # balanced placements, groups, Positions and their history
+bun run ops seed-posts           # 24 published example Posts, after seed-users
+bun run ops seed-demo            # reference data + all of the above, after migrating
 
 bun run ops --prod               # the menu, targeting production
 bun run ops migrate --prod       # asks you to type "prod" first
@@ -58,3 +60,37 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
 
 TLS verification follows the shared policy in `src/core/db/tls.ts`; see
 `src/core/db/README.md`.
+
+## Local demo data
+
+After `bun run ops migrate`, run `bun run ops seed-demo`. It creates the shared reference
+data if needed, then seeds people, placements, group history and Posts in one transaction.
+It never resets the database. The individual seed commands remain available; run
+`reference-data`, `seed-users`, `seed-groups`, then `seed-posts` for the same dataset.
+
+On an empty database the demo contains:
+
+- 100 distinct named, email-verified Users, with usernames `singer001` through `singer100`.
+  Sign in as `singer-001@example.com` through `singer-100@example.com`, all with password
+  `password`; the first three Users are Admins. Each has its own salted credential hash.
+- 34/33/33 singers across DK, KK and MK, with 8–9 singers per Section. KK alternates
+  divisions within its S/A/T/B Sections. Existing unplaced active Users are placed too;
+  the seed balances around existing placements rather than moving anyone.
+- Varied Choir join dates from 2021–2025, Section and division changes, independent
+  self-reported Voice capabilities, and some Users who have declared none.
+- CSK-wide and Choir-owned committees, gig groups, roddgrupper, festgrupper and rephelgsgrupper,
+  with helpers, former members, rejoins and Position handovers. Six additional groups are
+  archived, including an old Board and completed concert/rephelg projects.
+- Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare; a Stämförälder for each
+  Section; a current Board with one elected Position per member. Board offices are linked
+  to their responsibility groups, and each Choir's Gigmästare also serves in the Gigmästeri,
+  respecting the Position catalogue's Group limits. Some singers hold multiple non-Board Positions.
+- 24 fictional Swedish Posts with paragraphs, headings, lists, emphasis and blockquotes,
+  published by the example Admins between August 2025 and October 2026. They use the editor's
+  document format and appear in the shared News feed. Their event details are demo content.
+
+Stable identities make these seeds repeatable: they insert missing fixtures and keep existing
+passwords, profile edits and Post edits. A conflicting existing Position assignment fails the
+demo transaction rather than displacing its holder. Direct scripts also enforce the local-only
+database guard. To return to the original demo after editing it, deliberately run
+`bun run ops reset`, then `bun run ops seed-demo`.

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Fragment } from "react"
 import { getFormatter, getTimeZone, getTranslations } from "@/core/i18n/server"
+import { memberProfilePath } from "@/core/navigation/navigation-utils"
 import { Message, MessageContent, MessageGroup } from "@/shared/ui/base/message"
 import {
   MessageScroller,
@@ -43,7 +44,13 @@ export async function ConversationScreen({
         </Link>
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="min-w-0 wrap-break-word font-heading text-2xl font-semibold">
-            {conversation.otherMemberName ?? t("formerMember")}
+            {conversation.kind === "direct" && conversation.otherMemberProfileId ? (
+              <Link href={memberProfilePath(conversation.otherMemberProfileId)} className="hover:underline">
+                {conversation.otherMemberName}
+              </Link>
+            ) : (
+              (conversation.otherMemberName ?? t("formerMember"))
+            )}
           </h1>
           {conversation.kind === "group" && conversation.canSend ? (
             <GroupControls

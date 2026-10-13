@@ -19,8 +19,10 @@ const DIVISIONS_OF_FAMILY: Record<VoiceFamily, VoiceDivision[]> = {
   B: ["B1", "B2"]
 }
 
-export function isVoiceDivision(voice: Voice): voice is VoiceDivision {
-  return !(voice in DIVISIONS_OF_FAMILY)
+export const VOICE_DIVISIONS: readonly VoiceDivision[] = Object.values(DIVISIONS_OF_FAMILY).flat()
+
+export function isVoiceDivision(voice: unknown): voice is VoiceDivision {
+  return typeof voice === "string" && VOICE_DIVISIONS.some((division) => division === voice)
 }
 
 /** The only place a Voice's family is decided: B1 → B, and B → B. */

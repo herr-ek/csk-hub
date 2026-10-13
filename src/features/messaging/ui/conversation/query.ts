@@ -64,6 +64,7 @@ async function getDirectConversationPage(conversationId: string, beforeSequence?
     members: [] as { id: string; name: string }[],
     conversationId,
     otherMemberName: otherMember?.name ?? null,
+    otherMemberProfileId: otherMember && !otherMember.banned ? otherMemberId : null,
     canSend: canReceiveDirectMessages({
       exists: Boolean(otherMember),
       banned: otherMember?.banned ?? false

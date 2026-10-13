@@ -4,6 +4,7 @@ export {
   divisionsOf,
   familyOf,
   isVoiceDivision,
+  VOICE_DIVISIONS,
   type Voice,
   type VoiceDivision,
   type VoiceFamily

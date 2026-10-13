@@ -10,6 +10,7 @@ import { seedGroups } from "./seed-groups"
 const database = await createTestDatabase()
 
 describe.skipIf(!database)("seedGroups", () => {
+  if (!database) return
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
 
