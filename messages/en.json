@@ -177,6 +177,7 @@
       "adminEventLocations": "Locations"
     },
     "members": "Members",
+    "menu": "Menu",
     "quickAccess": "Quick access",
     "customizeQuickAccess": "Customize quick access",
     "showQuickAccess": "Show quick access"
