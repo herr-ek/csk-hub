@@ -42,9 +42,9 @@ The browser's PushManager subscription is separate from the current User's serve
 Subscriptions are runtime-validated before registration, rebinding, and delivery.
 Supported provider hosts are `fcm.googleapis.com`, `push.services.mozilla.com`,
 `push.apple.com`, and `notify.windows.com` (including subdomains for the latter
-three). WNS accepts root-path URLs with a nonempty channel token; other endpoints
-need a non-root path. HTTPS is required; credentials, fragments, nondefault ports,
-and hosts outside this list are rejected.
+three). HTTPS is required; credentials, fragments, nondefault ports, and hosts
+outside this list are rejected. Channel paths and tokens are opaque to the app;
+the provider validates them. This includes WNS root-path URLs.
 
 Edge on Windows uses WNS ([Microsoft's policy documentation](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/forcebuiltinpushmessagingclient)).
 WNS channel URLs may contain a token at the root path ([WNS URL guidance](https://learn.microsoft.com/en-us/windows/apps/develop/notifications/push-notifications/wns-overview)).

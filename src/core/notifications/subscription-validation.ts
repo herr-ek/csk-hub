@@ -1,5 +1,6 @@
 import "server-only"
 
+import { z } from "zod"
 import type { NotificationSubscription } from "./types"
 
 const MAX_ENDPOINT_LENGTH = 4096
@@ -17,10 +18,6 @@ export class InvalidNotificationSubscriptionError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
 function isAllowedPushHost(hostname: string) {
   return (
     EXACT_PUSH_HOSTS.has(hostname) ||
@@ -30,7 +27,7 @@ function isAllowedPushHost(hostname: string) {
 
 /**
  * Validates an untrusted HTTPS endpoint against supported push providers and
- * returns its canonical URL. WNS also supports root URLs with a channel token.
+ * returns its canonical URL. The provider decides whether the channel is valid.
  * Throws `InvalidNotificationSubscriptionError` for unsupported or unsafe URLs.
  */
 export function parsePushEndpoint(value: unknown) {
@@ -50,11 +47,6 @@ export function parsePushEndpoint(value: unknown) {
     endpoint.password !== "" ||
     endpoint.port !== "" ||
     endpoint.hash !== "" ||
-    (endpoint.pathname === "/" &&
-      !(
-        (endpoint.hostname === "notify.windows.com" || endpoint.hostname.endsWith(".notify.windows.com")) &&
-        endpoint.searchParams.get("token")
-      )) ||
     !isAllowedPushHost(endpoint.hostname)
   ) {
     throw new InvalidNotificationSubscriptionError()
@@ -79,44 +71,29 @@ function validateKey(value: unknown, expectedBytes: number) {
   return decoded
 }
 
-function validateOptionalText(value: unknown, maxLength: number) {
-  if (value === undefined || value === null) return value
-  if (typeof value !== "string" || value.length > maxLength) throw new InvalidNotificationSubscriptionError()
-  return value
-}
+const subscriptionSchema = z.object({
+  endpoint: z.string().transform(parsePushEndpoint),
+  keys: z.object({
+    p256dh: z.string().transform((value) => {
+      if (validateKey(value, 65)[0] !== 4) throw new InvalidNotificationSubscriptionError()
+      return value
+    }),
+    auth: z.string().transform((value) => {
+      validateKey(value, 16)
+      return value
+    })
+  }),
+  expirationTime: z.number().int().min(0).max(8.64e15).nullish(),
+  userAgent: z.string().max(MAX_USER_AGENT_LENGTH).nullish(),
+  deviceLabel: z.string().max(MAX_DEVICE_LABEL_LENGTH).nullish()
+})
 
 /**
- * Parses untrusted browser or stored subscription data, canonicalizing the URL
- * and base64url keys. Optional metadata is bounded. Throws
- * `InvalidNotificationSubscriptionError` for invalid shape, keys, metadata, or endpoint.
+ * Parses untrusted subscription data into canonical endpoint/keys and bounded
+ * optional metadata. Throws `InvalidNotificationSubscriptionError` for invalid data.
  */
 export function parseNotificationSubscription(input: unknown): NotificationSubscription {
-  if (!isRecord(input) || !isRecord(input.keys)) throw new InvalidNotificationSubscriptionError()
-
-  const p256dh = validateKey(input.keys.p256dh, 65)
-  if (p256dh[0] !== 4) throw new InvalidNotificationSubscriptionError()
-
-  const auth = validateKey(input.keys.auth, 16)
-  const expirationTime = input.expirationTime
-  if (
-    expirationTime !== undefined &&
-    expirationTime !== null &&
-    (typeof expirationTime !== "number" ||
-      !Number.isSafeInteger(expirationTime) ||
-      expirationTime < 0 ||
-      expirationTime > 8.64e15)
-  ) {
-    throw new InvalidNotificationSubscriptionError()
-  }
-
-  const userAgent = validateOptionalText(input.userAgent, MAX_USER_AGENT_LENGTH)
-  const deviceLabel = validateOptionalText(input.deviceLabel, MAX_DEVICE_LABEL_LENGTH)
-
-  return {
-    endpoint: parsePushEndpoint(input.endpoint),
-    expirationTime,
-    keys: { p256dh: p256dh.toString("base64url"), auth: auth.toString("base64url") },
-    userAgent,
-    deviceLabel
-  }
+  const result = subscriptionSchema.safeParse(input)
+  if (!result.success) throw new InvalidNotificationSubscriptionError()
+  return result.data
 }

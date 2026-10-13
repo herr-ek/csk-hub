@@ -15,7 +15,9 @@ for (const url of [
   "https://updates.push.services.mozilla.com/wpush/v2/channel",
   "https://web.push.apple.com/channel",
   "https://wns2-db5p.notify.windows.com/w/?token=channel",
-  "https://cloud.notify.windows.com/?token=channel%2Btoken"
+  "https://cloud.notify.windows.com/?token=channel%2Btoken",
+  "https://cloud.notify.windows.com/",
+  "https://fcm.googleapis.com/"
 ]) {
   test(`accepts supported provider endpoint ${new URL(url).hostname}`, () => {
     expect(parseNotificationSubscription({ endpoint: url, keys }).endpoint).toBe(url)
@@ -34,9 +36,6 @@ for (const url of [
   "https://evilpush.services.mozilla.com/channel",
   "https://notify.windows.com.attacker.test/?token=channel",
   "https://evilnotify.windows.com/?token=channel",
-  "https://cloud.notify.windows.com/",
-  "https://cloud.notify.windows.com/?token=",
-  "https://fcm.googleapis.com/",
   ` ${endpoint}`,
   `${endpoint} `,
   "not-a-url",
