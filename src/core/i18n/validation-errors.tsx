@@ -3,43 +3,30 @@
 import type { ComponentProps } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { InputField } from "@/shared/forms/fields"
-import { FieldError } from "@/shared/ui/base/field"
+import { validationMessageIds } from "@/shared/schemas"
 
-type ValidationIssue = { message?: string; minimum?: number } | undefined
-
-function translatedMessage(
-  message: string | undefined,
-  label: string,
-  minimum: number | undefined,
-  common: ReturnType<typeof useTranslations<"Common">>
-) {
-  switch (message) {
-    case "validation.required":
-      return common("validation.required", { label })
-    case "validation.passwordTooShort":
-      return common("validation.passwordTooShort", { label, count: minimum ?? 8 })
-    case "validation.invalidEmail":
-      return common("validation.invalidEmail", { label })
-    case "validation.passwordsMismatch":
-      return common("validation.passwordsMismatch")
-    default:
-      return message
-  }
+type ValidationIssue = {
+  message?: string
+  minimum?: number | bigint
+  params?: Record<string, string | number>
 }
 
+const messageIds = Object.values(validationMessageIds)
+
+/** Translates registered validation IDs or issues; preserves other messages as plain text. */
 export function useValidationMessage() {
   const common = useTranslations("Common")
-  return (message: string | undefined, label: string, minimum?: number) =>
-    translatedMessage(message, label, minimum, common)
-}
+  return (issue: ValidationIssue | string | undefined, label: string) => {
+    const error = typeof issue === "string" ? { message: issue } : issue
+    const key = messageIds.find((id) => id === error?.message)
+    if (!key) return error?.message
 
-export function LocalizedFieldError({ errors, label }: { errors: Array<ValidationIssue>; label: string }) {
-  const translate = useValidationMessage()
-  return (
-    <FieldError
-      errors={errors.map((error) => (error ? { message: translate(error.message, label, error.minimum) } : undefined))}
-    />
-  )
+    return common(key, {
+      ...(typeof error?.minimum === "number" ? { count: error.minimum } : {}),
+      ...error?.params,
+      label
+    })
+  }
 }
 
 export function LocalizedInputField({
@@ -48,14 +35,14 @@ export function LocalizedInputField({
   ...props
 }: Omit<ComponentProps<typeof InputField>, "label" | "errors"> & {
   label: string
-  errors?: Array<ValidationIssue>
+  errors?: Array<ValidationIssue | undefined>
 }) {
   const translate = useValidationMessage()
   return (
     <InputField
       {...props}
       label={label}
-      errors={errors?.map((error) => (error ? { message: translate(error.message, label, error.minimum) } : undefined))}
+      errors={errors?.map((error) => (error ? { message: translate(error, label) } : undefined))}
     />
   )
 }
