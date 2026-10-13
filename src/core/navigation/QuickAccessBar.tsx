@@ -124,8 +124,16 @@ function Bar({ shortcuts, items, isImpersonating, pathname }: QuickAccessBarProp
 
   return (
     <>
-      {/* Keeps the end of the page, such as the message composer, clear of the fixed bar. */}
-      <div aria-hidden="true" className="shrink-0 md:hidden" style={{ height: `calc(${BAR_OFFSET} + 1rem)` }} />
+      {/*
+        Keeps the end of the page clear of the fixed bar. Screens pinned to the bottom, such as a conversation, look for
+        it to know the bar is there.
+      */}
+      <div
+        aria-hidden="true"
+        data-bottom-bar-spacer=""
+        className="shrink-0 md:hidden"
+        style={{ height: `calc(${BAR_OFFSET} + 1rem)` }}
+      />
       <div
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center md:hidden"
         style={{ paddingBottom: BAR_BOTTOM }}

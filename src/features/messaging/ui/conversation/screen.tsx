@@ -13,6 +13,7 @@ import {
   MessageScrollerViewport
 } from "@/shared/ui/base/message-scroller"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { cn } from "@/shared/utils"
 import { MessagingAccessError } from "../../model/messaging-error"
 import { formatMessageSentAt } from "../message-timestamp"
 import { GroupControls } from "./group-controls"
@@ -21,6 +22,18 @@ import { getConversationPage } from "./query"
 import { ReadMarker } from "./read-marker"
 import { getMessageLayout } from "./timeline-layout"
 import { createMessageCalendarDayKey, formatMessageDay, formatMessageTime } from "./timestamp"
+
+/**
+ * Below `md` the conversation is a chat screen: it takes the height left under the header (and above the quick-access
+ * bar's spacer), the messages scroll in their own pane, and the composer stays pinned at the bottom instead of
+ * scrolling under the bar. Without the bar the composer sits at the foot of the screen, just clear of the iPhone home
+ * indicator; with it, the bar's spacer already holds that room. From `md` up it is an ordinary page with a fixed-height
+ * pane.
+ */
+const screenClass =
+  "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto px-4 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 max-md:[body:has([data-bottom-bar-spacer])_&]:pb-4 md:flex-none md:overflow-visible md:pb-8"
+/** Fills the screen's spare height on small screens, but never shrinks below a few lines of messages. */
+const paneClass = "min-h-40 flex-1 md:h-[min(60vh,40rem)] md:flex-none"
 
 export async function ConversationScreen({
   conversationId,
@@ -37,7 +50,7 @@ export async function ConversationScreen({
   ])
   const layout = getMessageLayout(conversation.messages, createMessageCalendarDayKey(timeZone))
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <main className={screenClass}>
       <div>
         <PageBreadcrumb route="messages" current={conversation.otherMemberName ?? t("formerMember")} />
         <div className="mt-2 flex items-start justify-between gap-3">
@@ -59,7 +72,7 @@ export async function ConversationScreen({
         ) : null}
       </div>
       <MessageScrollerProvider autoScroll defaultScrollPosition="end">
-        <MessageScroller className="h-[min(60vh,40rem)] rounded-xl border bg-card">
+        <MessageScroller className={cn(paneClass, "rounded-xl border bg-card")}>
           <MessageScrollerViewport aria-label={t("title")}>
             <MessageScrollerContent className="gap-4 p-4">
               {conversation.nextBeforeSequence ? (
@@ -150,12 +163,12 @@ async function getConversationOrNotFound(conversationId: string, beforeSequence?
 
 export function ConversationScreenSkeleton() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6" aria-busy="true">
+    <main className={screenClass} aria-busy="true">
       <div>
         <PageBreadcrumb route="messages" current={<Skeleton className="h-4 w-24" />} />
         <Skeleton className="mt-3 h-8 w-44" />
       </div>
-      <div className="flex h-[min(60vh,40rem)] flex-col justify-end gap-3 rounded-xl border bg-card p-4">
+      <div className={cn(paneClass, "flex flex-col justify-end gap-3 rounded-xl border bg-card p-4")}>
         <Skeleton className="h-16 w-3/4 self-start rounded-2xl" />
         <Skeleton className="h-12 w-2/3 self-end rounded-2xl" />
         <Skeleton className="h-16 w-4/5 self-start rounded-2xl" />
