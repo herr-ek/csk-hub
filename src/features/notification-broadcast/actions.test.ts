@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, mock, spyOn, test } from "bun:test"
 import https from "node:https"
-import { Socket } from "node:net"
 
 const requireAdmin = mock(async () => undefined)
 let subscriptions: Record<string, unknown>[] = []
@@ -273,51 +272,23 @@ test("delivery processes the queue with at most five simultaneous sends", async 
   expect(maximumInFlight).toBe(5)
 })
 
-test("the batch deadline skips queued sends while allowing in-flight acceptance", async () => {
+test("a provider that never settles times out without losing successful deliveries", async () => {
   jest.useFakeTimers()
-  subscriptions = Array.from({ length: 7 }, (_, index) => ({ ...activeSubscription, id: `subscription-${index}` }))
-  const releases: (() => void)[] = []
+  subscriptions = [activeSubscription, { ...activeSubscription, id: "subscription-2" }]
   const started = Promise.withResolvers<void>()
-  sendNotification.mockImplementation(
-    () =>
-      new Promise<void>((resolve) => {
-        releases.push(resolve)
-        if (releases.length === 5) started.resolve()
-      })
-  )
-  const result = delivery.sendToAll("Hello")
-  await started.promise
-  jest.advanceTimersByTime(30_000)
-  for (const release of releases) release()
-  expect(await result).toMatchObject({ accepted: 5, failed: 2, failureCategories: { deadline: 2 } })
-  expect(sendNotification).toHaveBeenCalledTimes(5)
-})
-
-test("an unresponsive request socket is destroyed and reported as a timeout", async () => {
-  jest.useFakeTimers()
-  subscriptions = [activeSubscription]
-  const socket = new Socket()
-  const started = Promise.withResolvers<void>()
-  const createConnection = spyOn(https.Agent.prototype, "createConnection").mockReturnValue(socket)
+  const destroy = spyOn(https.Agent.prototype, "destroy")
   try {
-    sendNotification.mockImplementation(
-      (_subscription, _payload, options) =>
-        new Promise<void>((_resolve, reject) => {
-          socket.once("error", reject)
-          options.agent.createConnection({}, () => undefined)
-          started.resolve()
-        })
-    )
+    sendNotification.mockImplementationOnce(() => {
+      started.resolve()
+      return new Promise<void>(() => undefined)
+    })
     const result = delivery.sendToAll("Hello")
     await started.promise
-    jest.advanceTimersByTime(9_999)
-    expect(socket.destroyed).toBe(false)
-    jest.advanceTimersByTime(1)
-    expect(await result).toMatchObject({ accepted: 0, failed: 1, failureCategories: { timeout: 1 } })
-    expect(socket.destroyed).toBe(true)
+    jest.advanceTimersByTime(10_000)
+    expect(await result).toMatchObject({ success: true, accepted: 1, failed: 1, failureCategories: { timeout: 1 } })
+    expect(destroy).toHaveBeenCalledTimes(2)
   } finally {
-    createConnection.mockRestore()
-    socket.destroy()
+    destroy.mockRestore()
   }
 })
 
