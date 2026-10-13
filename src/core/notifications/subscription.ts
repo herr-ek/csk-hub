@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq, ilike, or } from "drizzle-orm"
+import { and, eq, ilike, isNull, or } from "drizzle-orm"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
@@ -85,7 +85,7 @@ export async function listUsersWithActiveSubscriptions(search: string = "") {
     .selectDistinct({ id: user.id, name: user.name, email: user.email })
     .from(user)
     .innerJoin(pushSubscription, eq(pushSubscription.userId, user.id))
-    .where(and(eq(pushSubscription.status, "active"), searchFilter))
+    .where(and(eq(pushSubscription.status, "active"), or(eq(user.banned, false), isNull(user.banned)), searchFilter))
     .orderBy(user.name)
     .limit(25)
 }
