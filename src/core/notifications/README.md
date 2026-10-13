@@ -61,6 +61,12 @@ invalid stored subscriptions are disabled on the next delivery attempt. Expandin
 the supported provider list does not automatically reactivate previously disabled
 rows; an explicit reconnect revalidates and reactivates a supported subscription.
 
+Only active Users (`banned` false or null) are eligible for delivery and the
+recipient picker. Eligibility is checked when recipients are selected; already
+selected or provider-accepted notifications cannot be recalled. Deactivation
+leaves device health unchanged, so reactivation restores delivery to existing
+active bindings without reviving disabled ones.
+
 ## Sending a notification
 
 Import the smallest delivery operation that matches the feature's audience:
