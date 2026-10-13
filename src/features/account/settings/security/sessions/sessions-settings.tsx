@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
-import { useTranslations } from "@/core/i18n/translations"
+import { useFormatter, useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Badge } from "@/shared/ui/base/badge"
 import { Button } from "@/shared/ui/base/button"
@@ -10,18 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 
 type Session = NonNullable<Awaited<ReturnType<typeof authClient.listSessions>>["data"]>[number]
 
-const sessionDateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short"
-})
-
-function formatSessionDate(value: Date | string) {
-  return sessionDateFormatter.format(new Date(value))
-}
-
 export function SessionsSettings({ currentSessionToken }: { currentSessionToken: string }) {
   const t = useTranslations("AccountSettings")
   const common = useTranslations("Common")
+  const format = useFormatter()
   const [sessions, setSessions] = useState<Session[]>([])
   const [error, setError] = useState<string>()
   const [pendingToken, setPendingToken] = useState<string>()
@@ -30,7 +22,7 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
     setError(undefined)
     const result = await authClient.listSessions()
     if (result.data) setSessions(result.data)
-    if (result.error) setError(result.error.message ?? t("sessionsLoadFailed"))
+    if (result.error) setError(t("sessionsLoadFailed"))
   }, [t])
 
   useEffect(() => {
@@ -41,7 +33,7 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
     setPendingToken(token)
     const result = await authClient.revokeSession({ token })
     setPendingToken(undefined)
-    if (result.error) setError(result.error.message ?? t("sessionRevokeFailed"))
+    if (result.error) setError(t("sessionRevokeFailed"))
     else if (token === currentSessionToken) window.location.assign("/login")
     else await loadSessions()
   }
@@ -79,7 +71,7 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
                 </p>
                 <p>
                   <span className="font-medium text-foreground">{t("expires")}</span>{" "}
-                  {formatSessionDate(session.expiresAt)}
+                  {format.dateTime(session.expiresAt, { dateStyle: "medium", timeStyle: "short" })}
                 </p>
               </div>
             </div>
