@@ -33,6 +33,7 @@ export function PushNotificationSettings() {
   const [isPending, setIsPending] = useState(false)
 
   const loadSubscriptionState = useCallback(async () => {
+    setIsLoading(true)
     setBinding("unknown")
     setError(null)
     setStatus(null)
@@ -46,35 +47,23 @@ export function PushNotificationSettings() {
       const browserSubscription = await registration.pushManager.getSubscription()
       setSubscription(browserSubscription)
       setBinding(browserSubscription ? await getPushSubscriptionBinding(browserSubscription.endpoint) : "unbound")
+    } catch {
+      setError(t("deviceEnableFailed"))
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (!("serviceWorker" in navigator && "PushManager" in window && "Notification" in window)) return
     setIsSupported(true)
-    loadSubscriptionState().catch(() => {
-      setIsLoading(false)
-      setError(t("deviceEnableFailed"))
-    })
+    void loadSubscriptionState()
     const refreshOnFocus = () => {
-      setIsLoading(true)
-      loadSubscriptionState().catch(() => setError(t("deviceEnableFailed")))
+      void loadSubscriptionState()
     }
     window.addEventListener("focus", refreshOnFocus)
     return () => window.removeEventListener("focus", refreshOnFocus)
-  }, [loadSubscriptionState, t])
-
-  async function retrySubscriptionState() {
-    setError(null)
-    setIsLoading(true)
-    try {
-      await loadSubscriptionState()
-    } catch {
-      setError(t("deviceEnableFailed"))
-    }
-  }
+  }, [loadSubscriptionState])
 
   async function subscribeToPush() {
     if (isPending) return
@@ -111,7 +100,7 @@ export function PushNotificationSettings() {
       }
       setSubscription(nextSubscription)
       setBinding("unbound")
-      await subscribeUserToPush(JSON.parse(JSON.stringify(nextSubscription)))
+      await subscribeUserToPush(nextSubscription.toJSON())
       setSubscription(nextSubscription)
       setBinding("bound")
       setStatus(t("enabled"))
@@ -230,7 +219,7 @@ export function PushNotificationSettings() {
                     : t("disabled")}
             </p>
             {binding === "unknown" ? (
-              <Button type="button" onClick={retrySubscriptionState} disabled={isPending}>
+              <Button type="button" onClick={loadSubscriptionState} disabled={isPending}>
                 {t("retry")}
               </Button>
             ) : binding !== "unsupported" ? (
