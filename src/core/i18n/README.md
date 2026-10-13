@@ -78,7 +78,9 @@ For a synchronous Server Component, `useTranslations` is supported by next-intl.
 
 Avoid i18n in Server Actions and the helpers they call. Return typed outcomes or stable error codes and translate them in the UI. Keep low-level services independent of translation APIs and message catalogs.
 
-Keep Zod schemas as static, locale-neutral constants. Validation issues should carry stable IDs (and machine-readable parameters such as a minimum length), not translated text. Translate those IDs in the rendering layer, with the field label available; use `LocalizedInputField` for shared input fields or `LocalizedFieldError` for standalone field errors. This keeps schemas reusable in server and client code and avoids rebuilding them for each locale.
+Keep Zod schemas as static, locale-neutral constants. Validation issues should carry stable IDs (and machine-readable parameters such as a minimum length), not translated text. Use `LocalizedInputField` for shared input fields and `useValidationMessage` when displaying errors elsewhere. This keeps schemas reusable in server and client code and avoids rebuilding them for each locale.
+
+Register new validation IDs in `validationMessageIds` in `src/shared/schemas.ts` and add matching keys under `Common.validation` in every catalog. [`useValidationMessage`](./validation-errors.tsx) translates these keys generically, adding the field's `label`, mapping Zod's numeric `minimum` to `count`, and passing custom refinement `params` through. New IDs need no translation switch case. Keep parameter values in the validation issue rather than supplying fallback limits in the UI.
 
 Only translate on the server when it must produce final text, such as an email. Choose the intended recipient's locale explicitly. `next/root-params` is unavailable in Server Actions and Route Handlers; server translation APIs need an explicit locale and request configuration that honors the override before reading root params.
 
