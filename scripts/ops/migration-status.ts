@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { Client } from "pg"
 import { secureConnection } from "@/core/db/tls"
-import { databaseFor, type Target } from "./target"
+import { type Database, databaseFor, type Target } from "./target"
 
 /**
  * Compares the migration files on disk against the ledger a database has actually
@@ -33,9 +33,27 @@ export async function statusFor(target: Target): Promise<TargetStatus> {
   const database = databaseFor(target)
   if (!database) return { kind: "not-configured" }
 
+  return statusOf(database)
+}
+
+/**
+ * The ledger status of an already-resolved database; never `not-configured`.
+ *
+ * Connecting and the ledger query are each bounded by `timeout` milliseconds, so a database
+ * that stops answering, or a lock held on the ledger, reports `unreachable` rather than
+ * hanging. Ending the client while the timed-out query is still active destroys the socket.
+ */
+export async function statusOf(
+  database: Database,
+  { timeout = 10_000 }: { timeout?: number } = {}
+): Promise<Exclude<TargetStatus, { kind: "not-configured" }>> {
   const { host } = database
   const entries = readJournal()
-  const client = new Client(secureConnection(database.url))
+  const client = new Client({
+    ...secureConnection(database.url),
+    connectionTimeoutMillis: timeout,
+    query_timeout: timeout
+  })
 
   try {
     await client.connect()

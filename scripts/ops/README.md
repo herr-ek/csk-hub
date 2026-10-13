@@ -56,5 +56,24 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
 - Seeding refuses outright and exits non-zero with `--prod`. The seed scripts also refuse
   any `POSTGRES_URL` that is not a local database, including when run by hand.
 
+## Production build check
+
+The `prebuild` hook in `package.json` runs `scripts/ops/pre-build.ts`, so `bun run build`
+checks the migrations before `next build`. On a production build (`VERCEL_ENV=production`)
+it compares the migrations on disk with the ledger of the database the deployment will use
+(the `POSTGRES_URL` Vercel injects), the same comparison `status` makes. If any migration is
+pending, the build fails and lists them. Preview and local builds skip the check.
+
+Vercel runs the project's `build` script, which triggers the hook. A Build Command override
+in the Vercel dashboard must stay `bun run build`; a direct `next build` would skip it.
+
+The check fails closed: the build stops if `POSTGRES_URL` is unset, or if connecting or
+reading the ledger takes longer than 10 seconds. It keeps no state, so after a failed build
+you can apply the migrations and redeploy the same commit:
+
+```bash
+bun run ops migrate --prod   # then "Redeploy" the failed deployment in Vercel, or push again
+```
+
 TLS verification follows the shared policy in `src/core/db/tls.ts`; see
 `src/core/db/README.md`.
