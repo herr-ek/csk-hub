@@ -8,6 +8,7 @@ import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostByline } from "./post-byline"
 import { getPublishedPost } from "./service"
+import { PostReadMarker } from "./unread"
 
 function BackToNews() {
   const t = useTranslations("Posts")
@@ -29,6 +30,7 @@ export async function PostScreen({ postId }: { postId: string }) {
 
   return (
     <ContentPage>
+      <PostReadMarker postId={post.id} />
       <BackToNews />
       <article className="flex flex-col gap-4">
         <header>

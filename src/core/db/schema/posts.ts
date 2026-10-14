@@ -1,6 +1,6 @@
 import type { JSONContent } from "@tiptap/core"
 import { sql } from "drizzle-orm"
-import { customType, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { customType, index, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
 /** Postgres's full-text type; Drizzle has no built-in for it. Read only, never written by the app. */
@@ -42,5 +42,25 @@ export const post = pgTable(
   (table) => [
     index("post_published_at_idx").on(table.publishedAt.desc()),
     index("post_body_search_idx").using("gin", table.bodySearch)
+  ]
+)
+
+// That a User has opened a Post, which is what takes it off their unread badge. Private to
+// that User: it answers "what is new to me", never "who has read this".
+export const postRead = pgTable(
+  "post_read",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => post.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.postId] }),
+    // The key leads with the User; deleting a Post looks its reads up by Post.
+    index("post_read_post_id_idx").on(table.postId)
   ]
 )

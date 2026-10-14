@@ -132,6 +132,8 @@
     "formerMember": "Ehemaliges Mitglied",
     "bylineSeparator": "·",
     "allNews": "Alle Neuigkeiten",
+    "unread": "Ungelesen",
+    "unreadCount": "{count, plural, one {# ungelesener Beitrag} other {# ungelesene Beiträge}}",
     "publishDescription": "Durch das Veröffentlichen wird der Beitrag sofort allen Mitgliedern angezeigt.",
     "titleLabel": "Titel",
     "bodyLabel": "Beitrag",

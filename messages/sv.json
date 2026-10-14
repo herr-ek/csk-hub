@@ -132,6 +132,8 @@
     "formerMember": "Tidigare medlem",
     "bylineSeparator": "·",
     "allNews": "Alla nyheter",
+    "unread": "Oläst",
+    "unreadCount": "{count, plural, one {# oläst inlägg} other {# olästa inlägg}}",
     "publishDescription": "När du publicerar visas inlägget genast för alla medlemmar.",
     "titleLabel": "Titel",
     "bodyLabel": "Inlägg",

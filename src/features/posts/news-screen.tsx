@@ -1,17 +1,21 @@
 import Link from "next/link"
 import { canCurrentUser } from "@/core/auth/permissions.server"
+import { getRequestSession } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
+import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { cn } from "@/shared/utils"
 import { PostByline } from "./post-byline"
 import { listNewsFeed } from "./service"
+import { listUnreadPostIds } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
   const t = useTranslations("Posts")
@@ -26,9 +30,15 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
   )
 }
 
+async function listUnreadForCurrentUser() {
+  const session = await getRequestSession()
+  return session ? listUnreadPostIds(session.user.id) : new Set<string>()
+}
+
 export async function NewsScreen() {
-  const [entries, canPublish, t] = await Promise.all([
+  const [entries, unread, canPublish, t] = await Promise.all([
     listNewsFeed(),
+    listUnreadForCurrentUser(),
     canCurrentUser({ resource: "post", action: "create" }),
     getTranslations("Posts")
   ])
@@ -52,27 +62,37 @@ export async function NewsScreen() {
         </Empty>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry) => (
-            <li key={entry.id}>
-              <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
-                <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                  <CardHeader>
-                    <CardTitle className="text-lg break-words">{entry.title}</CardTitle>
-                    <CardDescription>
-                      <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <RichTextContent
-                      document={entry.body}
-                      linksAsText
-                      className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
-                    />
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
-          ))}
+          {entries.map((entry) => {
+            const isUnread = unread.has(entry.id)
+            return (
+              <li key={entry.id}>
+                <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
+                  <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                    <CardHeader>
+                      <CardTitle className={cn("text-lg break-words", isUnread && "font-semibold")}>
+                        {entry.title}
+                      </CardTitle>
+                      {isUnread ? (
+                        <CardAction>
+                          <Badge>{t("unread")}</Badge>
+                        </CardAction>
+                      ) : null}
+                      <CardDescription>
+                        <PostByline authorName={entry.authorName} publishedAt={entry.publishedAt} />
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RichTextContent
+                        document={entry.body}
+                        linksAsText
+                        className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
+                      />
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </ContentPage>
