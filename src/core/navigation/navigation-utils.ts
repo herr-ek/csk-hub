@@ -1,3 +1,4 @@
+import { isLocale } from "@/core/i18n/locales"
 import { hasAdminRole } from "@/shared/roles"
 import { ROUTES } from "./site"
 
@@ -50,4 +51,15 @@ export function twoFactorPath(methods: string[], returnTo?: string) {
 /** Posts are reached by opaque id: Swedish titles change, permalinks must not. */
 export function newsPostPath(postId: string) {
   return `${ROUTES.news}/${encodeURIComponent(postId)}`
+}
+
+/**
+ * Whether `href` is the current page or one of its ancestors. The server may see the internal `/<locale>/…`
+ * path that the locale rewrite produces, so the locale segment is ignored to keep server and client in agreement.
+ */
+export function isActiveRoute(pathname: string, href: string) {
+  const [, first, ...rest] = pathname.split("/")
+  const path = isLocale(first) ? `/${rest.join("/")}` : pathname
+  if (href === ROUTES.home) return path === ROUTES.home
+  return path === href || path.startsWith(`${href}/`)
 }

@@ -1,26 +1,10 @@
-import { ArrowLeftIcon } from "lucide-react"
-import Link from "next/link"
 import { notFound } from "next/navigation"
-import { useTranslations } from "@/core/i18n/translations"
-import { ROUTES } from "@/core/navigation/site"
+import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostByline } from "./post-byline"
 import { getPublishedPost } from "./service"
-
-function BackToNews() {
-  const t = useTranslations("Posts")
-  return (
-    <Link
-      href={ROUTES.news}
-      className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeftIcon className="size-4" aria-hidden="true" />
-      {t("allNews")}
-    </Link>
-  )
-}
 
 export async function PostScreen({ postId }: { postId: string }) {
   const post = await getPublishedPost(postId)
@@ -29,7 +13,7 @@ export async function PostScreen({ postId }: { postId: string }) {
 
   return (
     <ContentPage>
-      <BackToNews />
+      <PageBreadcrumb route="news" current={post.title} />
       <article className="flex flex-col gap-4">
         <header>
           <h1 className="font-heading text-2xl font-semibold break-words">{post.title}</h1>
@@ -46,7 +30,7 @@ export async function PostScreen({ postId }: { postId: string }) {
 export function PostScreenSkeleton() {
   return (
     <ContentPage busy>
-      <BackToNews />
+      <PageBreadcrumb route="news" current={<Skeleton className="h-4 w-32" />} />
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-48" />

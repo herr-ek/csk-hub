@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Fragment } from "react"
 import { getFormatter, getTimeZone, getTranslations } from "@/core/i18n/server"
+import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { Message, MessageContent, MessageGroup } from "@/shared/ui/base/message"
 import {
   MessageScroller,
@@ -38,9 +39,7 @@ export async function ConversationScreen({
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <div>
-        <Link href="/messages" className="text-sm text-muted-foreground underline">
-          {t("title")}
-        </Link>
+        <PageBreadcrumb route="messages" current={conversation.otherMemberName ?? t("formerMember")} />
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="min-w-0 wrap-break-word font-heading text-2xl font-semibold">
             {conversation.otherMemberName ?? t("formerMember")}
@@ -153,7 +152,7 @@ export function ConversationScreenSkeleton() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6" aria-busy="true">
       <div>
-        <Skeleton className="h-4 w-20" />
+        <PageBreadcrumb route="messages" current={<Skeleton className="h-4 w-24" />} />
         <Skeleton className="mt-3 h-8 w-44" />
       </div>
       <div className="flex h-[min(60vh,40rem)] flex-col justify-end gap-3 rounded-xl border bg-card p-4">
