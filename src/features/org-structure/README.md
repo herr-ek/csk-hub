@@ -75,6 +75,13 @@ production. `bun run ops seed-groups` adds local example data on top. Both live 
 "Current" means no end date. Dates are calendar dates, `YYYY-MM-DD`; a period may end on the
 day the next one starts.
 
+Position writes share advisory locks in this order: the Position catalogue, office slots ordered
+by Group ID, then User IDs in sorted order, before locking or updating Position holder rows.
+Assignments and catalogue changes use the same catalogue lock, so an allowance cannot be revoked
+between validation and insertion. Membership-ending commands take the User lock before ending that
+User's holder rows, and do not acquire catalogue or office locks; they therefore cannot form a
+reverse wait cycle with a handover.
+
 ## Admin pages
 
 The Admin surface over this module is split by task. `/admin/org-structure` lists the Choirs and

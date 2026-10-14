@@ -3,7 +3,15 @@ import "server-only"
 import { findCurrentMembership } from "./lookup"
 import { addMembership } from "./membership"
 import type { IsoDate } from "./model"
-import { lockUser, type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
+import {
+  lockPositionCatalogue,
+  lockPositionSlot,
+  lockUser,
+  type OrgStructureDatabase,
+  RuleViolation,
+  requireDate,
+  runOrgStructureCommand
+} from "./operation"
 import { addHolding, closeHolding } from "./positions"
 
 /**
@@ -20,9 +28,12 @@ export function startLinkedPosition(
   return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
     if (input.groupIds.length === 0) throw new RuleViolation("group-not-found")
+    const groupIds = [...new Set(input.groupIds)].sort()
+    await lockPositionCatalogue(tx, input.positionId)
+    for (const groupId of groupIds) await lockPositionSlot(tx, groupId, input.positionId)
     await lockUser(tx, input.userId)
 
-    for (const groupId of new Set(input.groupIds)) {
+    for (const groupId of groupIds) {
       if (!(await findCurrentMembership(tx, input.userId, groupId))) {
         await addMembership(tx, input.userId, groupId, startDate)
       }
@@ -36,9 +47,12 @@ export function endLinkedPosition(database: OrgStructureDatabase, input: LinkedP
   return runOrgStructureCommand(database, async (tx) => {
     const endDate = requireDate(input.endDate)
     if (input.groupIds.length === 0) throw new RuleViolation("group-not-found")
+    const groupIds = [...new Set(input.groupIds)].sort()
+    await lockPositionCatalogue(tx, input.positionId)
+    for (const groupId of groupIds) await lockPositionSlot(tx, groupId, input.positionId)
     await lockUser(tx, input.userId)
 
-    for (const groupId of new Set(input.groupIds)) {
+    for (const groupId of groupIds) {
       await closeHolding(tx, { userId: input.userId, groupId, positionId: input.positionId }, endDate)
     }
   })
