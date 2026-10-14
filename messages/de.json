@@ -126,6 +126,7 @@
     "closeMenu": "Menü schließen",
     "breadcrumb": "Brotkrümelnavigation",
     "routes": {
+      "home": "Startseite",
       "news": "Neuigkeiten",
       "newsCompose": "Beitrag schreiben",
       "messages": "Nachrichten",
@@ -136,7 +137,11 @@
       "adminNotifications": "Benachrichtigungen",
       "adminOrgStructure": "Chöre und Stimmen",
       "adminOrgStructureGroups": "Gruppen und Ämter"
-    }
+    },
+    "menu": "Menü",
+    "quickAccess": "Schnellzugriff",
+    "customizeQuickAccess": "Schnellzugriff anpassen",
+    "showQuickAccess": "Schnellzugriff anzeigen"
   },
   "Posts": {
     "title": "Neuigkeiten",
@@ -350,6 +355,22 @@
     "profileTab": "Profil",
     "securityTab": "Sicherheit",
     "notificationsTab": "Benachrichtigungen"
+  },
+  "QuickAccess": {
+    "title": "Schnellzugriff",
+    "description": "Hefte bis zu vier Seiten an die Leiste unten auf dem Bildschirm deines Handys.",
+    "inBar": "In deiner Leiste",
+    "available": "Seiten",
+    "limit": "Wähle bis zu {count} Verknüpfungen.",
+    "moveUp": "{name} nach oben verschieben",
+    "moveDown": "{name} nach unten verschieben",
+    "empty": "Keine Verknüpfungen angeheftet, daher ist die Leiste ausgeblendet.",
+    "updateFailed": "Deine Verknüpfungen konnten gerade nicht gespeichert werden. Bitte versuche es erneut.",
+    "added": "{name} wurde zur Leiste hinzugefügt.",
+    "removed": "{name} wurde aus der Leiste entfernt.",
+    "moved": "{name} wurde an Position {position} von {count} verschoben.",
+    "pwaNotice": "Der Schnellzugriff ist für CSK Hub als App auf deinem Home-Bildschirm gedacht. In einem mobilen Browser teilt er sich den Platz mit der Symbolleiste des Browsers.",
+    "enabled": "Schnellzugriffsleiste anzeigen"
   },
   "AccountProfile": {
     "title": "Mein Konto",

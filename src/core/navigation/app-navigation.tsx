@@ -3,13 +3,17 @@ import { Suspense } from "react"
 import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getRequestSession } from "@/core/auth/session.server"
 import { app } from "@/core/config/app"
+import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
 import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
+import { getUserPreferences } from "@/core/preferences"
 import { cn } from "@/shared/utils"
 import { ThemeSwitch } from "../theme/ThemeSwitch"
 import { LogoutButton } from "./logout-button"
 import { MobileNavigation } from "./MobileNavigation"
 import { NavLinks } from "./NavLinks"
+import { QuickAccessBar } from "./QuickAccessBar"
+import { visibleQuickAccess } from "./quick-access"
 
 export type NavigationRoute = {
   id: NavigationRouteId
@@ -95,5 +99,41 @@ export async function RuntimeAppNavigation() {
         ...(session?.session.impersonatedBy ? { impersonatingUserName: session.user.name } : {})
       }}
     />
+  )
+}
+
+/** The member's quick-access bar for small screens. Render it after the page content so its spacer comes last. */
+export function AppQuickAccessBar() {
+  return (
+    <Suspense fallback={null}>
+      <RuntimeQuickAccessBar />
+    </Suspense>
+  )
+}
+
+async function RuntimeQuickAccessBar() {
+  const session = await getRequestSession()
+  if (!session) return null
+
+  const [isAdmin, preferences, t] = await Promise.all([
+    isUserAdmin(session),
+    getUserPreferences(session.user.id),
+    getTranslations("Navigation")
+  ])
+  if (!preferences.quickAccessEnabled) return null
+
+  const shortcuts = visibleQuickAccess(preferences.quickAccess, { isAdmin }).map((id) => ({
+    id,
+    href: ROUTES[id],
+    label: t(`routes.${id}`)
+  }))
+  const items = getNavigationItems({ showAdmin: isAdmin }, t).map((item) => ({
+    id: item.id,
+    href: ROUTES[item.id],
+    label: item.label
+  }))
+
+  return (
+    <QuickAccessBar shortcuts={shortcuts} items={items} isImpersonating={Boolean(session.session.impersonatedBy)} />
   )
 }

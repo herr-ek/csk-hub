@@ -126,6 +126,7 @@
     "closeMenu": "Close menu",
     "breadcrumb": "Breadcrumb",
     "routes": {
+      "home": "Home",
       "news": "News",
       "newsCompose": "Write a post",
       "messages": "Messages",
@@ -136,7 +137,11 @@
       "adminNotifications": "Notifications",
       "adminOrgStructure": "Choirs and voices",
       "adminOrgStructureGroups": "Groups and positions"
-    }
+    },
+    "menu": "Menu",
+    "quickAccess": "Quick access",
+    "customizeQuickAccess": "Customize quick access",
+    "showQuickAccess": "Show quick access"
   },
   "Posts": {
     "title": "News",
@@ -350,6 +355,22 @@
     "profileTab": "Profile",
     "securityTab": "Security",
     "notificationsTab": "Notifications"
+  },
+  "QuickAccess": {
+    "title": "Quick access",
+    "description": "Pin up to four pages to the bar at the bottom of the screen on your phone.",
+    "inBar": "In your bar",
+    "available": "Pages",
+    "limit": "Choose up to {count} shortcuts.",
+    "moveUp": "Move {name} up",
+    "moveDown": "Move {name} down",
+    "empty": "No shortcuts pinned, so the bar is hidden.",
+    "updateFailed": "Unable to save your shortcuts right now. Please try again.",
+    "added": "{name} added to the bar.",
+    "removed": "{name} removed from the bar.",
+    "moved": "{name} moved to position {position} of {count}.",
+    "pwaNotice": "Quick access is made for CSK Hub installed as an app on your home screen. In a mobile browser it shares space with the browser's own toolbar.",
+    "enabled": "Show the quick-access bar"
   },
   "AccountProfile": {
     "title": "My account",
