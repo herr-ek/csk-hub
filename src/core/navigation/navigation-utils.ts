@@ -63,3 +63,8 @@ export function isActiveRoute(pathname: string, href: string) {
   if (href === ROUTES.home) return path === ROUTES.home
   return path === href || path.startsWith(`${href}/`)
 }
+
+/** Where a Post is written further: its author's draft, or a published Post to change. */
+export function newsPostEditPath(postId: string) {
+  return `${newsPostPath(postId)}/edit`
+}

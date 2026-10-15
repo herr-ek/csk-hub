@@ -16,9 +16,10 @@ const postBodySchema = z.string().transform((value, ctx) => {
   return document
 })
 
-export const publishPostSchema = z.object({
+/** A Post's title and body as every compose form submits them, new or edited. */
+export const postFormSchema = z.object({
   title: z.string().trim().min(1).max(POST_TITLE_MAX_LENGTH),
   body: postBodySchema
 })
 
-export type PublishPostInput = z.infer<typeof publishPostSchema>
+export type PostFormInput = z.infer<typeof postFormSchema>

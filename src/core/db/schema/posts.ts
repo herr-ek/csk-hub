@@ -1,6 +1,6 @@
 import type { JSONContent } from "@tiptap/core"
 import { sql } from "drizzle-orm"
-import { customType, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { check, customType, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
 /** Postgres's full-text type; Drizzle has no built-in for it. Read only, never written by the app. */
@@ -30,9 +30,18 @@ export const post = pgTable(
     // part of the erased User's own history. Null therefore means "author erased", not
     // "not written by anyone" — every insert sets it.
     authorId: text("author_id").references(() => user.id, { onDelete: "set null" }),
-    // Null until published; drafts are a later issue's job. Stored with a zone so
-    // a Post keeps the same publication instant whatever the server runs in.
+    // Null while the Post is a draft, which only its author sees. Unpublishing clears it
+    // again, so a recalled Post is its author's draft and republishing dates it afresh.
+    // Stored with a zone so a Post keeps the same publication instant whatever the server
+    // runs in.
     publishedAt: timestamp("published_at", { withTimezone: true }),
+    // When a published Post's title or body last changed, shown beside the publish date
+    // so a reader can tell the Post moved under them. Null for a Post untouched since
+    // publishing; unlike `updatedAt`, saving a draft or publishing does not set it.
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    // When the author threw the draft away. A discarded draft is gone from every view, but
+    // the row stays: Posts are never deleted. Only a draft can be discarded.
+    discardedAt: timestamp("discarded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
@@ -41,6 +50,8 @@ export const post = pgTable(
   },
   (table) => [
     index("post_published_at_idx").on(table.publishedAt.desc()),
-    index("post_body_search_idx").using("gin", table.bodySearch)
+    index("post_body_search_idx").using("gin", table.bodySearch),
+    // A published Post is the choir's record, so it is unpublished first, never discarded.
+    check("post_discarded_draft_check", sql`${table.discardedAt} is null or ${table.publishedAt} is null`)
   ]
 )
