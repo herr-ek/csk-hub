@@ -55,7 +55,10 @@ export function InputField({
   )
 }
 
-/** A labelled, uncontrolled `Select` that submits `name` with its form. It starts on the first option. */
+/**
+ * A labelled `Select` that submits `name` with its form. Uncontrolled, it starts on the first
+ * option; given `value`, it is controlled and reports changes through `onValueChange`.
+ */
 export function SelectField({
   label,
   description,
@@ -65,19 +68,31 @@ export function SelectField({
   name,
   options,
   defaultValue,
+  value,
+  onValueChange,
   required
 }: FieldChrome & {
   name: string
   options: { value: string; label: string }[]
   defaultValue?: string
+  value?: string
+  onValueChange?: (value: string) => void
   required?: boolean
 }) {
   const id = useId()
   const initial = defaultValue ?? options[0]?.value
+  const controlled = value === undefined ? { defaultValue: initial } : { value }
   return (
     <Field data-invalid={invalid}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select key={defaultKey(initial)} name={name} items={options} defaultValue={initial} required={required}>
+      <Select
+        key={value === undefined ? defaultKey(initial) : undefined}
+        name={name}
+        items={options}
+        {...controlled}
+        onValueChange={(next) => onValueChange?.(next ?? "")}
+        required={required}
+      >
         <SelectTrigger id={id} aria-invalid={invalid} className="w-full">
           <SelectValue />
         </SelectTrigger>

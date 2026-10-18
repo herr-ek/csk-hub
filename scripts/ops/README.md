@@ -18,6 +18,7 @@ bun run ops seed-users           # 100 verified local example accounts, includin
 bun run ops seed-groups          # balanced placements, groups, Positions and their history
 bun run ops seed-posts           # 24 published example Posts, after seed-users
 bun run ops seed-demo            # reference data + all of the above, after migrating
+bun run ops seed-events          # example Events, Locations and a gig group, after seed-groups or seed-demo
 
 bun run ops --prod               # the menu, targeting production
 bun run ops migrate --prod       # asks you to type "prod" first
