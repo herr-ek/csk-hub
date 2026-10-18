@@ -18,6 +18,7 @@ mock.module("@/core/i18n/translations", () => ({
 
 const { createDocumentSchema, richText } = await import("../document")
 const { RichTextEditor } = await import("./rich-text-editor")
+const { RichTextToolbar } = await import("./rich-text-toolbar")
 
 const schema = createDocumentSchema([richText.headings([2, 3]), richText.emphasis])
 
@@ -56,6 +57,25 @@ describe("the editor's lifecycle", () => {
     expect(next).not.toBe(first)
     expect(next.isDestroyed).toBe(false)
     expect(container.querySelector('[role="toolbar"], [aria-label="heading"]')).not.toBeNull()
+
+    await act(async () => root.unmount())
+  })
+
+  test("a toolbar survives an editor destroyed after the surface above it checked it", async () => {
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    await act(async () =>
+      root.render(<RichTextEditor schema={schema} name="body" labelledBy="label" placeholder="Write." />)
+    )
+    const destroyed = editorOf(container)
+
+    // React can pause a render between the surface and its toolbar, and Tiptap's timer can
+    // destroy the editor in that pause; the toolbar is then rendered with the dead instance.
+    destroyed.destroy()
+    await act(async () => root.render(<RichTextToolbar editor={destroyed} schema={schema} controls="editor" />))
+
+    expect(container.querySelector('[role="toolbar"]')).not.toBeNull()
 
     await act(async () => root.unmount())
   })
