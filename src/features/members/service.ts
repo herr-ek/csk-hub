@@ -32,27 +32,24 @@ export async function requireActiveViewer(database: MemberDatabase, viewerId: st
   if (!viewer) throw new InactiveViewerError()
 }
 
-/** Read the current database state, and select email only for the profile's owner. */
+/** Reads the current database state and returns email only to the profile's owner. */
 export async function getMemberProfile(database: MemberDatabase, viewerId: string, memberId: string) {
   await requireActiveViewer(database, viewerId)
   const [member] = await database
-    .select({ id: user.id, name: user.name, username: user.username, image: user.image })
+    .select({ id: user.id, name: user.name, username: user.username, image: user.image, email: user.email })
     .from(user)
     .where(and(eq(user.id, memberId), activeUser()))
     .limit(1)
   if (!member) return null
-  const [memberships, holdings, capabilities, ownContact] = await Promise.all([
+  const [memberships, holdings, capabilities] = await Promise.all([
     listCurrentGroupsOfUser(database, memberId),
     listCurrentPositionsOfUser(database, memberId),
-    listVoiceCapabilities(database, memberId),
-    viewerId === memberId
-      ? database.select({ email: user.email }).from(user).where(eq(user.id, viewerId)).limit(1)
-      : Promise.resolve([])
+    listVoiceCapabilities(database, memberId)
   ])
   return {
     ...member,
     isOwn: viewerId === memberId,
-    email: ownContact[0]?.email ?? null,
+    email: viewerId === memberId ? member.email : null,
     capabilities,
     ...buildAffiliations(memberships, holdings)
   }

@@ -72,3 +72,8 @@ export function newsPostEditPath(postId: string) {
 export function memberProfilePath(userId: string) {
   return `${ROUTES.members}/${encodeURIComponent(userId)}`
 }
+
+/** Builds a Conversation URL from its opaque ID, encoded as a single path segment. */
+export function conversationPath(conversationId: string) {
+  return `${ROUTES.messages}/${encodeURIComponent(conversationId)}`
+}

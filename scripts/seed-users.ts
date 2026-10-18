@@ -22,8 +22,9 @@ export async function seedUsers(database: SeedDatabase) {
         )
       )
     const missing = SEED_USERS.filter(({ id }) => !existing.some((row) => row.id === id))
+    if (missing.length === 0) return { created: 0 }
+    const password = await hashPassword(SEED_PASSWORD)
     for (const singer of missing) {
-      const password = await hashPassword(SEED_PASSWORD)
       await tx.insert(user).values({
         id: singer.id,
         name: singer.name,

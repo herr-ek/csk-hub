@@ -377,13 +377,6 @@
     "securityTab": "Säkerhet",
     "notificationsTab": "Notiser"
   },
-  "AccountProfile": {
-    "title": "Mitt konto",
-    "description": "Din CSK Hub-profil.",
-    "name": "Namn",
-    "email": "E-post",
-    "settings": "Kontoinställningar"
-  },
   "PushNotifications": {
     "settingsTitle": "Pushnotiser",
     "settingsDescription": "Få uppdateringar från CSK Hub även när appen inte är öppen.",

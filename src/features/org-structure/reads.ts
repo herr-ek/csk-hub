@@ -57,8 +57,7 @@ export async function listCurrentChoirAffiliationsOfUsers(database: OrgStructure
       groupId: group.id,
       name: group.name,
       type: group.type,
-      choirId: group.choirId,
-      voice: groupMember.voice
+      choirId: group.choirId
     })
     .from(groupMember)
     .innerJoin(group, eq(group.id, groupMember.groupId))

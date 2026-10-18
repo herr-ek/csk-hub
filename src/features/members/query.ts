@@ -18,13 +18,17 @@ async function getViewer(returnTo: string = ROUTES.members) {
 export async function getProfile(memberId?: string) {
   const session = await getViewer(memberId ? memberProfilePath(memberId) : ROUTES.account)
   try {
-    const profile = await getMemberProfile(db, session.user.id, memberId ?? session.user.id)
+    const targetId = memberId ?? session.user.id
+    const canMessage = targetId !== session.user.id && !session.session.impersonatedBy
+    const [profile, messageConversationId] = await Promise.all([
+      getMemberProfile(db, session.user.id, targetId),
+      canMessage ? findDirectConversation(db, session.user.id, targetId) : Promise.resolve(null)
+    ])
     if (!profile) notFound()
-    const canMessage = !profile.isOwn && !session.session.impersonatedBy
     return {
       profile,
       canMessage,
-      messageConversationId: canMessage ? await findDirectConversation(db, session.user.id, profile.id) : null,
+      messageConversationId,
       canEditProfile: profile.isOwn && !session.session.impersonatedBy
     }
   } catch (error) {
@@ -35,7 +39,6 @@ export async function getProfile(memberId?: string) {
 
 export async function getProfileEditor() {
   const session = await getViewer(ROUTES.accountEditProfile)
-  if (session.session.impersonatedBy) notFound()
   try {
     return await getOwnVoiceCapabilities(db, session.user.id)
   } catch (error) {

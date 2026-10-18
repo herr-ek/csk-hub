@@ -1,18 +1,16 @@
 import "server-only"
 
-import { and, eq, isNull, or } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import type { db } from "@/core/db"
-import { user } from "@/core/db/schema/auth"
 import { directConversation } from "@/core/db/schema/messaging"
 
-/** Read-only lookup for a pair of active Users. Neither navigation nor lookup creates history. */
+/**
+ * Finds an existing Direct Conversation for an unordered pair of User IDs without creating history.
+ * Callers must authenticate the viewer and verify both Users are active before exposing the result.
+ * This lookup does not grant access to the Conversation.
+ */
 export async function findDirectConversation(database: typeof db, userId: string, recipientId: string) {
   if (userId === recipientId) return null
-  const active = await database
-    .select({ id: user.id })
-    .from(user)
-    .where(and(or(eq(user.id, userId), eq(user.id, recipientId)), or(eq(user.banned, false), isNull(user.banned))))
-  if (active.length !== 2) return null
   const [first, second] = [userId, recipientId].sort()
   const [pair] = await database
     .select({ id: directConversation.conversationId })

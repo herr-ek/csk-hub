@@ -1,1 +1,1 @@
-export { findDirectConversation } from "./direct-destination"
+export { findDirectConversation } from "./find-direct-conversation"

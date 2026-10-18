@@ -1,6 +1,12 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/base/avatar"
 import { cn } from "@/shared/utils"
 
+/**
+ * Decorative avatar shown beside the member's visible name.
+ * @param name - Display name; the first and last words supply fallback initials, or `?` when blank.
+ * @param image - Image URL, or null to use initials. Failed images also fall back to initials.
+ * @param large - Uses profile-header sizing instead of the default directory sizing.
+ */
 export function MemberAvatar({ name, image, large = false }: { name: string; image: string | null; large?: boolean }) {
   const parts = name.trim().split(/\s+/u).filter(Boolean)
   const initials = [parts[0]?.[0], parts.length > 1 ? parts.at(-1)?.[0] : undefined]

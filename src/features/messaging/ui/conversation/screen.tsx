@@ -2,7 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Fragment } from "react"
 import { getFormatter, getTimeZone, getTranslations } from "@/core/i18n/server"
-import { memberProfilePath } from "@/core/navigation/navigation-utils"
+import { conversationPath, memberProfilePath } from "@/core/navigation/navigation-utils"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { Message, MessageContent, MessageGroup } from "@/shared/ui/base/message"
 import {
@@ -72,7 +72,7 @@ export async function ConversationScreen({
               {conversation.nextBeforeSequence ? (
                 <Link
                   className="self-center text-sm underline"
-                  href={`/messages/${conversationId}?before=${conversation.nextBeforeSequence}`}
+                  href={`${conversationPath(conversationId)}?before=${conversation.nextBeforeSequence}`}
                 >
                   {t("loadOlder")}
                 </Link>

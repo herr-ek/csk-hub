@@ -39,7 +39,7 @@ describe.skipIf(!database)("complete local demo seed", () => {
     expect(result.posts.created).toBe(24)
   }, 30_000)
 
-  test("creates 100 usable, verified identities with distinct password salts and three Admins", async () => {
+  test("creates 100 usable, verified identities with a shared seed password hash and three Admins", async () => {
     const users = await db.select().from(user)
     const accounts = await db.select().from(account)
     expect(users).toHaveLength(100)
@@ -47,7 +47,7 @@ describe.skipIf(!database)("complete local demo seed", () => {
     expect(users.every(({ emailVerified, username }) => emailVerified && username)).toBe(true)
     expect(users.filter(({ role }) => role === "admin")).toHaveLength(3)
     expect(accounts).toHaveLength(100)
-    expect(new Set(accounts.map(({ password }) => password)).size).toBe(100)
+    expect(new Set(accounts.map(({ password }) => password)).size).toBe(1)
     const credential = accounts.find(({ userId }) => userId === SEED_USERS[0]?.id)
     expect(credential).toMatchObject({ providerId: "credential", accountId: SEED_USERS[0]?.id })
     expect(await verifyPassword({ hash: credential?.password as string, password: SEED_PASSWORD })).toBe(true)

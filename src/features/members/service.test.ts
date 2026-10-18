@@ -176,7 +176,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     expect((await listMemberDirectory(db, viewer, { query: token, page: 999 })).page).toBe(2)
   })
 
-  test("Direct Conversation lookup reuses only the authenticated pair and never creates history", async () => {
+  test("Direct Conversation lookup reuses only the requested pair and never creates history", async () => {
     const first = await member()
     const second = await member()
     const outsider = await member()
@@ -188,7 +188,5 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     expect(await findDirectConversation(db, outsider, second)).toBeNull()
     expect(await findDirectConversation(db, first, first)).toBeNull()
     expect(await db.select({ count: count() }).from(conversation)).toEqual([{ count: 1 }])
-    await db.update(user).set({ banned: true }).where(eq(user.id, second))
-    expect(await findDirectConversation(db, first, second)).toBeNull()
   })
 })

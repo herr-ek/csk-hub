@@ -1,7 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { ROUTES } from "@/core/navigation/site"
 import { sendMessage } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { requireMessageSendingAvailable } from "../message-command-access"
@@ -21,8 +20,8 @@ export async function sendMessageAction(_state: MessageCommandState, formData: F
       idempotencyKey
     })
 
-    revalidatePath(`${ROUTES.messages}/${result.conversationId}`)
-    revalidatePath(ROUTES.messages)
+    revalidatePath("/[locale]/(app)/messages/[conversationId]", "page")
+    revalidatePath("/[locale]/(app)/messages", "page")
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {
     return messageCommandErrorState(error, text)

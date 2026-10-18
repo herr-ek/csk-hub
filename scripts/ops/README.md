@@ -91,7 +91,7 @@ On an empty database the demo contains:
 
 - 100 distinct named, email-verified Users, with usernames `singer001` through `singer100`.
   Sign in as `singer-001@example.com` through `singer-100@example.com`, all with password
-  `password`; the first three Users are Admins. Each has its own salted credential hash.
+  `password`; the first three Users are Admins. New accounts share one salted credential hash per seed run.
 - 34/33/33 singers across DK, KK and MK, with 8–9 singers per Section. KK alternates
   divisions within its S/A/T/B Sections. Existing unplaced active Users are placed too;
   the seed balances around existing placements rather than moving anyone.

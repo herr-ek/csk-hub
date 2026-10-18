@@ -377,13 +377,6 @@
     "securityTab": "Sicherheit",
     "notificationsTab": "Benachrichtigungen"
   },
-  "AccountProfile": {
-    "title": "Mein Konto",
-    "description": "Dein CSK Hub-Profil.",
-    "name": "Name",
-    "email": "E-Mail",
-    "settings": "Kontoeinstellungen"
-  },
   "PushNotifications": {
     "settingsTitle": "Push-Benachrichtigungen",
     "settingsDescription": "Erhalte Updates von CSK Hub, auch wenn die App nicht geöffnet ist.",

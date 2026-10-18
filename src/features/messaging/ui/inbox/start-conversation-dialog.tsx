@@ -4,6 +4,7 @@ import { PlusIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { type ReactNode, useActionState, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { conversationPath } from "@/core/navigation/navigation-utils"
 import { Button } from "@/shared/ui/base/button"
 import {
   Dialog,
@@ -90,7 +91,7 @@ function StartConversationForm({
     if (result.status === "success") {
       // Activity restores effects on browser Back; navigate only when this submission completes.
       onStarted()
-      router.push(`/messages/${result.conversationId}`)
+      router.push(conversationPath(result.conversationId))
     }
     return result
   }, initialState)
