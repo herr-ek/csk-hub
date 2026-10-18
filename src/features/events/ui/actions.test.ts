@@ -21,10 +21,17 @@ const redirect = mock((to: string) => {
   throw new Redirect(to)
 })
 
+// A module mock holds for the whole test run, so each keeps the module's other exports for the
+// test files that import it later.
+const [permissions, cache, navigation] = await Promise.all([
+  import("@/core/auth/permissions.server"),
+  import("next/cache"),
+  import("next/navigation")
+])
 mock.module("@/core/db", () => ({ db: database?.db }))
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
-mock.module("next/cache", () => ({ revalidatePath }))
-mock.module("next/navigation", () => ({ redirect }))
+mock.module("@/core/auth/permissions.server", () => ({ ...permissions, requireAdmin }))
+mock.module("next/cache", () => ({ ...cache, revalidatePath }))
+mock.module("next/navigation", () => ({ ...navigation, redirect }))
 
 const { createEventAction, updateEventAction, changeEventStatusAction, deleteEventAction } = await import(
   "./editor/actions"

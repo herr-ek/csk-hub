@@ -73,9 +73,11 @@ races, never surface as thrown errors.
 - Reads: `listCurrentGroupMembers`, `listCurrentGroupsOfUser`, `getCurrentPositionHolder`,
   `listChoirMembersByVoiceFamily`, `listCurrentPositionsOfUser`,
   `listCurrentChoirAffiliationsOfUsers` (batched Choir/Section summaries), `listActiveGroups`
-  (for pickers, keeping groups already chosen), `listGroupNames` (batched), and
+  (for pickers, keeping groups already chosen), `listGroupNames` (batched),
   `lockGroupForReference`, which another feature's command calls in its own transaction to
-  check a group it is about to refer to and hold it against archiving.
+  check a group it is about to refer to and hold it against archiving, and
+  `listMembershipsOfUser`: a user's dated Memberships from a date on, from which the events
+  module computes an Event's Audience.
 
 The structure every environment shares (MK, DK and KK with their Sections and Voices, Styret and
 the Position catalogue) comes from `bun run ops reference-data`, which can also run against

@@ -4,7 +4,8 @@ The CSK calendar: Events, who they are for, and where they are held. Terminology
 [`GLOSSARY.md`](../../../GLOSSARY.md#events); the scheme it implements is "Events scheme (v2)"
 in `docs/schemas/Events - DB Scheme.md`, which tags every rule with where it is enforced.
 This module covers what an organiser writes: the Event, its extension row, Targets, Event
-details and Locations. Responses, Registrations and Attendance come later.
+details and Locations, and what each User reads: their upcoming Events and each Event page.
+Responses, Registrations and Attendance come later.
 
 ## The write path
 
@@ -60,6 +61,32 @@ never surface as thrown errors.
 **Commands check no permissions.** The Admin surface calls `requireAdmin()` in every Server
 Action. Delegated Event management (Organiser group Position holders, Choir Positions) is meant to
 put its own policy in front of these same commands.
+
+## The Audience
+
+Who an Event is for is computed, never stored: `inAudience` in `audience.ts` is the scheme's
+"Targets and audience" pseudo-code as a pure function of a User's dated Memberships and an Event's
+Targets. Only Memberships active on the Event's start date in Europe/Stockholm count, so a singer
+who has left stops seeing later Events and a new one sees Events from their first day. Positions
+and permission roles play no part. The Memberships come from org-structure's
+`listMembershipsOfUser`, since that module is the only reader of its tables. Responses and
+Registrations are meant to check their Audience through the same function.
+
+A Rehearsal is labelled by its kind (`rehearsalKind` in the model), derived from its Targets and
+Series as the scheme describes: Choir rehearsal, Extra rehearsal, Sectional rehearsal or Rehearsal.
+
+## Calendar pages
+
+`/events` lists the signed-in User's upcoming Events, and `/events/[eventId]` is an Event page.
+Both live in `calendar/`, with their reads in `calendar/query.ts`:
+
+- Only Published and Cancelled Events are shown, and only to their Audience; a Cancelled Event
+  stays, struck through. An Event is upcoming until it has ended, so ongoing ones still show.
+- An Event page the viewer may not see answers exactly like a missing one: a Draft for everyone,
+  Admins included (they have the admin page), and any other Event outside the viewer's Audience
+  unless they are an Admin.
+- A Gig's external contact is personal data for organisers only. The calendar reads never select
+  it.
 
 ## Admin pages
 
