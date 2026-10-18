@@ -5,6 +5,7 @@ import Link from "next/link"
 import { type FormEvent, startTransition, useActionState, useEffect, useId, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { RichTextEditor } from "@/features/rich-text"
+import { IDLE } from "@/shared/forms/command-state"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { useUnsavedForm } from "@/shared/hooks/use-unsaved-form"
 import { Alert, AlertAction, AlertDescription } from "@/shared/ui/base/alert"
@@ -23,7 +24,7 @@ import {
   PARTICIPATION_MODES,
   type ParticipationMode
 } from "../../model"
-import { type EventCommandState, IDLE } from "../command-state"
+import type { EventCommandState } from "../command-state"
 import { ERROR_FIELD, type EventFormField, useEventErrorMessage } from "../errors"
 import { DETAIL_LABEL_MAX_LENGTH, LONG_TEXT_MAX_LENGTH, SHORT_TEXT_MAX_LENGTH, TITLE_MAX_LENGTH } from "../limits"
 import type { EventFormOptions, EventFormValues } from "./query"

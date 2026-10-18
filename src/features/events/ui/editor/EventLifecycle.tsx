@@ -5,7 +5,7 @@ import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import type { EventDeletionImpact } from "../../lifecycle"
 import { type EventStatus, statusChangesFrom } from "../../model"
-import { CommandDialog } from "../CommandDialog"
+import { EventCommandDialog } from "../EventCommandDialog"
 import { changeEventStatusAction, deleteEventAction } from "./actions"
 
 /** What moving from one status to another is called. */
@@ -41,7 +41,7 @@ export function EventLifecycle({
           const change = STATUS_CHANGE[status][next]
           if (!change) return null
           return (
-            <CommandDialog
+            <EventCommandDialog
               key={next}
               trigger={
                 <Button type="button" variant={change === "cancel" ? "outline" : "default"}>
@@ -57,10 +57,10 @@ export function EventLifecycle({
             >
               <input type="hidden" name="eventId" value={eventId} />
               <input type="hidden" name="status" value={next} />
-            </CommandDialog>
+            </EventCommandDialog>
           )
         })}
-        <CommandDialog
+        <EventCommandDialog
           trigger={
             <Button type="button" variant="ghost" className="text-destructive">
               {t("delete")}
@@ -81,7 +81,7 @@ export function EventLifecycle({
           destructive
         >
           <input type="hidden" name="eventId" value={eventId} />
-        </CommandDialog>
+        </EventCommandDialog>
       </CardContent>
     </Card>
   )

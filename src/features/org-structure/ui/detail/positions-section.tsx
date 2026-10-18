@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import { holdsElectedPosts } from "../../model"
-import { CommandDialog } from "../command-dialog"
+import { GroupCommandDialog } from "../group-command-dialog"
 import { assignHolderAction, endHoldingAction } from "./actions"
 import type { GroupDetail } from "./query"
 
@@ -113,7 +113,7 @@ function AssignHolderDialog({
   )
 
   return (
-    <CommandDialog
+    <GroupCommandDialog
       trigger={
         <Button type="button" variant="ghost" size="sm">
           {position.holder ? t("replaceHolder") : t("assignHolder")}
@@ -140,7 +140,7 @@ function AssignHolderDialog({
         />
       )}
       <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
-    </CommandDialog>
+    </GroupCommandDialog>
   )
 }
 
@@ -157,7 +157,7 @@ function EndHoldingDialog({
   if (!position.holder) return null
 
   return (
-    <CommandDialog
+    <GroupCommandDialog
       trigger={
         <Button type="button" variant="ghost" size="sm">
           {t("endHolding")}
@@ -173,6 +173,6 @@ function EndHoldingDialog({
       <input type="hidden" name="positionId" value={position.id} />
       <input type="hidden" name="userId" value={position.holder.userId} />
       <InputField label={t("endDate")} name="endDate" defaultValue={today} type="date" required />
-    </CommandDialog>
+    </GroupCommandDialog>
   )
 }

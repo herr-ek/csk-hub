@@ -4,7 +4,7 @@ import { useTranslations } from "@/core/i18n/translations"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import type { GroupType } from "../../model"
-import { CommandDialog } from "../command-dialog"
+import { GroupCommandDialog } from "../group-command-dialog"
 import { NAME_MAX_LENGTH } from "../limits"
 import { createGroupAction } from "./actions"
 
@@ -33,7 +33,7 @@ export function CreateGroupDialog({ choirs }: { choirs: { id: string; name: stri
   const types = useTranslations("Groups.types")
 
   return (
-    <CommandDialog
+    <GroupCommandDialog
       trigger={<Button type="button">{t("create")}</Button>}
       title={t("create")}
       description={t("createDescription")}
@@ -55,6 +55,6 @@ export function CreateGroupDialog({ choirs }: { choirs: { id: string; name: stri
           ...choirs.map((choir) => ({ value: choir.id, label: choir.name }))
         ]}
       />
-    </CommandDialog>
+    </GroupCommandDialog>
   )
 }

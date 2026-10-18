@@ -72,7 +72,7 @@ ui/
   list/        the Event list, its filters in the address, and the audience summary
   editor/      the Event form, its Server Actions, and an Event's lifecycle
   locations/   the Location catalogue
-  run-command.ts, CommandDialog.tsx   the shared shape of every admin command
+  run-command.ts, EventCommandDialog.tsx   the shared shape of every admin command
   errors.ts    the field each violation is shown next to
 ```
 
