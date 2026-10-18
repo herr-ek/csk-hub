@@ -38,6 +38,7 @@ const COMMANDS = [
   "seed-users",
   "seed-groups",
   "seed-posts",
+  "seed-events",
   "seed-demo"
 ] as const
 type Command = (typeof COMMANDS)[number]
@@ -48,6 +49,7 @@ const SEED_SCRIPTS: Record<string, string[]> = {
   "seed-users": ["run", "scripts/seed-users.ts"],
   "seed-groups": ["run", "scripts/seed-groups.ts"],
   "seed-posts": ["run", "scripts/seed-posts.ts"],
+  "seed-events": ["run", "scripts/seed-events.ts"],
   "seed-demo": ["run", "scripts/seed-demo.ts"]
 }
 
@@ -152,6 +154,7 @@ async function menu(): Promise<void> {
         localOnlyOption("seed-users", "Seed users"),
         localOnlyOption("seed-groups", "Seed groups"),
         localOnlyOption("seed-posts", "Seed Posts"),
+        localOnlyOption("seed-events", "Seed events"),
         localOnlyOption("seed-demo", "Seed complete demo (100 singers, groups, history and Posts)"),
         { value: "exit", label: "Exit" }
       ]

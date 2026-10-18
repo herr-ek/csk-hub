@@ -109,6 +109,8 @@ capabilities, and 24 published example Posts. It is safe to repeat and preserves
 credentials and edited Posts. Existing Users are retained, so a populated database can have
 more than 100 Users. The individual `seed-users`, `seed-groups` and `seed-posts` commands are
 also available; see [local demo data](scripts/ops/README.md#local-demo-data).
+`bun run ops seed-events` then adds example Events from the coming week on; running it again
+changes nothing.
 
 ## Routes
 
