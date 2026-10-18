@@ -3,7 +3,7 @@
 import { useTranslations } from "@/core/i18n/translations"
 import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
-import { CommandDialog } from "../CommandDialog"
+import { EventCommandDialog } from "../EventCommandDialog"
 import { SHORT_TEXT_MAX_LENGTH, URL_MAX_LENGTH } from "../limits"
 import { archiveLocationAction, createLocationAction, updateLocationAction } from "./actions"
 import type { LocationRow } from "./query"
@@ -40,7 +40,7 @@ function LocationFields({ location }: { location?: LocationRow }) {
 export function CreateLocationDialog() {
   const t = useTranslations("Events.locations")
   return (
-    <CommandDialog
+    <EventCommandDialog
       trigger={<Button type="button">{t("create")}</Button>}
       title={t("create")}
       action={createLocationAction}
@@ -48,14 +48,14 @@ export function CreateLocationDialog() {
       successMessage={t("saved")}
     >
       <LocationFields />
-    </CommandDialog>
+    </EventCommandDialog>
   )
 }
 
 export function EditLocationDialog({ location }: { location: LocationRow }) {
   const t = useTranslations("Events.locations")
   return (
-    <CommandDialog
+    <EventCommandDialog
       trigger={
         <Button type="button" variant="ghost" size="sm">
           {t("edit")}
@@ -69,14 +69,14 @@ export function EditLocationDialog({ location }: { location: LocationRow }) {
     >
       <input type="hidden" name="locationId" value={location.id} />
       <LocationFields location={location} />
-    </CommandDialog>
+    </EventCommandDialog>
   )
 }
 
 export function ArchiveLocationDialog({ location }: { location: LocationRow }) {
   const t = useTranslations("Events.locations")
   return (
-    <CommandDialog
+    <EventCommandDialog
       trigger={
         <Button type="button" variant="ghost" size="sm">
           {t("archive")}
@@ -90,6 +90,6 @@ export function ArchiveLocationDialog({ location }: { location: LocationRow }) {
       destructive
     >
       <input type="hidden" name="locationId" value={location.id} />
-    </CommandDialog>
+    </EventCommandDialog>
   )
 }

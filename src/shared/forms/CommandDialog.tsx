@@ -10,7 +10,6 @@ import {
   useRef,
   useState
 } from "react"
-import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import {
   Dialog,
@@ -23,27 +22,37 @@ import {
 } from "@/shared/ui/base/dialog"
 import { FieldError, FieldGroup } from "@/shared/ui/base/field"
 import { toast } from "@/shared/ui/base/toast"
-import { type EventCommandState, IDLE } from "./command-state"
-import { useEventErrorMessage } from "./errors"
+import { type CommandState, IDLE } from "./command-state"
 
-type EventAction = (state: EventCommandState, formData: FormData) => Promise<EventCommandState>
-
-type CommandDialogProps = {
+export type CommandDialogProps<Error extends string> = {
   /** The button that opens the dialog. */
   trigger: ReactElement
   title: string
   description?: ReactNode
-  action: EventAction
+  action: (state: CommandState<Error>, formData: FormData) => Promise<CommandState<Error>>
   submitLabel: string
+  /** Shown on the submit button while the command runs. */
+  pendingLabel: string
+  cancelLabel: string
   /** The toast shown when the command succeeds. */
   successMessage: string
+  /** The message shown for each way the command can fail. */
+  errorMessage: (error: Error) => string
   destructive?: boolean
   /** Hidden identifiers and the form's fields. */
   children: ReactNode
 }
 
-/** A dialog holding one admin Events command: it shows the command's violation, or closes on success. */
-export function CommandDialog({ trigger, title, description, ...form }: CommandDialogProps) {
+/**
+ * A dialog holding one command: it shows the command's failure, or closes on success. Features
+ * wrap it to fill in their own copy.
+ */
+export function CommandDialog<Error extends string>({
+  trigger,
+  title,
+  description,
+  ...form
+}: CommandDialogProps<Error>) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -61,17 +70,17 @@ export function CommandDialog({ trigger, title, description, ...form }: CommandD
   )
 }
 
-function CommandForm({
+function CommandForm<Error extends string>({
   action,
   submitLabel,
+  pendingLabel,
+  cancelLabel,
   successMessage,
+  errorMessage,
   destructive,
   children,
   onSuccess
-}: Omit<CommandDialogProps, "trigger" | "title" | "description"> & { onSuccess: () => void }) {
-  const t = useTranslations("Events")
-  const common = useTranslations("Common")
-  const errorMessage = useEventErrorMessage()
+}: Omit<CommandDialogProps<Error>, "trigger" | "title" | "description"> & { onSuccess: () => void }) {
   const [state, formAction, pending] = useActionState(action, IDLE)
   const handled = useRef<number | null>(null)
 
@@ -83,8 +92,8 @@ function CommandForm({
     onSuccess()
   }, [state, onSuccess, successMessage])
 
-  // Submitted by hand rather than through `action`, so a field the Admin is correcting after an
-  // error keeps what they typed.
+  // Submitted by hand rather than through `action`: React resets an action form's fields when the
+  // action settles, which would silently revert a choice the user is about to correct after an error.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
@@ -99,9 +108,9 @@ function CommandForm({
       </FieldGroup>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" variant={destructive ? "destructive" : "default"} disabled={pending}>
-          {pending ? t("working") : submitLabel}
+          {pending ? pendingLabel : submitLabel}
         </Button>
-        <DialogClose render={<Button type="button" variant="ghost" />}>{common("cancel")}</DialogClose>
+        <DialogClose render={<Button type="button" variant="ghost" />}>{cancelLabel}</DialogClose>
       </div>
     </form>
   )
