@@ -1,1 +1,2 @@
-export { PublishPostScreen } from "./publish-post-screen"
+export { EditPostScreen, EditPostScreenSkeleton } from "./EditPostScreen"
+export { NewPostScreen } from "./NewPostScreen"

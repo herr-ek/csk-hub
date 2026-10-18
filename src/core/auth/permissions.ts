@@ -16,7 +16,9 @@ export { ADMIN_ROLE, USER_ROLE }
  * `accessRoles` is given it, and only where a call site asks for it.
  */
 const applicationStatements = {
-  post: ["read", "create"]
+  // `create` covers writing a Post and keeping it as a draft; `update` covers changing or
+  // unpublishing one that is already published, whoever wrote it.
+  post: ["read", "create", "update"]
 } as const
 
 export const statements = {
@@ -40,7 +42,7 @@ export const accessRoles = {
   }),
   [ADMIN_ROLE]: accessControl.newRole({
     ...defaultRoles.admin.statements,
-    post: ["read", "create"]
+    post: ["read", "create", "update"]
   })
 } as const
 
@@ -62,6 +64,6 @@ export type PermissionResource = keyof typeof statements
 
 /**
  * One of the actions `Resource` declares in `statements`. For `"post"` that is
- * `"read" | "create"`; for `"session"`, `"list" | "revoke" | "delete"`.
+ * `"read" | "create" | "update"`; for `"session"`, `"list" | "revoke" | "delete"`.
  */
 export type PermissionAction<Resource extends PermissionResource> = (typeof statements)[Resource][number]

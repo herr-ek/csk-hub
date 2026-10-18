@@ -17,6 +17,8 @@ type EditorProps = {
   /** Id of the element holding the field's visible label. */
   labelledBy: string
   placeholder: string
+  /** Called with the document after every change, for a consumer that keeps a copy of its own. */
+  onChange?: (document: RichTextDocument) => void
 }
 
 const FRAME = cn(
@@ -72,11 +74,12 @@ function EditorSurface({
   defaultValue,
   labelledBy,
   placeholder,
+  onChange,
   field
 }: Omit<EditorProps, "name"> & { field: RefObject<HTMLInputElement | null> }) {
   const editorId = useId()
 
-  const editor = useEditor({
+  const created = useEditor({
     extensions: [...schema.extensions, ...editingAffordances, Placeholder.configure({ placeholder })],
     content: defaultValue,
     // Created in an effect rather than during render; the empty frame stands in until then.
@@ -94,10 +97,18 @@ function EditorSurface({
     // document is not something this component renders, so making it state would
     // rerender the editor and its toolbar on every keystroke for nothing.
     onUpdate: ({ editor: current }) => {
+      const document = current.getJSON()
       const written = field.current
-      if (written) written.value = JSON.stringify(current.getJSON())
+      if (written) written.value = JSON.stringify(document)
+      onChange?.(document)
     }
   })
+
+  // Tiptap destroys an editor on a timer once its effects are cleaned up — an unmount, or a
+  // page Next keeps hidden after navigating away — and a render can still be handed that
+  // instance before the swap to a fresh one reaches it. A destroyed editor has no schema
+  // and no view, so it is treated as not there yet.
+  const editor = created && !created.isDestroyed ? created : null
 
   return (
     <>
