@@ -53,6 +53,11 @@ export function newsPostPath(postId: string) {
   return `${ROUTES.news}/${encodeURIComponent(postId)}`
 }
 
+/** An Event's page, which its Audience reads. Admins edit it elsewhere. */
+export function eventPath(eventId: string) {
+  return `${ROUTES.events}/${encodeURIComponent(eventId)}`
+}
+
 /**
  * Whether `href` is the current page or one of its ancestors. The server may see the internal `/<locale>/…`
  * path that the locale rewrite produces, so the locale segment is ignored to keep server and client in agreement.

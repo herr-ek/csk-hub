@@ -1,5 +1,6 @@
 import type { eventStatus, eventType, participationMode } from "@/core/db/schema/events"
 
+export { type RehearsalKind, rehearsalKind } from "./rehearsal-kind"
 export type { EventResult, EventViolation } from "./result"
 export {
   addDays,

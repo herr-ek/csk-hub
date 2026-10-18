@@ -11,7 +11,8 @@ export {
   listCurrentChoirAffiliationsOfUsers,
   listCurrentGroupMembers,
   listCurrentGroupsOfUser,
-  listCurrentPositionsOfUser
+  listCurrentPositionsOfUser,
+  listMembershipsOfUser
 } from "./reads"
 export {
   allowPositionInGroupTypes,

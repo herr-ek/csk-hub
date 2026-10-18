@@ -8,6 +8,7 @@ export const ROUTES = {
   twoFactor: "/two-factor",
   news: "/news",
   newsCompose: "/news/new",
+  events: "/events",
   admin: "/admin",
   adminUsers: "/admin/users",
   adminNotifications: "/admin/notifications",
@@ -30,6 +31,7 @@ export type NavigationRouteId = Exclude<RouteId, "home">
 export type MenuRouteId =
   | "news"
   | "newsCompose"
+  | "events"
   | "messages"
   | "account"
   | "accountSettings"

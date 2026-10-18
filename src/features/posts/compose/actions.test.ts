@@ -26,7 +26,9 @@ mock.module("@/core/auth/permissions.server", () => ({
 mock.module("../lifecycle", () => ({ createPost, saveDraft, editPublishedPost, unpublishPost, discardDraft }))
 mock.module("@/core/logging", () => ({ logger: { error: loggerError } }))
 mock.module("next/cache", () => ({ revalidatePath }))
-mock.module("next/navigation", () => ({ redirect }))
+// The mock holds for the whole test run, so it keeps the other exports for later test files.
+const navigation = await import("next/navigation")
+mock.module("next/navigation", () => ({ ...navigation, redirect }))
 
 import * as actions from "./actions"
 

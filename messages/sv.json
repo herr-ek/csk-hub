@@ -111,6 +111,7 @@
     "admin": "Administratör",
     "myAccount": "Mitt konto",
     "news": "Nyheter",
+    "events": "Evenemang",
     "login": "Logga in",
     "primary": "Primär navigering",
     "impersonating": "Imiterar {name}",
@@ -128,6 +129,7 @@
     "routes": {
       "news": "Nyheter",
       "newsCompose": "Skriv ett inlägg",
+      "events": "Evenemang",
       "messages": "Meddelanden",
       "account": "Mitt konto",
       "accountSettings": "Inställningar",
@@ -928,6 +930,43 @@
       "archivedBadge": "Arkiverad",
       "eventCount": "{count, plural, =0 {Används inte av något evenemang} one {Används av # evenemang} other {Används av # evenemang}}",
       "openMap": "Karta"
+    },
+    "calendar": {
+      "title": "Kommande evenemang",
+      "description": "Det som väntar dig i CSK:s kalender.",
+      "allDay": "Heldag",
+      "until": "Till {end}",
+      "emptyTitle": "Inget på gång",
+      "emptyDescription": "Du har inga kommande evenemang just nu.",
+      "noChoirTitle": "Inga evenemang än",
+      "noChoirDescription": "Evenemang visas här när du är med i en kör.",
+      "rehearsalKinds": {
+        "ChoirRehearsal": "Körrepetition",
+        "ExtraRehearsal": "Extrarepetition",
+        "SectionalRehearsal": "Stämrepetition",
+        "Rehearsal": "Repetition"
+      },
+      "voiceFamilies": {
+        "S": "Sopraner",
+        "A": "Altar",
+        "T": "Tenorer",
+        "B": "Basar"
+      },
+      "everyoneInCsk": "Alla i CSK",
+      "voiceInGroup": "{voices} i {group}",
+      "voiceInCsk": "{voices} i CSK",
+      "page": {
+        "when": "När",
+        "callTime": "Samling",
+        "where": "Var",
+        "openMap": "Öppna karta",
+        "organiser": "Arrangeras av",
+        "audience": "För",
+        "leader": "Leds av",
+        "responsible": "Ansvarig",
+        "cost": "Kostnad",
+        "edit": "Redigera evenemang"
+      }
     }
   }
 }
