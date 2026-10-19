@@ -940,6 +940,10 @@
       "emptyDescription": "There are no upcoming Events for you right now.",
       "noChoirTitle": "No Events yet",
       "noChoirDescription": "Events appear here once you are in a Choir.",
+      "filterLabel": "Type",
+      "anyType": "All types",
+      "noMatchTitle": "Nothing of this type",
+      "noMatchDescription": "There are no upcoming Events of this type for you. Choose All types to see everything.",
       "rehearsalKinds": {
         "ChoirRehearsal": "Choir rehearsal",
         "ExtraRehearsal": "Extra rehearsal",

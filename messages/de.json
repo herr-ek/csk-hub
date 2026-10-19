@@ -940,6 +940,10 @@
       "emptyDescription": "Für dich stehen gerade keine Veranstaltungen an.",
       "noChoirTitle": "Noch keine Veranstaltungen",
       "noChoirDescription": "Veranstaltungen erscheinen hier, sobald du in einem Chor bist.",
+      "filterLabel": "Art",
+      "anyType": "Alle Arten",
+      "noMatchTitle": "Nichts von dieser Art",
+      "noMatchDescription": "Für dich stehen keine Veranstaltungen dieser Art an. Wähle Alle Arten, um alles zu sehen.",
       "rehearsalKinds": {
         "ChoirRehearsal": "Chorprobe",
         "ExtraRehearsal": "Zusatzprobe",

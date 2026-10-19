@@ -940,6 +940,10 @@
       "emptyDescription": "Du har inga kommande evenemang just nu.",
       "noChoirTitle": "Inga evenemang än",
       "noChoirDescription": "Evenemang visas här när du är med i en kör.",
+      "filterLabel": "Typ",
+      "anyType": "Alla typer",
+      "noMatchTitle": "Inget av den här typen",
+      "noMatchDescription": "Du har inga kommande evenemang av den här typen. Välj Alla typer för att se allt.",
       "rehearsalKinds": {
         "ChoirRehearsal": "Körrepetition",
         "ExtraRehearsal": "Extrarepetition",

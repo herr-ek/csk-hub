@@ -87,6 +87,8 @@ Both live in `calendar/`, with their reads in `calendar/query.ts`:
   unless they are an Admin.
 - A Gig's external contact is personal data for organisers only. The calendar reads never select
   it.
+- `/events?type=Gig` narrows the list to one type, after the Audience is computed. The filter only
+  offers types the User has coming up, and only appears when there is more than one.
 
 ## Admin pages
 
