@@ -27,14 +27,27 @@ describe.skipIf(!database)("seedEvents", () => {
     // A Sunday: the examples start from the next Monday, 19 October.
     const { created } = await seedEvents(t.db, "2026-10-18")
     expect(created).toEqual(
-      expect.arrayContaining(["KK rehearsal", "KKB stämrep", "Alumnikväll", "Höstsittning", "Körmöte"])
+      expect.arrayContaining([
+        ...["KK", "MK", "DK"].flatMap((choir) => [
+          `${choir} rehearsal`,
+          `${choir} julkonsert`,
+          `${choir} extra rehearsal`
+        ]),
+        ...["KKB", "MKT1", "DKS1"].map((section) => `${section} stämrep`),
+        "Alumnikväll",
+        "Höstsittning",
+        "Januarimöte"
+      ])
     )
 
     const events = await t.db.select().from(event)
     const statuses = events.map(({ status }) => status)
-    expect(statuses.filter((status) => status === "Draft")).toHaveLength(1)
-    expect(statuses.filter((status) => status === "Cancelled")).toHaveLength(1)
-    expect(events.filter(({ seriesId }) => seriesId !== null).length).toBeGreaterThan(1)
+    // Each Choir has its own Draft concert, Cancelled extra rehearsal and weekly rehearsal series.
+    expect(statuses.filter((status) => status === "Draft")).toHaveLength(3)
+    expect(statuses.filter((status) => status === "Cancelled")).toHaveLength(3)
+    const series = events.filter(({ seriesId }) => seriesId !== null)
+    expect(new Set(series.map(({ seriesId }) => seriesId)).size).toBe(3)
+    expect(series).toHaveLength(12)
 
     // Every Rehearsal, Gig and Social has its extension row, and no other type does.
     const [rehearsals, gigs, socials] = await Promise.all([
@@ -52,7 +65,7 @@ describe.skipIf(!database)("seedEvents", () => {
       .where(eq(event.title, "KK rehearsal"))
       .orderBy(event.startsAt)
       .limit(1)
-    expect(first?.local).toBe("2026-10-21 18:00")
+    expect(first?.local).toBe("2026-10-22 18:30")
 
     const [korMote] = events.filter(({ type }) => type === "Körmöte")
     expect(
