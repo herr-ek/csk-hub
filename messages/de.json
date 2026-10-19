@@ -136,7 +136,8 @@
       "adminNotifications": "Benachrichtigungen",
       "adminOrgStructure": "Chöre und Stimmen",
       "adminOrgStructureGroups": "Gruppen und Ämter"
-    }
+    },
+    "members": "Mitglieder"
   },
   "Posts": {
     "title": "Neuigkeiten",
@@ -376,13 +377,6 @@
     "securityTab": "Sicherheit",
     "notificationsTab": "Benachrichtigungen"
   },
-  "AccountProfile": {
-    "title": "Mein Konto",
-    "description": "Dein CSK Hub-Profil.",
-    "name": "Name",
-    "email": "E-Mail",
-    "settings": "Kontoeinstellungen"
-  },
   "PushNotifications": {
     "settingsTitle": "Push-Benachrichtigungen",
     "settingsDescription": "Erhalte Updates von CSK Hub, auch wenn die App nicht geöffnet ist.",
@@ -529,6 +523,55 @@
     "groupUpdated": "Unterhaltung aktualisiert.",
     "savingGroup": "Wird gespeichert…",
     "groupUpdateFailed": "Die Unterhaltung konnte nicht aktualisiert werden. Bitte versuche es erneut."
+  },
+  "MemberProfiles": {
+    "directoryTitle": "Mitglieder",
+    "directoryDescription": "Lerne die Menschen kennen, die CSK ausmachen.",
+    "searchLabel": "Mitglied finden",
+    "searchPlaceholder": "Nach Name oder Benutzername suchen",
+    "search": "Suchen",
+    "clearSearch": "Suche löschen",
+    "memberCount": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+    "noResults": "Keine Mitglieder entsprechen deiner Suche.",
+    "emptyDirectory": "Es gibt keine weiteren aktiven Mitglieder.",
+    "pagination": "Seiten des Mitgliederverzeichnisses",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "pageOf": "Seite {page} von {total}",
+    "choirSection": "{choir} · {section}",
+    "email": "E-Mail",
+    "settings": "Kontoeinstellungen",
+    "message": "Nachricht senden",
+    "positions": "Ämter",
+    "choirs": "Chöre",
+    "section": "Stimmgruppe",
+    "assignedVoice": "Singt {voice}",
+    "memberSince": "Mitglied seit {date}",
+    "groups": "CSK-weite Gruppen",
+    "canSing": "Kann singen",
+    "notRecorded": "Nicht erfasst",
+    "noChoirs": "Keine aktuellen Chormitgliedschaften.",
+    "groupContext": "{group} ({choir})",
+    "association": "CSK",
+    "username": "@{username}",
+    "otherGroups": "Weitere Gruppen",
+    "sectionVoice": "Stimme der Stimmgruppe: {voice}",
+    "searching": "Suche läuft…",
+    "editProfile": "Profil bearbeiten",
+    "editProfileDescription": "Teile mit, welche Stimmen du singen kannst.",
+    "capabilitiesDescription": "Wähle alle geteilten Stimmen, die du singen kannst. Diese Angaben machst du selbst; sie ändern deine Stimmzuordnung in keinem Chor. Entferne alle Häkchen, wenn du keine Fähigkeiten angeben möchtest.",
+    "selfReported": "Selbst angegeben",
+    "saveProfile": "Profil speichern",
+    "savingProfile": "Wird gespeichert…",
+    "profileSaved": "Dein Profil wurde gespeichert.",
+    "backToProfile": "Zurück zum Profil",
+    "editErrors": {
+      "sign-in-required": "Melde dich an, um dein Profil zu bearbeiten.",
+      "impersonation-unavailable": "Du kannst selbst angegebene Fähigkeiten nicht ändern, während du ein anderes Mitglied imitierst.",
+      "inactive-user": "Dein Konto ist nicht mehr aktiv.",
+      "invalid-voices": "Wähle nur die aufgeführten Stimmen.",
+      "unexpected": "Dein Profil konnte nicht gespeichert werden. Bitte versuche es erneut."
+    }
   },
   "Groups": {
     "choirsPage": {

@@ -15,16 +15,14 @@ import {
   SheetTitle,
   SheetTrigger
 } from "@/shared/ui/base/sheet"
-import { LogoutButton } from "./logout-button"
 import { type NavLinkItem, NavLinks } from "./NavLinks"
 
 export interface MobileNavigationProps {
   items: NavLinkItem[]
-  isImpersonating: boolean
 }
 
-/** The signed-in menu on small screens: a menu button that opens the nav links, theme and logout in a side sheet. */
-export function MobileNavigation({ items, isImpersonating }: MobileNavigationProps) {
+/** The signed-in menu on small screens: a menu button that opens the nav links and theme in a side sheet. */
+export function MobileNavigation({ items }: MobileNavigationProps) {
   const t = useTranslations("Navigation")
   const [open, setOpen] = useState(false)
 
@@ -44,7 +42,6 @@ export function MobileNavigation({ items, isImpersonating }: MobileNavigationPro
           <NavLinks items={items} orientation="vertical" onNavigate={() => setOpen(false)} />
         </nav>
         <SheetFooter className="flex-row items-center justify-between gap-2 border-t p-4">
-          <LogoutButton isImpersonating={isImpersonating} />
           <ThemeSwitch />
         </SheetFooter>
       </SheetContent>

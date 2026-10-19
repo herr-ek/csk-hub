@@ -1,7 +1,8 @@
 import "server-only"
 
 import { and, asc, eq, inArray, isNull } from "drizzle-orm"
-import { group, groupMember, positionHolder, section } from "@/core/db/schema/org-structure"
+import { alias } from "drizzle-orm/pg-core"
+import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
 import type { OrgStructureDatabase } from "./operation"
 
@@ -16,6 +17,7 @@ export function listCurrentGroupMembers(database: OrgStructureDatabase, groupId:
 
 /** The groups a user currently belongs to. */
 export function listCurrentGroupsOfUser(database: OrgStructureDatabase, userId: string) {
+  const owningChoir = alias(group, "owning_choir")
   return database
     .select({
       groupId: group.id,
@@ -24,12 +26,50 @@ export function listCurrentGroupsOfUser(database: OrgStructureDatabase, userId: 
       choirId: group.choirId,
       active: group.active,
       startDate: groupMember.startDate,
-      voice: groupMember.voice
+      voice: groupMember.voice,
+      sectionVoice: section.voice,
+      choirName: owningChoir.name
     })
     .from(groupMember)
     .innerJoin(group, eq(group.id, groupMember.groupId))
+    .leftJoin(section, eq(section.groupId, group.id))
+    .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
     .where(and(eq(groupMember.userId, userId), isNull(groupMember.endDate)))
     .orderBy(asc(group.name))
+}
+
+/** Current Position holdings with their Group identity; callers choose archive visibility. */
+export function listCurrentPositionsOfUser(database: OrgStructureDatabase, userId: string) {
+  return database
+    .select({ groupId: positionHolder.groupId, positionId: position.id, name: position.name })
+    .from(positionHolder)
+    .innerJoin(position, eq(position.id, positionHolder.positionId))
+    .where(and(eq(positionHolder.userId, userId), isNull(positionHolder.endDate)))
+    .orderBy(asc(position.name), asc(positionHolder.groupId))
+}
+
+/** Batched Choir/Section summaries for a directory page, excluding archived Groups. */
+export async function listCurrentChoirAffiliationsOfUsers(database: OrgStructureDatabase, userIds: string[]) {
+  if (userIds.length === 0) return []
+  return database
+    .select({
+      userId: groupMember.userId,
+      groupId: group.id,
+      name: group.name,
+      type: group.type,
+      choirId: group.choirId
+    })
+    .from(groupMember)
+    .innerJoin(group, eq(group.id, groupMember.groupId))
+    .where(
+      and(
+        inArray(groupMember.userId, userIds),
+        isNull(groupMember.endDate),
+        eq(group.active, true),
+        inArray(group.type, ["Choir", "Section"])
+      )
+    )
+    .orderBy(asc(group.name), asc(group.id))
 }
 
 /** Who currently holds a Position in a group, or null when it is vacant. */

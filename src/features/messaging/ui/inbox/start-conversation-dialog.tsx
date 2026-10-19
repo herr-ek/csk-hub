@@ -2,8 +2,9 @@
 
 import { PlusIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useActionState, useState } from "react"
+import { type ReactNode, useActionState, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { conversationPath } from "@/core/navigation/navigation-utils"
 import { Button } from "@/shared/ui/base/button"
 import {
   Dialog,
@@ -24,7 +25,14 @@ import { MemberSelection, type SelectedMember } from "../member-selection"
 import { startConversationAction } from "./actions"
 
 const initialState: MessageCommandState = { status: "idle" }
-export function StartConversationDialog() {
+/** Opens the shared composer, optionally with a member selected from their profile. */
+export function StartConversationDialog({
+  initialMember,
+  children
+}: {
+  initialMember?: SelectedMember
+  children?: ReactNode
+}) {
   const t = useTranslations("Messages")
   const common = useTranslations("Common")
   const [open, setOpen] = useState(false)
@@ -32,10 +40,14 @@ export function StartConversationDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button type="button" variant="outline" size="icon" aria-label={t("startTitle")} title={t("startTitle")} />
+          children ? (
+            <Button type="button" />
+          ) : (
+            <Button type="button" variant="outline" size="icon" aria-label={t("startTitle")} title={t("startTitle")} />
+          )
         }
       >
-        <PlusIcon aria-hidden="true" />
+        {children ?? <PlusIcon aria-hidden="true" />}
       </DialogTrigger>
       <DialogContent showCloseButton={false} className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader className="pr-8">
@@ -55,16 +67,22 @@ export function StartConversationDialog() {
         >
           <XIcon aria-hidden="true" />
         </DialogClose>
-        <StartConversationForm onStarted={() => setOpen(false)} />
+        <StartConversationForm initialMember={initialMember} onStarted={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   )
 }
 
-function StartConversationForm({ onStarted }: { onStarted: () => void }) {
+function StartConversationForm({
+  initialMember,
+  onStarted
+}: {
+  initialMember?: SelectedMember
+  onStarted: () => void
+}) {
   const t = useTranslations("Messages")
   const router = useRouter()
-  const [selected, setSelected] = useState<SelectedMember[]>([])
+  const [selected, setSelected] = useState<SelectedMember[]>(initialMember ? [initialMember] : [])
   const [idempotencyKey, setIdempotencyKey] = useState(createMessageIdempotencyKey)
   const [name, setName] = useState("")
   const [text, setText] = useState("")
@@ -73,7 +91,7 @@ function StartConversationForm({ onStarted }: { onStarted: () => void }) {
     if (result.status === "success") {
       // Activity restores effects on browser Back; navigate only when this submission completes.
       onStarted()
-      router.push(`/messages/${result.conversationId}`)
+      router.push(conversationPath(result.conversationId))
     }
     return result
   }, initialState)

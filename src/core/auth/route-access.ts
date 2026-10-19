@@ -52,7 +52,9 @@ export function getRouteAccessPolicy(path: string): RouteAccessPolicy {
 
   if (path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`)) return { kind: "admin" }
 
-  if (path === ROUTES.messages || path.startsWith(`${ROUTES.messages}/`)) return { kind: "impersonation-unavailable" }
+  if (path === ROUTES.accountEditProfile || path === ROUTES.messages || path.startsWith(`${ROUTES.messages}/`)) {
+    return { kind: "impersonation-unavailable" }
+  }
 
   return { kind: "authenticated" }
 }

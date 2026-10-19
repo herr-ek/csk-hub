@@ -40,6 +40,17 @@ describe("route access", () => {
     await expect(getRouteAccessDecision("/messages", userSession)).resolves.toEqual({ kind: "allow" })
   })
 
+  test("reserves profile editing for the real member while allowing profile and settings reads", async () => {
+    await expect(getRouteAccessDecision("/me/edit", impersonatingSession)).resolves.toEqual({ kind: "forbidden" })
+    await expect(getRouteAccessDecision("/me/edit", userSession)).resolves.toEqual({ kind: "allow" })
+    await expect(getRouteAccessDecision("/me/edit", null)).resolves.toEqual({
+      kind: "redirect",
+      location: "/login?returnTo=%2Fme%2Fedit"
+    })
+    await expect(getRouteAccessDecision("/me", impersonatingSession)).resolves.toEqual({ kind: "allow" })
+    await expect(getRouteAccessDecision("/me/settings", impersonatingSession)).resolves.toEqual({ kind: "allow" })
+  })
+
   test("redirects unauthenticated users to sign in with the requested path", async () => {
     await expect(getRouteAccessDecision("/me", null)).resolves.toEqual({
       kind: "redirect",

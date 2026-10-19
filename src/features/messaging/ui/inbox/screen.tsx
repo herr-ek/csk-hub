@@ -1,6 +1,7 @@
 import { UserRoundIcon, UsersRoundIcon } from "lucide-react"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
+import { conversationPath } from "@/core/navigation/navigation-utils"
 import { Card, CardContent } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { formatMessageSentAt } from "../message-timestamp"
@@ -28,7 +29,7 @@ export async function MessagesScreen() {
           {conversations.map((conversation) => (
             <li key={conversation.id}>
               <Link
-                href={`/messages/${conversation.id}`}
+                href={conversationPath(conversation.id)}
                 className="block rounded-xl border bg-card p-4 transition-colors hover:bg-accent"
               >
                 <div className="flex items-start justify-between gap-3">

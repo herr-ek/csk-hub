@@ -4,6 +4,7 @@ import { ArrowUpIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { conversationPath } from "@/core/navigation/navigation-utils"
 import { Button } from "@/shared/ui/base/button"
 import { useMessageScroller } from "@/shared/ui/base/message-scroller"
 import { Textarea } from "@/shared/ui/base/textarea"
@@ -26,7 +27,7 @@ export function MessageComposer({ conversationId, readOnly }: { conversationId: 
   useEffect(() => {
     if (state.status !== "success") return
     setIdempotencyKey((currentKey) => nextMessageIdempotencyKey(currentKey))
-    router.replace(`/messages/${state.conversationId}`, { scroll: false })
+    router.replace(conversationPath(state.conversationId), { scroll: false })
     scrollToEnd({ behavior: "smooth" })
   }, [router, scrollToEnd, state])
 

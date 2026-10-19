@@ -8,11 +8,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance and how we use 
 
 ## Current status
 
-The project currently provides the authentication and account-management
-foundation. The main user and admin pages are still placeholders; choir,
-user, rehearsal, event, and gig management have not been implemented yet.
+The project provides authentication and account management, shared member
+profiles and a searchable member directory. Choir and Group structure is modelled
+in the database; its management screens, rehearsals, events and gigs are still
+under development.
 
-Implemented account workflows include:
+Implemented User workflows include:
 
 - email- and username-based password sign-in
 - passkey sign-in and passkey management
@@ -20,6 +21,9 @@ Implemented account workflows include:
 - account activation and password reset
 - profile username, password, passkey, two-factor, and session settings
 - authenticated and admin-only route protection
+- shared profiles with Choirs, Sections, Groups, Positions and Voice capabilities
+- self-reported Voice capabilities edited on a dedicated profile page
+- a searchable, paginated member directory
 
 ## Stack
 
@@ -81,7 +85,8 @@ password `password`:
 bun run ops seed-admin
 ```
 
-`bun run ops seed-users` adds ten further example users with the same password.
+`bun run ops seed-users` adds 100 named, verified example Users with the same password:
+`singer-001@example.com` through `singer-100@example.com`. The first three are Admins.
 
 Both are local-development conveniences only. Change the password immediately,
 and do not use these credentials in a deployed environment. Seeding refuses to
@@ -90,18 +95,35 @@ run against production.
 `bun run ops reference-data` creates the Choirs MK, DK and KK with their Sections,
 Styret and the Positions; run it once after migrating (it also runs against production
 with `--prod`). `bun run ops reset` starts the local database over: it erases it, migrates
-it from scratch and creates the reference data. `bun run ops seed-groups` then adds example groups and places every user
-who is in no group yet in a Section. Running either again changes nothing.
+it from scratch and creates the reference data.
+
+For a populated development environment after migrating, run:
+
+```bash
+bun run ops seed-demo
+```
+
+This creates the reference data, 100 singers split evenly across the three Choirs and their
+Sections, active and archived groups, dated Memberships and Position handovers, Voice
+capabilities, and 24 published example Posts. It is safe to repeat and preserves existing
+credentials and edited Posts. Existing Users are retained, so a populated database can have
+more than 100 Users. The individual `seed-users`, `seed-groups` and `seed-posts` commands are
+also available; see [local demo data](scripts/ops/README.md#local-demo-data).
 
 ## Routes
 
 | Route | Purpose | Access |
 | --- | --- | --- |
 | `/` | Authenticated home page | User |
-| `/me` | Account settings | User |
 | `/admin` | Admin surface (currently a placeholder) | Admin |
 | `/admin/org-structure` | Choirs and Sections: placing singers and changing their Voice | Admin |
 | `/admin/org-structure/groups` | Every other group, its Members and Positions, and the Position catalogue | Admin |
+| `/me` | Own profile | Active User |
+| `/me/edit` | Edit own Voice capabilities | Active User |
+| `/me/settings` | Account settings | User |
+| `/members` | Searchable directory of other members | Active User |
+| `/members/[memberId]` | Shared profile of an active User | Active User |
+| `/admin` | Administration overview | Admin |
 | `/login` | Password or passkey sign-in | Public |
 | `/activate` | Set the password for an activated account | Activation session |
 | `/forgot-password` | Request a password reset | Public |

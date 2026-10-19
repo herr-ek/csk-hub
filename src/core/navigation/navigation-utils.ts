@@ -68,3 +68,12 @@ export function isActiveRoute(pathname: string, href: string) {
 export function newsPostEditPath(postId: string) {
   return `${newsPostPath(postId)}/edit`
 }
+
+export function memberProfilePath(userId: string) {
+  return `${ROUTES.members}/${encodeURIComponent(userId)}`
+}
+
+/** Builds a Conversation URL from its opaque ID, encoded as a single path segment. */
+export function conversationPath(conversationId: string) {
+  return `${ROUTES.messages}/${encodeURIComponent(conversationId)}`
+}

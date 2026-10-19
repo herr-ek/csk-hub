@@ -36,7 +36,9 @@ const COMMANDS = [
   "reset",
   "seed-admin",
   "seed-users",
-  "seed-groups"
+  "seed-groups",
+  "seed-posts",
+  "seed-demo"
 ] as const
 type Command = (typeof COMMANDS)[number]
 
@@ -44,7 +46,9 @@ type Command = (typeof COMMANDS)[number]
 const SEED_SCRIPTS: Record<string, string[]> = {
   "seed-admin": ["run", "scripts/seed-admin.ts"],
   "seed-users": ["run", "scripts/seed-users.ts"],
-  "seed-groups": ["run", "scripts/seed-groups.ts"]
+  "seed-groups": ["run", "scripts/seed-groups.ts"],
+  "seed-posts": ["run", "scripts/seed-posts.ts"],
+  "seed-demo": ["run", "scripts/seed-demo.ts"]
 }
 
 const { values: flags, positionals } = parseArgs({
@@ -147,6 +151,8 @@ async function menu(): Promise<void> {
         localOnlyOption("seed-admin", "Seed admin"),
         localOnlyOption("seed-users", "Seed users"),
         localOnlyOption("seed-groups", "Seed groups"),
+        localOnlyOption("seed-posts", "Seed Posts"),
+        localOnlyOption("seed-demo", "Seed complete demo (100 singers, groups, history and Posts)"),
         { value: "exit", label: "Exit" }
       ]
     })

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  conversationPath,
   getPostLoginPath,
   isActiveRoute,
   isSafeInternalPath,
@@ -45,6 +46,11 @@ describe("active route", () => {
 })
 
 describe("site navigation", () => {
+  test("encodes opaque Conversation IDs as a single path segment", () => {
+    expect(conversationPath("conversation-1")).toBe("/messages/conversation-1")
+    expect(conversationPath("id/with?query#fragment")).toBe("/messages/id%2Fwith%3Fquery%23fragment")
+  })
+
   test("uses a safe requested destination after sign-in", () => {
     expect(getPostLoginPath("user", "/account?tab=password")).toBe("/account?tab=password")
   })

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Fragment } from "react"
 import { getFormatter, getTimeZone, getTranslations } from "@/core/i18n/server"
+import { conversationPath, memberProfilePath } from "@/core/navigation/navigation-utils"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { Message, MessageContent, MessageGroup } from "@/shared/ui/base/message"
 import {
@@ -42,7 +43,13 @@ export async function ConversationScreen({
         <PageBreadcrumb route="messages" current={conversation.otherMemberName ?? t("formerMember")} />
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="min-w-0 wrap-break-word font-heading text-2xl font-semibold">
-            {conversation.otherMemberName ?? t("formerMember")}
+            {conversation.kind === "direct" && conversation.otherMemberProfileId ? (
+              <Link href={memberProfilePath(conversation.otherMemberProfileId)} className="hover:underline">
+                {conversation.otherMemberName}
+              </Link>
+            ) : (
+              (conversation.otherMemberName ?? t("formerMember"))
+            )}
           </h1>
           {conversation.kind === "group" && conversation.canSend ? (
             <GroupControls
@@ -65,7 +72,7 @@ export async function ConversationScreen({
               {conversation.nextBeforeSequence ? (
                 <Link
                   className="self-center text-sm underline"
-                  href={`/messages/${conversationId}?before=${conversation.nextBeforeSequence}`}
+                  href={`${conversationPath(conversationId)}?before=${conversation.nextBeforeSequence}`}
                 >
                   {t("loadOlder")}
                 </Link>
