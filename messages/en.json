@@ -111,6 +111,7 @@
     "admin": "Admin",
     "myAccount": "My account",
     "news": "News",
+    "events": "Events",
     "login": "Login",
     "primary": "Primary navigation",
     "impersonating": "Impersonating {name}",
@@ -128,6 +129,7 @@
     "routes": {
       "news": "News",
       "newsCompose": "Write a post",
+      "events": "Events",
       "messages": "Messages",
       "account": "My account",
       "accountSettings": "Settings",
@@ -928,6 +930,47 @@
       "archivedBadge": "Archived",
       "eventCount": "{count, plural, =0 {Used by no Events} one {Used by # Event} other {Used by # Events}}",
       "openMap": "Map"
+    },
+    "calendar": {
+      "title": "Upcoming Events",
+      "description": "What is coming up for you in the CSK calendar.",
+      "allDay": "All day",
+      "until": "Until {end}",
+      "emptyTitle": "Nothing upcoming",
+      "emptyDescription": "There are no upcoming Events for you right now.",
+      "noChoirTitle": "No Events yet",
+      "noChoirDescription": "Events appear here once you are in a Choir.",
+      "filterLabel": "Type",
+      "anyType": "All types",
+      "noMatchTitle": "Nothing of this type",
+      "noMatchDescription": "There are no upcoming Events of this type for you. Choose All types to see everything.",
+      "rehearsalKinds": {
+        "ChoirRehearsal": "Choir rehearsal",
+        "ExtraRehearsal": "Extra rehearsal",
+        "SectionalRehearsal": "Sectional rehearsal",
+        "Rehearsal": "Rehearsal"
+      },
+      "voiceFamilies": {
+        "S": "Sopranos",
+        "A": "Altos",
+        "T": "Tenors",
+        "B": "Basses"
+      },
+      "everyoneInCsk": "Everyone in CSK",
+      "voiceInGroup": "{voices} in {group}",
+      "voiceInCsk": "{voices} in CSK",
+      "page": {
+        "when": "When",
+        "callTime": "Call time",
+        "where": "Where",
+        "openMap": "Open map",
+        "organiser": "Organised by",
+        "audience": "For",
+        "leader": "Led by",
+        "responsible": "Responsible",
+        "cost": "Cost",
+        "edit": "Edit Event"
+      }
     }
   }
 }

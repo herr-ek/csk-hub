@@ -1,9 +1,10 @@
 import "server-only"
 
-import { and, asc, eq, inArray, isNull } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, isNull, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
+import type { IsoDate } from "./model"
 import type { OrgStructureDatabase } from "./operation"
 
 /** The current members of a group, with the Voice each sings when the group is a Section. */
@@ -70,6 +71,27 @@ export async function listCurrentChoirAffiliationsOfUsers(database: OrgStructure
       )
     )
     .orderBy(asc(group.name), asc(group.id))
+}
+
+/**
+ * A user's Memberships, current and past, that had not ended before `from`: enough to tell which
+ * groups they were in on any date from then on. Each carries its group's type and Choir, and the
+ * Voice of a Section Membership. Positions are not Memberships and are not included.
+ */
+export function listMembershipsOfUser(database: OrgStructureDatabase, userId: string, { from }: { from: IsoDate }) {
+  return database
+    .select({
+      groupId: group.id,
+      groupType: group.type,
+      choirId: group.choirId,
+      voice: groupMember.voice,
+      startDate: groupMember.startDate,
+      endDate: groupMember.endDate
+    })
+    .from(groupMember)
+    .innerJoin(group, eq(group.id, groupMember.groupId))
+    .where(and(eq(groupMember.userId, userId), or(isNull(groupMember.endDate), gte(groupMember.endDate, from))))
+    .orderBy(asc(groupMember.startDate), asc(group.id))
 }
 
 /** Who currently holds a Position in a group, or null when it is vacant. */
