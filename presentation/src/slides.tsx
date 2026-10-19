@@ -40,7 +40,7 @@ function Title() {
       <p className="kicker">Körmöte · 19 oktober 2026</p>
       <h1 className="hero">CSK Hub</h1>
       <p className="lead">Körens digitala samlingsplats</p>
-      <p className="byline">Lucas Ekstener</p>
+      <p className="byline">Webmästeriet</p>
     </div>
   )
 }
@@ -48,7 +48,7 @@ function Title() {
 function Idea() {
   const pillars = [
     { name: "Nyheter", text: "Information från styrelsen, samlad i ett flöde." },
-    { name: "Kalender", text: "Rep, gig och konserter – det som gäller dig." },
+    { name: "Kalender", text: "Rep, gig och konserter - det som gäller dig." },
     { name: "Medlemmar", text: "Vem är vem, och ett sätt att nå varandra." }
   ]
 
@@ -56,7 +56,7 @@ function Idea() {
     <div className="layout">
       <p className="kicker">Idén</p>
       <h2 className="statement">
-        Ett ställe för <em>allt</em> som rör kören.
+        <em>Ett</em> ställe för <em>allt</em> som rör kören.
       </h2>
       <div className="pillars">
         {pillars.map((pillar) => (
@@ -67,7 +67,7 @@ function Idea() {
         ))}
       </div>
       <p className="note">
-        Byggt för CSK – Manskören, Kammarkören och Damkören. Man blir inbjuden; ingen öppen registrering.
+        Byggt för CSK - Manskören, Kammarkören och Damkören. Man blir inbjuden; ingen öppen registrering.
       </p>
     </div>
   )
@@ -78,7 +78,7 @@ function Today() {
     { name: "Nyheter", text: "Inlägg till alla medlemmar i ett gemensamt nyhetsflöde." },
     { name: "Meddelanden", text: "Skriv direkt till någon, eller i en gruppkonversation." },
     { name: "Medlemslista", text: "Sök bland medlemmarna och se kör, stämma och poster." },
-    { name: "Min profil", text: "Din kör, din stämma, dina poster – och vad du kan sjunga." },
+    { name: "Min profil", text: "Din kör, din stämma, dina poster - och vad du kan sjunga." },
     { name: "Notiser", text: "Push-notiser direkt i mobilen när något händer." },
     { name: "Tryggt & personligt", text: "Passkey och tvåfaktor. Svenska, engelska, tyska. Mörkt läge." }
   ]
@@ -96,7 +96,7 @@ function Today() {
         ))}
       </div>
       <p className="note">
-        För admins: bjud in medlemmar (en i taget eller från en lista), hantera grupper och poster.
+        För admins/ansvariga: bjud in medlemmar (en i taget eller från en lista), hantera grupper och poster.
       </p>
     </div>
   )
@@ -105,14 +105,14 @@ function Today() {
 function Events() {
   const points = [
     "Rep, gig, konserter, körmöten och sociala aktiviteter på ett ställe.",
-    "Du ser det som gäller dig – din kör och din stämma.",
+    "Du ser det som gäller dig - din kör och din stämma.",
     "Inställt syns tydligt: överstruket, inte borttaget.",
     "Admins lägger in och publicerar evenemangen."
   ]
   const examples = [
     { day: "Mån 19 okt", time: "19:00", title: "Körmöte", place: "Ikväll!" },
-    { day: "Ons 21 okt", time: "18:30", title: "Rep · KK", place: "Repsalen" },
-    { day: "Tor 22 okt", time: "18:00", title: "Stämrep · KKB", place: "Inställt", cancelled: true },
+    { day: "Ons 21 okt", time: "18:00", title: "Stämrep · KKB", place: "Inställt", cancelled: true },
+    { day: "Tors 22 okt", time: "18:30", title: "Rep · KK", place: "Scania" },
     { day: "Lör 24 okt", time: "14:00", title: "Gig", place: "Mer info kommer" }
   ]
 
@@ -158,14 +158,13 @@ function Demo() {
 
 function Next() {
   const soon = [
-    { name: "Svara på evenemang", text: "Ja, Nej eller Kanske – direkt i Hubben." },
-    { name: "En startsida för dig", text: "Nästa rep, senaste nytt och olästa meddelanden." }
+    { name: "Svara på evenemang", text: "Ja, Nej eller Kanske - direkt i appen." },
+    { name: "Roller och behörigheter", text: "Dirigenter kan ändra sina rep, gigmästare sina gig - utan att vara admin." }
   ]
   const later = [
     "Fästa inlägg och markering för olästa",
     "Bilder i nyhetsinlägg",
     "Inlägg till en viss kör eller stämma",
-    "Dirigenter och gigmästare kan publicera utan att vara admin",
     "Snabbmeny i mobilen"
   ]
 
@@ -201,7 +200,7 @@ function Thanks() {
     <div className="layout title">
       <Staff />
       <h1 className="hero">Tack!</h1>
-      <p className="lead">Frågor, tankar eller idéer? Hör av dig – gärna efteråt.</p>
+      <p className="lead">Frågor, tankar eller idéer? Hör av dig - gärna efteråt.</p>
     </div>
   )
 }
