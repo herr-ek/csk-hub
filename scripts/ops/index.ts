@@ -155,7 +155,7 @@ async function menu(): Promise<void> {
         localOnlyOption("seed-groups", "Seed groups"),
         localOnlyOption("seed-posts", "Seed Posts"),
         localOnlyOption("seed-events", "Seed events"),
-        localOnlyOption("seed-demo", "Seed complete demo (100 singers, groups, history and Posts)"),
+        localOnlyOption("seed-demo", "Seed complete demo (100 singers, groups, history, Posts and Events)"),
         { value: "exit", label: "Exit" }
       ]
     })
