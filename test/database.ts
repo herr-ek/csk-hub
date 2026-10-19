@@ -48,8 +48,16 @@ export async function createTestDatabase(migrationsFolder = "drizzle"): Promise<
       await db.$client.end()
       const cleanup = new Client({ connectionString: baseUrl })
       await cleanup.connect()
-      await cleanup.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`)
-      await cleanup.end()
+      try {
+        await cleanup.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`)
+      } catch (error) {
+        // FORCE may not terminate an autovacuum worker on the new database without
+        // pg_signal_backend; a plain drop asks autovacuum to stop and waits for it instead.
+        if ((error as { code?: string }).code !== "42501") throw error
+        await cleanup.query(`DROP DATABASE IF EXISTS "${name}"`)
+      } finally {
+        await cleanup.end()
+      }
     }
   }
 }
