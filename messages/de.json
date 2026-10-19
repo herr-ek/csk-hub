@@ -1,8 +1,47 @@
 {
   "HomePage": {
-    "title": "Willkommen bei CSK Hub",
-    "description": "Alles, was der Chor veröffentlicht, hat jetzt hier ein Zuhause.",
-    "readNews": "Neuigkeiten lesen"
+    "greeting": "Hallo {name}",
+    "greetingAnonymous": "Willkommen",
+    "events": {
+      "title": "Als Nächstes",
+      "seeAll": "Alle Termine",
+      "today": "Heute",
+      "comingUp": "Demnächst",
+      "allDay": "Ganztägig",
+      "cancelledToday": "Abgesagt. Nicht kommen.",
+      "empty": "Gerade steht für dich nichts an.",
+      "noChoir": "Termine erscheinen hier, sobald du in einem Chor bist."
+    },
+    "eventDrafts": {
+      "title": "{count, plural, one {# Terminentwurf} other {# Terminentwürfe}}",
+      "seeAll": "Alle Entwürfe"
+    },
+    "news": {
+      "title": "Neuigkeiten",
+      "seeAll": "Alle Neuigkeiten",
+      "empty": "Noch wurde nichts veröffentlicht."
+    },
+    "postDrafts": {
+      "title": "{count, plural, one {Dein Beitragsentwurf} other {Deine # Beitragsentwürfe}}",
+      "seeAll": "Neuigkeiten",
+      "saved": "Gespeichert"
+    },
+    "messages": {
+      "title": "Nachrichten",
+      "seeAll": "Posteingang",
+      "unreadConversations": "{count, plural, one {# Unterhaltung mit ungelesenen Nachrichten} other {# Unterhaltungen mit ungelesenen Nachrichten}}",
+      "unread": "{count} ungelesen",
+      "allRead": "Du hast alles gelesen.",
+      "formerMember": "Ehemaliges Mitglied"
+    },
+    "me": {
+      "title": "Wo ich singe",
+      "profile": "Mein Profil",
+      "sectionInChoir": "{section} in {choir}",
+      "sectionVoiceInChoir": "{section} · {voice} in {choir}",
+      "noChoir": "Du bist noch in keinem Chor.",
+      "alsoIn": "Auch in {groups}"
+    }
   },
   "Metadata": {
     "description": "Das digitale Zentrum von Chalmers Sångkör"
