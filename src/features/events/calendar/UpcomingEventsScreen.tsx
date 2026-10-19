@@ -7,11 +7,12 @@ import { ContentPage } from "@/shared/layouts/content-page"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
-import { stockholmInstant } from "../model"
+import { EVENT_TYPES, stockholmInstant } from "../model"
 import { StatusBadge } from "../ui/StatusBadge"
 import { eventDays, groupByDay } from "./days"
 import { EventKind } from "./EventKind"
 import { listUpcomingEventsForUser, type UpcomingEvent } from "./query"
+import { UpcomingEventsFilter } from "./UpcomingEventsFilter"
 
 async function UpcomingEventsHeader() {
   const t = await getTranslations("Events.calendar")
@@ -23,26 +24,35 @@ async function UpcomingEventsHeader() {
   )
 }
 
-/** The signed-in User's upcoming Events, by month and day in Europe/Stockholm. */
-export async function UpcomingEventsScreen() {
+type SearchParams = Record<string, string | string[] | undefined>
+
+/** The signed-in User's upcoming Events, by month and day in Europe/Stockholm, optionally of one type. */
+export async function UpcomingEventsScreen({ searchParams }: { searchParams: SearchParams }) {
   const userId = await requireAuthenticatedUser()
-  const [{ events, inChoir }, t, format] = await Promise.all([
+  const [{ events: upcoming, inChoir }, t, format] = await Promise.all([
     listUpcomingEventsForUser(db, userId, new Date()),
     getTranslations("Events.calendar"),
     getFormatter()
   ])
-  const months = groupByDay(events)
+  // An unknown type in the address is ignored, as in the admin list's filters.
+  const type = EVENT_TYPES.find((value) => value === searchParams.type)
+  // Only the types the User has coming up are worth offering, plus the one already chosen.
+  const types = EVENT_TYPES.filter((value) => value === type || upcoming.some((event) => event.type === value))
+  const months = groupByDay(type ? upcoming.filter((event) => event.type === type) : upcoming)
   // Several months get a heading each; within one month, the day headings say enough.
   const monthHeadings = months.length > 1
 
   return (
     <ContentPage>
       <UpcomingEventsHeader />
+      {types.length > 1 || type ? <UpcomingEventsFilter type={type} types={types} /> : null}
       {months.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>{t(inChoir ? "emptyTitle" : "noChoirTitle")}</EmptyTitle>
-            <EmptyDescription>{t(inChoir ? "emptyDescription" : "noChoirDescription")}</EmptyDescription>
+            <EmptyTitle>{t(type ? "noMatchTitle" : inChoir ? "emptyTitle" : "noChoirTitle")}</EmptyTitle>
+            <EmptyDescription>
+              {t(type ? "noMatchDescription" : inChoir ? "emptyDescription" : "noChoirDescription")}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
