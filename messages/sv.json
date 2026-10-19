@@ -1,8 +1,47 @@
 {
   "HomePage": {
-    "title": "Välkommen till CSK Hub",
-    "description": "Allt kören publicerar har nu ett hem här.",
-    "readNews": "Läs nyheterna"
+    "greeting": "Hej {name}",
+    "greetingAnonymous": "Välkommen",
+    "events": {
+      "title": "Härnäst",
+      "seeAll": "Alla evenemang",
+      "today": "Idag",
+      "comingUp": "Framöver",
+      "allDay": "Heldag",
+      "cancelledToday": "Inställt. Kom inte.",
+      "empty": "Inget på gång för dig just nu.",
+      "noChoir": "Evenemang visas här när du är med i en kör."
+    },
+    "eventDrafts": {
+      "title": "{count, plural, one {# evenemangsutkast} other {# evenemangsutkast}}",
+      "seeAll": "Alla utkast"
+    },
+    "news": {
+      "title": "Senaste nytt",
+      "seeAll": "Alla nyheter",
+      "empty": "Inget har publicerats än."
+    },
+    "postDrafts": {
+      "title": "{count, plural, one {Ditt inläggsutkast} other {Dina # inläggsutkast}}",
+      "seeAll": "Nyheter",
+      "saved": "Sparat"
+    },
+    "messages": {
+      "title": "Meddelanden",
+      "seeAll": "Inkorg",
+      "unreadConversations": "{count, plural, one {# konversation med olästa meddelanden} other {# konversationer med olästa meddelanden}}",
+      "unread": "{count} olästa",
+      "allRead": "Du har läst allt.",
+      "formerMember": "Tidigare medlem"
+    },
+    "me": {
+      "title": "Där jag sjunger",
+      "profile": "Min profil",
+      "sectionInChoir": "{section} i {choir}",
+      "sectionVoiceInChoir": "{section} · {voice} i {choir}",
+      "noChoir": "Du är inte med i någon kör än.",
+      "alsoIn": "Även i {groups}"
+    }
   },
   "Metadata": {
     "description": "Chalmers Sångkörs digitala nav"

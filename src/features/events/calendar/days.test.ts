@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { stockholmInstant } from "../model"
-import { eventDays, groupByDay } from "./days"
+import { eventDays, groupByDay, happensOn } from "./days"
 
 const at = (value: string) => stockholmInstant(value) as Date
 
@@ -72,5 +72,21 @@ describe("groupByDay", () => {
 
   test("nothing upcoming is no months", () => {
     expect(groupByDay([])).toEqual([])
+  })
+})
+
+describe("happensOn", () => {
+  test("a timed Event happens on its own day only", () => {
+    const rehearsal = { startsAt: at("2026-10-21T18:00"), endsAt: at("2026-10-21T21:00") }
+    expect(happensOn(rehearsal, "2026-10-21")).toBe(true)
+    expect(happensOn(rehearsal, "2026-10-20")).toBe(false)
+    expect(happensOn(rehearsal, "2026-10-22")).toBe(false)
+  })
+
+  test("a multi-day Event happens on every day it covers, and not after its closing midnight", () => {
+    const tour = { startsAt: at("2026-12-24"), endsAt: at("2026-12-26") }
+    expect(happensOn(tour, "2026-12-24")).toBe(true)
+    expect(happensOn(tour, "2026-12-25")).toBe(true)
+    expect(happensOn(tour, "2026-12-26")).toBe(false)
   })
 })
