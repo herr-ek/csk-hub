@@ -108,9 +108,10 @@ On an empty database the demo contains:
 - 24 fictional Swedish Posts with paragraphs, headings, lists, emphasis and blockquotes,
   published by the example Admins between August 2025 and October 2026. They use the editor's
   document format and appear in the shared News feed. Their event details are demo content.
-- Example Events from the coming Monday on: a weekly KK rehearsal series, a KKB sectional,
-  the Alumnikväll gig with its gig group and Event details, the Höstsittning, a Körmöte for
-  everyone, a room Booking, a Draft and a Cancelled Event, at the Locations Repsalen and Kårhuset.
+- Example Events from the coming Monday on. Each Choir has a weekly rehearsal series on its own
+  weekday, a sectional (KKB, MKT1, DKS1), a Draft julkonsert and a Cancelled extra rehearsal.
+  For all of CSK: the Alumnikväll gig with its gig group and Event details, the Höstsittning,
+  the Januarimöte Körmöte for everyone and a room Booking, at the Locations Scania and Kårhuset.
 
 Stable identities make these seeds repeatable: they insert missing fixtures and keep existing
 passwords, profile edits and Post edits. A conflicting existing Position assignment fails the

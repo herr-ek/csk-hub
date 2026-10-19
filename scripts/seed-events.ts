@@ -18,9 +18,9 @@ import { assertLocalDatabase } from "./ops/guards"
 
 /**
  * Local example Events from the Events scheme, on top of the example groups (`bun run ops
- * seed-groups`): a weekly KK rehearsal series, a sectional rehearsal, the Alumnikväll gig with
- * Event details, the Höstsittning, a Körmöte for everyone, a room Booking, a Draft and a
- * Cancelled Event. They are dated from the coming week, so there is always something upcoming.
+ * seed-groups`): for each Choir a weekly rehearsal series, a sectional rehearsal, a Draft concert
+ * and a Cancelled extra rehearsal; for all of CSK the Alumnikväll gig with Event details, the
+ * Höstsittning, a Körmöte for everyone and a room Booking. They are dated from the coming week, so there is always something upcoming.
  *
  * It writes the tables directly, so scripts never depend on a feature, and keeps the Events rules
  * by hand: every Rehearsal, Gig and Social has its extension row, the Participation mode is the
@@ -33,6 +33,34 @@ type EventValues = PgInsertValue<typeof event> & { title: string }
 
 const TIME_ZONE = "Europe/Stockholm"
 const SERIES_WEEKS = 4
+
+/** What each Choir gets, as days after the first Monday; each rehearses on its own weekday. */
+const CHOIRS = [
+  {
+    name: "KK",
+    section: "KKB",
+    rehearsal: { day: 3, start: "18:30", end: "21:00" },
+    sectional: 7,
+    extraRehearsal: 12,
+    concert: 54
+  },
+  {
+    name: "MK",
+    section: "MKT1",
+    rehearsal: { day: 1, start: "18:15", end: "20:45" },
+    sectional: 9,
+    extraRehearsal: 13,
+    concert: 53
+  },
+  {
+    name: "DK",
+    section: "DKS1",
+    rehearsal: { day: 2, start: "18:15", end: "20:45" },
+    sectional: 11,
+    extraRehearsal: 19,
+    concert: 55
+  }
+] as const
 
 /** A Stockholm wall-clock time on the day `days` after `from`, as the database's instant. */
 function at(from: string, days: number, time: string): SQL<Date> {
@@ -66,13 +94,11 @@ export function seedEvents(database: Database, from = today()) {
 
 async function seed(database: Database, monday: string) {
   // One at a time: a transaction is one connection.
-  const kk = await requireGroup(database, "KK", "Choir")
-  const kkb = await requireGroup(database, "KKB", "Section")
   const gigmasteri = await requireGroup(database, "Gigmästeri", "Gigmästeri")
   const sexmasteri = await requireGroup(database, "Sexmästeri", "Sexmästeri")
   const board = await requireGroup(database, null, "Board")
   const gigGroup = await findOrCreateGroup(database, "Alumnikväll", "GigGroup")
-  const repsalen = await findOrCreateLocation(database, "Repsalen", "Chalmers tvärgata 3, Göteborg")
+  const scania = await findOrCreateLocation(database, "Scania", "Chalmersplatsen 1, Göteborg")
   const karhuset = await findOrCreateLocation(database, "Kårhuset", "Chalmersplatsen 1, Göteborg")
   const [leader, responsible] = await activeUsers(database)
   const created: string[] = []
@@ -107,50 +133,93 @@ async function seed(database: Database, monday: string) {
   }
   const missing = async (title: string) => !(await eventTitled(database, title))
 
-  const seriesName = `KK rehearsals, ${term(monday)}`
-  const [series] = await database.select().from(eventSeries).where(eq(eventSeries.name, seriesName))
-  if (!series) {
-    const [newSeries] = await database.insert(eventSeries).values({ name: seriesName }).returning()
-    if (!newSeries) throw new Error("No series created.")
-    for (let week = 0; week < SERIES_WEEKS; week++) {
+  for (const choir of CHOIRS) {
+    const choirId = await requireGroup(database, choir.name, "Choir")
+    const sectionId = await requireGroup(database, choir.section, "Section")
+
+    const seriesName = `${choir.name} rehearsals, ${term(monday)}`
+    const [series] = await database.select().from(eventSeries).where(eq(eventSeries.name, seriesName))
+    if (!series) {
+      const [newSeries] = await database.insert(eventSeries).values({ name: seriesName }).returning()
+      if (!newSeries) throw new Error("No series created.")
+      for (let week = 0; week < SERIES_WEEKS; week++) {
+        await add(
+          {
+            type: "Rehearsal",
+            status: "Published",
+            title: `${choir.name} rehearsal`,
+            startsAt: at(monday, choir.rehearsal.day + 7 * week, choir.rehearsal.start),
+            endsAt: at(monday, choir.rehearsal.day + 7 * week, choir.rehearsal.end),
+            participationMode: "ResponseRequiredStrict",
+            locationId: scania,
+            organiserGroupId: choirId,
+            seriesId: newSeries.id
+          },
+          {
+            targets: [{ groupId: choirId }],
+            extension: (eventId) => database.insert(rehearsal).values({ eventId })
+          }
+        )
+      }
+    }
+
+    const sectional = `${choir.section} stämrep`
+    if (await missing(sectional)) {
       await add(
         {
           type: "Rehearsal",
           status: "Published",
-          title: "KK rehearsal",
-          startsAt: at(monday, 2 + 7 * week, "18:00"),
-          endsAt: at(monday, 2 + 7 * week, "21:00"),
+          title: sectional,
+          startsAt: at(monday, choir.sectional, "18:00"),
+          endsAt: at(monday, choir.sectional, "20:00"),
           participationMode: "ResponseRequiredStrict",
-          locationId: repsalen,
-          organiserGroupId: kk,
-          seriesId: newSeries.id
+          locationId: scania,
+          locationText: "Room 3",
+          organiserGroupId: sectionId
         },
         {
-          targets: [{ groupId: kk }],
+          targets: [{ groupId: sectionId }],
+          extension: (eventId) => database.insert(rehearsal).values({ eventId, leaderUserId: leader ?? null })
+        }
+      )
+    }
+
+    const concert = `${choir.name} julkonsert`
+    if (await missing(concert)) {
+      await add(
+        {
+          type: "Concert",
+          status: "Draft",
+          title: concert,
+          startsAt: at(monday, choir.concert, "19:00"),
+          endsAt: at(monday, choir.concert, "21:00"),
+          callTime: at(monday, choir.concert, "17:30"),
+          participationMode: "ResponseRequiredStrict",
+          organiserGroupId: choirId
+        },
+        { targets: [{ groupId: choirId }] }
+      )
+    }
+
+    const extraRehearsal = `${choir.name} extra rehearsal`
+    if (await missing(extraRehearsal)) {
+      await add(
+        {
+          type: "Rehearsal",
+          status: "Cancelled",
+          title: extraRehearsal,
+          startsAt: at(monday, choir.extraRehearsal, "10:00"),
+          endsAt: at(monday, choir.extraRehearsal, "16:00"),
+          participationMode: "ResponseRequiredStrict",
+          locationId: scania,
+          organiserGroupId: choirId
+        },
+        {
+          targets: [{ groupId: choirId }],
           extension: (eventId) => database.insert(rehearsal).values({ eventId })
         }
       )
     }
-  }
-
-  if (await missing("KKB stämrep")) {
-    await add(
-      {
-        type: "Rehearsal",
-        status: "Published",
-        title: "KKB stämrep",
-        startsAt: at(monday, 7, "18:00"),
-        endsAt: at(monday, 7, "20:00"),
-        participationMode: "ResponseRequiredStrict",
-        locationId: repsalen,
-        locationText: "Room 3",
-        organiserGroupId: kkb
-      },
-      {
-        targets: [{ groupId: kkb }],
-        extension: (eventId) => database.insert(rehearsal).values({ eventId, leaderUserId: leader ?? null })
-      }
-    )
   }
 
   if (await missing("Alumnikväll")) {
@@ -205,16 +274,16 @@ async function seed(database: Database, monday: string) {
     )
   }
 
-  if (await missing("Körmöte")) {
+  if (await missing("Januarimöte")) {
     // No Targets: for everyone in CSK.
     await add({
       type: "Körmöte",
       status: "Published",
-      title: "Körmöte",
+      title: "Januarimöte",
       startsAt: at(monday, 15, "18:30"),
       endsAt: at(monday, 15, "20:00"),
       participationMode: "ResponseRequired",
-      locationId: repsalen
+      locationId: scania
     })
   }
 
@@ -226,44 +295,9 @@ async function seed(database: Database, monday: string) {
       startsAt: at(monday, 3, "10:00"),
       endsAt: at(monday, 3, "12:00"),
       participationMode: "None",
-      locationId: repsalen,
+      locationId: scania,
       organiserGroupId: board
     })
-  }
-
-  if (await missing("Julkonsert")) {
-    await add(
-      {
-        type: "Concert",
-        status: "Draft",
-        title: "Julkonsert",
-        startsAt: at(monday, 54, "19:00"),
-        endsAt: at(monday, 54, "21:00"),
-        callTime: at(monday, 54, "17:30"),
-        participationMode: "ResponseRequiredStrict",
-        organiserGroupId: kk
-      },
-      { targets: [{ groupId: kk }] }
-    )
-  }
-
-  if (await missing("KK extra rehearsal")) {
-    await add(
-      {
-        type: "Rehearsal",
-        status: "Cancelled",
-        title: "KK extra rehearsal",
-        startsAt: at(monday, 12, "10:00"),
-        endsAt: at(monday, 12, "16:00"),
-        participationMode: "ResponseRequiredStrict",
-        locationId: repsalen,
-        organiserGroupId: kk
-      },
-      {
-        targets: [{ groupId: kk }],
-        extension: (eventId) => database.insert(rehearsal).values({ eventId })
-      }
-    )
   }
 
   return { created }
