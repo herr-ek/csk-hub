@@ -1,0 +1,366 @@
+:root {
+  /* The app's violet primary (src/app/globals.css), with lighter tints for text on dark. */
+  --primary: oklch(0.491 0.27 292.581);
+  --accent: oklch(0.78 0.14 293);
+  --bg: oklch(0.16 0.025 293);
+  --bg-glow: oklch(0.26 0.09 293);
+  --fg: oklch(0.97 0.01 293);
+  --muted: oklch(0.74 0.03 293);
+  --card: oklch(0.21 0.035 293);
+  --border: oklch(0.31 0.05 293);
+  --danger: oklch(0.7 0.18 25);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "SF Pro Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.viewport {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1600px;
+  height: 900px;
+  overflow: hidden;
+  background: radial-gradient(ellipse 80% 70% at 85% 0%, var(--bg-glow), transparent 70%), var(--bg);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  animation: enter 380ms ease-out;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.chrome {
+  position: absolute;
+  inset: auto 96px 36px;
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+}
+
+.progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 6px;
+  background: var(--primary);
+  transition: width 380ms ease-out;
+}
+
+/* Layout */
+
+.layout {
+  position: relative;
+  height: 100%;
+  padding: 110px 96px 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout.title {
+  justify-content: center;
+  padding-bottom: 260px;
+}
+
+.layout.centered {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.layout.split {
+  display: grid;
+  grid-template-columns: 1fr 640px;
+  gap: 80px;
+  align-items: center;
+}
+
+/* Type */
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--accent);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.hero {
+  font-size: 168px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+h2 {
+  font-size: 76px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  margin-bottom: 52px;
+}
+
+h2.statement {
+  font-size: 96px;
+  max-width: 1200px;
+}
+
+em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+h3 {
+  font-size: 32px;
+  font-weight: 650;
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 26px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.lead {
+  font-size: 44px;
+  color: var(--fg);
+  margin-top: 28px;
+}
+
+.byline {
+  font-size: 28px;
+  margin-top: 40px;
+}
+
+.note {
+  margin-top: auto;
+  font-size: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+/* Blocks */
+
+.staff {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.staff line {
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.staff ellipse {
+  fill: var(--primary);
+}
+
+.staff .stem {
+  stroke: var(--primary);
+  stroke-width: 4;
+}
+
+.pillars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 48px;
+}
+
+.pillar {
+  border-left: 6px solid var(--primary);
+  padding-left: 28px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 32px;
+}
+
+.points {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 26px;
+}
+
+.points li {
+  position: relative;
+  padding-left: 44px;
+  font-size: 32px;
+  line-height: 1.35;
+}
+
+.points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 5px oklch(0.491 0.27 292.581 / 0.3);
+}
+
+.points.compact {
+  gap: 20px;
+}
+
+.points.compact li {
+  font-size: 28px;
+}
+
+.roadmap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 72px;
+}
+
+.roadmap .card {
+  margin-bottom: 20px;
+}
+
+.lane {
+  color: var(--accent);
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+
+/* Events mock */
+
+.mock {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 40px 80px -30px oklch(0 0 0 / 0.6);
+}
+
+.mock-heading {
+  color: var(--fg);
+  font-size: 26px;
+  font-weight: 650;
+  margin-bottom: 16px;
+}
+
+.mock-row {
+  display: grid;
+  grid-template-columns: 150px 80px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+  font-size: 22px;
+}
+
+.mock-day {
+  font-weight: 600;
+}
+
+.mock-time {
+  color: var(--muted);
+}
+
+.mock-title {
+  font-weight: 600;
+}
+
+.mock-place {
+  grid-column: 3;
+  color: var(--muted);
+  font-size: 19px;
+}
+
+.mock-row.cancelled .mock-day,
+.mock-row.cancelled .mock-time,
+.mock-row.cancelled .mock-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.mock-row.cancelled .mock-place {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* Demo */
+
+.live-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.demo-link {
+  margin-top: 56px;
+  padding: 18px 34px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--accent);
+  font-size: 30px;
+  text-decoration: none;
+}
+
+.demo-link:hover {
+  border-color: var(--accent);
+}
