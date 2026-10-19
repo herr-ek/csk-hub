@@ -38,3 +38,9 @@ export function groupByDay<T extends { startsAt: Date }>(events: readonly T[]): 
   }
   return months
 }
+
+/** Whether an Event covers the Stockholm day `day`, so an ongoing multi-day Event counts too. */
+export function happensOn(event: { startsAt: Date; endsAt: Date }, day: IsoDate) {
+  const { firstDay, lastDay } = eventDays(event)
+  return firstDay <= day && day <= lastDay
+}

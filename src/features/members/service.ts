@@ -41,9 +41,8 @@ export async function getMemberProfile(database: MemberDatabase, viewerId: strin
     .where(and(eq(user.id, memberId), activeUser()))
     .limit(1)
   if (!member) return null
-  const [memberships, holdings, capabilities] = await Promise.all([
-    listCurrentGroupsOfUser(database, memberId),
-    listCurrentPositionsOfUser(database, memberId),
+  const [affiliations, capabilities] = await Promise.all([
+    getCurrentAffiliations(database, memberId),
     listVoiceCapabilities(database, memberId)
   ])
   return {
@@ -51,8 +50,17 @@ export async function getMemberProfile(database: MemberDatabase, viewerId: strin
     isOwn: viewerId === memberId,
     email: viewerId === memberId ? member.email : null,
     capabilities,
-    ...buildAffiliations(memberships, holdings)
+    ...affiliations
   }
+}
+
+/** Where a User sings today: their current Choirs, Sections, other groups and Positions. */
+export async function getCurrentAffiliations(database: MemberDatabase, userId: string) {
+  const [memberships, holdings] = await Promise.all([
+    listCurrentGroupsOfUser(database, userId),
+    listCurrentPositionsOfUser(database, userId)
+  ])
+  return buildAffiliations(memberships, holdings)
 }
 
 /** Other active Users, with literal name/username search and deterministic paging. */

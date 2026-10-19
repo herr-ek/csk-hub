@@ -67,6 +67,23 @@ export async function listNewsFeed(database: PostsDatabase = db): Promise<NewsFe
   return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
 }
 
+/** One Post as an overview lists it: what it is called and who published it when. */
+export type LatestPost = Omit<NewsFeedEntry, "body">
+
+/** The `count` newest published Posts, newest first, without their bodies. */
+export async function listLatestPosts(count: number, database: PostsDatabase = db): Promise<LatestPost[]> {
+  const { body: _body, ...columns } = publishedPostColumns
+  const rows = await database
+    .select(columns)
+    .from(post)
+    .leftJoin(user, eq(post.authorId, user.id))
+    .where(isNotNull(post.publishedAt))
+    .orderBy(desc(post.publishedAt))
+    .limit(count)
+
+  return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
+}
+
 /** One Post by its opaque id, or null when it does not exist or is not published. */
 export async function getPublishedPost(postId: string, database: PostsDatabase = db): Promise<PublishedPost | null> {
   if (!isPostId(postId)) return null
