@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, mock, spyOn, test } from "bun:test"
+import { createECDH } from "node:crypto"
 import https from "node:https"
 
 const requireAdmin = mock(async () => undefined)
@@ -69,7 +70,7 @@ beforeEach(() => {
 const activeSubscription = {
   id: "subscription-1",
   endpoint: "https://fcm.googleapis.com/fcm/send/test-subscription",
-  p256dh: "BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  p256dh: createECDH("prime256v1").generateKeys().toString("base64url"),
   auth: "AAAAAAAAAAAAAAAAAAAAAA",
   failureCount: 0
 }
@@ -315,6 +316,21 @@ test("stored WNS subscriptions remain deliverable after endpoint validation", as
 
 test("unsafe stored endpoints are disabled without contacting a provider", async () => {
   subscriptions = [{ ...activeSubscription, endpoint: "https://127.0.0.1/private" }]
+  expect(await delivery.sendToAll("Hello")).toMatchObject({
+    accepted: 0,
+    failed: 1,
+    failureCategories: { invalidSubscription: 1 }
+  })
+  expect(sendNotification).not.toHaveBeenCalled()
+  expect(set).toHaveBeenCalledWith(
+    expect.objectContaining({ status: "disabled", disabledReason: "Stored push subscription failed validation" })
+  )
+})
+
+test("invalid stored P-256 points are disabled without contacting a provider", async () => {
+  subscriptions = [
+    { ...activeSubscription, p256dh: Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString("base64url") }
+  ]
   expect(await delivery.sendToAll("Hello")).toMatchObject({
     accepted: 0,
     failed: 1,

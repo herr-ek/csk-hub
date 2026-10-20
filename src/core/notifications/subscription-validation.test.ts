@@ -57,6 +57,7 @@ for (const input of [
   { endpoint, keys: null },
   { endpoint, keys: { ...keys, p256dh: "bad" } },
   { endpoint, keys: { ...keys, p256dh: Buffer.alloc(65).toString("base64url") } },
+  { endpoint, keys: { ...keys, p256dh: Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString("base64url") } },
   { endpoint, keys: { ...keys, auth: `${keys.auth}=` } },
   { endpoint, keys: { ...keys, auth: "!".repeat(22) } },
   { endpoint, keys, expirationTime: -1 },

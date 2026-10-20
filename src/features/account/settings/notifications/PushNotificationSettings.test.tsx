@@ -14,13 +14,15 @@ const browserData = {
 }
 const subscription = { endpoint: browserData.endpoint, unsubscribe, toJSON: () => browserData }
 const subscribe = mock(async () => ({ success: true }))
-const getSubscription = mock(async () => subscription)
-const registration = { pushManager: { getSubscription } }
+const getSubscription = mock(async (): Promise<typeof subscription | null> => subscription)
+const browserSubscribe = mock(async () => subscription)
+const registration = { pushManager: { getSubscription, subscribe: browserSubscribe } }
 const register = mock(async () => registration)
 const getRegistration = mock(async (): Promise<typeof registration | undefined> => registration)
 const originalServiceWorker = Object.getOwnPropertyDescriptor(navigator, "serviceWorker")
 const originalPushManager = Object.getOwnPropertyDescriptor(window, "PushManager")
 const originalNotification = Object.getOwnPropertyDescriptor(window, "Notification")
+const originalVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
 const translate = (key: string) => key
 mock.module("@/core/i18n/translations", () => ({ useTranslations: () => translate }))
@@ -41,6 +43,8 @@ beforeEach(() => {
   register.mockReset().mockResolvedValue(registration)
   getRegistration.mockReset().mockResolvedValue(registration)
   getSubscription.mockReset().mockResolvedValue(subscription)
+  browserSubscribe.mockReset().mockResolvedValue(subscription)
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = "AQAB"
   Object.defineProperty(navigator, "serviceWorker", {
     configurable: true,
     value: { register, getRegistration, ready: Promise.resolve(registration) }
@@ -55,6 +59,8 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount())
   container.remove()
+  if (originalVapidKey === undefined) delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  else process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = originalVapidKey
   for (const [target, name, descriptor] of [
     [navigator, "serviceWorker", originalServiceWorker],
     [window, "PushManager", originalPushManager],
@@ -140,4 +146,35 @@ test("a failed server write remains repairable after refreshing browser state", 
   await clickButton("reconnect")
   expect(container.textContent).toContain("enabled")
   expect(subscribe).toHaveBeenCalledTimes(2)
+})
+
+test("a focus lookup during enable cannot overwrite the successful subscription", async () => {
+  getSubscription.mockResolvedValueOnce(null)
+  const enabling = Promise.withResolvers<typeof subscription>()
+  browserSubscribe.mockReturnValueOnce(enabling.promise)
+  await renderSettings()
+  await clickButton("enable")
+
+  const staleLookup = Promise.withResolvers<typeof subscription | null>()
+  getSubscription.mockReturnValueOnce(staleLookup.promise)
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  await act(async () => enabling.resolve(subscription))
+  await act(async () => staleLookup.resolve(null))
+
+  expect([...container.querySelectorAll("button")].map((button) => button.textContent)).toContain("disable")
+  expect(container.textContent).not.toContain("disabled")
+})
+
+test("an older focus lookup cannot replace a newer confirmed binding", async () => {
+  await renderSettings()
+  const staleLookup = Promise.withResolvers<typeof subscription | null>()
+  getSubscription.mockReturnValueOnce(staleLookup.promise)
+  await act(async () => window.dispatchEvent(new Event("focus")))
+
+  getBinding.mockResolvedValue("bound")
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  await act(async () => staleLookup.resolve(null))
+
+  expect([...container.querySelectorAll("button")].map((button) => button.textContent)).toContain("disable")
+  expect(container.textContent).not.toContain("disabled")
 })

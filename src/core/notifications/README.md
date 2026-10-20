@@ -39,7 +39,12 @@ The browser's PushManager subscription is separate from the current User's serve
 
 ## Endpoint validation and recovery
 
+Logout waits at most two seconds for push cleanup before starting sign-out. After
+that deadline, late cleanup results cannot start further browser cleanup operations;
+requests already in flight may still complete.
+
 Subscriptions are runtime-validated before registration, rebinding, and delivery.
+Public encryption keys must encode a valid uncompressed P-256 point.
 Supported provider hosts are `fcm.googleapis.com`, `push.services.mozilla.com`,
 `push.apple.com`, and `notify.windows.com` (including subdomains for the latter
 three). HTTPS is required; credentials, fragments, nondefault ports, and hosts

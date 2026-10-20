@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
@@ -31,8 +31,12 @@ export function PushNotificationSettings() {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
+  const refreshVersion = useRef(0)
+  const isChangingSubscription = useRef(false)
 
   const loadSubscriptionState = useCallback(async () => {
+    if (isChangingSubscription.current) return
+    const version = ++refreshVersion.current
     setIsLoading(true)
     setBinding("unknown")
     setError(null)
@@ -45,12 +49,16 @@ export function PushNotificationSettings() {
           updateViaCache: "none"
         }))
       const browserSubscription = await registration.pushManager.getSubscription()
+      if (version !== refreshVersion.current) return
       setSubscription(browserSubscription)
-      setBinding(browserSubscription ? await getPushSubscriptionBinding(browserSubscription.endpoint) : "unbound")
+      const nextBinding = browserSubscription
+        ? await getPushSubscriptionBinding(browserSubscription.endpoint)
+        : "unbound"
+      if (version === refreshVersion.current) setBinding(nextBinding)
     } catch {
-      setError(t("deviceEnableFailed"))
+      if (version === refreshVersion.current) setError(t("deviceEnableFailed"))
     } finally {
-      setIsLoading(false)
+      if (version === refreshVersion.current) setIsLoading(false)
     }
   }, [t])
 
@@ -62,7 +70,10 @@ export function PushNotificationSettings() {
       void loadSubscriptionState()
     }
     window.addEventListener("focus", refreshOnFocus)
-    return () => window.removeEventListener("focus", refreshOnFocus)
+    return () => {
+      refreshVersion.current += 1
+      window.removeEventListener("focus", refreshOnFocus)
+    }
   }, [loadSubscriptionState])
 
   async function subscribeToPush() {
@@ -80,6 +91,9 @@ export function PushNotificationSettings() {
     setError(null)
     setStatus(null)
     setIsPending(true)
+    isChangingSubscription.current = true
+    refreshVersion.current += 1
+    setIsLoading(false)
     try {
       const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission()
       if (permission !== "granted") {
@@ -111,6 +125,7 @@ export function PushNotificationSettings() {
         setError(t("subscribeFailed"))
       }
     } finally {
+      isChangingSubscription.current = false
       setIsPending(false)
     }
   }
@@ -120,6 +135,9 @@ export function PushNotificationSettings() {
     setError(null)
     setStatus(null)
     setIsPending(true)
+    isChangingSubscription.current = true
+    refreshVersion.current += 1
+    setIsLoading(false)
     try {
       const endpoint = subscription.endpoint
       const result = await unsubscribeUserFromPush(endpoint)
@@ -134,6 +152,7 @@ export function PushNotificationSettings() {
     } catch {
       setError(t("unsubscribeFailed"))
     } finally {
+      isChangingSubscription.current = false
       setIsPending(false)
     }
   }
@@ -143,6 +162,9 @@ export function PushNotificationSettings() {
     setError(null)
     setStatus(null)
     setIsPending(true)
+    isChangingSubscription.current = true
+    refreshVersion.current += 1
+    setIsLoading(false)
     try {
       const removedFromBrowser = await subscription.unsubscribe()
       if (!removedFromBrowser) throw new Error("Browser did not remove the push subscription")
@@ -152,6 +174,7 @@ export function PushNotificationSettings() {
     } catch {
       setError(t("unsubscribeFailed"))
     } finally {
+      isChangingSubscription.current = false
       setIsPending(false)
     }
   }
