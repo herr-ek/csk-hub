@@ -21,7 +21,11 @@ const accessControl = createAccessControl(statements)
 
 // ROLES
 
-/** Better Auth's native user and session grants for each role. */
+/**
+ * Better Auth's native User/Session grants for each role. Resource-aware policies live in
+ * core/authz; do not add Group/Position grants here. A migrating feature must replace its
+ * existing read/write/UI checks together, not use these grants as an OR fallback.
+ */
 export const accessRoles = {
   [USER_ROLE]: accessControl.newRole({
     ...defaultRoles.user.statements

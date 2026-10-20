@@ -29,6 +29,17 @@ export const getRequestSession = cache(async () => {
   return auth.api.getSession({ headers: await headers() })
 })
 
+/**
+ * Validates the request against the stored session, bypassing Better Auth's cookie cache.
+ * Authorization calls this afresh for each operation; it is not React-cached. Rendering callers
+ * still need Suspense and must stay outside cache scopes. Callers must also check current User
+ * status: Better Auth does not reject an existing session solely because its User is banned.
+ */
+export async function getFreshRequestSession() {
+  await io()
+  return auth.api.getSession({ headers: await headers(), query: { disableCookieCache: true } })
+}
+
 /** Returns the signed-in user's ID for server-side workflows. */
 export async function requireAuthenticatedUser(): Promise<string> {
   const session = await getRequestSession()

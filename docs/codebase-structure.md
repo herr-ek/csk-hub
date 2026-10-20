@@ -55,6 +55,9 @@ Use `src/shared` only for genuinely cross-feature modules:
 Use `src/core` for infrastructure and app shell modules:
 
 - `src/core/auth`: Better Auth setup, server/client auth objects, plugins, cookie integration, and auth infrastructure tests.
+- `src/core/authz`: server-only application authorization policies and their minimal database fact
+  reads. It depends on auth and database schemas, never features. See
+  [authorization adoption](authorization.md) before migrating existing guards.
 - `src/core/db`: database client and schemas.
 - `src/core/email`: email delivery adapters.
 - `src/core/i18n`: locale definitions, locale-cookie handling, next-intl routing/request configuration, and translation loading. See `src/core/i18n/README.md` before adding translated UI.
@@ -152,6 +155,12 @@ helpers, Server Actions, and Route Handlers. Use `requireAuthenticatedUser()` fr
 the same module when a workflow only needs a required user ID. Permission and
 admin guards in `permissions.server.ts` already use the shared session helper;
 pass an existing session to them when one is available.
+
+New resource-aware authorization uses `@/core/authz`, which calls the same session module's
+`getFreshRequestSession()` to bypass Better Auth's cookie cache and then verifies the current
+User state. The fresh helper is not React-cached. Existing feature flows retain their current
+guards until migrated; see [the adoption guide](authorization.md). Do not pass cached session
+claims as authority to the new module.
 
 React `cache()` deduplicates session reads within a Server Component render and
 shares the pending promise and result. It does not share sessions across requests
