@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { canCurrentUser } from "@/core/auth/permissions.server"
+import { isUserAdmin } from "@/core/auth/permissions.server"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
@@ -61,11 +61,7 @@ async function OwnDrafts() {
 }
 
 export async function NewsScreen() {
-  const [entries, canPublish, t] = await Promise.all([
-    listNewsFeed(),
-    canCurrentUser({ resource: "post", action: "create" }),
-    getTranslations("Posts")
-  ])
+  const [entries, canPublish, t] = await Promise.all([listNewsFeed(), isUserAdmin(), getTranslations("Posts")])
 
   return (
     <ContentPage>

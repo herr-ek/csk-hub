@@ -27,7 +27,7 @@ export type PermissionSession = {
 
 /**
  * One resource-and-action pair drawn from the access-control table, e.g.
- * `{ resource: "post", action: "create" }`. The union is generated from `statements`,
+ * `{ resource: "session", action: "list" }`. The union is generated from `statements`,
  * so an action that a resource does not declare will not typecheck.
  */
 export type GlobalPermissionRequest = {

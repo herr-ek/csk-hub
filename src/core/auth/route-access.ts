@@ -22,9 +22,7 @@ const AUTH_ENTRY_PATHS = new Set<string>([
 ])
 
 /** Routes that need a specific permission rather than a role. */
-const PERMISSION_PATHS = new Map<string, GlobalPermissionRequest>([
-  [ROUTES.newsCompose, { resource: "post", action: "create" }]
-])
+const PERMISSION_PATHS = new Map<string, GlobalPermissionRequest>()
 
 export type RouteAccessPolicy =
   | { kind: "public" }
@@ -50,7 +48,9 @@ export function getRouteAccessPolicy(path: string): RouteAccessPolicy {
   const permission = PERMISSION_PATHS.get(path)
   if (permission) return { kind: "permission", permission }
 
-  if (path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`)) return { kind: "admin" }
+  if (path === ROUTES.newsCompose || path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`)) {
+    return { kind: "admin" }
+  }
 
   if (path === ROUTES.accountEditProfile || path === ROUTES.messages || path.startsWith(`${ROUTES.messages}/`)) {
     return { kind: "impersonation-unavailable" }

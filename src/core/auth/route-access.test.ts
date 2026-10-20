@@ -105,17 +105,17 @@ describe("route access", () => {
     expect(requireAdmin).toHaveBeenCalledWith(userSession)
   })
 
-  test("keeps users without the post:create permission off the compose page", async () => {
-    requireCurrentUserPermission.mockRejectedValue(new Error("not permitted"))
+  test("keeps non-admin users off the compose page", async () => {
+    requireAdmin.mockRejectedValue(new Error("not an admin"))
 
     await expect(getRouteAccessDecision("/news/new", userSession)).resolves.toEqual({ kind: "forbidden" })
-    expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "create" }, userSession)
-    expect(requireAdmin).not.toHaveBeenCalled()
+    expect(requireAdmin).toHaveBeenCalledWith(userSession)
+    expect(requireCurrentUserPermission).not.toHaveBeenCalled()
   })
 
-  test("lets a user holding post:create reach the compose page", async () => {
+  test("lets an admin reach the compose page", async () => {
     await expect(getRouteAccessDecision("/news/new", adminSession)).resolves.toEqual({ kind: "allow" })
-    expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "create" }, adminSession)
+    expect(requireAdmin).toHaveBeenCalledWith(adminSession)
   })
 
   test("sends an unauthenticated visitor from the compose page to sign in", async () => {
