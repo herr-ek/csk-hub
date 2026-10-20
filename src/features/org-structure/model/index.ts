@@ -17,3 +17,6 @@ export function holdsElectedPosts(type: GroupType) {
 
 /** A calendar date, `YYYY-MM-DD`, as Memberships and Position holdings are dated. */
 export type IsoDate = string
+
+export type { PositionCode } from "./catalogue"
+export { GROUP_POLICIES, organisationYearPeriod, POSITION_DEFINITIONS } from "./catalogue"

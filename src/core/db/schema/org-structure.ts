@@ -5,6 +5,7 @@ import {
   check,
   date,
   index,
+  integer,
   pgEnum,
   pgTable,
   primaryKey,
@@ -57,13 +58,31 @@ export const group = pgTable(
     type: groupType("type").notNull(),
     // Null means CSK-wide. A Choir group itself is always CSK-wide, and a Section always belongs to one.
     choirId: uuid("choir_id").references((): AnyPgColumn => choir.groupId, { onDelete: "restrict" }),
-    active: boolean("active").default(true).notNull()
+    active: boolean("active").default(true).notNull(),
+    organisationYear: integer("organisation_year"),
+    // Compatibility marker: removed with the legacy representation in redesign ticket 08.
+    usesAppointmentModel: boolean("uses_appointment_model").default(false).notNull()
   },
   (table) => [
     // Hand-written in drizzle/0011_groups.sql (2): the index is NULLS NOT DISTINCT, which Drizzle's
     // index builder cannot express, so two active CSK-wide groups (choir_id null) cannot share a
     // name while each Choir keeps its own namespace.
     uniqueIndex("group_name_choir_active_unique").on(table.name, table.choirId).where(sql`${table.active}`),
+    uniqueIndex("group_annual_identity_unique")
+      .on(table.type, table.organisationYear)
+      .where(sql`${table.usesAppointmentModel} AND ${table.organisationYear} IS NOT NULL`),
+    uniqueIndex("group_continuing_singleton_unique")
+      .on(table.type)
+      .where(sql`${table.usesAppointmentModel} AND ${table.type} = 'Föräldramötet'`),
+    uniqueIndex("group_choir_team_unique")
+      .on(table.type, table.choirId)
+      .where(
+        sql`${table.usesAppointmentModel} AND ${table.active} AND ${table.type} IN ('Roddgrupp', 'Festgrupp', 'Rephelg')`
+      ),
+    check(
+      "group_organisation_year_check",
+      sql`${table.organisationYear} IS NULL OR ${table.organisationYear} BETWEEN 1000 AND 9998`
+    ),
     index("group_choirId_idx").on(table.choirId),
     check("group_name_not_blank_check", sql`length(btrim(${table.name})) > 0`),
     check("group_choir_csk_wide_check", sql`${table.type} <> 'Choir' OR ${table.choirId} IS NULL`),
@@ -226,3 +245,72 @@ export const positionHolderRelations = relations(positionHolder, ({ one }) => ({
   position: one(position, { fields: [positionHolder.positionId], references: [position.id] }),
   holder: one(user, { fields: [positionHolder.userId], references: [user.id], relationName: "positionHolder" })
 }))
+
+/** Independent direct participation. Appointment grants never copy rows here. */
+export const directMembership = pgTable(
+  "direct_membership",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => group.id, { onDelete: "restrict" }),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date"),
+    voice: voiceDivision("voice")
+  },
+  (table) => [
+    index("direct_membership_group_idx").on(table.groupId),
+    check("direct_membership_period_check", sql`${table.endDate} IS NULL OR ${table.endDate} > ${table.startDate}`)
+  ]
+)
+
+/** One responsibility, in one context, with one tenure across every granted Group. */
+export const positionAppointment = pgTable(
+  "position_appointment",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    positionCode: text("position_code").notNull(),
+    contextGroupId: uuid("context_group_id")
+      .notNull()
+      .references(() => group.id, { onDelete: "restrict" }),
+    organisationYear: integer("organisation_year"),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date")
+  },
+  (table) => [
+    index("position_appointment_user_idx").on(table.userId),
+    check("position_appointment_period_check", sql`${table.endDate} IS NULL OR ${table.endDate} > ${table.startDate}`),
+    check(
+      "position_appointment_year_check",
+      sql`${table.organisationYear} IS NULL OR ${table.organisationYear} BETWEEN 1000 AND 9998`
+    )
+  ]
+)
+
+/** A connection only: User, Position, and dates belong exclusively to the appointment. */
+export const appointmentGrant = pgTable(
+  "appointment_grant",
+  {
+    appointmentId: uuid("appointment_id")
+      .notNull()
+      .references(() => positionAppointment.id, { onDelete: "cascade" }),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => group.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.appointmentId, table.groupId] }),
+    index("appointment_grant_group_idx").on(table.groupId)
+  ]
+)
+
+// Hand-written in 0017_expand-organisation-appointments.sql: btree_gist range exclusions
+// on appointment occupancy, Board exclusivity and direct Membership overlap; fixed-policy
+// triggers on group, position_appointment, direct_membership and appointment_grant. Drizzle
+// does not diff these. Preserve them in later migrations; see docs/schemas/Groups - DB Scheme.md.

@@ -1,5 +1,6 @@
 import "server-only"
 
+export { appointPosition, createOrganisationGroup, listAppointmentMembersAt } from "./appointments"
 export { endLinkedPosition, startLinkedPosition } from "./linked-positions"
 export { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 export type { GroupType, IsoDate, OrgStructureResult, OrgStructureViolation } from "./model"
@@ -13,6 +14,7 @@ export {
   listCurrentGroupsOfUser,
   listCurrentPositionsOfUser
 } from "./reads"
+export { inventoryOrganisation } from "./reconciliation"
 export {
   allowPositionInGroupTypes,
   archiveGroup,

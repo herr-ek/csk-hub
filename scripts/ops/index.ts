@@ -7,7 +7,7 @@ import { grantAdmin } from "./grant-admin"
 import { statusFor, type TargetStatus } from "./migration-status"
 import { createReferenceData } from "./reference-data"
 import { resetLocalDatabase } from "./reset"
-import { childEnvironment, databaseOrExit, type Target, variableFor } from "./target"
+import { announce, childEnvironment, databaseOrExit, type Target, variableFor } from "./target"
 
 /**
  * The single entrypoint for database operations.
@@ -33,6 +33,7 @@ const COMMANDS = [
   "studio",
   "grant-admin",
   "reference-data",
+  "organisation-inventory",
   "reset",
   "seed-admin",
   "seed-users",
@@ -108,6 +109,15 @@ async function run(choice: Command): Promise<number> {
     return grantAdmin(database, email, { skipConfirmation: flags.yes })
   }
 
+  if (choice === "organisation-inventory") {
+    announce(database)
+    const result = spawnSync("bun", ["--conditions=react-server", "run", "scripts/ops/organisation-inventory.ts"], {
+      stdio: "inherit",
+      env: childEnvironment(database)
+    })
+    return result.status ?? 1
+  }
+
   if (choice === "reference-data") return createReferenceData(database, { skipConfirmation: flags.yes })
 
   if (choice === "migrate") {
@@ -138,6 +148,7 @@ async function menu(): Promise<void> {
     const choice = await select<Command | "exit">({
       message: "What would you like to do?",
       options: [
+        { value: "organisation-inventory", label: "Organisation inventory", hint: `read-only, against ${target}` },
         { value: "status", label: "Status", hint: "migration ledger for local and prod" },
         { value: "migrate", label: "Run migrations", hint: `against ${target}` },
         { value: "studio", label: "Open Studio", hint: `against ${target}` },
@@ -207,6 +218,8 @@ function describe(target: Target, status: TargetStatus): string {
 
   return `${name} ${behind} ${DIM}${status.host} — ${status.applied.length}/${total} applied${RESET}${pending}`
 }
+
+if (command === "organisation-inventory") process.exit(await run(command))
 
 intro(`csk-hub ops  ${DIM}(target: ${target})${RESET}`)
 

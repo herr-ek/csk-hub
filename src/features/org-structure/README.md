@@ -106,3 +106,31 @@ The tests run against a real, freshly migrated database created beside the local
 `POSTGRES_URL` and dropped afterwards (`test/database.ts`). Without a reachable local
 Postgres they are skipped with a warning. Migrations create no rows, so `test-support.ts` builds
 the structure the tests name through the module's own commands.
+
+## Additive appointment foundation (redesign ticket 01)
+
+Migration `0017_expand-organisation-appointments` adds `direct_membership`,
+`position_appointment`, and `appointment_grant`. It adds explicit `organisation_year`
+and an internal `uses_appointment_model` compatibility marker on Groups. Legacy
+commands, live reads, catalogue, and seeds keep their behaviour during this integration
+branch. This foundation is not a completed or deployable domain cutover.
+
+The universal `model` entrypoint exports fixed `GROUP_POLICIES`, the 16 stable
+`POSITION_DEFINITIONS`, and `PositionCode`. New commands `createOrganisationGroup` and
+`appointPosition` accept the same database-or-transaction contract. The latter stores
+one tenure, validates full prerequisite coverage, and creates its fixed grant set
+atomically. `listAppointmentMembersAt` reads dated grants with one roster entry per
+User and every appointment retained. It deliberately does not feed legacy live reads.
+
+`inventoryOrganisation` is a read-only public operation; the focused server-only
+`@/features/org-structure/reconciliation` entrypoint is also available to ops without
+loading screen exports. `bun run ops organisation-inventory` runs it in a PostgreSQL
+repeatable-read, read-only transaction and prints JSON. Candidate mappings and pairs
+are evidence for ticket 07, never permission to merge or write records.
+
+Ticket 08 removes the marker, legacy commands/tables, and transitional read split
+once every writer and consumer has migrated. Direct-member workflows, Helper conversion,
+appointment handover/end/renewal, departure and archival protections, and combined
+participation reads are delivered by the subsequent behaviour tickets. The implemented
+storage and its hand-written exclusions/triggers are described in
+[`Groups - DB Scheme.md`](../../../docs/schemas/Groups%20-%20DB%20Scheme.md).

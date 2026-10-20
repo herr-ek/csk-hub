@@ -1,596 +1,275 @@
-## Revised scheme (v2)
+# Groups database schema
 
-#### Terminology
+This describes the schema implemented in `src/core/db/schema/org-structure.ts` and
+`src/core/db/schema/voice.ts`, including the hand-written constraints in migrations
+0011, 0013, and 0017. Migration 0017 is the additive foundation of the organisation
+redesign. Both representations below currently exist. Legacy application behaviour,
+reference data, IDs, history, and foreign references remain available; no conversion
+runs as part of this migration.
 
-| Term                | Meaning                                                                                                                                   | In the schema                         |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Voice**           | A musical concept: the line someone sings (B1, T2, ...). An attribute, **never** a group of people.                                       | `Voice` enum                          |
-| **Part**            | The musical voice family S/A/T/B. Derived from a voice (B1 → B). Also never a group.                                                      | `Part` enum, fixed mapping from Voice |
-| **Section**         | A social concept: the actual people in one choir who sing a given voice (or voices). Always a group.                                      | Group with `type = Section`           |
-| **Choir**           | One of the choirs (MK, DK, KK). Always a group.                                                                                           | Group with `type = Choir`             |
-| **Membership**      | Being in a group, over a period of time.                                                                                                  | `GroupMembers`                        |
-| **Position**        | A named organisational position in a group (Notfiskal, Konsertmästare, Sexmästare, Stämförälder). Swedish: *post*. Not a permission role. | `Positions`                           |
-| **Position holder** | A member holding a position in a group, over its own period of time, independent of the membership.                                       | `PositionHolders`                     |
-| **News post**       | An item in the news feed. "Post" is reserved for this; never used for positions.                                                          | `NewsPosts` (news model)              |
+## Groups, Choirs, and Sections
 
-Every choir has exactly **four sections**. In most choirs each section sings **one** voice (MK: T1, T2, B1, B2). In the chamber choir a section can sing **two** voices (KKB sings B1 + B2). A singer always has **one** voice.
+SQL identifiers below are the actual database names. Group IDs are UUIDs; User IDs
+are text. All dates on participation records are PostgreSQL calendar dates.
 
-Groups are either **CSK-wide** (`choirId = null`) or **belong to a choir** (`choirId` set). There is no deeper hierarchy: every subgroup belongs directly to a choir.
-
-A person can hold **several positions in the same group** (e.g. Notfiskal + Konsertmästare in KK). Each position has **one holder** per group at a time.
-
-"Position" means an organisational position only. If standing order / formation is ever modelled, call it **Placement** or **Formation**.
-
-``` ER Scheme
-Users(_id_, ...)
-
-// Enum so the code can branch on it with type-safe comparisons.
-// Storage: native Postgres enum (easy to ADD a value, awkward to remove/rename)
-// or text + CHECK constraint (easier to change). Either maps to an enum in code.
-Enum GroupType:
-	Choir
-	Section         // the people in a choir singing a given voice/voices (4 per choir)
-	Board
-	Committee
-	GigGroup
-	Gigmästeri
-	Sexmästeri
-	Rodd
-	Fest
-	Rephelg
-	Konsert
-
-Groups(_id_, name, type, choirId?, active)
-	type     -> GroupType
-	choirId  -> Choirs.groupId   // the choir this group belongs to. null = CSK-wide.
-	                             // A Choir group itself has choirId = null.
-
-	// Every choir has a "Roddgrupp" etc., so names are unique per choir, not globally.
-	// CSK-wide groups have choirId = null, and NULLs are not equal in a unique index:
-	// use NULLS NOT DISTINCT (Postgres 15+) or an index on COALESCE(choirId, 0)
-	UNIQUE (name, choirId) NULLS NOT DISTINCT WHERE active
-
-// A choir IS a group (1:1 extension), so membership, news targeting
-// and permissions work the same everywhere
-Choirs(_groupId_, ...choir-specific fields)
-	groupId -> Groups.id
-
---- Voices (musical) ---
-
-// Two separate enums so Part and Voice can't be mixed up in code
-Enum Part:  S, A, T, B
-Enum Voice: S1, S2, A1, A2, T1, T2, B1, B2
-// Fixed mapping Voice -> Part in code (B1 -> B, T2 -> T, ...). Not stored.
-
-// What a user CAN sing (e.g. finding a T2 to cover a gig). Real voices only.
-VoiceCapabilities(_userId_, _voice_)
-	userId -> Users.id
-	voice  -> Voice
-
---- Sections (social) ---
-
-// Which voices a section sings. A section is defined by its voices, not by a fixed kind.
-//   MKB1: one row  (B1)
-//   KKB:  two rows (B1, B2)
-// A section group with type = Section must have at least one row here.
-SectionVoices(_sectionId_, _voice_)
-	sectionId -> Groups.id       // a group with type = Section
-	voice     -> Voice
-
---- Membership ---
-
-// Being in a group. Dated, so history is kept (Styret 25/26 vs 26/27, alumni, voice changes).
-// Taking or leaving a position does NOT touch this table.
-GroupMembers(_userId_, _groupId_, _startDate_, endDate?, voice?)
-	userId -> Users.id
-	groupId -> Groups.id
-	voice  -> Voice              // the singer's ONE voice; only set on Section memberships
-	endDate = null -> current member
-
-	// The singer's voice must be one the section sings.
-	// Composite FK: when voice is NULL the FK is not checked (MATCH SIMPLE),
-	// so non-section memberships are unaffected. Enforced by the database.
-	(groupId, voice) -> SectionVoices(sectionId, voice)
-
-	// At most one CURRENT membership per user per group (history rows are fine)
-	UNIQUE (userId, groupId) WHERE endDate IS NULL
-
---- Positions ---
-
-// Named organisational positions in a group (Swedish: poster). Not permission roles.
-Positions(_id_, name)
-	// e.g. Ordförande, PR-mästare, Gigmästare, Sexmästare, Sexmästarinna,
-	//      Conductor, Notfiskal, Konsertmästare, Stämförälder
-
-// Optional: which positions are allowed in which kind of group
-// (stops e.g. "Conductor" in a festgrupp)
-GroupTypePositions(_type_, _positionId_)
-	type       -> GroupType
-	positionId -> Positions.id
-
-// Who holds which position, in which group, when. Own term, independent of the membership.
-PositionHolders(_userId_, _groupId_, _positionId_, _startDate_, endDate?)
-	userId     -> Users.id
-	groupId    -> Groups.id
-	positionId -> Positions.id
-	endDate = null -> current holder
-
-	// One holder per position per group at a time.
-	// A person may hold several different positions in the same group.
-	// Gives "one stämförälder per section" and "one conductor per choir" for free.
-	UNIQUE (groupId, positionId) WHERE endDate IS NULL
+```text
+group (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  type group_type NOT NULL,
+  choir_id uuid NULL REFERENCES choir(group_id) ON DELETE RESTRICT,
+  active boolean NOT NULL DEFAULT true,
+  organisation_year integer NULL,
+  uses_appointment_model boolean NOT NULL DEFAULT false
+)
+choir (
+  group_id uuid PRIMARY KEY REFERENCES group(id) ON DELETE RESTRICT
+)
+section (
+  group_id uuid PRIMARY KEY REFERENCES group(id) ON DELETE RESTRICT,
+  voice voice NOT NULL
+)
 ```
 
-### Example placement
+A Choir is itself a CSK-wide Group. A Section belongs directly to a Choir. Other
+Groups are CSK-wide or Choir-owned according to their policy. There is no deeper
+hierarchy. Groups are archived rather than deleted by application commands.
 
-| Group                                    | type                    | choirId | SectionVoices                             |
-| ---------------------------------------- | ----------------------- | ------- | ----------------------------------------- |
-| Styret                                   | Board                   | null    |                                           |
-| Committees, gig groups                   | Committee / GigGroup    | null    |                                           |
-| Gigmästeri, Sexmästeri                   | Gigmästeri / Sexmästeri | null    |                                           |
-| CSK konsertgrupp                         | Konsert                 | null    |                                           |
-| MK konsertgrupp                          | Konsert                 | MK      |                                           |
-| MK roddgrupp / festgrupp / rephelgsgrupp | Rodd / Fest / Rephelg   | MK      |                                           |
-| MK, DK, KK                               | Choir                   | null    |                                           |
-| MKT1, MKT2, MKB1, MKB2                   | Section                 | MK      | T1 / T2 / B1 / B2 (one each)              |
-| DKS1, DKS2, DKA1, DKA2                   | Section                 | DK      | S1 / S2 / A1 / A2 (one each)              |
-| KKS, KKA, KKT, KKB                       | Section                 | KK      | (S1, S2) / (A1, A2) / (T1, T2) / (B1, B2) |
+`organisation_year = 2026` identifies 26/27: `[2026-07-01, 2027-07-01)`.
+An annual Group is a separate concrete Group for each year. Names are editable and
+do not determine operational identity. A null year means no annual identity, or an
+unreconciled legacy Group. Non-null years are restricted to integers 1000–9998.
 
-Structure: one level. A group is CSK-wide or belongs to a choir.
+`uses_appointment_model` is an internal transition marker, not an Admin option.
+New model Groups set it true and enforce the fixed year/scope/cardinality policy.
+Existing Groups retain false; their names and dates are not interpreted or changed
+by the migration. Redesign ticket 07 reconciles them. Ticket 08 removes the marker,
+legacy tables and commands after every writer and reader has migrated, and applies
+the reconciled rules universally.
 
-```
-CSK-wide: Styret, committees, gig groups, Gigmästeri, Sexmästeri, CSK konsertgrupp
+Database constraints:
 
-MK  (Choir)                               KK  (Choir)              ← positions: Conductor, Notfiskal, Konsertmästare
-├─ MKT1, MKT2, MKB1, MKB2  (Sections)     ├─ KKS, KKA, KKT, KKB  (Sections)  ← singers here, each with ONE voice
-└─ MK konsertgrupp, roddgrupp, ...        └─ KK konsertgrupp, roddgrupp, ...
-```
+- Names must contain non-whitespace characters.
+- Active names are unique within a Choir, including one CSK-wide namespace:
+  `(name, choir_id) NULLS NOT DISTINCT WHERE active`. This remains the hand-written
+  index from migration 0011.
+- A Choir has null `choir_id`; a Section has non-null `choir_id`.
+- For model Groups, the policy trigger requires an explicit year exactly on annual
+  types and requires Choir ownership exactly on Choir-scoped types.
+- Model annual identity is unique by `(type, organisation_year)`, including archived
+  Groups. Model Föräldramötet is unique by type, including archived Groups.
+- Active model Roddgrupp, Festgrupp and Rephelg are unique by `(type, choir_id)`.
+- The existing application commands create a Choir and its four non-overlapping
+  Sections together. The extension-table iff/type relationship and four-Section
+  requirement are application rules, not database constraints.
 
-Example: Sara sings B1 in KK and holds two positions there.
+## Fixed Group policy
 
-```
-GroupMembers   (Sara, KK,  2023-08-20)
-GroupMembers   (Sara, KKB, 2023-08-20, voice = B1)
-PositionHolders(Sara, KK,  Notfiskal,      2025-09-01)
-PositionHolders(Sara, KK,  Konsertmästare, 2026-09-01)
-```
+`GROUP_POLICIES` in the universal organisation model is authoritative for new
+commands. The database policy functions in migration 0017 freeze the same policy
+for storage checks. A later policy change needs both a code change and an additive
+migration; Drizzle does not generate trigger changes.
 
-More examples:
+| Stored group_type | Scope | Lifetime | Direct Membership | Cardinality |
+| --- | --- | --- | --- | --- |
+| Choir | CSK | Continuing | Yes | Existing MK, DK, KK; managed by Choir commands |
+| Section | Choir | Continuing | Singer placement | Four per Choir; managed by Choir commands |
+| Board | CSK | Annual | No | One per year |
+| Gigmästeri | CSK | Annual | Helpers | One per year |
+| Sexmästeri | CSK | Annual | Helpers | One per year |
+| Konsertmästeri | CSK | Annual | Helpers | One per year |
+| Rekryteringskommitté | CSK | Annual | Helpers | One per year |
+| Turnékommitté | CSK | Annual | Helpers | One per year |
+| Valberedning | CSK | Annual | Yes | One per year |
+| Webmästeri | CSK | Annual | Yes | One per year |
+| Arkivarie | CSK | Annual | Yes | One per year |
+| Utantillkommitté | CSK | Annual | Yes | One per year |
+| Föräldramötet | CSK | Continuing | No | One continuing Group |
+| Roddgrupp | Choir | Fluid | Yes | At most one active per Choir |
+| Festgrupp | Choir | Fluid | Yes | At most one active per Choir |
+| Rephelg | Choir | Fluid | Yes | At most one active per Choir |
+| GigGroup | CSK | Fluid | Yes | Multiple |
+| Övrig | CSK | Fluid | Yes | Multiple; compatibility case |
 
-```
-GroupMembers   (Erik, KK,  2020-01-10)                   -- conductor, doesn't sing: choir row only
-PositionHolders(Erik, KK,  Conductor,    2020-01-10)
+`Arkivarie` retains its existing enum identifier for Arkivariet. Övrig confers no
+formal Positions; the inventory flags every unclassified Group for explicit review.
+Existing legacy Groups can still have scope outside the new policy until reconciled.
+Annual periods permit preparing next year's Groups. The intended operational rule
+that only one Turnékommitté operates at a time belongs to later lifecycle workflows;
+0017 stores annual identity without automatically activating or renewing anything.
 
-GroupMembers   (Olof, KK,  2022-08-25)
-GroupMembers   (Olof, KKB, 2022-08-25, voice = B2)
-PositionHolders(Olof, KKB, Stämförälder, 2025-09-01)     -- position on the section
+## New participation representation
 
-GroupMembers   (Nils, MK,   2024-08-22)
-GroupMembers   (Nils, MKB1, 2024-08-22, voice = B1)
-```
-
-Example, Sexmästeri:
-
-| User    | Membership | Position      |
-| ------- | ---------- | ------------- |
-| Anna    | yes        | Sexmästare    |
-| Bertil  | yes        | Sexmästarinna |
-| Cecilia | yes        | (medhjälpare: no position) |
-| David   | yes        | (medhjälpare: no position) |
-
-### Rules (enforced in the app)
-
-- **Choir groups are always CSK-wide** (`choirId = null`); only non-choir groups can belong to a choir.
-- **Members of a choir's groups are members of that choir**: joining a group with `choirId = X` requires a current membership in choir X; placing a singer in one of X's sections is how they join X, so only that creates it. This means a news post to a choir already reaches everyone in its sections and other groups. No propagation logic needed.
-- **Permissions follow the choir**: a position on a choir (e.g. Conductor) also gives rights in every group with that `choirId` (e.g. the KK conductor can publish to KKB).
-- **Recipients are deduplicated** (`SELECT DISTINCT userId`): a singer in both MK and KK gets a news post targeted at both only once.
-- **Sections**:
-	- exactly four `Section` groups per choir
-	- each section has at least one `SectionVoices` row
-	- a voice belongs to at most one section per choir (B1 can't be in both KKB and another KK section)
-	- these are app rules or triggers (`choirId` lives on `Groups`, not on `SectionVoices`)
-- **Singers are members of the choir + exactly one section** in it, with `voice` set. The DB checks the voice is one the section sings; "one section per choir per singer" is an app rule (or trigger).
-- **`voice` is only set on Section memberships**, never on choir or other group memberships.
-- **Multiple choirs per singer** is allowed: one section (and one voice) in each.
-- **One elected post per person**: in the Board, whose positions are elected posts, a member holds at most one current position. In other groups a member may hold several. App rule (`holdsElectedPosts`).
-- **Position holders must be current members** of the group they hold the position in. When a membership ends, end that person's positions in the group too. App rule or trigger.
-- **One holder per position per group at a time**, enforced by the partial unique index. A person may hold several positions in the same group. Members without a position (medhjälpare) are simply members.
-- **Stämförälder** is a position on the section: one per section.
-- **Choir-specific positions** (Conductor, Notfiskal, Konsertmästare) are positions on the choir group.
-- **Voice changes**:
-	- within a section (KKB: B2 → B1): end the membership row, start a new one with the new voice
-	- between sections (MKB2 → MKB1): end the old section membership, start a new one
-	- either way history is kept
-- **Board positions that lead another group** (e.g. the board's Sexmästare leads the Sexmästeri): the person holds the Sexmästare position in both Styret and the Sexmästeri (two `PositionHolders` rows, plus membership in both). The app should create/end both together when the board changes.
-- Groups are archived (`active = false`), never deleted, so history stays intact.
-
-### Belongs elsewhere
-
-- **News targeting** → a target is a group, a part, or both:
-	```
-	NewsTargets(_newsPostId_, groupId?, part?)
-		newsPostId -> NewsPosts.id
-		groupId    -> Groups.id
-		part       -> Part
-		CHECK (groupId IS NOT NULL OR part IS NOT NULL)
-	```
-	- `groupId = MKB1`         → members of that group
-	- `groupId = KK`           → members of KK (= everyone in KK's sections and groups)
-	- `part = B`               → all basses in CSK: members of every section whose `SectionVoices` include a B voice (MKB1, MKB2, KKB, ...)
-	- `groupId = KK, part = B` → basses in KK only
-	"All basses" is deliberately not a group; it's found via `SectionVoices` + the Voice → Part mapping.
-	The CSK konsertgrupp no longer links to the choir konsertgrupper. To reach "all concert groups", target several groups, or later add targeting by `type = Konsert`.
-- Gigs → events model: `Gigs(_id_, ..., assignedGroupId -> Groups.id)`. The Gigmästeri plans gigs; the gig group is assigned. Gigmästeri position holders get rights to create gigs/assign groups through their position, not through a group hierarchy.
-- Cleaning schedule → same pattern: `CleaningDuty(_week_, groupId -> Groups.id)`, assigned to a section (KKB, MKB1, DKS2, ...).
-
-## ER diagram (v2)
-
-```mermaid
-erDiagram
-    Users {
-        int id PK
-    }
-    Groups {
-        int id PK
-        string name "unique per choirId among active"
-        GroupType type "enum: Choir, Section, Board, ..."
-        int choirId FK "null = CSK-wide"
-        bool active
-    }
-    Choirs {
-        int groupId PK, FK "type = Choir"
-    }
-    SectionVoices {
-        int sectionId PK, FK "group with type = Section"
-        Voice voice PK "enum: S1..B2"
-    }
-    GroupMembers {
-        int userId PK, FK
-        int groupId PK, FK
-        date startDate PK
-        date endDate "null = current"
-        Voice voice FK "only on Section memberships"
-    }
-    Positions {
-        int id PK
-        string name "Notfiskal, Konsertmästare, ..."
-    }
-    GroupTypePositions {
-        GroupType type PK "enum"
-        int positionId PK, FK
-    }
-    PositionHolders {
-        int userId PK, FK
-        int groupId PK, FK
-        int positionId PK, FK
-        date startDate PK
-        date endDate "null = current; one holder per position per group"
-    }
-    VoiceCapabilities {
-        int userId PK, FK
-        Voice voice PK "enum, real voices only"
-    }
-
-    Groups ||--o| Choirs : "is a"
-    Choirs |o--o{ Groups : "owns"
-    Groups ||--o{ SectionVoices : "sings"
-    Users ||--o{ GroupMembers : "member"
-    Groups ||--o{ GroupMembers : "has"
-    SectionVoices |o--o{ GroupMembers : "voice of"
-    Users ||--o{ PositionHolders : "holds"
-    Groups ||--o{ PositionHolders : "has position"
-    Positions ||--o{ PositionHolders : "held as"
-    Positions ||--o{ GroupTypePositions : "allowed in"
-    Users ||--o{ VoiceCapabilities : "can sing"
+```text
+direct_membership (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  group_id uuid NOT NULL REFERENCES group(id) ON DELETE RESTRICT,
+  start_date date NOT NULL,
+  end_date date NULL,
+  voice voice_division NULL
+)
+position_appointment (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  position_code text NOT NULL,
+  context_group_id uuid NOT NULL REFERENCES group(id) ON DELETE RESTRICT,
+  organisation_year integer NULL,
+  start_date date NOT NULL,
+  end_date date NULL
+)
+appointment_grant (
+  appointment_id uuid NOT NULL REFERENCES position_appointment(id) ON DELETE CASCADE,
+  group_id uuid NOT NULL REFERENCES group(id) ON DELETE RESTRICT,
+  PRIMARY KEY (appointment_id, group_id)
+)
 ```
 
-## Revised scheme (v3)
+A direct Membership is independent participation: singing, an explicit addition, or
+helping. An appointment is one User's responsibility in one concrete context, with
+one tenure. A grant connects that appointment to a concrete Group. It has no copy of
+the User, Position, year or dates. The context does not itself imply Membership.
 
-> Self-contained spec. Supersedes v2. Target: Postgres (15+).
-> Every constraint is tagged with where it is enforced: **[DB]** index/FK/CHECK, **[trigger]**, or **[app]**.
+New periods use inclusive start and exclusive end. Ending after 30 June is stored
+as 1 July. Null end means unbounded, not necessarily current. A future start is not
+current early. Both participation tables require `end_date > start_date` when set.
 
-### Terminology
+Hand-written PostgreSQL `btree_gist` exclusions enforce overlapping ranges for:
 
-| Term                | Meaning                                                                                                                         | In the schema                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Voice family**    | S, A, T, B. A whole voice line in an undivided setting (B in SATB).                                                             | `VoiceFamily`                    |
-| **Voice division**  | S1 … B2. A voice line when a family splits (B1 in TTBB).                                                                        | `VoiceDivision`                  |
-| **Voice**           | A line someone sings, at either granularity: a family or a division. "B" and "B1" are both voices. Never a group of people.     | `Voice = VoiceFamily \| VoiceDivision` |
-| **Section**         | A social concept: the actual people in one choir who sing a given voice. Always a group. A section sings exactly **one** voice.  | Group with `type = Section`      |
-| **Choir**           | One of the choirs (MK, DK, KK). Always a group.                                                                                 | Group with `type = Choir`        |
-| **Membership**      | Being in a group, over a period of time.                                                                                        | `GroupMembers`                   |
-| **Position**        | A named organisational position in a group (Notfiskal, Konsertmästare, Sexmästare, Stämförälder). Swedish: *post*. Not a permission role. | `Positions`             |
-| **Position holder** | A member holding a position in a group, over its own period of time, independent of the membership.                            | `PositionHolders`                |
-| **News post**       | An item in the news feed. "Post" is reserved for this; never used for positions.                                                | `NewsPosts` (news model)         |
-| **Part** (*stämma* in a score) | A line in a specific arrangement. Repertoire concept, not modelled yet. Will be labelled with a `Voice`.             | future                           |
+- One appointment per `(context_group_id, position_code)` at any time.
+- One simultaneous Board Position per `(context_group_id, user_id)`. The predicate
+  contains the eight fixed Board Position codes below.
+- One direct Membership per `(group_id, user_id)` at any time.
 
-Domain facts:
-- Every choir has exactly **four sections**.
-- MK sections: T1, T2, B1, B2. DK sections: S1, S2, A1, A2. KK sections: S, A, T, B.
-- A singer has **one** voice per choir, which must be **contained in** their section's voice (in KKB: B1 or B2; in MKB1: only B1). A singer's voice is always a division, never a family.
-- Groups are either **CSK-wide** (`choirId = null`) or **belong to a choir**. No deeper hierarchy.
-- A person can hold **several positions in the same group**; each position has **one holder** per group at a time.
-- "Position" means an organisational position only. Standing order / formation, if ever modelled, is **Placement** / **Formation**.
+These checks include bounded, historical and future periods. Adjacent periods may
+share a boundary; vacancies require no placeholder rows. Independent Choir contexts
+can hold the same Position code simultaneously and grant the same committee.
 
-### Voice types (code)
+Policy triggers enforce:
 
-```ts
-type VoiceFamily   = 'S' | 'A' | 'T' | 'B'
-type VoiceDivision = 'S1' | 'S2' | 'A1' | 'A2' | 'T1' | 'T2' | 'B1' | 'B2'
-type Voice         = VoiceFamily | VoiceDivision
+- A recognised `position_code` and matching context Group type.
+- An annual appointment has a year, an exclusive end, and stays within that year;
+  an annual context must have the same year. Fluid appointments have null year.
+- Direct Membership is forbidden in Board and Föräldramötet. Annual direct
+  Membership requires the Group's explicit year and stays inside its bounds.
+- Voice is set exactly on Section direct Memberships and is contained by that
+  Section's Voice. Non-Section direct Memberships have null Voice.
+- A grant targets a model Group of an allowed type. A grant to the context type
+  targets that exact context Group. Annual grant targets match the appointment year.
 
-// 'B1' -> 'B', 'B' -> 'B'
-function familyOf(v: Voice): VoiceFamily
+Indexes additionally support direct Membership lookup by Group, appointment lookup
+by User, and grant lookup by Group. Foreign keys retain their referenced identities.
 
-// outer contains inner if they are equal, or outer is a family and inner is one of its divisions.
-// contains('B', 'B1') = true, contains('B', 'B') = true, contains('B1', 'B1') = true
-// contains('B1', 'B') = false, contains('B1', 'B2') = false, contains('T', 'B1') = false
-function contains(outer: Voice, inner: Voice): boolean
+## Fixed Position catalogue
+
+These are the 16 stable `position_code` values. Labels are not database identities.
+An annual context supplies its year; Choir annual appointments require an explicit
+year. Every annual end defaults to the following 1 July and may be shortened.
+
+| position_code | Position | Context | Prerequisite | Granted Groups | End policy |
+| --- | --- | --- | --- | --- | --- |
+| ordforande | Ordförande | Board | None | Context Board | Annual |
+| vice-ordforande | Vice Ordförande | Board | None | Context Board; year's Rekryteringskommitté | Annual |
+| kassor | Kassör | Board | None | Context Board | Annual |
+| sekreterare | Sekreterare | Board | None | Context Board; Föräldramötet | Annual |
+| pr-mastare | PR-mästare | Board | None | Context Board | Annual |
+| forsta-konsertmastare | 1:a Konsertmästare | Board | None | Context Board; year's Konsertmästeri | Annual |
+| csk-gigmastare | CSK Gigmästare | Board | None | Context Board; year's Gigmästeri | Annual |
+| sexmastare | Sexmästare | Board | None | Context Board; year's Sexmästeri | Annual |
+| sexmastarinna | Sexmästarinna | Sexmästeri | None | Context Sexmästeri | Annual |
+| ekonomiskt-ansvarig | Ekonomiskt Ansvarig | Turnékommitté | None | Context Turnékommitté | Annual |
+| dirigent | Dirigent | Choir | Context Membership | None | Fluid |
+| notfiskal | Notfiskal | Choir | Context Membership | None | Fluid |
+| choir-konsertmastare | Choir Konsertmästare | Choir | Context Membership | Year's Konsertmästeri | Annual |
+| choir-gigmastare | Choir Gigmästare | Choir | Context Membership | Year's Gigmästeri | Annual |
+| stamforalder | Stämförälder | Section | Context Membership | Föräldramötet | Fluid |
+| gigledare | Gigledare | GigGroup | Context Membership | None | Fluid |
+
+CSK Gigmästare and Choir Gigmästare are separate identities. The latter's Choir is
+its context, not a separate title per MK/DK/KK. Demo-only titles are absent.
+Appointments confer no application permissions.
+
+## Retained legacy representation
+
+These tables remain unchanged in migration 0017. Existing application callers keep
+using them until their coordinated migration; they do not automatically read or
+write the new participation tables.
+
+```text
+group_member (
+  user_id text REFERENCES user(id) ON DELETE CASCADE,
+  group_id uuid REFERENCES group(id) ON DELETE RESTRICT,
+  start_date date NOT NULL, end_date date NULL, voice voice_division NULL,
+  PRIMARY KEY (user_id, group_id, start_date)
+)
+position (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL)
+group_type_position (
+  type group_type NOT NULL,
+  position_id uuid REFERENCES position(id) ON DELETE RESTRICT,
+  PRIMARY KEY (type, position_id)
+)
+position_group (
+  position_id uuid REFERENCES position(id) ON DELETE RESTRICT,
+  group_id uuid REFERENCES group(id) ON DELETE RESTRICT,
+  PRIMARY KEY (position_id, group_id)
+)
+position_holder (
+  user_id text REFERENCES user(id) ON DELETE CASCADE,
+  group_id uuid REFERENCES group(id) ON DELETE RESTRICT,
+  position_id uuid REFERENCES position(id) ON DELETE RESTRICT,
+  start_date date NOT NULL, end_date date NULL,
+  PRIMARY KEY (user_id, group_id, position_id, start_date)
+)
 ```
 
-DB storage: one base enum plus two **domains** (named, restricted subtypes), so the database has the same three types as the code. Domains share the base enum's values and sort order, but Postgres finds no `=` for a domain over an enum (not even against a literal or the same domain), so comparisons cast to the base type: `WHERE voice::voice = 'B1'`, `ON nt.voiceFamily::voice = ...`. Keys, `ORDER BY` and `DISTINCT` work without a cast.
+All primary-key columns are non-null. Legacy Membership and holding periods allow
+`end_date >= start_date`, including zero-length history. Legacy current reads mean
+`end_date IS NULL`. Partial unique indexes enforce one current Membership per
+User/Group and one current holding per Group/Position. They do not enforce all
+bounded-period overlaps. Position names are unique and nonblank; Group names are
+nonblank. Additional indexes support legacy Group membership/holding and Position
+restriction reads. Legacy Voice triggers remain intact, including division checks.
 
-```sql
-CREATE TYPE   voice          AS ENUM ('S','A','T','B','S1','S2','A1','A2','T1','T2','B1','B2');
-CREATE DOMAIN voice_family   AS voice CHECK (VALUE IN ('S','A','T','B'));
-CREATE DOMAIN voice_division AS voice CHECK (VALUE IN ('S1','S2','A1','A2','T1','T2','B1','B2'));
-```
+Legacy commands require Membership, enforce catalogue applicability and optional
+Group restrictions, serialize User changes, and close local holdings on departure.
+Linked legacy commands create separate holding rows; no shared appointment identity
+can be recovered from those rows without reconciliation. These behaviours are
+preserved, not attributed to the new model.
 
-| DB type          | TS type         | Used by                                          |
-| ---------------- | --------------- | ------------------------------------------------ |
-| `voice`          | `Voice`         | `Sections.voice`                                 |
-| `voice_division` | `VoiceDivision` | `GroupMembers.voice`, `VoiceCapabilities.voice`  |
-| `voice_family`   | `VoiceFamily`   | `NewsTargets.voiceFamily` (news model)           |
+## Voice models
 
-The family of a voice is always derived (`familyOf`), never stored separately.
+`voice` is a PostgreSQL enum: S, A, T, B, S1, S2, A1, A2, T1, T2, B1, B2.
+`voice_family` and `voice_division` are domains over `voice`, restricted to families
+and divisions respectively. `voice_division` is restricted to the eight divisions. Section
+Voice can be a family or division. Singer Voice and Voice capability use divisions.
+`voice_capability(user_id text, voice voice_division)` has a composite primary key
+and references User with `ON DELETE CASCADE`; it is independent of Membership.
+The family and containment functions live in the universal Voice model.
 
-### Schema
+## Public boundary and remaining cutover work
 
-``` ER Scheme
-Users(_id_, ...)
+The server-only organisation boundary continues to accept a database client or an
+existing transaction. Commands use a transaction/savepoint and translate applicable
+new constraint failures into existing typed `OrgStructureViolation` results. Unknown
+infrastructure errors still throw. New errors reuse existing translations.
 
-Enum GroupType:
-	Choir
-	Section
-	Board
-	GigGroup
-	Gigmästeri
-	Sexmästeri
-	Roddgrupp
-	Festgrupp
-	Rephelg
-	Konsertmästeri
-	Rekryteringskommitté
-	Turnékommitté
-	Valberedning
-	Webmästeri
-	Föräldramötet
-	Arkivarie
-	Utantillkommitté
-	Övrig
+The additive foundation exposes `createOrganisationGroup`, `appointPosition`, and
+`listAppointmentMembersAt`. Appointment creation checks prerequisites for the entire
+tenure and resolves mandatory grants by fixed type and concrete year atomically.
+A missing target refuses the command without partial rows. The dated read deduplicates
+people and retains every appointment/context; it reads appointment grants only.
+The focused server-only `reconciliation` entrypoint also supports operational reads.
 
-// See "Voice types (code)": one base enum + two domains
-Enum   voice:          S, A, T, B, S1, S2, A1, A2, T1, T2, B1, B2
-Domain voice_family:   voice restricted to S, A, T, B
-Domain voice_division: voice restricted to S1 … B2
+`bun run ops organisation-inventory` uses a repeatable-read, read-only transaction.
+It reports supported Position candidates, explicit/name-derived year evidence,
+duplicate singleton Groups, scope problems, unclassified Groups, holding context and
+restriction evidence, possible linked pairs and partial periods, conflicting
+Memberships, and unclear direct-member intent. Names, matching Users and dates never
+approve a merge. Even paired candidates require review before conversion.
 
-Groups(_id_, name, type, choirId?, active)
-	type    -> GroupType
-	choirId -> Choirs.groupId    // the choir this group belongs to; null = CSK-wide
-	active  default true          // archive instead of delete
-
-	[DB] UNIQUE (name, choirId) NULLS NOT DISTINCT WHERE active
-
-// A choir IS a group (1:1 extension)
-Choirs(_groupId_, ...choir-specific fields)
-	groupId -> Groups.id
-
-// A section IS a group (1:1 extension). Sings exactly one voice.
-//   KKB: voice = B     MKB1: voice = B1     DKS2: voice = S2
-Sections(_groupId_, voice)
-	groupId -> Groups.id
-	voice   : voice               // family or division
-
-// Being in a group, over time. Taking or leaving a position does NOT touch this table.
-GroupMembers(_userId_, _groupId_, _startDate_, endDate?, voice?)
-	userId  -> Users.id
-	groupId -> Groups.id
-	voice   : voice               // only on Section memberships: the singer's one voice
-	endDate = null -> current member
-
-	[DB] UNIQUE (userId, groupId) WHERE endDate IS NULL
-
-// Named organisational positions (Swedish: poster)
-Positions(_id_, name)
-	// e.g. Ordförande, PR-mästare, Gigmästare, Sexmästare, Sexmästarinna,
-	//      Conductor, Notfiskal, Konsertmästare, Stämförälder
-
-// Optional: which positions are allowed in which kind of group
-GroupTypePositions(_type_, _positionId_)
-	type       -> GroupType
-	positionId -> Positions.id
-
-// Optional: the groups a position is limited to (Gigmästare KK: KK and the Gigmästeri).
-// Without rows, every group of an allowed type has the position.
-PositionGroups(_positionId_, _groupId_)
-	positionId -> Positions.id
-	groupId    -> Groups.id
-
-// Who holds which position, in which group, when
-PositionHolders(_userId_, _groupId_, _positionId_, _startDate_, endDate?)
-	userId     -> Users.id
-	groupId    -> Groups.id
-	positionId -> Positions.id
-	endDate = null -> current holder
-
-	[DB] UNIQUE (groupId, positionId) WHERE endDate IS NULL   // one holder per position per group
-
-// What a user CAN sing (e.g. finding a cover). Divisions only: "can sing B1", never "can sing B".
-// Being able to sing a family is expressed as capability for its divisions.
-VoiceCapabilities(_userId_, _voice_)
-	userId -> Users.id
-	voice  : voice_division       // enforced by the domain, no table-level CHECK
-```
-
-### Constraints and rules
-
-**Groups and extension tables**
-- [trigger/app] `Choirs` row exists iff `Groups.type = Choir`; `Sections` row exists iff `Groups.type = Section`.
-- [DB] CHECK: `type = Choir` → `choirId IS NULL`.
-- [DB] CHECK: `type = Section` → `choirId IS NOT NULL`.
-- [app] Groups are archived (`active = false`), never deleted.
-
-**Sections**
-- [app] Exactly four active `Section` groups per choir.
-- [trigger/app] Sections in the same choir must not overlap: no two active sections in one choir where `contains(a.voice, b.voice)` (rules out KKB = B together with another KK section = B1).
-
-**Membership**
-- [trigger/app] Joining a group with `choirId = X` requires a current membership in choir X.
-- [trigger] `GroupMembers.voice` is set **iff** the group is a Section.
-- [trigger] Voice containment: `contains(section.voice, member.voice)` must be true.
-- [trigger/app] At most one current Section membership per user per choir.
-- [app] A singer may be in multiple choirs: one section and one voice in each.
-- [app] Voice change = end the membership row, start a new one (history kept). Applies both within a section (KKB: B2 → B1) and between sections (MKB2 → MKB1).
-
-**Positions**
-- [trigger/app] A position holder must be a current member of the group.
-- [trigger/app] Ending a membership ends that user's current positions in that group.
-- [app] Optional: `positionId` must be allowed for the group's type via `GroupTypePositions`.
-- [app] When a position has `PositionGroups` rows, it is held only in those groups (each of an allowed type), so each choir's Gigmästare appears only in that choir and the Gigmästeri.
-- [app] Board positions that lead another group (e.g. Sexmästare in Styret also leads the Sexmästeri): two `PositionHolders` rows + membership in both, created/ended together.
-
-**Permissions and reach**
-- [app] A news post to a choir reaches every member of the choir, which (by the membership rule) includes everyone in its sections and groups. No propagation logic.
-- [app] A position on a choir (e.g. Conductor) grants rights in every group with that `choirId`.
-- [app] Recipient lists are deduplicated (`SELECT DISTINCT userId`).
-
-### Examples
-
-```
--- Groups
-Groups  (KK,   type = Choir,   choirId = null)
-Groups  (KKB,  type = Section, choirId = KK)      Sections(KKB,  voice = B)
-Groups  (MK,   type = Choir,   choirId = null)
-Groups  (MKB1, type = Section, choirId = MK)      Sections(MKB1, voice = B1)
-Groups  (Sexmästeri, type = Sexmästeri, choirId = null)
-
--- Lucas: sings B2 in KK, can also cover B1
-GroupMembers     (Lucas, KK,  2024-08-20)
-GroupMembers     (Lucas, KKB, 2024-08-20, voice = B2)     -- contains(B, B2) ✓
-VoiceCapabilities(Lucas, B1)
-VoiceCapabilities(Lucas, B2)
--- VoiceCapabilities(Lucas, B) would be rejected: capabilities are divisions only
-
--- Sara: sings B1 in KK, holds two positions in KK
-GroupMembers   (Sara, KK,  2023-08-20)
-GroupMembers   (Sara, KKB, 2023-08-20, voice = B1)
-PositionHolders(Sara, KK,  Notfiskal,      2025-09-01)
-PositionHolders(Sara, KK,  Konsertmästare, 2026-09-01)
-
--- Erik: conductor, doesn't sing
-GroupMembers   (Erik, KK, 2020-01-10)
-PositionHolders(Erik, KK, Conductor, 2020-01-10)
-
--- Olof: stämförälder for KKB
-GroupMembers   (Olof, KK,  2022-08-25)
-GroupMembers   (Olof, KKB, 2022-08-25, voice = B2)
-PositionHolders(Olof, KKB, Stämförälder, 2025-09-01)
-
--- Nils: sings B1 in MK
-GroupMembers   (Nils, MK,   2024-08-22)
-GroupMembers   (Nils, MKB1, 2024-08-22, voice = B1)     -- contains(B1, B1) ✓
--- voice = B2 here would be rejected: contains(B1, B2) = false
-
--- Sexmästeri: medhjälpare are members without a position
-GroupMembers   (Anna,    Sexmästeri, ...)   PositionHolders(Anna,   Sexmästeri, Sexmästare,    ...)
-GroupMembers   (Bertil,  Sexmästeri, ...)   PositionHolders(Bertil, Sexmästeri, Sexmästarinna, ...)
-GroupMembers   (Cecilia, Sexmästeri, ...)
-```
-
-Common queries:
-- Lucas's voice in KK → his KKB membership: `B2`.
-- Is Lucas a bass? → `familyOf(B2) = B` ✓.
-- Who in KK sings B2? → current KKB members with `voice = B2`.
-- All basses in CSK → current Section memberships where `familyOf(Sections.voice) = B`.
-- Who can cover B1? → `VoiceCapabilities` where `voice = B1`.
-- Who can cover the B part in an SATB piece? → `VoiceCapabilities` where `familyOf(voice) = B` (anyone who can sing B1 or B2).
-
-### Out of scope here (other models)
-
-- **News targeting**:
-	```
-	NewsTargets(_newsPostId_, groupId?, voiceFamily?)
-		newsPostId  -> NewsPosts.id
-		groupId     -> Groups.id
-		voiceFamily -> VoiceFamily
-		CHECK (groupId IS NOT NULL OR voiceFamily IS NOT NULL)
-	```
-	- `groupId = KKB` → members of KKB
-	- `groupId = KK` → members of KK
-	- `voiceFamily = B` → all basses in CSK (sections where `familyOf(voice) = B`)
-	- `groupId = KK, voiceFamily = B` → basses in KK
-	- "All basses" is deliberately not a group.
-	- "All concert groups" (no hierarchy): target several groups, or later add targeting by `type`.
-- **Gigs**: `Gigs(_id_, ..., assignedGroupId -> Groups.id)`. Gigmästeri plans; the gig group is assigned. Rights via positions.
-- **Cleaning**: `CleaningDuty(_week_, groupId -> Groups.id)`, assigned to a section.
-- **Repertoire**: parts of a piece labelled with a `Voice` (SATB parts = families, divisi parts = divisions). Not designed yet.
-
-### ER diagram (v3)
-
-```mermaid
-erDiagram
-    Users {
-        int id PK
-    }
-    Groups {
-        int id PK
-        string name "unique per choirId among active"
-        GroupType type "enum: Choir, Section, Board, ..."
-        int choirId FK "null = CSK-wide"
-        bool active
-    }
-    Choirs {
-        int groupId PK, FK "type = Choir"
-    }
-    Sections {
-        int groupId PK, FK "type = Section"
-        Voice voice "one voice: family (B) or division (B1)"
-    }
-    GroupMembers {
-        int userId PK, FK
-        int groupId PK, FK
-        date startDate PK
-        date endDate "null = current"
-        Voice voice "Section memberships only; contained in section voice"
-    }
-    Positions {
-        int id PK
-        string name "Notfiskal, Konsertmästare, ..."
-    }
-    GroupTypePositions {
-        GroupType type PK "enum"
-        int positionId PK, FK
-    }
-    PositionHolders {
-        int userId PK, FK
-        int groupId PK, FK
-        int positionId PK, FK
-        date startDate PK
-        date endDate "null = current; one holder per position per group"
-    }
-    VoiceCapabilities {
-        int userId PK, FK
-        VoiceDivision voice PK "divisions only: S1..B2"
-    }
-
-    Groups ||--o| Choirs : "is a"
-    Groups ||--o| Sections : "is a"
-    Choirs |o--o{ Groups : "owns"
-    Users ||--o{ GroupMembers : "member"
-    Groups ||--o{ GroupMembers : "has"
-    Users ||--o{ PositionHolders : "holds"
-    Groups ||--o{ PositionHolders : "has position"
-    Positions ||--o{ PositionHolders : "held as"
-    Positions ||--o{ GroupTypePositions : "allowed in"
-    Users ||--o{ VoiceCapabilities : "can sing"
-```
+Later tickets deliver direct-member workflows and placement protections, Helper
+replacement, prerequisite-shortening/departure protections, whole-appointment ending,
+handover and renewal, archival protections, effective direct-plus-grant reads and
+consumer migration, translated Admin flows, and explicit legacy reconciliation.
+Those are not database guarantees or live behaviours introduced by ticket 01.
+Only after that cutover does ticket 08 remove the legacy representation and marker.

@@ -22,6 +22,23 @@ export class RuleViolation extends Error {
  * A race between two commands ends here rather than in a raw constraint error.
  */
 const CONSTRAINT_VIOLATIONS: Record<string, OrgStructureViolation> = {
+  group_annual_identity_unique: "group-name-taken",
+  group_continuing_singleton_unique: "group-name-taken",
+  group_choir_team_unique: "group-name-taken",
+  group_organisation_policy_check: "position-not-allowed",
+  group_organisation_year_check: "period-conflict",
+  position_appointment_occupancy_excl: "position-taken",
+  position_appointment_board_excl: "already-holding-elected-post",
+  position_appointment_period_check: "period-conflict",
+  position_appointment_year_check: "period-conflict",
+  position_appointment_policy_check: "position-not-allowed",
+  position_appointment_annual_check: "period-conflict",
+  appointment_grant_policy_check: "position-not-allowed",
+  direct_membership_overlap_excl: "already-member",
+  direct_membership_period_check: "period-conflict",
+  direct_membership_annual_check: "period-conflict",
+  direct_membership_policy_check: "position-not-allowed",
+  direct_membership_voice_check: "voice-not-sung-in-section",
   group_name_choir_active_unique: "group-name-taken",
   group_member_current_unique: "already-member",
   group_member_user_id_group_id_start_date_pk: "period-conflict",

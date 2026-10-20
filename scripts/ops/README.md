@@ -113,3 +113,13 @@ passwords, profile edits and Post edits. A conflicting existing Position assignm
 demo transaction rather than displacing its holder. Direct scripts also enforce the local-only
 database guard. To return to the original demo after editing it, deliberately run
 `bun run ops reset`, then `bun run ops seed-demo`.
+
+## Organisation reconciliation inventory
+
+`bun run ops organisation-inventory` prints a JSON report without changing data. `--prod`
+uses the usual explicit target selection and production banner; the database transaction is
+`REPEATABLE READ, READ ONLY`. The report runs before any conversion. It includes supported
+Position candidates, explicit and name-derived year evidence, duplicate singleton Groups,
+incompatible scope, unclassified Groups, linked-holding candidates and partial periods,
+conflicting Memberships, and unresolved direct-member intent. Matching names, Users or dates
+never approve a merge. Even paired candidates require review in redesign ticket 07.
