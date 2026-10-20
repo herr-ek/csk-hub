@@ -6,8 +6,8 @@ import type { SubmitEvent } from "react"
 import { useRef, useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
-import { LocalizedInputField } from "@/core/i18n/validation-errors"
 import { ROUTES } from "@/core/navigation/site"
+import { InputField } from "@/shared/forms/fields"
 import { passwordPolicy } from "@/shared/policy"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
@@ -72,7 +72,7 @@ export function PasswordResetForm({
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
             return (
-              <LocalizedInputField
+              <InputField
                 label={t("email")}
                 name={field.name}
                 type="email"
@@ -91,7 +91,7 @@ export function PasswordResetForm({
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
             return (
-              <LocalizedInputField
+              <InputField
                 label={t("newPassword")}
                 name={field.name}
                 type="password"
@@ -112,7 +112,7 @@ export function PasswordResetForm({
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
 
             return (
-              <LocalizedInputField
+              <InputField
                 label={t("confirmNewPassword")}
                 name={field.name}
                 type="password"

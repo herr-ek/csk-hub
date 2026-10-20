@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import type z from "zod"
 import { useTranslations } from "@/core/i18n/translations"
-import { LocalizedInputField } from "@/core/i18n/validation-errors"
 import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Checkbox } from "@/shared/ui/base/checkbox"
@@ -86,7 +86,7 @@ export function LoginForm() {
           {(field) => {
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
             return (
-              <LocalizedInputField
+              <InputField
                 label={t("identifier")}
                 name={field.name}
                 value={field.state.value}
@@ -104,7 +104,7 @@ export function LoginForm() {
           {(field) => {
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
             return (
-              <LocalizedInputField
+              <InputField
                 label={t("password")}
                 name={field.name}
                 type="password"

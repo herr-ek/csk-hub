@@ -4,6 +4,7 @@ import { type ComponentProps, type ReactNode, useId } from "react"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
+import { useValidationFormatter, type ValidationIssue } from "./validation-messages"
 
 /** The label, help text and errors around a control; the control's own props go to the control. */
 type FieldChrome = {
@@ -13,7 +14,7 @@ type FieldChrome = {
   invalid?: boolean
   /** An error message, or a validator's error list, shown below the control. */
   error?: ReactNode
-  errors?: ComponentProps<typeof FieldError>["errors"]
+  errors?: Array<ValidationIssue | undefined>
 }
 
 /**
@@ -26,15 +27,27 @@ function defaultKey(defaultValue: unknown) {
 }
 
 function FieldMessages({ description, error, errors }: Omit<FieldChrome, "label" | "invalid">) {
+  const format = useValidationFormatter()
+  const localizedErrors = error
+    ? undefined
+    : errors?.map((issue) => {
+        if (!issue?.message) return undefined
+        return { message: format(issue) }
+      })
+
   return (
     <>
       {description ? <FieldDescription>{description}</FieldDescription> : null}
-      <FieldError errors={errors}>{error}</FieldError>
+      <FieldError errors={localizedErrors}>{error}</FieldError>
     </>
   )
 }
 
-/** A labelled `Input`. Every `Input` prop passes through, so it covers text, email, password, date and file. */
+/**
+ * A labelled `Input`. Every `Input` prop passes through, covering text, email, password, date and file.
+ * Validator `errors` are formatted independently of the label and require a formatter supplied through ValidationMessagesContext.
+ * Use `error` for already-formatted content, which takes precedence over validator issues.
+ */
 export function InputField({
   label,
   description,
@@ -55,7 +68,11 @@ export function InputField({
   )
 }
 
-/** A labelled, uncontrolled `Select` that submits `name` with its form. It starts on the first option. */
+/**
+ * A labelled, uncontrolled `Select` that submits `name` with its form. It starts on the first option.
+ * Validator `errors` are formatted independently of the label and require a formatter supplied through ValidationMessagesContext.
+ * Use `error` for already-formatted content, which takes precedence over validator issues.
+ */
 export function SelectField({
   label,
   description,

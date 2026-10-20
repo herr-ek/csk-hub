@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 import "@/app/globals.css"
 import { app } from "@/core/config/app"
 import { NextIntlClientProvider } from "@/core/i18n/client"
+import { LocalizedFormProvider } from "@/core/i18n/LocalizedFormProvider"
 import { isLocale } from "@/core/i18n/locales"
 import { getMessages } from "@/core/i18n/messages"
 import { routing } from "@/core/i18n/routing"
@@ -96,10 +97,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="h-full flex flex-col">
         <NextIntlClientProvider locale={locale} messages={messages} formats={{}} timeZone={timeZone}>
           <UiLabelsProvider labels={messages.Ui}>
-            <ThemeProvider>
-              {children}
-              <Toaster />
-            </ThemeProvider>
+            <LocalizedFormProvider>
+              <ThemeProvider>
+                {children}
+                <Toaster />
+              </ThemeProvider>
+            </LocalizedFormProvider>
           </UiLabelsProvider>
         </NextIntlClientProvider>
       </body>
