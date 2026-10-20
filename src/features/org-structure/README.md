@@ -63,7 +63,7 @@ races, never surface as thrown errors.
   Section's Voice does not contain), `changeVoice`.
 - Positions: `startPositionHolding`, `endPositionHolding`, `replacePositionHolder` (a handover
   on the new holder's start date), and `startLinkedPosition` /
-  `endLinkedPosition` for one office held in several Groups, such as the Board's Sexmästare
+  `endLinkedPosition` for one Position held in several Groups, such as the Board's Sexmästare
   who leads the Sexmästeri.
 - Reads: `listCurrentGroupMembers`, `listCurrentGroupsOfUser`, `getCurrentPositionHolder`,
   `listChoirMembersByVoiceFamily`, `listCurrentPositionsOfUser`, and
@@ -76,12 +76,13 @@ production. `bun run ops seed-groups` adds local example data on top. Both live 
 "Current" means no end date. Dates are calendar dates, `YYYY-MM-DD`; a period may end on the
 day the next one starts.
 
-Position writes share advisory locks in this order: the Position catalogue, office slots ordered
-by Group ID, then User IDs in sorted order, before locking or updating Position holder rows.
+Position writes share advisory locks in this order: the Position catalogue, Position-in-Group
+slots ordered by Group ID, then User IDs in sorted order, before locking or updating Position
+holder rows.
 Assignments and catalogue changes use the same catalogue lock, so an allowance cannot be revoked
 between validation and insertion. Membership-ending commands take the User lock before ending that
-User's holder rows, and do not acquire catalogue or office locks; they therefore cannot form a
-reverse wait cycle with a handover.
+User's holder rows, and do not acquire catalogue or Position-in-Group locks; they therefore cannot
+form a reverse wait cycle with a handover.
 
 ## Admin pages
 
