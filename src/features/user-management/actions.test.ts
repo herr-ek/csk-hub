@@ -18,7 +18,7 @@ const select = mock(() => ({ from }))
 mock.module("@/core/auth/auth", () => ({
   auth: { api: { banUser, removeUser, setRole, signInMagicLink, impersonateUser: impersonateUserApi } }
 }))
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
+mock.module("@/core/authz", () => ({ requirePermission: requireAdmin }))
 mock.module("@/core/db", () => ({ db: { select } }))
 mock.module("next/headers", () => ({ headers: requestHeaders }))
 mock.module("next/cache", () => ({ revalidatePath }))

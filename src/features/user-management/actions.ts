@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { z } from "zod"
 import { auth } from "@/core/auth/auth"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { account, user } from "@/core/db/schema/auth"
 import { logger } from "@/core/logging"
@@ -71,7 +71,7 @@ async function fail(action: string, error: unknown): Promise<UserCommandState> {
 export async function activateUser(_state: UserCommandState, formData: FormData): Promise<UserCommandState> {
   const input = userIdSchema.safeParse({ userId: formData.get("userId") })
   if (!input.success) return invalidInput()
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   const user = await getUser(input.data.userId)
   if (!user) return { status: "error", error: "That user could not be found." }
   if (!user.banned) return { status: "error", error: "That user is already active." }
@@ -87,7 +87,7 @@ export async function activateUser(_state: UserCommandState, formData: FormData)
 export async function deactivateUser(_state: UserCommandState, formData: FormData): Promise<UserCommandState> {
   const input = userIdSchema.safeParse({ userId: formData.get("userId") })
   if (!input.success) return invalidInput()
-  const actor = await requireAdmin()
+  const actor = await requirePermission({ action: "user.administer" })
   const user = await getUser(input.data.userId)
   if (!user) return { status: "error", error: "That user could not be found." }
   if (user.id === actor.userId) return { status: "error", error: "You cannot deactivate your own account." }
@@ -112,7 +112,7 @@ export async function eraseUser(_state: UserCommandState, formData: FormData): P
     confirmation: formData.get("confirmation") ?? undefined
   })
   if (!input.success) return invalidInput()
-  const actor = await requireAdmin()
+  const actor = await requirePermission({ action: "user.administer" })
   const user = await getUser(input.data.userId)
   if (!user) return { status: "error", error: "That user could not be found." }
   if (user.id === actor.userId) return { status: "error", error: "You cannot erase your own account." }
@@ -132,7 +132,7 @@ export async function eraseUser(_state: UserCommandState, formData: FormData): P
 export async function resendInvitation(_state: UserCommandState, formData: FormData): Promise<UserCommandState> {
   const input = userIdSchema.safeParse({ userId: formData.get("userId") })
   if (!input.success) return invalidInput()
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   const user = await getUser(input.data.userId)
   if (!user) return { status: "error", error: "That user could not be found." }
   if (user.hasPassword) return { status: "error", error: "That user has already completed account activation." }
@@ -156,7 +156,7 @@ export async function resendInvitation(_state: UserCommandState, formData: FormD
 export async function changeUserRole(_state: UserCommandState, formData: FormData): Promise<UserCommandState> {
   const input = changeRolesSchema.safeParse({ userId: formData.get("userId"), roles: formData.getAll("roles") })
   if (!input.success) return invalidInput()
-  const actor = await requireAdmin()
+  const actor = await requirePermission({ action: "user.administer" })
   const user = await getUser(input.data.userId)
   if (!user) return { status: "error", error: "That user could not be found." }
   if (user.id === actor.userId) return { status: "error", error: "You cannot change your own role." }
@@ -179,7 +179,7 @@ export async function impersonateUser(
 ): Promise<{ status: "success" } | { status: "error"; error: string }> {
   const input = userIdSchema.safeParse({ userId })
   if (!input.success) return { status: "error", error: "That user could not be impersonated." }
-  const actor = await requireAdmin()
+  const actor = await requirePermission({ action: "user.administer" })
   const user = await getUser(input.data.userId)
   if (!user || user.banned) return { status: "error", error: "Only active users can be impersonated." }
   if (hasAdminRole(user.role)) return { status: "error", error: "Admins cannot be impersonated." }

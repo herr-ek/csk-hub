@@ -1,17 +1,16 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import * as nextCache from "next/cache"
-import * as session from "@/core/auth/session.server"
+import * as session from "@/core/authz"
 import { db } from "@/core/db"
 import { logger } from "@/core/logging"
 import { saveProfileAction } from "./actions"
 import * as service from "./service"
 
-const actorSession = {
-  user: { id: "member-1" },
-  session: { impersonatedBy: null }
-} as NonNullable<Awaited<ReturnType<typeof session.getRequestSession>>>
+const actorSession = { userId: "member-1", isAdmin: false, impersonatedBy: null } as Awaited<
+  ReturnType<typeof session.requirePermission>
+>
 
-const sessionRead = spyOn(session, "getRequestSession")
+const sessionRead = spyOn(session, "requirePermission")
 const save = spyOn(service, "saveOwnVoiceCapabilities")
 const revalidate = spyOn(nextCache, "revalidatePath")
 const logError = spyOn(logger, "error")

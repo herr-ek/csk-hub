@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, eq, sql } from "drizzle-orm"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
+import { requireMessagingUserId } from "@/core/authz"
 import { db } from "@/core/db"
 import { conversation, conversationReadState, directConversation } from "@/core/db/schema/messaging"
 import { validateMessageBody } from "../model/message-body"
@@ -13,7 +13,7 @@ type StartDirectConversationInput = { recipientId: string; text: unknown; idempo
 
 /** Creates a direct conversation when needed, then appends its first message. */
 export async function startDirectConversation(input: StartDirectConversationInput) {
-  const userId = await requireAuthenticatedUser()
+  const userId = await requireMessagingUserId()
   const body = validateMessageBody(input.text)
 
   if (!body.success) throw new MessagingAccessError(body.error)
@@ -22,6 +22,7 @@ export async function startDirectConversation(input: StartDirectConversationInpu
   if (userId === input.recipientId) throw new MessagingAccessError("self-recipient")
 
   return db.transaction(async (tx) => {
+    await requireMessagingUserId(tx)
     const recipientId = await requireActiveDirectRecipient(tx, input.recipientId)
 
     const [firstMemberId, secondMemberId] = [userId, recipientId].sort()
