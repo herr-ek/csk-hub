@@ -15,8 +15,8 @@ import {
 import { addHolding, closeHolding } from "./positions"
 
 /**
- * One Position held across several groups as a single office, such as the Board's Sexmästare
- * who also leads the Sexmästeri: one holding per group, plus Membership in each.
+ * One Position held across several Groups as a linked assignment, such as the Board's Sexmästare
+ * who also leads the Sexmästeri: one holding per Group, plus Membership in each.
  */
 type LinkedPositionInput = { userId: string; positionId: string; groupIds: string[] }
 

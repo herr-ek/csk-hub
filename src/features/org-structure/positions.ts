@@ -83,7 +83,7 @@ export function replacePositionHolder(database: OrgStructureDatabase, input: Hol
   })
 }
 
-/** Starts a holding for an office and user already locked by the caller. */
+/** Starts a holding for a Position in a Group and a User already locked by the caller. */
 export async function addHolding(tx: OrgStructureTransaction, input: HoldingInput, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, input.groupId)
   const [found] = await tx.select({ id: position.id }).from(position).where(eq(position.id, input.positionId))
