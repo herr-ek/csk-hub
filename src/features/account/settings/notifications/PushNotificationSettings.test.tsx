@@ -1,0 +1,180 @@
+import { afterEach, beforeEach, expect, mock, test } from "bun:test"
+import { registerDom } from "@test/dom"
+import { act } from "react"
+import { createRoot, type Root } from "react-dom/client"
+
+registerDom()
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+
+const getBinding = mock(async (): Promise<"bound" | "unbound" | "unsupported"> => "unbound")
+const unsubscribe = mock(async () => true)
+const browserData = {
+  endpoint: "https://fcm.googleapis.com/send/test",
+  keys: { p256dh: "test-key", auth: "test-auth" }
+}
+const subscription = { endpoint: browserData.endpoint, unsubscribe, toJSON: () => browserData }
+const subscribe = mock(async () => ({ success: true }))
+const getSubscription = mock(async (): Promise<typeof subscription | null> => subscription)
+const browserSubscribe = mock(async () => subscription)
+const registration = { pushManager: { getSubscription, subscribe: browserSubscribe } }
+const register = mock(async () => registration)
+const getRegistration = mock(async (): Promise<typeof registration | undefined> => registration)
+const originalServiceWorker = Object.getOwnPropertyDescriptor(navigator, "serviceWorker")
+const originalPushManager = Object.getOwnPropertyDescriptor(window, "PushManager")
+const originalNotification = Object.getOwnPropertyDescriptor(window, "Notification")
+const originalVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
+const translate = (key: string) => key
+mock.module("@/core/i18n/translations", () => ({ useTranslations: () => translate }))
+mock.module("./push-notification-actions", () => ({
+  getPushSubscriptionBinding: getBinding,
+  subscribeUserToPush: subscribe,
+  unsubscribeUserFromPush: mock(),
+  sendPushNotificationTest: mock()
+}))
+const { PushNotificationSettings } = await import("./push-notification-settings")
+let root: Root
+let container: HTMLDivElement
+
+beforeEach(() => {
+  getBinding.mockReset().mockResolvedValue("unbound")
+  unsubscribe.mockReset().mockResolvedValue(true)
+  subscribe.mockReset().mockResolvedValue({ success: true })
+  register.mockReset().mockResolvedValue(registration)
+  getRegistration.mockReset().mockResolvedValue(registration)
+  getSubscription.mockReset().mockResolvedValue(subscription)
+  browserSubscribe.mockReset().mockResolvedValue(subscription)
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = "AQAB"
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: { register, getRegistration, ready: Promise.resolve(registration) }
+  })
+  Object.defineProperty(window, "PushManager", { configurable: true, value: class {} })
+  Object.defineProperty(window, "Notification", { configurable: true, value: { permission: "granted" } })
+  container = document.createElement("div")
+  document.body.append(container)
+  root = createRoot(container)
+})
+
+afterEach(async () => {
+  await act(async () => root.unmount())
+  container.remove()
+  if (originalVapidKey === undefined) delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  else process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = originalVapidKey
+  for (const [target, name, descriptor] of [
+    [navigator, "serviceWorker", originalServiceWorker],
+    [window, "PushManager", originalPushManager],
+    [window, "Notification", originalNotification]
+  ] as const) {
+    if (descriptor) Object.defineProperty(target, name, descriptor)
+    else Reflect.deleteProperty(target, name)
+  }
+})
+
+async function renderSettings() {
+  await act(async () => root.render(<PushNotificationSettings />))
+}
+
+async function clickButton(label: string) {
+  const button = [...container.querySelectorAll("button")].find((element) => element.textContent === label)
+  expect(button).toBeDefined()
+  await act(async () => button?.click())
+}
+
+test("unsupported endpoints offer browser removal without reconnect", async () => {
+  getBinding.mockResolvedValue("unsupported")
+  await renderSettings()
+  expect(container.textContent).toContain("unsupportedSubscription")
+  expect(container.textContent).not.toContain("reconnect")
+  await clickButton("removeFromBrowser")
+  expect(unsubscribe).toHaveBeenCalledTimes(1)
+  expect(container.textContent).toContain("disabled")
+})
+
+test("a failed lookup stays unknown and offers retry and explicit browser removal", async () => {
+  getBinding.mockRejectedValue(new Error("Network unavailable"))
+  await renderSettings()
+  expect(container.textContent).toContain("bindingUnknown")
+  expect(container.textContent).not.toContain("unbound")
+  getBinding.mockResolvedValue("bound")
+  await clickButton("retry")
+  expect(container.textContent).toContain("enabled")
+  expect(container.textContent).not.toContain("deviceEnableFailed")
+})
+
+test("browser removal remains available when binding lookup is unavailable", async () => {
+  getBinding.mockRejectedValue(new Error("Network unavailable"))
+  await renderSettings()
+  await clickButton("removeFromBrowser")
+  expect(unsubscribe).toHaveBeenCalledTimes(1)
+  expect(container.textContent).toContain("disabled")
+})
+
+test("an unbound subscription offers reconnect but never reports enabled", async () => {
+  await renderSettings()
+  expect(container.textContent).toContain("reconnect")
+  expect(container.textContent).not.toContain("enabled")
+})
+
+test("focus refresh rechecks ownership without registering the service worker again", async () => {
+  getRegistration.mockResolvedValueOnce(undefined)
+  await renderSettings()
+  expect(register).toHaveBeenCalledTimes(1)
+  getBinding.mockResolvedValue("bound")
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  expect(getBinding).toHaveBeenCalledTimes(2)
+  expect(getRegistration).toHaveBeenCalledTimes(2)
+  expect(register).toHaveBeenCalledTimes(1)
+  expect(container.textContent).toContain("enabled")
+})
+
+test("an existing browser subscription is only rebound after explicit consent", async () => {
+  await renderSettings()
+  expect(subscribe).not.toHaveBeenCalled()
+  await clickButton("reconnect")
+  expect(subscribe).toHaveBeenCalledWith(browserData)
+  expect(container.textContent).toContain("enabled")
+})
+
+test("a failed server write remains repairable after refreshing browser state", async () => {
+  subscribe.mockRejectedValueOnce(new Error("Storage unavailable"))
+  await renderSettings()
+  await clickButton("reconnect")
+  expect(container.textContent).toContain("subscribeFailed")
+  expect(container.textContent).not.toContain("enabled")
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  await clickButton("reconnect")
+  expect(container.textContent).toContain("enabled")
+  expect(subscribe).toHaveBeenCalledTimes(2)
+})
+
+test("a focus lookup during enable cannot overwrite the successful subscription", async () => {
+  getSubscription.mockResolvedValueOnce(null)
+  const enabling = Promise.withResolvers<typeof subscription>()
+  browserSubscribe.mockReturnValueOnce(enabling.promise)
+  await renderSettings()
+  await clickButton("enable")
+
+  const staleLookup = Promise.withResolvers<typeof subscription | null>()
+  getSubscription.mockReturnValueOnce(staleLookup.promise)
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  await act(async () => enabling.resolve(subscription))
+  await act(async () => staleLookup.resolve(null))
+
+  expect([...container.querySelectorAll("button")].map((button) => button.textContent)).toContain("disable")
+  expect(container.textContent).not.toContain("disabled")
+})
+
+test("an older focus lookup cannot replace a newer confirmed binding", async () => {
+  await renderSettings()
+  const staleLookup = Promise.withResolvers<typeof subscription | null>()
+  getSubscription.mockReturnValueOnce(staleLookup.promise)
+  await act(async () => window.dispatchEvent(new Event("focus")))
+
+  getBinding.mockResolvedValue("bound")
+  await act(async () => window.dispatchEvent(new Event("focus")))
+  await act(async () => staleLookup.resolve(null))
+
+  expect([...container.querySelectorAll("button")].map((button) => button.textContent)).toContain("disable")
+  expect(container.textContent).not.toContain("disabled")
+})
