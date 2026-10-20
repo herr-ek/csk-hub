@@ -14,6 +14,7 @@ import { contains, type Voice } from "@/features/voice/model"
 import { requireChoir, requireGroup } from "./lookup"
 import type { GroupType } from "./model"
 import {
+  lockPositionCatalogue,
   type OrgStructureDatabase,
   type OrgStructureTransaction,
   RuleViolation,
@@ -138,6 +139,7 @@ export function createPosition(database: OrgStructureDatabase, input: CreatePosi
 /** Allows an existing Position in further GroupTypes. */
 export function allowPositionInGroupTypes(database: OrgStructureDatabase, positionId: string, groupTypes: GroupType[]) {
   return runOrgStructureCommand(database, async (tx) => {
+    await lockPositionCatalogue(tx, positionId)
     const [row] = await tx.select({ id: position.id }).from(position).where(eq(position.id, positionId))
     if (!row) throw new RuleViolation("position-not-found")
     await allowPosition(tx, positionId, groupTypes)
@@ -153,7 +155,10 @@ async function allowPosition(tx: OrgStructureTransaction, positionId: string, gr
 }
 
 export function renamePosition(database: OrgStructureDatabase, positionId: string, name: string) {
-  return runOrgStructureCommand(database, (tx) => applyPositionName(tx, positionId, name))
+  return runOrgStructureCommand(database, async (tx) => {
+    await lockPositionCatalogue(tx, positionId)
+    await applyPositionName(tx, positionId, name)
+  })
 }
 
 /**
@@ -161,7 +166,10 @@ export function renamePosition(database: OrgStructureDatabase, positionId: strin
  * currently holds the Position in a group of that type.
  */
 export function setPositionGroupTypes(database: OrgStructureDatabase, positionId: string, groupTypes: GroupType[]) {
-  return runOrgStructureCommand(database, (tx) => applyPositionGroupTypes(tx, positionId, groupTypes))
+  return runOrgStructureCommand(database, async (tx) => {
+    await lockPositionCatalogue(tx, positionId)
+    await applyPositionGroupTypes(tx, positionId, groupTypes)
+  })
 }
 
 /**
@@ -170,7 +178,10 @@ export function setPositionGroupTypes(database: OrgStructureDatabase, positionId
  * holds the Position there.
  */
 export function setPositionGroups(database: OrgStructureDatabase, positionId: string, groupIds: string[]) {
-  return runOrgStructureCommand(database, (tx) => applyPositionGroups(tx, positionId, groupIds))
+  return runOrgStructureCommand(database, async (tx) => {
+    await lockPositionCatalogue(tx, positionId)
+    await applyPositionGroups(tx, positionId, groupIds)
+  })
 }
 
 /** Renames a Position and replaces its GroupTypes and its limit to groups as one change, or none. */
@@ -179,6 +190,7 @@ export function updatePosition(
   input: { positionId: string; name: string; groupTypes: GroupType[]; groupIds?: string[] }
 ) {
   return runOrgStructureCommand(database, async (tx) => {
+    await lockPositionCatalogue(tx, input.positionId)
     await applyPositionName(tx, input.positionId, input.name)
     await applyPositionGroupTypes(tx, input.positionId, input.groupTypes)
     await applyPositionGroups(tx, input.positionId, input.groupIds ?? [])

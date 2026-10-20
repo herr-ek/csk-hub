@@ -67,6 +67,16 @@ export async function lockUser(tx: OrgStructureTransaction, userId: string) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:user:${userId}`}))`)
 }
 
+/** Serializes changes to a Position's catalogue rules with holding assignments. */
+export async function lockPositionCatalogue(tx: OrgStructureTransaction, positionId: string) {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:position-catalogue:${positionId}`}))`)
+}
+
+/** Serializes holding checks and inserts for one Position in one Group. */
+export async function lockPositionSlot(tx: OrgStructureTransaction, groupId: string, positionId: string) {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:position:${groupId}:${positionId}`}))`)
+}
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 export function requireDate(value: IsoDate): IsoDate {
