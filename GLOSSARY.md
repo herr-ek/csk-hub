@@ -104,25 +104,72 @@ in, and their Voice is a Voice division contained by that Section's Voice: B1 or
 _Avoid_: Voice, part, stämma
 
 **Membership**:
-Being in a Group for a period of time, from a start date until an end date; without an end date
-it is current. Membership history is kept, and membership in a Group belonging to a Choir
-implies membership in that Choir.
+Being part of a Group, either through a Position appointment or independently through a
+manual addition, as a singer or Helper. Choir and Section Memberships are not bound to an
+Organisational year; membership in a Group belonging to a Choir implies membership in that Choir.
 _Avoid_: Enrolment, role
 
+**Helper**:
+A person explicitly added to a Group without a Position in it; taking a Position replaces
+their participation as a Helper. The Board has no Helpers, while Choir and Section singers
+retain their singing Membership when they take or leave a Position.
+_Avoid_: Position holder, singer
+
+**Organisational year**:
+The period from 1 July through 30 June, labelled by its two calendar years: 26/27 means
+1 July 2026 through 30 June 2027. Someone joining an annual Group partway through the year
+still belongs to that year's Group.
+_Avoid_: Calendar year, season
+
+**Annual group**:
+A Group for one Organisational year, such as Styret 26/27, that year's Sexmästeri, or that
+year's Turnékommitté; the next year's Group is a different Group of the same type.
+Arkivariet and Webmästeriet also renew annually, while roddgrupper, festgrupper,
+rephelgsgrupper, and gig groups have no yearly renewal.
+_Avoid_: Continuing group with yearly editions
+
+**Föräldramötet**:
+The continuing Group consisting of the current Stämföräldrar and the current Board's
+Sekreterare. It has no yearly renewal of its own; its membership follows those appointments.
+_Avoid_: Annual group
+
+**CSK-wide**:
+For CSK as a whole rather than internal to one Choir; members from any Choir can participate.
+A CSK-wide committee can have its own formal Positions, as each Turnékommitté has an
+Ekonomiskt Ansvarig.
+_Avoid_: Choir-scoped, all Choirs separately
+
+**Choir-scoped**:
+Specific to one Choir, with the same Group or Position recurring in each Choir.
+_Avoid_: CSK-wide
+
+**Section-scoped**:
+Specific to one Section, as its Stämförälder Position.
+_Avoid_: Choir-scoped, CSK-wide
+
 **Position**:
-A named organisational position in a Group (Swedish: *post*), such as Ordförande, Dirigent,
-Notfiskal, Konsertmästare, Stämförälder, or Sexmästare. A Position is allowed in Group types, and
-may be limited to some Groups of them, as Gigmästare KK to KK and the Gigmästeri. A member may
-hold several Positions in a Group, except where Positions are elected posts, as on the Board:
-there each member holds one. A Position is distinct from a permission role; use Post only for a
-news announcement.
+A formal organisational responsibility (Swedish: *post*), such as Ordförande, Dirigent,
+Konsertmästare, Stämförälder, or a Turnékommitté's Ekonomiskt Ansvarig, with at most one
+holder at a time in its particular context. A Position can be vacant and is distinct from a
+permission role; use Post only for a news announcement.
 _Avoid_: Post, role, title, Admin
 
+**Position appointment**:
+One person's tenure in a Position, bringing them into every Group that Position entails,
+as one appointment as Sexmästare brings its holder into both Styret and Sexmästeriet.
+A Choir- or Section-scoped appointment requires existing Membership there; renewal beyond
+an appointment's end is explicit.
+_Avoid_: Separate appointment per Group
+
 **Position holder**:
-A member holding a Position in a Group over a period of their own, independent of their
-Membership. Each Position has one holder per Group at a time, while one person may hold
-several. Only a current member can hold a Position, and leaving the Group ends it.
+A person with a Position appointment; replacing them transfers the places in Groups that
+come through that appointment to their successor.
 _Avoid_: Officer, role owner
+
+**Gigledare**:
+A member of a gig group responsible for leading it, through a Position appointment.
+Like a Stämförälder, taking or leaving the Position preserves their existing Membership.
+_Avoid_: Gigmästare
 
 ## Messaging
 
