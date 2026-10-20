@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { canCurrentUser } from "@/core/auth/permissions.server"
+import { can } from "@/core/authz"
 import { getTranslations } from "@/core/i18n/server"
 import { newsPostEditPath } from "@/core/navigation/navigation-utils"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
@@ -16,10 +16,7 @@ import { getPublishedPost } from "./service"
 
 /** Changing a published Post, offered only to whoever may make the change. */
 async function PostControls({ postId }: { postId: string }) {
-  const [canChange, t] = await Promise.all([
-    canCurrentUser({ resource: "post", action: "update" }),
-    getTranslations("Posts")
-  ])
+  const [canChange, t] = await Promise.all([can({ action: "post.update", postId }), getTranslations("Posts")])
   if (!canChange) return null
 
   return (

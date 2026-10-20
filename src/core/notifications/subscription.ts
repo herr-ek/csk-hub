@@ -10,7 +10,11 @@ import type { NotificationSubscription } from "./types"
  * Stores a User's browser subscription by endpoint, reactivating and refreshing
  * lifecycle metadata when that endpoint already exists.
  */
-export async function subscribe(userId: string, subscription: NotificationSubscription) {
+export async function subscribe(
+  userId: string,
+  subscription: NotificationSubscription,
+  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+) {
   const now = new Date()
   const values = {
     userId,
@@ -28,15 +32,19 @@ export async function subscribe(userId: string, subscription: NotificationSubscr
     updatedAt: now
   }
 
-  await db
+  await database
     .insert(pushSubscription)
     .values({ id: crypto.randomUUID(), ...values })
     .onConflictDoUpdate({ target: pushSubscription.endpoint, set: values })
 }
 
 /** Removes a browser subscription only when it belongs to the specified User. */
-export async function unsubscribe(userId: string, endpoint: string) {
-  await db
+export async function unsubscribe(
+  userId: string,
+  endpoint: string,
+  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+) {
+  await database
     .delete(pushSubscription)
     .where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.endpoint, endpoint)))
 }

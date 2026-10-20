@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { AUTHORIZATION_DENIED, requireCurrentUserPermission } from "@/core/auth/permissions.server"
+import {
+  AUTHORIZATION_DENIED,
+  type AuthorizationDatabase,
+  type PermissionRequest,
+  requirePermission
+} from "@/core/authz"
+import { db } from "@/core/db"
 import { logger } from "@/core/logging"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
@@ -11,7 +17,7 @@ import * as lifecycle from "../lifecycle"
 import { postFormSchema } from "./schemas"
 
 /**
- * What the Admin typed, echoed back so a rejected submission does not lose the post.
+ * What the User typed, echoed back so a rejected submission does not lose the post.
  * `body` is the editor's document as JSON, exactly as the hidden field carried it.
  */
 export type PostFormValues = { title: string; body: string }
@@ -26,8 +32,6 @@ export type PostCommand = "unpublish" | "discard"
 export type PostCommandError = "writeUnauthorized" | "unpublishFailed" | "discardFailed" | "postUnavailable"
 
 export type PostCommandState = { status: "idle" } | { status: "error"; error: PostCommandError }
-
-type PostWrite = "create" | "update"
 
 /** Which submit button sent the form. Anything but an explicit publish keeps a draft. */
 function publishRequested(formData: FormData): boolean {
@@ -46,29 +50,15 @@ function logFailure(event: string, error: unknown) {
   })
 }
 
-/** The acting User's id, or why they may not write. A failed lookup is not a verdict. */
-async function authorize(action: PostWrite): Promise<{ userId: string } | { error: "writeUnauthorized" | "failed" }> {
-  try {
-    const { userId } = await requireCurrentUserPermission({ resource: "post", action })
-    return { userId }
-  } catch (error) {
-    if (getErrorCode(error) === AUTHORIZATION_DENIED) return { error: "writeUnauthorized" }
-
-    // Reading the session touches the database, so a failure here is not a verdict.
-    logFailure("news.post.authorization-failed", error)
-    return { error: "failed" }
-  }
-}
-
 /**
  * The shared shape of every form submission: validate before authorizing, authorize the
- * write, run it, and hand the Admin their post back on any failure. On success the write
- * names the Post saved, and the caller says where the Admin goes next.
+ * write, run it, and hand the User their post back on any failure. On success the write
+ * names the Post saved, and the caller says where the User goes next.
  */
 async function submitPost(
   formData: FormData,
-  action: PostWrite,
-  write: (actorId: string, content: lifecycle.PostContent) => Promise<{ id: string } | null>
+  permission: PermissionRequest,
+  write: (actorId: string, content: lifecycle.PostContent, tx: AuthorizationDatabase) => Promise<{ id: string } | null>
 ): Promise<{ state: PostFormState } | { savedId: string }> {
   const values = readValues(formData)
   const errorState = (error: PostFormError) => ({ state: { status: "error" as const, error, values } })
@@ -76,13 +66,14 @@ async function submitPost(
   const input = postFormSchema.safeParse(values)
   if (!input.success) return errorState("formInvalid")
 
-  const actor = await authorize(action)
-  if ("error" in actor) return errorState(actor.error === "failed" ? "saveFailed" : actor.error)
-
   let saved: { id: string } | null
   try {
-    saved = await write(actor.userId, input.data)
+    saved = await db.transaction(async (tx) => {
+      const actor = await requirePermission(permission, tx)
+      return write(actor.userId, input.data, tx)
+    })
   } catch (error) {
+    if (getErrorCode(error) === AUTHORIZATION_DENIED) return errorState("writeUnauthorized")
     logFailure("news.post.save-failed", error)
     return errorState("saveFailed")
   }
@@ -99,8 +90,8 @@ function revalidatePost(postId: string) {
 /** Writes a new Post: published straight to the feed, or kept as the author's draft. */
 export async function createPost(_state: PostFormState, formData: FormData): Promise<PostFormState> {
   const publish = publishRequested(formData)
-  const result = await submitPost(formData, "create", (authorId, content) =>
-    lifecycle.createPost({ authorId, content, publish })
+  const result = await submitPost(formData, { action: "post.create" }, (authorId, content, tx) =>
+    lifecycle.createPost({ authorId, content, publish }, tx)
   )
   if ("state" in result) return result.state
 
@@ -109,13 +100,15 @@ export async function createPost(_state: PostFormState, formData: FormData): Pro
 }
 
 /**
- * Saves the acting Admin's own draft, or publishes it. A saved draft reloads its edit page,
+ * Saves the acting User's own draft, or publishes it. A saved draft reloads its edit page,
  * which then shows when it was saved.
  */
 export async function saveDraft(postId: string, _state: PostFormState, formData: FormData): Promise<PostFormState> {
   const publish = publishRequested(formData)
-  const result = await submitPost(formData, "create", (authorId, content) =>
-    lifecycle.saveDraft({ postId, authorId, content, publish })
+  const result = await submitPost(
+    formData,
+    { action: publish ? "post.publish" : "post.update", postId },
+    (authorId, content, tx) => lifecycle.saveDraft({ postId, authorId, content, publish }, tx)
   )
   if ("state" in result) return result.state
 
@@ -129,8 +122,8 @@ export async function editPublishedPost(
   _state: PostFormState,
   formData: FormData
 ): Promise<PostFormState> {
-  const result = await submitPost(formData, "update", (_actorId, content) =>
-    lifecycle.editPublishedPost({ postId, content })
+  const result = await submitPost(formData, { action: "post.update", postId }, (_actorId, content, tx) =>
+    lifecycle.editPublishedPost({ postId, content }, tx)
   )
   if ("state" in result) return result.state
 
@@ -139,24 +132,25 @@ export async function editPublishedPost(
 }
 
 /**
- * The shared shape of a confirmed command: authorize, run it, and send the Admin back to
+ * The shared shape of a confirmed command: authorize, run it, and send the User back to
  * the feed. A command that finds the Post in another state reports it unavailable.
  */
 async function runCommand(
   postId: string,
   command: PostCommand,
-  action: PostWrite,
-  run: (actorId: string) => Promise<boolean>
+  permission: PermissionRequest,
+  run: (actorId: string, tx: AuthorizationDatabase) => Promise<boolean>
 ): Promise<PostCommandState> {
   const failed = command === "unpublish" ? "unpublishFailed" : "discardFailed"
 
-  const actor = await authorize(action)
-  if ("error" in actor) return { status: "error", error: actor.error === "failed" ? failed : actor.error }
-
   let done: boolean
   try {
-    done = await run(actor.userId)
+    done = await db.transaction(async (tx) => {
+      const actor = await requirePermission(permission, tx)
+      return run(actor.userId, tx)
+    })
   } catch (error) {
+    if (getErrorCode(error) === AUTHORIZATION_DENIED) return { status: "error", error: "writeUnauthorized" }
     logFailure(`news.post.${command}-failed`, error)
     return { status: "error", error: failed }
   }
@@ -169,10 +163,14 @@ async function runCommand(
 
 /** Recalls a published Post from the feed and its permalink, back to its author's drafts. */
 export async function unpublishPost(postId: string, _state: PostCommandState): Promise<PostCommandState> {
-  return runCommand(postId, "unpublish", "update", () => lifecycle.unpublishPost(postId))
+  return runCommand(postId, "unpublish", { action: "post.unpublish", postId }, (_actorId, tx) =>
+    lifecycle.unpublishPost(postId, tx)
+  )
 }
 
-/** Throws away the acting Admin's own draft. It is hidden for good, never deleted. */
+/** Throws away the acting User's own draft. It is hidden for good, never deleted. */
 export async function discardDraft(postId: string, _state: PostCommandState): Promise<PostCommandState> {
-  return runCommand(postId, "discard", "create", (authorId) => lifecycle.discardDraft({ postId, authorId }))
+  return runCommand(postId, "discard", { action: "post.discard", postId }, (authorId, tx) =>
+    lifecycle.discardDraft({ postId, authorId }, tx)
+  )
 }

@@ -1,9 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
+import { createAuthorization } from "@/core/authz/authorization"
 import { user } from "@/core/db/schema/auth"
 import { listVoiceCapabilities, setVoiceCapabilities } from "@/features/voice"
 import { createTestDatabase } from "../../../../test/database"
-import { getOwnVoiceCapabilities, saveOwnVoiceCapabilities } from "./service"
+import { getOwnVoiceCapabilities, saveOwnVoiceCapabilities as saveCapabilities } from "./service"
 
 const database = await createTestDatabase()
 
@@ -11,6 +12,18 @@ describe.skipIf(!database)("Self-reported profile capabilities", () => {
   if (!database) return
   const { db, drop } = database
   afterAll(drop)
+  function saveOwnVoiceCapabilities(
+    database: typeof db,
+    actor: { userId: string; impersonating: boolean } | null,
+    input: unknown
+  ) {
+    const authorize = createAuthorization({
+      database,
+      readSession: async () =>
+        actor ? { user: { id: actor.userId }, session: { impersonatedBy: actor.impersonating ? "admin" : null } } : null
+    }).requirePermission
+    return saveCapabilities(database, actor, input, authorize)
+  }
   async function member() {
     const id = crypto.randomUUID()
     await db.insert(user).values({ id, name: "Singer", email: `${id}@example.com` })

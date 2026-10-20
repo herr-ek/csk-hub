@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
 import { AuthorizationDeniedError, createAuthorization } from "@/core/authz/authorization"
 import type { AuthorizationSession, PermissionRequest } from "@/core/authz/model"
-import { user } from "@/core/db/schema/auth"
+import { session as storedSession, user } from "@/core/db/schema/auth"
 import { choir, group, groupMember, position, positionHolder } from "@/core/db/schema/org-structure"
 import { post } from "@/core/db/schema/posts"
 import { listCurrentGroupsOfUser, listCurrentPositionsOfUser } from "@/features/org-structure"
@@ -83,6 +83,38 @@ describe.skipIf(!database)("resource authorization", () => {
       }
     })
     await expect(access.can({ action: "post.create" })).rejects.toBe(failure)
+  })
+
+  test("transactional guards recheck a revoked or expired stored session", async () => {
+    const a = await actor()
+    const id = crypto.randomUUID()
+    const access = createAuthorization({
+      database: t.db,
+      readSession: async () => ({ user: { id: a.id }, session: { id } })
+    })
+    // Simulate revocation after the external session resolver returned its snapshot.
+    await expect(
+      t.db.transaction((tx) => access.requirePermission({ action: "post.create" }, tx))
+    ).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await t.db
+      .insert(storedSession)
+      .values({ id, userId: a.id, token: crypto.randomUUID(), expiresAt: new Date(Date.now() - 1000) })
+    await expect(
+      t.db.transaction((tx) => access.requirePermission({ action: "post.create" }, tx))
+    ).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await t.db
+      .update(storedSession)
+      .set({ expiresAt: new Date(Date.now() + 60000) })
+      .where(eq(storedSession.id, id))
+    expect(await t.db.transaction((tx) => access.requirePermission({ action: "post.create" }, tx))).toMatchObject({
+      userId: a.id
+    })
+  })
+
+  test("Messaging disallows support impersonation at the request boundary", async () => {
+    const a = await actor({ impersonatedBy: "support-admin" })
+    expect(await a.access.can({ action: "app.access" })).toBe(true)
+    expect(await a.access.can({ action: "messaging.access" })).toBe(false)
   })
 
   test("personal publishing needs no organisational grant; Draft privacy defeats Admin", async () => {

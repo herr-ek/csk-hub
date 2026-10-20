@@ -97,8 +97,13 @@ ui/
   command-dialog.tsx, run-command.ts   the shared shape of every admin command
 ```
 
-Every Server Action goes through `runGroupCommand`: `requireAdmin`, validate the form, run one
-module command, and return its violation as `{ status: "error", error }`. The client translates
+Every Server Action goes through `runGroupCommand`: require `org.manage`, validate the form,
+then check the exact Group administration policy and run the module command in one transaction.
+Structure/catalogue operations use `org.manage`; Membership/Voice and holder operations use
+`group.manageMemberships` and `group.managePositions`. All remain Admin-only; an ordinary Position
+holder cannot appoint holders or administer Memberships. Screen queries establish their own
+`org.manage` boundary. Domain commands retain their savepoints, locks and period semantics.
+Return domain violations as `{ status: "error", error }`. The client translates
 the kind from `Groups.errors`, so adding an `OrgStructureViolation` means adding its message to
 every catalogue; the typed translation keys fail the typecheck until you do. Reads for a screen
 live beside it (`query.ts`) and are shaped for that screen.

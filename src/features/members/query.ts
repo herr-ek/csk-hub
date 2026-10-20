@@ -1,7 +1,7 @@
 import "server-only"
 
 import { notFound, redirect } from "next/navigation"
-import { getRequestSession } from "@/core/auth/session.server"
+import { AuthorizationDeniedError, can, requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { loginPath, memberProfilePath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
@@ -10,47 +10,54 @@ import { getOwnVoiceCapabilities } from "./edit-profile/service"
 import { getMemberProfile, InactiveViewerError, listMemberDirectory } from "./service"
 
 async function getViewer(returnTo: string = ROUTES.members) {
-  const session = await getRequestSession()
-  if (!session) redirect(loginPath(returnTo))
-  return session
+  try {
+    return await requirePermission({ action: "app.access" })
+  } catch (error) {
+    if (error instanceof AuthorizationDeniedError) redirect(loginPath(returnTo))
+    throw error
+  }
 }
 
 export async function getProfile(memberId?: string) {
-  const session = await getViewer(memberId ? memberProfilePath(memberId) : ROUTES.account)
+  const actor = await getViewer(memberId ? memberProfilePath(memberId) : ROUTES.account)
   try {
-    const targetId = memberId ?? session.user.id
-    const canMessage = targetId !== session.user.id && !session.session.impersonatedBy
-    const [profile, messageConversationId] = await Promise.all([
-      getMemberProfile(db, session.user.id, targetId),
-      canMessage ? findDirectConversation(db, session.user.id, targetId) : Promise.resolve(null)
-    ])
+    const targetId = memberId ?? actor.userId
+    await requirePermission({ action: "member.read", memberId: targetId })
+    const canMessage = targetId !== actor.userId && !actor.impersonatedBy
+    const profile = await getMemberProfile(db, actor.userId, targetId)
     if (!profile) notFound()
+    const [readEmail, canEditProfile, messageConversationId] = await Promise.all([
+      can({ action: "member.readEmail", memberId: targetId }),
+      can({ action: "member.editProfile", memberId: targetId }),
+      canMessage ? findDirectConversation(db, actor.userId, targetId) : Promise.resolve(null)
+    ])
     return {
-      profile,
+      profile: { ...profile, email: readEmail ? profile.email : null },
       canMessage,
       messageConversationId,
-      canEditProfile: profile.isOwn && !session.session.impersonatedBy
+      canEditProfile
     }
   } catch (error) {
-    if (error instanceof InactiveViewerError) notFound()
+    if (error instanceof InactiveViewerError || error instanceof AuthorizationDeniedError) notFound()
     throw error
   }
 }
 
 export async function getProfileEditor() {
-  const session = await getViewer(ROUTES.accountEditProfile)
+  const actor = await getViewer(ROUTES.accountEditProfile)
   try {
-    return await getOwnVoiceCapabilities(db, session.user.id)
+    await requirePermission({ action: "member.editProfile", memberId: actor.userId })
+    return await getOwnVoiceCapabilities(db, actor.userId)
   } catch (error) {
-    if (error instanceof InactiveViewerError) notFound()
+    if (error instanceof InactiveViewerError || error instanceof AuthorizationDeniedError) notFound()
     throw error
   }
 }
 
 export async function getDirectory(options: { query?: string; page?: number }) {
-  const session = await getViewer()
+  const actor = await getViewer()
   try {
-    return await listMemberDirectory(db, session.user.id, options)
+    return await listMemberDirectory(db, actor.userId, options)
   } catch (error) {
     if (error instanceof InactiveViewerError) notFound()
     throw error

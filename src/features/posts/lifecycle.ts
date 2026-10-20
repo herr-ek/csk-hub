@@ -7,8 +7,9 @@ import type { RichTextDocument } from "@/features/rich-text"
 import { isPostId, type PostsDatabase } from "./service"
 
 /**
- * A Post is a draft while `publishedAt` is null and published once it is set. Drafts belong
- * to their author alone; a published Post belongs to the choir, so any Admin may change it.
+ * Persistence operations used by the authorized Post commands. Callers must establish current
+ * resource permission in the same transaction before invoking them. Drafts belong to their author
+ * alone; a published personal Post may be changed by its author or an explicitly authorized Admin.
  * Unpublishing is a recall: the Post becomes its author's draft again. Nothing deletes one;
  * an author who no longer wants a draft discards it, which hides it for good.
  *

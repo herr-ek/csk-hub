@@ -8,23 +8,11 @@ describe("auth roles", () => {
   })
 })
 
-describe("post permissions", () => {
-  test("an Admin may publish a Post", () => {
-    expect(accessRoles[ADMIN_ROLE].authorize({ post: ["create"] }).success).toBe(true)
-  })
-
-  test("an Admin may edit or unpublish a published Post", () => {
-    expect(accessRoles[ADMIN_ROLE].authorize({ post: ["update"] }).success).toBe(true)
-  })
-
-  test("a User reads the news feed but does not publish to it or change it", () => {
-    expect(accessRoles[USER_ROLE].authorize({ post: ["read"] }).success).toBe(true)
-    expect(accessRoles[USER_ROLE].authorize({ post: ["create"] }).success).toBe(false)
-    expect(accessRoles[USER_ROLE].authorize({ post: ["update"] }).success).toBe(false)
-  })
-
-  test("keeps the admin plugin's own grants", () => {
+describe("native Better Auth permissions", () => {
+  test("keeps account administration with Better Auth", () => {
     expect(accessRoles[ADMIN_ROLE].authorize({ user: ["ban"] }).success).toBe(true)
     expect(accessRoles[USER_ROLE].authorize({ user: ["ban"] }).success).toBe(false)
+    expect(accessRoles[ADMIN_ROLE].statements).not.toHaveProperty("post")
+    expect(accessRoles[USER_ROLE].statements).not.toHaveProperty("post")
   })
 })

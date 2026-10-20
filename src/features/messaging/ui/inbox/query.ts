@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, count, desc, eq, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
+import { requireMessagingUserId } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import {
@@ -16,7 +16,7 @@ import { groupHistoryVisibility } from "../../group-conversations/access"
 import { toInboxConversations } from "./view-model"
 
 export async function listDirectConversations() {
-  const userId = await requireAuthenticatedUser()
+  const userId = await requireMessagingUserId()
   const otherMember = alias(user, "other_member")
 
   const latestMessage = db
@@ -71,7 +71,7 @@ export async function listConversations() {
 }
 
 async function listGroupConversations() {
-  const userId = await requireAuthenticatedUser()
+  const userId = await requireMessagingUserId()
   const visibleMessage = and(
     eq(message.conversationId, groupMembership.conversationId),
     groupHistoryVisibility(message.sequence, groupMembership.historyVisibleThroughSequence)

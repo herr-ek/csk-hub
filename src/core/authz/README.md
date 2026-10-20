@@ -6,9 +6,10 @@ Policies live in code. Better Auth retains authentication and its native account
 permissions. The detailed policy decisions and feature adoption map are in
 [`docs/authorization.md`](../../../docs/authorization.md).
 
-This is stage one: no existing feature, route, menu or Server Action has been migrated to this
-module. Existing global Post grants still control production flows. Group-authored Posts,
-audience targets, Recalled Group Posts and Event instance policies are not implemented.
+Stages one through three are implemented: personal Posts, Members, Messaging, account settings,
+administrative workflows, routes and navigation use these policies. Better Auth no longer carries
+application Post grants; the legacy application permission guards have been removed. Group-authored
+Posts, audience targets, Recalled Group Posts and Event instance policies remain unimplemented.
 
 ## Interface
 
@@ -22,7 +23,9 @@ const holds = await holdsCurrentPosition({ groupId, positionId })
 
 `can` returns false for expected denials. `requirePermission` checks the same policy and either
 returns `{ userId, isAdmin, impersonatedBy }` for attribution or throws `AuthorizationDeniedError`.
-Unexpected session/database failures propagate from both. `PermissionRequest` is a typed union;
+Unexpected session/database failures propagate from both. `requireMessagingUserId(tx?)` derives
+fresh active identity and denies support impersonation; Conversation access remains feature-owned.
+`PermissionRequest` is a typed union;
 unsupported actions fail closed at runtime. Universal types are also available from
 `@/core/authz/model`, without importing the server entrypoint.
 
@@ -33,8 +36,10 @@ and must stay outside Next.js cache scopes, as with other session reads.
 
 Both permission functions and both fact functions accept an optional database/transaction as
 their final argument. A protected command must pass its transaction and preserve its lifecycle
-predicates. **Passing a transaction does not acquire authorization locks.** See the adoption
-guide for coordinating resource changes, Membership departure, archiving and deactivation.
+predicates. Transactional guards lock the User and stored Session, and Post requests lock the
+Post row. Group Membership/Position changes still require explicit coordination; see the adoption
+guide for those locks. Fresh validation disables session refresh to avoid writing through a
+separate connection while a transaction holds a Session lock.
 Do not interpret a successful UI check as authority for a subsequent request.
 
 The Membership/Position functions are facts, not grants: like org-structure, they report rows
@@ -52,5 +57,8 @@ the request/Next.js composition.
 
 [`test/authz.test.ts`](../../../test/authz.test.ts) exercises the interface against a migrated,
 disposable local PostgreSQL database. It also compares Membership and Position facts with the
-org-structure public reads. No shared organisational helper or org-structure rewrite is needed
-for this stage.
+org-structure public reads. No shared organisational period helper or date-semantics rewrite is
+introduced.
+[`test/authz-adoption.test.ts`](../../../test/authz-adoption.test.ts) covers protected Post reads
+and serialization with deactivation, session revocation and unpublishing. Feature tests retain
+their lifecycle, profile and Conversation invariants.

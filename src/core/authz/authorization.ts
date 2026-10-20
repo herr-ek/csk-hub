@@ -3,7 +3,7 @@ import "server-only"
 import { and, eq, isNull } from "drizzle-orm"
 import { z } from "zod"
 import type { db } from "@/core/db"
-import { user } from "@/core/db/schema/auth"
+import { session as storedSession, user } from "@/core/db/schema/auth"
 import { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { post } from "@/core/db/schema/posts"
 import { hasAdminRole } from "@/shared/roles"
@@ -37,18 +37,29 @@ const uuid = z.uuid()
  * Server composition seam for request authentication and a database (also used by isolated tests).
  * readSession must validate the actual session, bypassing cookie caches. Session role/status
  * claims are ignored; each operation reloads the effective User. No facts or decisions are cached.
- * Passing a transaction shares reads with a write but does not itself lock against revocation.
- * Feature adoption must coordinate the locks described in docs/authorization.md.
+ * Transactional requirePermission locks the User, the stored Session when its ID is available,
+ * and the Post row for Post requests. Group Membership/holding changes still need their own
+ * coordination, as described in docs/authorization.md. Trusted test resolvers may omit Session IDs.
  */
 export function createAuthorization({ database, readSession }: Dependencies) {
-  async function getActor(connection: AuthorizationDatabase): Promise<AuthorizationActor | null> {
+  async function getActor(connection: AuthorizationDatabase, lock = false): Promise<AuthorizationActor | null> {
     const session = await readSession()
     if (!session) return null
-    const [row] = await connection
+    const query = connection
       .select({ id: user.id, role: user.role, banned: user.banned })
       .from(user)
       .where(eq(user.id, session.user.id))
+    // User before Session matches Better Auth's deactivation ordering (ban, then revoke).
+    const [row] = lock ? await query.for("share") : await query
     if (!row || row.banned === true) return null
+    if (lock && session.session.id) {
+      const [live] = await connection
+        .select({ expiresAt: storedSession.expiresAt })
+        .from(storedSession)
+        .where(and(eq(storedSession.id, session.session.id), eq(storedSession.userId, row.id)))
+        .for("share")
+      if (!live || live.expiresAt <= new Date()) return null
+    }
     return {
       userId: row.id,
       isAdmin: hasAdminRole(row.role),
@@ -88,9 +99,14 @@ export function createAuthorization({ database, readSession }: Dependencies) {
   async function allows(
     actor: AuthorizationActor,
     request: PermissionRequest,
-    connection: AuthorizationDatabase
+    connection: AuthorizationDatabase,
+    lock = false
   ): Promise<boolean> {
     switch (request.action) {
+      case "app.access":
+        return true
+      case "messaging.access":
+        return actor.impersonatedBy === null
       case "admin.access":
       case "org.manage":
       case "user.administer":
@@ -104,10 +120,11 @@ export function createAuthorization({ database, readSession }: Dependencies) {
       case "post.unpublish":
       case "post.discard": {
         if (!uuid.safeParse(request.postId).success) return false
-        const [row] = await connection
+        const query = connection
           .select({ authorId: post.authorId, publishedAt: post.publishedAt, discardedAt: post.discardedAt })
           .from(post)
           .where(eq(post.id, request.postId))
+        const [row] = lock ? await query.for(request.action === "post.read" ? "share" : "update") : await query
         if (!row || row.discardedAt) return false
         const own = row.authorId === actor.userId
         if (row.publishedAt === null) {
@@ -168,8 +185,9 @@ export function createAuthorization({ database, readSession }: Dependencies) {
    * check with persistence and concurrent permission changes; a preceding can() is insufficient.
    */
   async function requirePermission(request: PermissionRequest, connection = database): Promise<AuthorizationActor> {
-    const actor = await getActor(connection)
-    if (!actor || !(await allows(actor, request, connection))) throw new AuthorizationDeniedError(request, actor)
+    const lock = "rollback" in connection
+    const actor = await getActor(connection, lock)
+    if (!actor || !(await allows(actor, request, connection, lock))) throw new AuthorizationDeniedError(request, actor)
     return actor
   }
 

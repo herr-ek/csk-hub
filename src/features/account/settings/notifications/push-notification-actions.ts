@@ -1,23 +1,20 @@
 "use server"
 
-import { getRequestSession } from "@/core/auth/session.server"
+import { type AuthorizationDatabase, requirePermission } from "@/core/authz"
+import { db } from "@/core/db"
 import { type NotificationSubscription, sendToUser, subscribe, unsubscribe } from "@/core/notifications"
 
-async function requireUserId() {
-  const session = await getRequestSession()
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
-  return session.user.id
+async function requireUserId(database?: AuthorizationDatabase) {
+  return (await requirePermission({ action: "app.access" }, database)).userId
 }
 
 export async function subscribeUserToPush(subscription: NotificationSubscription) {
-  await subscribe(await requireUserId(), subscription)
+  await db.transaction(async (tx) => subscribe(await requireUserId(tx), subscription, tx))
   return { success: true }
 }
 
 export async function unsubscribeUserFromPush(endpoint: string) {
-  await unsubscribe(await requireUserId(), endpoint)
+  await db.transaction(async (tx) => unsubscribe(await requireUserId(tx), endpoint, tx))
   return { success: true }
 }
 

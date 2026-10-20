@@ -1,4 +1,5 @@
 import "server-only"
+import { requirePermission } from "@/core/authz"
 
 import { listVoiceCapabilities, setVoiceCapabilities } from "@/features/voice"
 import { isVoiceDivision, VOICE_DIVISIONS } from "@/features/voice/model"
@@ -16,7 +17,8 @@ export type ProfileEditorActor = { userId: string; impersonating: boolean }
 export async function saveOwnVoiceCapabilities(
   database: MemberDatabase,
   actor: ProfileEditorActor | null,
-  input: unknown
+  input: unknown,
+  authorize = requirePermission
 ): Promise<EditProfileState> {
   if (!actor) return { status: "error", error: "sign-in-required" }
   if (actor.impersonating) return { status: "error", error: "impersonation-unavailable" }
@@ -28,6 +30,7 @@ export async function saveOwnVoiceCapabilities(
     return await database.transaction(async (tx) => {
       // Coordinate with deactivation so an inactive account cannot submit a stale edit form.
       await requireActiveViewer(tx, actor.userId, true)
+      await authorize({ action: "member.editProfile", memberId: actor.userId }, tx)
       const result = await setVoiceCapabilities(tx, actor.userId, voices)
       if (!result.success) return { status: "error", error: "invalid-voices" }
       return { status: "success", voices }
