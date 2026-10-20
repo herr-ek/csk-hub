@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq, gt, gte, isNull, lte, or } from "drizzle-orm"
+import { and, eq, gt, isNull, lt, lte, or } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { requireActiveGroup, requireChoir } from "./lookup"
 import {
@@ -13,7 +13,12 @@ import {
 } from "./model"
 import { lockUser, type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
-/** Creates an explicitly modelled Group; legacy creation remains available until ticket 08. */
+/**
+ * Creates an explicitly modelled Group. Annual types require an integer organisationYear
+ * from 1000 through 9998; other types forbid it. Choir-scoped types require choirId;
+ * CSK-wide types forbid it. Choirs/Sections still use createChoir. Legacy creation and
+ * the internal compatibility marker remain until redesign ticket 08.
+ */
 export function createOrganisationGroup(
   database: OrgStructureDatabase,
   input: {
@@ -83,21 +88,31 @@ export function appointPosition(
     )
       throw new RuleViolation("period-conflict")
     if (definition.prerequisite) {
-      const [membership] = await tx
-        .select()
+      const memberships = await tx
+        .select({ startDate: directMembership.startDate, endDate: directMembership.endDate })
         .from(directMembership)
         .where(
           and(
             eq(directMembership.userId, input.userId),
             eq(directMembership.groupId, context.id),
-            lte(directMembership.startDate, startDate),
-            endDate === null
-              ? isNull(directMembership.endDate)
-              : or(isNull(directMembership.endDate), gte(directMembership.endDate, endDate))
+            or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate)),
+            endDate === null ? undefined : lt(directMembership.startDate, endDate)
           )
         )
-      if (!membership) throw new RuleViolation("not-a-member")
+        .orderBy(directMembership.startDate)
+      let coveredUntil: IsoDate | null = startDate
+      for (const membership of memberships) {
+        if (membership.startDate > coveredUntil) break
+        if (membership.endDate === null) {
+          coveredUntil = null
+          break
+        }
+        if (membership.endDate > coveredUntil) coveredUntil = membership.endDate
+        if (endDate !== null && coveredUntil >= endDate) break
+      }
+      if (coveredUntil !== null && (endDate === null || coveredUntil < endDate)) throw new RuleViolation("not-a-member")
     }
+
     const grantIds: string[] = []
     for (const type of definition.grants) {
       if (type === context.type) {

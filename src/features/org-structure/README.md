@@ -3,7 +3,7 @@
 Who is in which Group, Choir and Section, and who holds which Position. Groups and Positions are
 both first-class here: Positions are held in Groups, and the rules tying them to Memberships are
 why they share one module. Terminology lives in [`GLOSSARY.md`](../../../GLOSSARY.md#groups); the
-scheme it implements is "Revised scheme (v3)" in `docs/Groups - DB Scheme.md`, introduced in #78.
+implemented schema is described in [`Groups - DB Scheme.md`](../../../docs/schemas/Groups%20-%20DB%20Scheme.md).
 Voices and what each user can sing are the separate [`voice`](../voice/README.md) feature.
 
 ## The write path
@@ -11,8 +11,8 @@ Voices and what each user can sing are the separate [`voice`](../voice/README.md
 Application code writes the tables in `src/core/db/schema/org-structure.ts` only through this
 module, and reads them through its read helpers rather than querying the tables. This is a
 convention, not a test. The ops scripts are the deliberate exception: `bun run ops
-reference-data` and `bun run ops seed-groups` write the tables directly, so that scripts never
-depend on a feature, and they keep these rules by hand.
+reference-data` and `bun run ops seed-groups` write legacy tables directly and keep their
+rules by hand. The read-only inventory uses this module's focused reconciliation entrypoint.
 
 The rules below are not database constraints, so going around this module breaks them
 silently:

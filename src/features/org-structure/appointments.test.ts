@@ -281,4 +281,35 @@ describe.skipIf(!database)("appointment foundation", () => {
       expect(await listAppointmentMembersAt(tx, groupId, "2035-10-01")).toEqual([])
     })
   })
+  test("continuous prerequisite periods cover one fluid appointment, while a one-day gap is refused", async () => {
+    const groupId = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Continuous gig membership", type: "GigGroup" })
+    ).id
+    const userId = await t.user()
+    await t.db.insert(directMembership).values([
+      { userId, groupId, startDate: "2038-07-01", endDate: "2039-01-01" },
+      { userId, groupId, startDate: "2039-01-01", endDate: null }
+    ])
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "gigledare",
+        contextGroupId: groupId,
+        startDate: "2038-09-01"
+      })
+    )
+    const otherUser = await t.user()
+    await t.db.insert(directMembership).values([
+      { userId: otherUser, groupId, startDate: "2038-07-01", endDate: "2039-01-01" },
+      { userId: otherUser, groupId, startDate: "2039-01-02", endDate: null }
+    ])
+    expect(
+      await appointPosition(t.db, {
+        userId: otherUser,
+        positionCode: "gigledare",
+        contextGroupId: groupId,
+        startDate: "2038-09-01"
+      })
+    ).toEqual({ success: false, error: "not-a-member" })
+  })
 })

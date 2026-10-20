@@ -119,7 +119,11 @@ export const POSITION_DEFINITIONS = {
 
 export type PositionCode = keyof typeof POSITION_DEFINITIONS
 
-/** Exclusive calendar-date bounds; 26/27 is [2026-07-01, 2027-07-01). */
+/**
+ * Exclusive calendar-date bounds; 26/27 is [2026-07-01, 2027-07-01).
+ * Callers must supply an already validated integer year in 1000–9998; this formatter
+ * performs no validation. Commands validate before constructing storage periods.
+ */
 export function organisationYearPeriod(year: number) {
   return { startDate: `${year}-07-01`, endDate: `${year + 1}-07-01` }
 }

@@ -254,8 +254,8 @@ new constraint failures into existing typed `OrgStructureViolation` results. Unk
 infrastructure errors still throw. New errors reuse existing translations.
 
 The additive foundation exposes `createOrganisationGroup`, `appointPosition`, and
-`listAppointmentMembersAt`. Appointment creation checks prerequisites for the entire
-tenure and resolves mandatory grants by fixed type and concrete year atomically.
+`listAppointmentMembersAt`. Appointment creation checks continuous prerequisite coverage across adjacent
+Membership periods for the entire tenure and resolves mandatory grants by fixed type and concrete year atomically.
 A missing target refuses the command without partial rows. The dated read deduplicates
 people and retains every appointment/context; it reads appointment grants only.
 The focused server-only `reconciliation` entrypoint also supports operational reads.
