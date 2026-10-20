@@ -11,3 +11,8 @@ export type { AuthorizationActor, PermissionRequest } from "./model"
 const authorization = createAuthorization({ database: db, readSession: getFreshRequestSession })
 
 export const { can, requirePermission, isCurrentMemberOfGroup, holdsCurrentPosition } = authorization
+
+/** Fresh active identity for Messaging entrypoints; Conversation authorization remains feature-owned. */
+export async function requireMessagingUserId(): Promise<string> {
+  return (await requirePermission({ action: "messaging.access" })).userId
+}

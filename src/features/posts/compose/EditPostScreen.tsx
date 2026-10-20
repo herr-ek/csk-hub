@@ -1,28 +1,19 @@
 import { notFound } from "next/navigation"
-import { canCurrentUser } from "@/core/auth/permissions.server"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostTime } from "../PostTime"
-import { type EditablePost, getEditablePost } from "../service"
+import { getEditablePost } from "../service"
 import { discardDraft, editPublishedPost, saveDraft } from "./actions"
 import { ConfirmPostCommand } from "./ConfirmPostCommand"
 import { PostForm } from "./PostForm"
 
-/** A draft needs the right to write Posts; changing a published one needs more. */
-function mayEdit(post: EditablePost) {
-  return post.state === "draft"
-    ? canCurrentUser({ resource: "post", action: "create" })
-    : canCurrentUser({ resource: "post", action: "update" })
-}
-
 export async function EditPostScreen({ postId }: { postId: string }) {
-  const post = await getEditablePost(postId, await requireAuthenticatedUser())
+  const post = await getEditablePost(postId)
   // Someone else's draft, and a Post the reader may not change, look like no Post at all.
-  if (!post || !(await mayEdit(post))) notFound()
+  if (!post) notFound()
 
   const t = await getTranslations("Posts")
   const draft = post.state === "draft"

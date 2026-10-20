@@ -1,11 +1,14 @@
-import {
-  type GlobalPermissionRequest,
-  type PermissionSession,
-  requireAdmin,
-  requireCurrentUserPermission
-} from "@/core/auth/permissions.server"
+import { locales } from "@/core/i18n/locales"
 import { getPostLoginPath, loginPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+
+/** Access rules use locale-neutral paths, including when Proxy sees an internal locale rewrite. */
+function accessPath(path: string): string {
+  const locale = locales.find((locale) => path === `/${locale}` || path.startsWith(`/${locale}/`))
+  return locale ? path.slice(locale.length + 1) || "/" : path
+}
+
+import { hasAdminRole } from "@/shared/roles"
 
 const PUBLIC_PATHS = new Set<string>([
   ROUTES.login,
@@ -21,18 +24,12 @@ const AUTH_ENTRY_PATHS = new Set<string>([
   ROUTES.twoFactor
 ])
 
-/** Routes that need a specific permission rather than a role. */
-const PERMISSION_PATHS = new Map<string, GlobalPermissionRequest>([
-  [ROUTES.newsCompose, { resource: "post", action: "create" }]
-])
-
 export type RouteAccessPolicy =
   | { kind: "public" }
   | { kind: "authenticated" }
   | { kind: "impersonation-unavailable" }
   | { kind: "admin" }
-  | { kind: "permission"; permission: GlobalPermissionRequest }
-export type RouteSession = PermissionSession
+export type RouteSession = { user: { id: string; role?: string | null }; session?: { impersonatedBy?: string | null } }
 export type AccessDecision = { kind: "allow" } | { kind: "redirect"; location: string } | { kind: "forbidden" }
 
 function isAuthEntryRoute(pathname: string, requestedPath: string): boolean {
@@ -45,10 +42,8 @@ function isAuthEntryRoute(pathname: string, requestedPath: string): boolean {
 
 // Identify what policy holds for *path*
 export function getRouteAccessPolicy(path: string): RouteAccessPolicy {
+  path = accessPath(path)
   if (PUBLIC_PATHS.has(path)) return { kind: "public" }
-
-  const permission = PERMISSION_PATHS.get(path)
-  if (permission) return { kind: "permission", permission }
 
   if (path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`)) return { kind: "admin" }
 
@@ -65,6 +60,8 @@ export async function getRouteAccessDecision(
   session: RouteSession | null,
   requestedPath = pathname
 ): Promise<AccessDecision> {
+  pathname = accessPath(pathname)
+  requestedPath = accessPath(requestedPath)
   const policy = getRouteAccessPolicy(pathname)
 
   // 1. Logged in users go to their landing page instead of authentication entry pages.
@@ -83,15 +80,8 @@ export async function getRouteAccessDecision(
     return { kind: "forbidden" }
   }
 
-  // 5. Some pages ask for more than a session: the Admin area, or a named permission.
-  if (policy.kind === "admin" || policy.kind === "permission") {
-    try {
-      if (policy.kind === "admin") await requireAdmin(session)
-      else await requireCurrentUserPermission(policy.permission, session)
-    } catch {
-      return { kind: "forbidden" }
-    }
-  }
+  // Cached session roles only shape navigation; protected pages/data/actions use fresh authz.
+  if (policy.kind === "admin" && !hasAdminRole(session.user.role)) return { kind: "forbidden" }
 
   // 6. All other pages are open to authenticated users
   return { kind: "allow" }

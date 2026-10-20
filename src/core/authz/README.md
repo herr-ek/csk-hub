@@ -33,8 +33,10 @@ and must stay outside Next.js cache scopes, as with other session reads.
 
 Both permission functions and both fact functions accept an optional database/transaction as
 their final argument. A protected command must pass its transaction and preserve its lifecycle
-predicates. **Passing a transaction does not acquire authorization locks.** See the adoption
-guide for coordinating resource changes, Membership departure, archiving and deactivation.
+predicates. Transactional guards lock the User and stored Session, and Post requests lock the
+Post row. Group Membership/Position changes still require explicit coordination; see the adoption
+guide for those locks. Fresh validation disables session refresh to avoid writing through a
+separate connection while a transaction holds a Session lock.
 Do not interpret a successful UI check as authority for a subsequent request.
 
 The Membership/Position functions are facts, not grants: like org-structure, they report rows

@@ -5,45 +5,19 @@ import { type AccessRole, ADMIN_ROLE, USER_ROLE } from "@/shared/roles"
 export type { AccessRole }
 export { ADMIN_ROLE, USER_ROLE }
 
-// RESOURCES AND ACTIONS
-
-/**
- * The resources this application owns, each mapped to the actions that can be taken on
- * it. Better Auth's `admin` plugin contributes `user` and `session`; everything under
- * `applicationStatements` is ours.
- *
- * Listing an action here does not grant it. It becomes reachable only once a role in
- * `accessRoles` is given it, and only where a call site asks for it.
- */
-const applicationStatements = {
-  // `create` covers writing a Post and keeping it as a draft; `update` covers changing or
-  // unpublishing one that is already published, whoever wrote it.
-  post: ["read", "create", "update"]
-} as const
-
-export const statements = {
-  ...defaultStatements, // user, session, and their native actions
-  ...applicationStatements // application resources
-} as const
+// Better Auth owns only native account/session administration. Application policies live in core/authz.
+export const statements = defaultStatements
 
 const accessControl = createAccessControl(statements)
 
 // ROLES
 
-/**
- * Legacy global grants, retained while existing Post callers are migrated. New resource-aware
- * policies live in core/authz; do not add Group/Position grants here. A migrating feature must
- * replace its legacy read/write/UI checks together, not use these grants as an OR fallback.
- * Better Auth's native User/Session permissions remain owned by this table.
- */
 export const accessRoles = {
   [USER_ROLE]: accessControl.newRole({
-    ...defaultRoles.user.statements,
-    post: ["read"]
+    ...defaultRoles.user.statements
   }),
   [ADMIN_ROLE]: accessControl.newRole({
-    ...defaultRoles.admin.statements,
-    post: ["read", "create", "update"]
+    ...defaultRoles.admin.statements
   })
 } as const
 
@@ -55,16 +29,5 @@ export const adminPluginOptions = {
   adminRoles: ADMIN_ROLE
 } as const
 
-// PERMISSIONS
-
-/**
- * The name of something that can be acted on — a key of `statements`, so `"post"`,
- * `"user"` or `"session"`.
- */
 export type PermissionResource = keyof typeof statements
-
-/**
- * One of the actions `Resource` declares in `statements`. For `"post"` that is
- * `"read" | "create" | "update"`; for `"session"`, `"list" | "revoke" | "delete"`.
- */
 export type PermissionAction<Resource extends PermissionResource> = (typeof statements)[Resource][number]

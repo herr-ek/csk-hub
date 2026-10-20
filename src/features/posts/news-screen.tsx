@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { canCurrentUser } from "@/core/auth/permissions.server"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
+import { can } from "@/core/authz"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
@@ -13,7 +12,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/ba
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
-import { listDraftsByAuthor, listNewsFeed } from "./service"
+import { listNewsFeed, listOwnDrafts } from "./service"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
   const t = useTranslations("Posts")
@@ -30,10 +29,7 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
 
 /** The reader's own unpublished Posts. Nobody else's drafts are ever shown here. */
 async function OwnDrafts() {
-  const [drafts, t] = await Promise.all([
-    requireAuthenticatedUser().then((authorId) => listDraftsByAuthor(authorId)),
-    getTranslations("Posts")
-  ])
+  const [drafts, t] = await Promise.all([listOwnDrafts(), getTranslations("Posts")])
   if (drafts.length === 0) return null
 
   return (
@@ -63,7 +59,7 @@ async function OwnDrafts() {
 export async function NewsScreen() {
   const [entries, canPublish, t] = await Promise.all([
     listNewsFeed(),
-    canCurrentUser({ resource: "post", action: "create" }),
+    can({ action: "post.create" }),
     getTranslations("Posts")
   ])
 
