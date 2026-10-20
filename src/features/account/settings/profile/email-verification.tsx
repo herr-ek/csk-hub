@@ -35,7 +35,7 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
     try {
       const result = await sendEmailVerificationOtp(email)
       if (!result.success) {
-        setError(result.error)
+        setError(t("sendVerificationFailed"))
         return false
       }
 
@@ -62,7 +62,7 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
     try {
       const result = await verifyEmailOtp(email, code)
       if (!result.success) {
-        setError(result.error)
+        setError(t("verifyCodeFailed"))
         return
       }
 

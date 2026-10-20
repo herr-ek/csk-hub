@@ -27,8 +27,7 @@ describe("account activation", () => {
   test("rejects passwords that do not satisfy the password policy", async () => {
     await expect(activateAccount({ status: "idle" }, formData("short"))).resolves.toEqual({
       status: "error",
-      kind: "validation",
-      error: "Use a password with at least 8 characters."
+      kind: "password-too-short"
     })
     expect(setPassword).not.toHaveBeenCalled()
   })
@@ -38,8 +37,7 @@ describe("account activation", () => {
       activateAccount({ status: "idle" }, formData("correct horse battery staple", "another valid password"))
     ).resolves.toEqual({
       status: "error",
-      kind: "validation",
-      error: "Passwords do not match."
+      kind: "passwords-mismatch"
     })
     expect(setPassword).not.toHaveBeenCalled()
   })
@@ -61,8 +59,7 @@ describe("account activation", () => {
 
     await expect(activateAccount({ status: "idle" }, formData("correct horse battery staple"))).resolves.toEqual({
       status: "error",
-      kind: "invalid-link",
-      error: "This activation link is invalid or has expired."
+      kind: "invalid-link"
     })
   })
 
@@ -71,8 +68,7 @@ describe("account activation", () => {
 
     await expect(activateAccount({ status: "idle" }, formData("correct horse battery staple"))).resolves.toEqual({
       status: "error",
-      kind: "unknown",
-      error: "Unable to activate your account right now. Please try again."
+      kind: "unavailable"
     })
   })
 })

@@ -31,7 +31,7 @@ export function PasswordResetRequestForm({
     const result = await requestPasswordReset(value.email)
 
     if (!result.success) {
-      setFormError(result.error)
+      setFormError(t(`errors.${result.kind}`))
       return
     }
 

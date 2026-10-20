@@ -1,15 +1,20 @@
 import { z } from "zod"
 import { passwordPolicy } from "@/shared/policy"
 
-export function passwordField(label: string) {
-  return z.string({ error: `${label} is required.` }).min(passwordPolicy.minPasswordLength, {
-    message: `${label} must be at least ${passwordPolicy.minPasswordLength} characters.`
-  })
-}
+export const validationMessageIds = {
+  required: "validation.required",
+  passwordTooShort: "validation.passwordTooShort",
+  invalidEmail: "validation.invalidEmail",
+  passwordsMismatch: "validation.passwordsMismatch"
+} as const
 
-export function normalizedEmailField(label: string) {
-  return z
-    .string({ error: `${label} is required.` })
-    .trim()
-    .pipe(z.email({ message: `${label} must be a valid email address.` }).toLowerCase())
-}
+export const passwordSchema = z
+  .string({ error: validationMessageIds.required })
+  .min(1, { message: validationMessageIds.required })
+  .pipe(z.string().min(passwordPolicy.minPasswordLength, { message: validationMessageIds.passwordTooShort }))
+
+export const normalizedEmailSchema = z
+  .string({ error: validationMessageIds.required })
+  .trim()
+  .min(1, { message: validationMessageIds.required })
+  .pipe(z.email({ message: validationMessageIds.invalidEmail }).toLowerCase())

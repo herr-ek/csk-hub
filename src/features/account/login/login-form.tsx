@@ -31,7 +31,7 @@ export function LoginForm() {
         router.replace(twoFactorPath(result.methods, returnTo))
         return
       }
-      setFormError(result.error)
+      setFormError(t(`errors.${result.error}`))
       return
     }
 

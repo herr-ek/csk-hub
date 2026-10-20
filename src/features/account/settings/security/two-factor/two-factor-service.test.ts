@@ -54,6 +54,16 @@ describe("two-factor settings", () => {
     expect(verifyTotp).toHaveBeenCalledWith({ code: "123456" })
   })
 
+  test("distinguishes unavailable requests from rejected setup operations", async () => {
+    enable.mockRejectedValue(new Error("Network unavailable"))
+    disable.mockRejectedValue(new Error("Network unavailable"))
+    verifyTotp.mockRejectedValue(new Error("Network unavailable"))
+
+    await expect(enableTwoFactor("password")).resolves.toEqual({ success: false, unavailable: true })
+    await expect(disableTwoFactor("password")).resolves.toEqual({ success: false, unavailable: true })
+    await expect(verifyTwoFactorSetup("123456")).resolves.toEqual({ success: false, unavailable: true })
+  })
+
   test("returns auth errors for setup operations", async () => {
     enable.mockResolvedValue({
       data: { method: "totp", totpURI: "otpauth://totp/CSK", backupCodes: ["backup-1"] },
@@ -62,8 +72,8 @@ describe("two-factor settings", () => {
     disable.mockResolvedValue({ error: { message: "Password is incorrect." } })
     verifyTotp.mockResolvedValue({ error: { message: "The code is invalid." } })
 
-    await expect(enableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "Password is incorrect." })
-    await expect(disableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "Password is incorrect." })
-    await expect(verifyTwoFactorSetup("wrong")).resolves.toEqual({ success: false, error: "The code is invalid." })
+    await expect(enableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "enableFailed" })
+    await expect(disableTwoFactor("wrong")).resolves.toEqual({ success: false, error: "disableFailed" })
+    await expect(verifyTwoFactorSetup("wrong")).resolves.toEqual({ success: false, error: "verifyFailed" })
   })
 })

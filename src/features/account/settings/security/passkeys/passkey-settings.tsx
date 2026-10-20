@@ -3,7 +3,7 @@
 import { getAuthenticatorName } from "@better-auth/passkey"
 import { useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
-import { useTranslations } from "@/core/i18n/translations"
+import { useFormatter, useTranslations } from "@/core/i18n/translations"
 import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
@@ -23,6 +23,7 @@ type Feedback = { type: "error" | "success"; message: string }
 export function PasskeySettings() {
   const t = useTranslations("AccountSettings")
   const common = useTranslations("Common")
+  const format = useFormatter()
   const {
     data: listedPasskeys,
     isPending: isLoadingPasskeys,
@@ -46,7 +47,7 @@ export function PasskeySettings() {
     try {
       const result = await addPasskeyOperation(name)
       if (!result.success) {
-        setFeedback({ type: "error", message: result.error })
+        setFeedback({ type: "error", message: t(`passkeyErrors.${result.error}`) })
         return
       }
       form.reset()
@@ -68,7 +69,7 @@ export function PasskeySettings() {
     try {
       const result = await renamePasskeyOperation(id, newName)
       if (!result.success) {
-        setFeedback({ type: "error", message: result.error })
+        setFeedback({ type: "error", message: t(`passkeyErrors.${result.error}`) })
         return
       }
       setEditingPasskeyId(undefined)
@@ -86,7 +87,7 @@ export function PasskeySettings() {
     try {
       const result = await deletePasskeyOperation(id)
       if (!result.success) {
-        setFeedback({ type: "error", message: result.error })
+        setFeedback({ type: "error", message: t(`passkeyErrors.${result.error}`) })
         return
       }
       setDeletingPasskeyId(undefined)
@@ -165,7 +166,9 @@ export function PasskeySettings() {
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {t("added", {
-                        date: passkey.createdAt ? new Date(passkey.createdAt).toLocaleDateString() : t("recently")
+                        date: passkey.createdAt
+                          ? format.dateTime(passkey.createdAt, { dateStyle: "medium" })
+                          : t("recently")
                       })}
                     </p>
                   </div>
