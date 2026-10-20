@@ -4,6 +4,7 @@ import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, XIcon } from "lucide-react"
 import type * as React from "react"
 import { Button } from "@/shared/ui/base/button"
+import { useUiLabels } from "@/shared/ui/UiLabelsProvider"
 import { cn } from "@/shared/utils"
 
 const toast = ToastPrimitive.createToastManager()
@@ -96,14 +97,15 @@ function ToastAction({
 function ToastClose({
   className,
   children,
-  closeLabel = "Close toast",
   render = <Button variant="ghost" size="icon-sm" />,
   ...props
-}: ToastPrimitive.Close.Props & { closeLabel?: string }) {
+}: ToastPrimitive.Close.Props) {
+  const labels = useUiLabels()
+
   return (
     <ToastPrimitive.Close
       data-slot="toast-close"
-      aria-label={closeLabel}
+      aria-label={labels.closeToast}
       render={render}
       className={cn(
         "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
@@ -150,7 +152,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
   )
 }
 
-function ToastList({ closeLabel }: { closeLabel: string }) {
+function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager()
 
   return toasts.map((toastItem) => (
@@ -162,26 +164,19 @@ function ToastList({ closeLabel }: { closeLabel: string }) {
           <ToastDescription />
         </div>
         <ToastAction />
-        <ToastClose closeLabel={closeLabel} />
+        <ToastClose />
       </ToastContent>
     </Toast>
   ))
 }
 
-function Toaster({
-  children,
-  toastManager = toast,
-  closeToastLabel = "Close toast",
-  ...props
-}: ToastPrimitive.Provider.Props & {
-  closeToastLabel?: string
-}) {
+function Toaster({ children, toastManager = toast, ...props }: ToastPrimitive.Provider.Props) {
   return (
     <ToastProvider toastManager={toastManager} {...props}>
       {children}
       <ToastPortal>
         <ToastViewport>
-          <ToastList closeLabel={closeToastLabel} />
+          <ToastList />
         </ToastViewport>
       </ToastPortal>
     </ToastProvider>

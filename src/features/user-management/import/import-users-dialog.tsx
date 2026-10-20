@@ -1,12 +1,18 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
-import { LocalizedDialogContent } from "@/core/i18n/localized-controls"
 import { useTranslations } from "@/core/i18n/translations"
 import { useValidationMessage } from "@/core/i18n/validation-errors"
 import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
-import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/ui/base/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/shared/ui/base/dialog"
 import { FieldError, FieldGroup } from "@/shared/ui/base/field"
 import { Input } from "@/shared/ui/base/input"
 import { Spinner } from "@/shared/ui/base/spinner"
@@ -20,6 +26,7 @@ type PreviewRow = ImportUserRow & { discarded: boolean; error?: string }
 export function ImportUsersDialog() {
   const t = useTranslations("Members")
   const common = useTranslations("Common")
+  const ui = useTranslations("Ui")
   const validationMessage = useValidationMessage()
   const [open, setOpen] = useState(false)
   const [state, setState] = useState<ImportUsersState>(initialState)
@@ -101,14 +108,13 @@ export function ImportUsersDialog() {
     setExistingEmails(new Set())
   }
 
-  const error =
+  const submissionError =
     state.status === "error"
-      ? state.error.startsWith("csv:")
-        ? t(
-            `csvParseErrors.${state.error.slice(4) as "parse-failed" | "empty" | "columns" | "no-users" | "too-many-users"}`
-          )
-        : state.error
-      : parseError
+      ? state.error.kind === "csv-parse"
+        ? t(`csvParseErrors.${state.error.code}`)
+        : t(`importActionErrors.${state.error.kind}`)
+      : undefined
+  const error = submissionError ?? parseError
   const readyRows = rows?.filter((row) => !row.discarded && !row.error) ?? []
   const canConfirm = readyRows.length > 0 && !pending && state.status !== "success"
 
@@ -121,7 +127,7 @@ export function ImportUsersDialog() {
           </Button>
         }
       />
-      <LocalizedDialogContent className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{t("importUsers")}</DialogTitle>
           <DialogDescription>{t("importDescription")}</DialogDescription>
@@ -174,6 +180,8 @@ export function ImportUsersDialog() {
                   </TableHeader>
                   <TableBody>
                     {rows.map((user) => {
+                      const failure =
+                        state.status === "success" ? state.failed.find((item) => item.row === user.row) : undefined
                       const result =
                         state.status === "success"
                           ? state.created.some((item) => item.row === user.row)
@@ -183,9 +191,9 @@ export function ImportUsersDialog() {
                                   label: t("createdInviteNotSent"),
                                   className: "text-yellow-600 dark:text-yellow-400"
                                 }
-                              : state.failed.find((item) => item.row === user.row)
+                              : failure
                                 ? {
-                                    label: state.failed.find((item) => item.row === user.row)?.error ?? t("failed"),
+                                    label: t(`importRowErrors.${failure.error}`),
                                     className: "text-destructive"
                                   }
                                 : null
@@ -250,7 +258,7 @@ export function ImportUsersDialog() {
           ) : null}
           {state.status === "success" ? (
             <Button type="button" onClick={() => changeOpen(false)}>
-              {common("close")}
+              {ui("close")}
             </Button>
           ) : (
             <Button type="submit" disabled={!canConfirm}>
@@ -264,7 +272,7 @@ export function ImportUsersDialog() {
             </Button>
           )}
         </form>
-      </LocalizedDialogContent>
+      </DialogContent>
     </Dialog>
   )
 }

@@ -34,7 +34,7 @@ export function StartConversationDialog({
   children?: ReactNode
 }) {
   const t = useTranslations("Messages")
-  const common = useTranslations("Common")
+  const ui = useTranslations("Ui")
   const [open, setOpen] = useState(false)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -61,7 +61,7 @@ export function StartConversationDialog({
               variant="ghost"
               size="icon-sm"
               className="absolute right-4 top-4"
-              aria-label={common("close")}
+              aria-label={ui("close")}
             />
           }
         >

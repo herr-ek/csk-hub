@@ -114,9 +114,6 @@
   },
   "Common": {
     "cancel": "Cancel",
-    "close": "Close",
-    "closeToast": "Close toast",
-    "closeSidebar": "Close sidebar",
     "save": "Save",
     "delete": "Delete",
     "edit": "Edit",
@@ -133,11 +130,13 @@
     }
   },
   "Ui": {
+    "close": "Close",
+    "closeToast": "Close toast",
     "more": "More",
     "previousSlide": "Previous slide",
     "nextSlide": "Next slide",
     "morePages": "More pages",
-    "sidebar": "Sidebar",
+    "sidebarTitle": "Sidebar",
     "mobileSidebarDescription": "Displays the mobile sidebar.",
     "toggleSidebar": "Toggle sidebar"
   },
@@ -271,6 +270,17 @@
     "usernameHandle": "@{username}",
     "importUsers": "Import users",
     "importDescription": "Upload a CSV with name and email columns, then review each row before inviting.",
+    "importActionErrors": {
+      "invalid-preview": "The import preview is invalid. Please upload the CSV again.",
+      "file-required": "Please choose a CSV file.",
+      "file-extension": "Please choose a file with a .csv extension.",
+      "file-too-large": "The CSV must be 1 MB or smaller.",
+      "no-valid-rows": "Keep at least one valid row to import."
+    },
+    "importRowErrors": {
+      "email-exists": "A user with that email already exists.",
+      "create-failed": "Unable to create this user."
+    },
     "csvParseErrors": {
       "parse-failed": "The CSV could not be parsed. Please check its quoted values.",
       "empty": "The CSV is empty.",

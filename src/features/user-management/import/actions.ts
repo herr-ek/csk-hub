@@ -9,6 +9,7 @@ import { user } from "@/core/db/schema/auth"
 import { ROUTES } from "@/core/navigation/site"
 import { inviteUsers } from "../invite-user"
 import {
+  type ImportCsvError,
   type ImportUserRow,
   type ImportUserSkipped,
   MAX_IMPORT_FILE_SIZE_BYTES,
@@ -34,12 +35,21 @@ export async function findExistingUserEmails(emails: string[]): Promise<string[]
 
 export type ImportUsersState =
   | { status: "idle" }
-  | { status: "error"; error: string }
+  | {
+      status: "error"
+      error:
+        | { kind: "invalid-preview" }
+        | { kind: "file-required" }
+        | { kind: "file-extension" }
+        | { kind: "file-too-large" }
+        | { kind: "csv-parse"; code: ImportCsvError }
+        | { kind: "no-valid-rows" }
+    }
   | {
       status: "success"
       created: Array<{ row: number; name: string; email: string }>
       emailFailed: Array<{ row: number; name: string; email: string }>
-      failed: Array<{ row: number; error: string }>
+      failed: Array<{ row: number; error: "email-exists" | "create-failed" }>
       skipped: ImportUserSkipped[]
     }
 
@@ -53,30 +63,30 @@ export async function importUsers(_state: ImportUsersState, formData: FormData):
       rows = importRowsSchema.parse(JSON.parse(submittedRows))
       skipped = []
     } catch {
-      return { status: "error", error: "The import preview is invalid. Please upload the CSV again." }
+      return { status: "error", error: { kind: "invalid-preview" } }
     }
   } else {
     const file = formData.get("file")
     if (!(file instanceof File) || file.size === 0) {
-      return { status: "error", error: "Please choose a CSV file." }
+      return { status: "error", error: { kind: "file-required" } }
     }
     if (!file.name.toLowerCase().endsWith(".csv")) {
-      return { status: "error", error: "Please choose a file with a .csv extension." }
+      return { status: "error", error: { kind: "file-extension" } }
     }
     if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) {
-      return { status: "error", error: "The CSV must be 1 MB or smaller." }
+      return { status: "error", error: { kind: "file-too-large" } }
     }
 
     const parsed = parseUserCsv(await file.text())
     if ("error" in parsed) {
-      return { status: "error", error: `csv:${parsed.error}` }
+      return { status: "error", error: { kind: "csv-parse", code: parsed.error } }
     }
     rows = parsed.rows
     skipped = parsed.skipped
   }
-  if (rows.length === 0) return { status: "error", error: "Keep at least one valid row to import." }
+  if (rows.length === 0) return { status: "error", error: { kind: "no-valid-rows" } }
 
-  const failed: Array<{ row: number; error: string }> = []
+  const failed: Array<{ row: number; error: "email-exists" | "create-failed" }> = []
   const created: Array<{ row: number; name: string; email: string }> = []
   const emailFailed: Array<{ row: number; name: string; email: string }> = []
   const results = await inviteUsers(rows)
@@ -87,8 +97,7 @@ export async function importUsers(_state: ImportUsersState, formData: FormData):
     else
       failed.push({
         row: user.row,
-        error:
-          result.kind === "already-exists" ? "A user with that email already exists." : "Unable to create this user."
+        error: result.kind === "already-exists" ? "email-exists" : "create-failed"
       })
   }
 

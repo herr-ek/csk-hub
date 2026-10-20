@@ -2,11 +2,17 @@
 
 import { CircleCheckIcon, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
-import { LocalizedDialogContent, LocalizedDialogFooter } from "@/core/i18n/localized-controls"
 import { useTranslations } from "@/core/i18n/translations"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
-import { Dialog, DialogDescription, DialogHeader, DialogTitle } from "@/shared/ui/base/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/shared/ui/base/dialog"
 import { Field, FieldError, FieldLabel } from "@/shared/ui/base/field"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/ui/base/input-otp"
 import { sendEmailVerificationOtp, verifyEmailOtp } from "./email-verification-service"
@@ -96,7 +102,7 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
           if (!isVerifying) setOpen(nextOpen)
         }}
       >
-        <LocalizedDialogContent showCloseButton={!isVerifying}>
+        <DialogContent showCloseButton={!isVerifying}>
           <DialogHeader>
             <DialogTitle>{t("verifyEmailTitle")}</DialogTitle>
             <DialogDescription>{t("verifyEmailDescription", { email })}</DialogDescription>
@@ -129,7 +135,7 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
                 <AlertDescription>{message}</AlertDescription>
               </Alert>
             ) : null}
-            <LocalizedDialogFooter className="mt-6">
+            <DialogFooter className="mt-6">
               <Button
                 type="button"
                 variant="outline"
@@ -141,9 +147,9 @@ export function EmailVerification({ email, initialVerified }: { email: string; i
               <Button type="submit" disabled={code.length !== 6 || isVerifying}>
                 {isVerifying ? t("verifying") : t("verifyEmail")}
               </Button>
-            </LocalizedDialogFooter>
+            </DialogFooter>
           </form>
-        </LocalizedDialogContent>
+        </DialogContent>
       </Dialog>
     </>
   )

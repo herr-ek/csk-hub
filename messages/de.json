@@ -114,9 +114,6 @@
   },
   "Common": {
     "cancel": "Abbrechen",
-    "close": "Schließen",
-    "closeToast": "Benachrichtigung schließen",
-    "closeSidebar": "Seitenleiste schließen",
     "save": "Speichern",
     "delete": "Löschen",
     "edit": "Bearbeiten",
@@ -133,11 +130,13 @@
     }
   },
   "Ui": {
+    "close": "Schließen",
+    "closeToast": "Benachrichtigung schließen",
     "more": "Mehr",
     "previousSlide": "Vorherige Folie",
     "nextSlide": "Nächste Folie",
     "morePages": "Weitere Seiten",
-    "sidebar": "Seitenleiste",
+    "sidebarTitle": "Seitenleiste",
     "mobileSidebarDescription": "Zeigt die mobile Seitenleiste an.",
     "toggleSidebar": "Seitenleiste umschalten"
   },
@@ -271,6 +270,17 @@
     "usernameHandle": "@{username}",
     "importUsers": "Benutzer importieren",
     "importDescription": "Lade eine CSV mit Namens- und E-Mail-Spalten hoch und prüfe jede Zeile vor dem Einladen.",
+    "importActionErrors": {
+      "invalid-preview": "Die Importvorschau ist ungültig. Bitte lade die CSV-Datei erneut hoch.",
+      "file-required": "Bitte wähle eine CSV-Datei aus.",
+      "file-extension": "Bitte wähle eine Datei mit der Erweiterung .csv aus.",
+      "file-too-large": "Die CSV-Datei darf höchstens 1 MB groß sein.",
+      "no-valid-rows": "Lass mindestens eine gültige Zeile für den Import übrig."
+    },
+    "importRowErrors": {
+      "email-exists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.",
+      "create-failed": "Der Benutzer kann nicht erstellt werden."
+    },
     "csvParseErrors": {
       "parse-failed": "Die CSV-Datei konnte nicht gelesen werden. Prüfe die Anführungszeichen.",
       "empty": "Die CSV-Datei ist leer.",
