@@ -148,39 +148,33 @@ Server Components are the default. Use Client Components only for interaction, b
 
 ### Server-side session reads
 
-Outside `src/proxy.ts`, read the current request's Better Auth session through
+Protected reads and commands use `@/core/authz`: `requirePermission` establishes authority and
+returns the effective actor, while `can` supplies UI hints. Messaging uses
+`requireMessagingUserId(tx?)` for fresh active identity without support impersonation, then applies
+its own Conversation access rules. See [the adoption guide](authorization.md) for transaction and
+resource requirements. Never pass cached session claims or submitted actor IDs as authority.
+
+For presentation metadata, read the request's Better Auth session through
 [`getRequestSession()`](../src/core/auth/session.server.ts), imported from
-`@/core/auth/session.server`. This applies to Server Components, layouts, read
-helpers, Server Actions, and Route Handlers. Use `requireAuthenticatedUser()` from
-the same module when a workflow only needs a required user ID. Permission and
-admin guards in `permissions.server.ts` already use the shared session helper;
-pass an existing session to them when one is available.
+`@/core/auth/session.server`. React `cache()` deduplicates it within a Server Component render,
+not across requests or Server Action executions. Treat that snapshot as read-only; it retains
+Better Auth's cookie cache and ordinary refresh behavior. It is not an authorization boundary.
 
-New resource-aware authorization uses `@/core/authz`, which calls the same session module's
-`getFreshRequestSession()` to bypass Better Auth's cookie cache and then verifies the current
-User state. The fresh helper is not React-cached. Existing feature flows retain their current
-guards until migrated; see [the adoption guide](authorization.md). Do not pass cached session
-claims as authority to the new module.
+Authz calls the same module's `getFreshRequestSession()` on every operation. That helper bypasses
+the cookie cache and disables refresh so validation cannot attempt a separate-connection write
+while a feature holds a Session lock. Authz reloads the User's active status and roles; transactional
+guards also validate and lock the stored Session. Native Better Auth endpoints retain their own
+authentication and User/Session permissions.
 
-React `cache()` deduplicates session reads within a Server Component render and
-shares the pending promise and result. It does not share sessions across requests
-or deduplicate reads during Server Action or Route Handler execution. Treat the
-returned session as read-only.
+Both session helpers await `io()` before `auth.api.getSession()`. Better Auth checks the current
+time, and headers alone may resolve during App Shell prerendering. Rendering callers need an
+enclosing `<Suspense>` boundary around session reads and guards. Keep them outside `"use cache"`,
+`"use cache: private"`, and `"use cache: remote"`: `io()` does not provide the intended gate inside
+cache scopes. Do not cache an authorization result.
 
-The helper awaits `io()` before calling `auth.api.getSession()`. Better Auth reads
-the clock to check expiry, which must stay outside prerendering. With Partial
-Prefetching enabled, session headers can resolve during App Shell prerendering,
-so `await headers()` alone does not protect that clock read. Rendering callers
-must have an enclosing `<Suspense>` boundary around the component that reads the
-session or calls a guard that reads it. Keep these calls outside `"use cache"`,
-`"use cache: private"`, and `"use cache: remote"` scopes: `io()` resolves immediately
-inside cache scopes and does not provide the intended prerendering gate there.
-
-Keep direct `auth.api.getSession()` calls confined to the shared helper and
-`src/proxy.ts`. Proxy reads `req.headers` before route rendering and does not need
-the prerendering gate. The helper does not disable Better Auth's cookie cache or
-force a fresh server request on every client navigation. Continue checking
-authorization where protected data is accessed and operations are performed.
+Direct `auth.api.getSession()` calls stay confined to the shared helper and `src/proxy.ts`.
+Proxy's cached-session navigation gates are preliminary; protected data and Server Actions
+establish fresh authority themselves. Do not query per-resource policies from Proxy.
 
 ### Server-only modules
 
