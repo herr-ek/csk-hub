@@ -9,6 +9,9 @@ The member-ID API uses this module for fresh issuance and Admin verification che
 feature guards, routes and UI behavior still use their existing authorization. See the [adoption guide](../../../docs/authorization.md)
 for the current migration points and future capabilities; this README owns the module interface
 and policy registration workflow.
+Personal Post creation, reads and lifecycle commands use this module. Features load and lock
+Post attributes before checking their resource policy. Other feature migrations are tracked in
+the adoption guide.
 
 ## Reading order
 

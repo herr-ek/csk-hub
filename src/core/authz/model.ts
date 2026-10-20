@@ -32,6 +32,8 @@ type MemberContext = Readonly<{ member: MemberAttributes | null }>
 export type PermissionContext = {
   "memberId.issue": undefined
   "memberId.verify": undefined
+  "app.access": undefined
+  "messaging.access": undefined
   "post.create": undefined
   "post.read": PostContext
   "post.update": PostContext
