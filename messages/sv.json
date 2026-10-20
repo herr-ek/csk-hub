@@ -123,9 +123,9 @@
     "status": "Status",
     "loading": "Laddar",
     "validation": {
-      "required": "{label} måste fyllas i.",
-      "passwordTooShort": "{label} måste innehålla minst {count} tecken.",
-      "invalidEmail": "{label} måste vara en giltig e-postadress.",
+      "required": "Det här fältet måste fyllas i.",
+      "passwordTooShort": "Använd minst {count} tecken.",
+      "invalidEmail": "Ange en giltig e-postadress.",
       "passwordsMismatch": "Lösenorden matchar inte."
     }
   },

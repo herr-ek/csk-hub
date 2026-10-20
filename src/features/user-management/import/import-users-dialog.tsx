@@ -233,7 +233,7 @@ export function ImportUsersDialog() {
                                 (user.error
                                   ? user.error === "email-repeated"
                                     ? t("emailRepeated")
-                                    : validationMessage(user.error, common(!user.name.trim() ? "name" : "email"))
+                                    : validationMessage(user.error)
                                   : t("ready")))}
                           </TableCell>
                           <TableCell className="text-right">

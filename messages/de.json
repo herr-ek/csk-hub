@@ -123,9 +123,9 @@
     "status": "Status",
     "loading": "Wird geladen",
     "validation": {
-      "required": "{label} ist erforderlich.",
-      "passwordTooShort": "{label} muss mindestens {count} Zeichen enthalten.",
-      "invalidEmail": "{label} muss eine gültige E-Mail-Adresse sein.",
+      "required": "Dieses Feld ist erforderlich.",
+      "passwordTooShort": "Verwende mindestens {count} Zeichen.",
+      "invalidEmail": "Gib eine gültige E-Mail-Adresse ein.",
       "passwordsMismatch": "Die Passwörter stimmen nicht überein."
     }
   },
