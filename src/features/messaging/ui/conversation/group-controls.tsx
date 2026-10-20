@@ -22,7 +22,7 @@ export async function GroupControls({
   name: string
   members: { id: string; name: string }[]
 }) {
-  const [t, common] = await Promise.all([getTranslations("Messages"), getTranslations("Common")])
+  const [t, ui] = await Promise.all([getTranslations("Messages"), getTranslations("Ui")])
   return (
     <Dialog>
       <DialogTrigger
@@ -51,7 +51,7 @@ export async function GroupControls({
               variant="ghost"
               size="icon-sm"
               className="absolute right-4 top-4"
-              aria-label={common("close")}
+              aria-label={ui("close")}
             />
           }
         >

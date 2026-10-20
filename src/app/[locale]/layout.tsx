@@ -11,6 +11,7 @@ import { routing } from "@/core/i18n/routing"
 import { getLocale, getTranslations } from "@/core/i18n/server"
 import { timeZone } from "@/core/i18n/time-zone"
 import { Toaster } from "@/shared/ui/base/toast"
+import { UiLabelsProvider } from "@/shared/ui/UiLabelsProvider"
 import { cn } from "@/shared/utils"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -76,11 +77,13 @@ export function generateStaticParams() {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale()
-  const common = await getTranslations("Common")
 
   if (!isLocale(locale)) {
     notFound()
   }
+
+  // TODO: Split up per feature if performance gets bad
+  const messages = getMessages(locale)
 
   return (
     <html
@@ -91,17 +94,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       {/* A definite height, not a minimum: it lets a screen give its overflow to a pane of
           its own instead of to the window (see `ContentPage`'s `fill`). */}
       <body className="h-full flex flex-col">
-        <NextIntlClientProvider
-          locale={locale}
-          // TODO: Split up per feature if performance gets bad
-          messages={getMessages(locale)}
-          formats={{}}
-          timeZone={timeZone}
-        >
-          <ThemeProvider>
-            {children}
-            <Toaster closeToastLabel={common("closeToast")} />
-          </ThemeProvider>
+        <NextIntlClientProvider locale={locale} messages={messages} formats={{}} timeZone={timeZone}>
+          <UiLabelsProvider labels={messages.Ui}>
+            <ThemeProvider>
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </UiLabelsProvider>
         </NextIntlClientProvider>
       </body>
     </html>

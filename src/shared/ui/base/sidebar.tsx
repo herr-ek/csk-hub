@@ -12,6 +12,7 @@ import { Separator } from "@/shared/ui/base/separator"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/ui/base/sheet"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/base/tooltip"
+import { useUiLabels } from "@/shared/ui/UiLabelsProvider"
 import { cn } from "@/shared/utils"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
@@ -146,6 +147,7 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const labels = useUiLabels()
 
   if (collapsible === "none") {
     return (
@@ -176,8 +178,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>{labels.sidebarTitle}</SheetTitle>
+            <SheetDescription>{labels.mobileSidebarDescription}</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>

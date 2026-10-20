@@ -26,14 +26,12 @@ function CommandDialog({
   children,
   className,
   showCloseButton = false,
-  closeLabel = "Close",
   ...props
 }: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
   title?: string
   description?: string
   className?: string
   showCloseButton?: boolean
-  closeLabel?: string
   children: React.ReactNode
 }) {
   return (
@@ -45,7 +43,6 @@ function CommandDialog({
       <DialogContent
         className={cn("top-1/3 translate-y-0 overflow-hidden rounded-4xl! p-0", className)}
         showCloseButton={showCloseButton}
-        closeLabel={closeLabel}
       >
         {children}
       </DialogContent>
