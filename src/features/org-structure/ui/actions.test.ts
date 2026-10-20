@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { and, eq, isNull } from "drizzle-orm"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
 import { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { createOrgStructureTestDatabase } from "../test-support"
 
@@ -12,7 +13,7 @@ const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId
 const revalidatePath = mock(() => undefined)
 
 mock.module("@/core/db", () => ({ db: database?.db }))
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
+mock.module("@/core/authz", () => ({ requirePermission: requireAdmin, AuthorizationDeniedError }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
 const { createGroupAction, renameGroupAction, archiveGroupAction } = await import("./groups/actions")

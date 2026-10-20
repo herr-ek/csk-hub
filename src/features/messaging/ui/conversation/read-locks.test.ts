@@ -34,7 +34,7 @@ if (!process.env.CSK_MESSAGING_READ_LOCK_TEST) {
   const identity = new AsyncLocalStorage<string>()
   let holdNextTransaction: { ready: () => void; release: Promise<void> } | undefined
 
-  mock.module("@/core/auth/session.server", () => ({ requireAuthenticatedUser: async () => identity.getStore() }))
+  mock.module("@/core/authz", () => ({ requireMessagingUserId: async () => identity.getStore() }))
   mock.module("@/core/db", () => ({
     db: {
       select: (...args: Parameters<typeof testDb.select>) => testDb.select(...args),

@@ -12,7 +12,11 @@ import { parseNotificationSubscription, parsePushEndpoint } from "./subscription
  * resets disabled/failure metadata. Callers must authorize the supplied userId.
  * Throws `InvalidNotificationSubscriptionError` for invalid data; persistence failures reject.
  */
-export async function subscribe(userId: string, subscription: unknown) {
+export async function subscribe(
+  userId: string,
+  subscription: unknown,
+  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+) {
   const validated = parseNotificationSubscription(subscription)
   const now = new Date()
   const values = {
@@ -31,7 +35,7 @@ export async function subscribe(userId: string, subscription: unknown) {
     updatedAt: now
   }
 
-  await db
+  await database
     .insert(pushSubscription)
     .values({ id: crypto.randomUUID(), ...values })
     .onConflictDoUpdate({ target: pushSubscription.endpoint, set: values })
@@ -42,9 +46,13 @@ export async function subscribe(userId: string, subscription: unknown) {
  * Returns whether an owned row was removed. Throws
  * `InvalidNotificationSubscriptionError` for invalid endpoints; persistence failures reject.
  */
-export async function unsubscribe(userId: string, endpoint: string) {
+export async function unsubscribe(
+  userId: string,
+  endpoint: string,
+  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+) {
   const normalizedEndpoint = parsePushEndpoint(endpoint)
-  const [deleted] = await db
+  const [deleted] = await database
     .delete(pushSubscription)
     .where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.endpoint, normalizedEndpoint)))
     .returning({ id: pushSubscription.id })
@@ -57,9 +65,13 @@ export async function unsubscribe(userId: string, endpoint: string) {
  * revealing another owner's identity. Returns false for absent or disabled bindings.
  * Throws `InvalidNotificationSubscriptionError` for invalid endpoints; lookup failures reject.
  */
-export async function hasActiveSubscription(userId: string, endpoint: string) {
+export async function hasActiveSubscription(
+  userId: string,
+  endpoint: string,
+  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+) {
   const normalizedEndpoint = parsePushEndpoint(endpoint)
-  const [subscription] = await db
+  const [subscription] = await database
     .select({ id: pushSubscription.id })
     .from(pushSubscription)
     .where(

@@ -1,5 +1,7 @@
 import "server-only"
 
+import { requirePermission } from "@/core/authz"
+
 import { compareVoices, type Voice } from "@/features/voice/model"
 import { type GroupSummary, listGroupSummaries } from "../group-summaries"
 
@@ -9,6 +11,7 @@ const bySectionVoice = (a: GroupSummary, b: GroupSummary) => compareVoices(a.voi
 
 /** Every Choir with its Sections in score order, archived ones included, for placing singers. */
 export async function getChoirPlacement(): Promise<ChoirPlacement> {
+  await requirePermission({ action: "org.manage" })
   const summaries = await listGroupSummaries()
   return summaries
     .filter(({ type }) => type === "Choir")

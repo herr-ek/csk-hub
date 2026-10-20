@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getRequestSession } from "@/core/auth/session.server"
+import { AuthorizationDeniedError, requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { logger } from "@/core/logging"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
@@ -10,8 +10,8 @@ import type { EditProfileState } from "./state"
 
 export async function saveProfileAction(_state: EditProfileState, formData: FormData): Promise<EditProfileState> {
   try {
-    const session = await getRequestSession()
-    const actor = session ? { userId: session.user.id, impersonating: Boolean(session.session.impersonatedBy) } : null
+    const current = await requirePermission({ action: "app.access" })
+    const actor = { userId: current.userId, impersonating: Boolean(current.impersonatedBy) }
     const result = await saveOwnVoiceCapabilities(db, actor, formData.getAll("voices"))
     if (result.status === "success" && actor) {
       revalidatePath("/[locale]/(app)/me", "page")
@@ -20,6 +20,7 @@ export async function saveProfileAction(_state: EditProfileState, formData: Form
     }
     return result
   } catch (error) {
+    if (error instanceof AuthorizationDeniedError) return { status: "error", error: "sign-in-required" }
     logger.error("members.profile.save-failed", {
       errorCode: getErrorCode(error),
       errorName: getErrorName(error),

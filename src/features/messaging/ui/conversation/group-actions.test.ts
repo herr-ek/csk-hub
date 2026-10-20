@@ -1,18 +1,18 @@
 import { beforeEach, expect, mock, test } from "bun:test"
+import { requestAuthorization } from "@test/request-authorization"
 
 const getSession = mock(async () => ({ session: { impersonatedBy: null as string | null } }))
 const command = mock(async () => ({ conversationId: "group-1" }))
 const revalidatePath = mock()
-mock.module("@/core/auth/session.server", () => ({
-  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
-  getRequestSession: getSession
-}))
+
 mock.module("next/cache", () => ({ revalidatePath }))
 mock.module("../../group-conversations", () => ({
   addGroupMembers: command,
   renameGroupConversation: command,
   leaveGroupConversation: command
 }))
+mock.module("@/core/authz", () => requestAuthorization(getSession))
+
 const { groupConversationAction } = await import("./group-actions")
 beforeEach(() => {
   getSession.mockResolvedValue({ session: { impersonatedBy: null } })

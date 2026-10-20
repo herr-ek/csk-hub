@@ -1,7 +1,6 @@
 "use server"
 
 import { z } from "zod"
-import { db } from "@/core/db"
 import { changeVoice, endMembership, placeSingerInSection, startMembership } from "../../membership"
 import { endPositionHolding, replacePositionHolder } from "../../positions"
 import type { GroupCommandState } from "../command-state"
@@ -28,15 +27,15 @@ export async function addMemberAction(_state: GroupCommandState, formData: FormD
       startDate: value(formData, "startDate"),
       voice: value(formData, "voice")
     },
-    (input) =>
+    (input, tx) =>
       input.voice
-        ? placeSingerInSection(db, {
+        ? placeSingerInSection(tx, {
             userId: input.userId,
             sectionId: input.groupId,
             voice: input.voice,
             startDate: input.startDate
           })
-        : startMembership(db, { userId: input.userId, groupId: input.groupId, startDate: input.startDate })
+        : startMembership(tx, { userId: input.userId, groupId: input.groupId, startDate: input.startDate })
   )
 }
 
@@ -47,7 +46,7 @@ export async function endMembershipAction(_state: GroupCommandState, formData: F
     "end-membership",
     endMembershipSchema,
     { groupId: value(formData, "groupId"), userId: value(formData, "userId"), endDate: value(formData, "endDate") },
-    (input) => endMembership(db, input)
+    (input, tx) => endMembership(tx, input)
   )
 }
 
@@ -69,10 +68,10 @@ export async function changeVoiceAction(_state: GroupCommandState, formData: For
       voice: value(formData, "voice"),
       date: value(formData, "date")
     },
-    async (input) => {
+    async (input, tx) => {
       const choirId = await getChoirIdOf(input.groupId)
       if (!choirId) return { success: false, error: "not-a-singer" }
-      return changeVoice(db, { userId: input.userId, choirId, voice: input.voice, date: input.date })
+      return changeVoice(tx, { userId: input.userId, choirId, voice: input.voice, date: input.date })
     }
   )
 }
@@ -95,7 +94,7 @@ export async function assignHolderAction(_state: GroupCommandState, formData: Fo
       userId: value(formData, "userId"),
       startDate: value(formData, "startDate")
     },
-    (input) => replacePositionHolder(db, input)
+    (input, tx) => replacePositionHolder(tx, input)
   )
 }
 
@@ -116,6 +115,6 @@ export async function endHoldingAction(_state: GroupCommandState, formData: Form
       userId: value(formData, "userId"),
       endDate: value(formData, "endDate")
     },
-    (input) => endPositionHolding(db, input)
+    (input, tx) => endPositionHolding(tx, input)
   )
 }
