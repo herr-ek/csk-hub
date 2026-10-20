@@ -99,19 +99,18 @@ const everyone = await sendToAll({
 });
 ```
 
-Call these only from server-side feature code, after the feature has authorized the actor and validated its input. For example, an Admin-only write action should call `requireAdmin()` before delivery.
+Call these only from server-side feature code, after the feature has authorized the actor and validated its input. For example, a broadcast action must require `notification.broadcast` before delivery.
 
 ```ts
 "use server";
 
-import { requireAdmin } from "@/core/auth/permissions.server";
-import { sendToUsers } from "@/core/notifications";
+import { requirePermission } from "@/core/authz"
+import { sendToUsers } from "@/core/notifications"
 
 export async function notifySelectedUsers(userIds: string[], message: string) {
-  await requireAdmin();
-  const text = message.trim();
-  if (!text)
-    return { success: false as const, error: "messageRequired" as const };
+  await requirePermission({ action: "notification.broadcast" })
+  const text = message.trim()
+  if (!text) return { success: false as const, error: "messageRequired" as const }
 
   return sendToUsers(userIds, { body: text });
 }

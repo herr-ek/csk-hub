@@ -5,13 +5,11 @@ and relationship attributes. Features supply facts from trusted server reads; au
 owns the decisions. Better Auth retains authentication and its native account permissions.
 The module never imports features and does not load their resources itself.
 
-The member-ID API uses this module for fresh issuance and Admin verification checks. Other
-feature guards, routes and UI behavior still use their existing authorization. See the [adoption guide](../../../docs/authorization.md)
-for the current migration points and future capabilities; this README owns the module interface
-and policy registration workflow.
-Personal Post creation, reads and lifecycle commands use this module. Features load and lock
-Post attributes before checking their resource policy. Other feature migrations are tracked in
-the adoption guide.
+Stages one through three are implemented: personal Posts, Members, Messaging, account settings,
+administrative workflows, routes and navigation use these policies. Better Auth no longer carries
+application Post grants; the legacy application permission guards have been removed. Group-authored
+Posts, audience targets, Recalled Group Posts and Event instance policies remain unimplemented.
+The member-ID API also uses fresh issuance and Admin verification policies.
 
 ## Reading order
 
@@ -62,6 +60,8 @@ returns `{ userId, isAdmin, impersonatedBy }` or throws `AuthorizationDeniedErro
 database failures propagate. Unknown runtime action names deny access. Error diagnostics contain
 the actor and supplied context: keep them on the server and map denials to the feature's existing
 localized errors or 404 behavior without serializing these details.
+`requireMessagingUserId(tx?)` derives fresh active identity and denies support impersonation;
+Conversation access remains feature-owned.
 
 ## One server operation with multiple checks
 
@@ -156,6 +156,8 @@ grants do not authorize arbitrary Post or Event instances.
 `policies.test.ts` exercises the pure evaluator with attribute fixtures and needs no database.
 `test/authz.test.ts` uses a migrated disposable local PostgreSQL database for trusted actor
 resolution, transaction visibility, attribution, errors and organisational period compatibility.
+`test/authz-adoption.test.ts` covers protected Post reads, feature-owned Post locks and fresh
+checks after deactivation or session revocation.
 `test/authz.typecheck.ts` checks invalid action/context combinations and policy registration
 through `bun run typecheck`.
 
