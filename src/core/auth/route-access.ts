@@ -1,14 +1,13 @@
 import { locales } from "@/core/i18n/locales"
 import { getPostLoginPath, loginPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { hasAdminRole } from "@/shared/roles"
 
 /** Access rules use locale-neutral paths, including when Proxy sees an internal locale rewrite. */
 function accessPath(path: string): string {
   const locale = locales.find((locale) => path === `/${locale}` || path.startsWith(`/${locale}/`))
   return locale ? path.slice(locale.length + 1) || "/" : path
 }
-
-import { hasAdminRole } from "@/shared/roles"
 
 const PUBLIC_PATHS = new Set<string>([
   ROUTES.login,

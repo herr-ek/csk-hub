@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Suspense } from "react"
-import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getRequestSession } from "@/core/auth/session.server"
+import { can } from "@/core/authz"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
 import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
@@ -102,14 +102,15 @@ export function AppNavigation({ badges }: { badges?: NavigationBadges }) {
 
 export async function RuntimeAppNavigation({ badges }: { badges?: NavigationBadges }) {
   const session = await getRequestSession()
-  const isAdmin = await isUserAdmin(session)
+  const active = session && (await can({ action: "app.access" }))
+  const isAdmin = active && (await can({ action: "admin.access" }))
   return (
     <AppNavigationTemplate
       badges={badges}
       config={
-        session
+        active && session
           ? {
-              showAdmin: isAdmin,
+              showAdmin: Boolean(isAdmin),
               user: { name: session.user.name, image: session.user.image },
               ...(session?.session.impersonatedBy ? { impersonatingUserName: session.user.name } : {})
             }
