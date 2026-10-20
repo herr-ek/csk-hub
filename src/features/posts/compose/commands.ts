@@ -1,6 +1,6 @@
 import "server-only"
 
-import { AUTHORIZATION_DENIED, requireCurrentUserPermission } from "@/core/auth/permissions.server"
+import { AUTHORIZATION_DENIED, requireAdmin } from "@/core/auth/permissions.server"
 import { logger } from "@/core/logging"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import * as lifecycle from "../lifecycle"
@@ -20,13 +20,12 @@ function logFailure(event: string, error: unknown) {
 }
 
 async function writePost(
-  action: "create" | "update",
   event: "save" | "unpublish" | "discard",
   write: (actorId: string) => Promise<{ id: string } | null>
 ): Promise<PostWriteResult> {
   let actorId: string
   try {
-    actorId = (await requireCurrentUserPermission({ resource: "post", action })).userId
+    actorId = (await requireAdmin()).userId
   } catch (error) {
     if (getErrorCode(error) === AUTHORIZATION_DENIED) return { status: "unauthorized" }
 
@@ -46,7 +45,7 @@ async function writePost(
 
 /** Authorize creation for the acting User; content must already satisfy the Post schema. */
 export async function createPostCommand(content: lifecycle.PostContent, publish: boolean): Promise<PostWriteResult> {
-  return writePost("create", "save", (authorId) => lifecycle.createPost({ authorId, content, publish }))
+  return writePost("save", (authorId) => lifecycle.createPost({ authorId, content, publish }))
 }
 
 /** Authorize saving or publishing the acting User's own draft; content must be validated. */
@@ -55,7 +54,7 @@ export async function saveDraftCommand(
   content: lifecycle.PostContent,
   publish: boolean
 ): Promise<PostWriteResult> {
-  return writePost("create", "save", (authorId) => lifecycle.saveDraft({ postId, authorId, content, publish }))
+  return writePost("save", (authorId) => lifecycle.saveDraft({ postId, authorId, content, publish }))
 }
 
 /** Authorize an edit to a published Post; content must already satisfy the Post schema. */
@@ -63,17 +62,17 @@ export async function editPublishedPostCommand(
   postId: string,
   content: lifecycle.PostContent
 ): Promise<PostWriteResult> {
-  return writePost("update", "save", () => lifecycle.editPublishedPost({ postId, content }))
+  return writePost("save", () => lifecycle.editPublishedPost({ postId, content }))
 }
 
 /** Authorize recalling a published Post to its author's drafts. */
 export async function unpublishPostCommand(postId: string): Promise<PostWriteResult> {
-  return writePost("update", "unpublish", async () => ((await lifecycle.unpublishPost(postId)) ? { id: postId } : null))
+  return writePost("unpublish", async () => ((await lifecycle.unpublishPost(postId)) ? { id: postId } : null))
 }
 
 /** Authorize discarding the acting User's own draft. */
 export async function discardDraftCommand(postId: string): Promise<PostWriteResult> {
-  return writePost("create", "discard", async (authorId) =>
+  return writePost("discard", async (authorId) =>
     (await lifecycle.discardDraft({ postId, authorId })) ? { id: postId } : null
   )
 }
