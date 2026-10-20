@@ -12,6 +12,8 @@ import { postPolicies } from "./post-policies"
 
 // Register each policy family here. This complete map requires a policy for every declared action.
 const policies: AuthorizationPolicies = {
+  "app.access": () => true,
+  "messaging.access": (actor) => actor.impersonatedBy === null,
   ...postPolicies,
   ...groupPolicies,
   ...memberPolicies,

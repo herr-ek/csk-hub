@@ -1,10 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
+import { createAuthorization } from "@/core/authz/authorization"
 import { user } from "@/core/db/schema/auth"
 import { post } from "@/core/db/schema/posts"
 import { createTestDatabase } from "../../../test/database"
 import { createPost, discardDraft, editPublishedPost, type PostContent, saveDraft, unpublishPost } from "./lifecycle"
-import { getEditablePost, getPublishedPost, listDraftsByAuthor, listNewsFeed } from "./service"
+import * as reads from "./service"
 
 const database = await createTestDatabase()
 
@@ -16,9 +17,28 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
   const { db, drop } = database as NonNullable<typeof database>
   afterAll(() => drop())
 
+  let viewerId: string
+  function authorizeAs(id: string) {
+    return createAuthorization({ database: db, readSession: async () => ({ user: { id }, session: {} }) })
+      .requirePermission
+  }
+  function listNewsFeed(database = db) {
+    return reads.listNewsFeed(database, authorizeAs(viewerId))
+  }
+  function getPublishedPost(id: string, database = db) {
+    return reads.getPublishedPost(id, database, authorizeAs(viewerId))
+  }
+  function listDraftsByAuthor(id: string, database = db) {
+    return reads.listOwnDrafts(database, authorizeAs(id))
+  }
+  function getEditablePost(postId: string, id: string, database = db) {
+    return reads.getEditablePost(postId, database, authorizeAs(id))
+  }
+
   async function newAdmin() {
     const id = crypto.randomUUID()
-    await db.insert(user).values({ id, name: "Admin", email: `${id}@example.com` })
+    viewerId = id
+    await db.insert(user).values({ id, role: "admin", name: "Admin", email: `${id}@example.com` })
     return id
   }
 

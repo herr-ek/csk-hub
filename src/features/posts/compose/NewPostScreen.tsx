@@ -1,3 +1,4 @@
+import { requirePermission } from "@/core/authz"
 import { getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
@@ -16,7 +17,8 @@ async function ComposeHeader() {
   )
 }
 
-export function NewPostScreen() {
+export async function NewPostScreen() {
+  await requirePermission({ action: "post.create" })
   return (
     <ContentPage fill>
       <PageBreadcrumb route="newsCompose" />

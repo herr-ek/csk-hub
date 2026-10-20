@@ -30,6 +30,8 @@ type MemberContext = Readonly<{ member: MemberAttributes | null }>
  * Group-authored Posts, audience changes and Event instances need their own contexts and policies.
  */
 export type PermissionContext = {
+  "app.access": undefined
+  "messaging.access": undefined
   "post.create": undefined
   "post.read": PostContext
   "post.update": PostContext
