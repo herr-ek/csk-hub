@@ -2,6 +2,7 @@ import "server-only"
 
 import { and, asc, desc, eq, exists, isNotNull, isNull, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import {
@@ -23,6 +24,7 @@ export type GroupDetail = NonNullable<Awaited<ReturnType<typeof getGroupDetail>>
 
 /** Everything the group detail page shows and offers, or null when there is no such group. */
 export async function getGroupDetail(groupId: string) {
+  await requirePermission({ action: "org.manage" })
   const choirGroup = alias(group, "choir_group")
   const [row] = await db
     .select({
@@ -199,6 +201,7 @@ async function choirVoicesOf(choirId: string): Promise<VoiceDivision[]> {
 
 /** The Choir a group belongs to, for commands that are addressed by Choir. */
 export async function getChoirIdOf(groupId: string) {
+  await requirePermission({ action: "org.manage" })
   const [row] = await db
     .select({ choirId: group.choirId })
     .from(group)

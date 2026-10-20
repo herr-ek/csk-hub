@@ -13,6 +13,8 @@ const authorization = createAuthorization({ database: db, readSession: getFreshR
 export const { can, requirePermission, forCurrentRequest } = authorization
 
 /** Fresh active identity for Messaging entrypoints; Conversation authorization remains feature-owned. */
-export async function requireMessagingUserId(): Promise<string> {
-  return (await requirePermission({ action: "messaging.access" })).userId
+export async function requireMessagingUserId(
+  connection?: import("./authorization").AuthorizationDatabase
+): Promise<string> {
+  return (await requirePermission({ action: "messaging.access" }, connection)).userId
 }

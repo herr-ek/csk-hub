@@ -38,10 +38,14 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
  * @param input - A partial preferences object validated by `userPreferencesUpdateSchema`.
  * @throws A Zod error when `input` is invalid, or a database error when the upsert fails.
  */
-export async function updateUserPreferences(userId: string, input: UserPreferencesUpdate): Promise<void> {
+export async function updateUserPreferences(
+  userId: string,
+  input: UserPreferencesUpdate,
+  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+): Promise<void> {
   const preferences = userPreferencesUpdateSchema.parse(input)
 
-  await db
+  await database
     .insert(userPreferences)
     .values({ userId, preferences })
     .onConflictDoUpdate({

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
 
 const POST_ID = "11111111-1111-4111-8111-111111111111"
 
@@ -24,7 +25,7 @@ class DeniedError extends Error {
 mock.module("@/core/authz", () => ({
   requirePermission,
   AUTHORIZATION_DENIED: "AUTHORIZATION_DENIED",
-  AuthorizationDeniedError: DeniedError
+  AuthorizationDeniedError
 }))
 mock.module("../lifecycle", () => ({ createPost, saveDraft, editPublishedPost, unpublishPost, discardDraft }))
 mock.module("@/core/logging", () => ({ logger: { error: loggerError } }))

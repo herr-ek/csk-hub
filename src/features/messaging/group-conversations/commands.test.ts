@@ -33,9 +33,9 @@ const tx = {
   }))
 }
 const db = { transaction: mock(async (callback: (transaction: typeof tx) => unknown) => callback(tx)) }
-const requireAuthenticatedUser = mock(async () => "creator")
+const requireMessagingUserId = mock(async () => "creator")
 mock.module("@/core/db", () => ({ db }))
-mock.module("@/core/auth/session.server", () => ({ requireAuthenticatedUser }))
+mock.module("@/core/authz", () => ({ requireMessagingUserId }))
 const { addGroupMembers, createGroupConversation, leaveGroupConversation, renameGroupConversation } = await import(
   "./commands"
 )

@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, asc, desc, eq, isNull, lt } from "drizzle-orm"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
+import { requireMessagingUserId } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import {
@@ -20,7 +20,7 @@ const MESSAGE_PAGE_SIZE = 50
 
 /** Returns a direct conversation timeline window in chronological display order. */
 async function getDirectConversationPage(conversationId: string, beforeSequence?: number) {
-  const userId = await requireAuthenticatedUser()
+  const userId = await requireMessagingUserId()
   const [pair] = await db
     .select({ firstMemberId: directConversation.firstMemberId, secondMemberId: directConversation.secondMemberId })
     .from(directConversation)
@@ -79,8 +79,9 @@ async function getDirectConversationPage(conversationId: string, beforeSequence?
 
 /** Keep the viewer's departure cutoff stable while loading their timeline window. */
 async function getGroupConversationPage(conversationId: string, beforeSequence?: number) {
-  const userId = await requireAuthenticatedUser()
+  const userId = await requireMessagingUserId()
   return db.transaction(async (tx) => {
+    await requireMessagingUserId(tx)
     const [membership] = await tx
       .select({
         name: groupConversation.name,

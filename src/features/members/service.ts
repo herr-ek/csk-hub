@@ -24,19 +24,27 @@ export class InactiveViewerError extends Error {
 
 export async function requireActiveViewer(database: MemberDatabase, viewerId: string, lock = false) {
   const query = database
-    .select({ id: user.id })
+    .select({ id: user.id, banned: user.banned })
     .from(user)
     .where(and(eq(user.id, viewerId), activeUser()))
     .limit(1)
   const [viewer] = lock ? await query.for("no key update") : await query
   if (!viewer) throw new InactiveViewerError()
+  return viewer
 }
 
 /** Reads the current database state and returns email only to the profile's owner. */
 export async function getMemberProfile(database: MemberDatabase, viewerId: string, memberId: string) {
   await requireActiveViewer(database, viewerId)
   const [member] = await database
-    .select({ id: user.id, name: user.name, username: user.username, image: user.image, email: user.email })
+    .select({
+      id: user.id,
+      banned: user.banned,
+      name: user.name,
+      username: user.username,
+      image: user.image,
+      email: user.email
+    })
     .from(user)
     .where(and(eq(user.id, memberId), activeUser()))
     .limit(1)

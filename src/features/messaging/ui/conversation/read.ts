@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, eq, sql } from "drizzle-orm"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
+import { requireMessagingUserId } from "@/core/authz"
 import { db } from "@/core/db"
 import { conversation, conversationReadState, directConversation, groupMembership } from "@/core/db/schema/messaging"
 import { canViewGroupSequence } from "../../group-conversations/access"
@@ -10,12 +10,13 @@ import { MessagingAccessError } from "../../model/messaging-error"
 import { verifiesReadToken } from "./read-token"
 
 export async function markConversationRead(conversationId: string, sequence: number, token: string) {
-  const userId = await requireAuthenticatedUser()
+  const userId = await requireMessagingUserId()
 
   if (!Number.isInteger(sequence) || sequence < 1 || !verifiesReadToken(token, conversationId, userId, sequence))
     throw new MessagingAccessError("read-position-invalid")
 
   await db.transaction(async (tx) => {
+    await requireMessagingUserId(tx)
     // Conversation kind is immutable; resolving it must not contend with sends.
     const [target] = await tx
       .select({ kind: conversation.kind })

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { requestAuthorization } from "@test/request-authorization"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
 
 const markConversationRead = mock(async () => undefined)
 const getSession = mock(async () => null as null | { session: { impersonatedBy: string | null } })
@@ -6,20 +8,18 @@ const revalidatePath = mock()
 const sendMessage = mock(async () => ({ conversationId: "conversation-1" }))
 
 mock.module("./read", () => ({ markConversationRead }))
-mock.module("@/core/auth/session.server", () => ({
-  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
-  getRequestSession: getSession,
-  requireAuthenticatedUser: mock(async () => "sender")
-}))
+
 mock.module("../../sending", () => ({ sendMessage }))
 
 mock.module("next/cache", () => ({ revalidatePath }))
+
+mock.module("@/core/authz", () => requestAuthorization(getSession))
 
 const { markConversationReadAction, sendMessageAction } = await import("./actions")
 
 beforeEach(() => {
   getSession.mockClear()
-  getSession.mockResolvedValue(null)
+  getSession.mockResolvedValue({ session: { impersonatedBy: null } })
   revalidatePath.mockClear()
   sendMessage.mockClear()
 })
@@ -62,7 +62,7 @@ describe("message Server Actions", () => {
     formData.set("conversationId", "conversation-1")
     formData.set("idempotencyKey", "request-1")
     formData.set("text", "Sign in first")
-    sendMessage.mockRejectedValueOnce(Object.assign(new Error(), { code: "AUTHENTICATION_REQUIRED" }))
+    sendMessage.mockRejectedValueOnce(new AuthorizationDeniedError({ action: "messaging.access" }, null))
 
     await expect(sendMessageAction({ status: "idle" }, formData)).resolves.toEqual({
       status: "error",
