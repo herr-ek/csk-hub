@@ -31,7 +31,7 @@ mock.module("@/core/authz", () => ({
     if (request.action === "notification.broadcast") return requireAdmin()
     const session = await getSession()
     if (!session) throw new Error("Unauthorized")
-    return { userId: session.user.id }
+    return { userId: session.user.id, impersonatedBy: session.session.impersonatedBy ?? null }
   }
 }))
 mock.module("@/core/i18n/server", () => ({ getTranslations }))

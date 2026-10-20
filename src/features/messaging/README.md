@@ -26,8 +26,10 @@ Routes import screens only through `@/features/messaging`. UI Server Actions cal
 ## Where changes belong
 
 - Change sender authentication, Conversation authorization, idempotency, transaction ordering, or
-  Message persistence in `sending/`. Request-context availability rules, such as preventing sends
-  during support impersonation, belong at the Server Action boundary in `ui/`. Read
+  Message persistence in `sending/`. Protected reads and commands use
+  `requireMessagingUserId(tx?)` from `core/authz` to reject inactive, revoked and impersonated
+  sessions. Server Actions in `ui/` translate these denials for the user; direct command callers
+  receive the same restriction. Read
   [`sending/README.md`](sending/README.md) before changing that module.
 - Change shared Message body rules or pure Direct Conversation rules in `model/`.
 - Change rendering, form behavior, navigation, or cache revalidation in `ui/`.
