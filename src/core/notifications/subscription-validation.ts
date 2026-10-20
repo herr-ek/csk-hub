@@ -1,5 +1,6 @@
 import "server-only"
 
+import { ECDH } from "node:crypto"
 import { z } from "zod"
 import type { NotificationSubscription } from "./types"
 
@@ -75,7 +76,13 @@ const subscriptionSchema = z.object({
   endpoint: z.string().transform(parsePushEndpoint),
   keys: z.object({
     p256dh: z.string().transform((value) => {
-      if (validateKey(value, 65)[0] !== 4) throw new InvalidNotificationSubscriptionError()
+      const key = validateKey(value, 65)
+      if (key[0] !== 4) throw new InvalidNotificationSubscriptionError()
+      try {
+        ECDH.convertKey(key, "prime256v1")
+      } catch {
+        throw new InvalidNotificationSubscriptionError()
+      }
       return value
     }),
     auth: z.string().transform((value) => {

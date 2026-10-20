@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, expect, mock, test } from "bun:test"
+import { afterAll, afterEach, beforeEach, expect, jest, mock, test } from "bun:test"
 
 // Bun's module mocks persist across files. Keep the client action stub out of
 // server-action authorization tests that import the real logout action.
@@ -28,6 +28,8 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
   mock.module("@/core/auth/auth-client", () => ({ authClient: { signOut, admin: { stopImpersonating } } }))
   mock.module("./logout-actions", () => ({ revokePushBindingBeforeLogout: revoke }))
   const { logout } = await import("./logout")
+
+  afterEach(() => jest.useRealTimers())
 
   beforeEach(() => {
     Object.defineProperty(globalThis, "navigator", {
@@ -78,6 +80,47 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
     await logout(false)
     expect(unsubscribe).not.toHaveBeenCalled()
     expect(signOut).toHaveBeenCalledTimes(1)
+  })
+
+  for (const [name, operation] of [
+    ["registration lookup", getRegistration],
+    ["subscription lookup", getSubscription],
+    ["server revocation", revoke],
+    ["browser unsubscribe", unsubscribe]
+  ] as const) {
+    test(`stalled ${name} cannot hold logout past its cleanup deadline`, async () => {
+      jest.useFakeTimers()
+      const started = Promise.withResolvers<void>()
+      operation.mockImplementationOnce(() => {
+        started.resolve()
+        return new Promise<never>(() => undefined)
+      })
+      const result = logout(false)
+      await started.promise
+      jest.advanceTimersByTime(2_000)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(signOut).toHaveBeenCalledTimes(1)
+      await expect(result).resolves.toMatchObject({ error: null })
+    })
+  }
+
+  test("late revocation cannot start browser removal after logout", async () => {
+    jest.useFakeTimers()
+    const started = Promise.withResolvers<void>()
+    const revocation = Promise.withResolvers<boolean>()
+    revoke.mockImplementationOnce(() => {
+      started.resolve()
+      return revocation.promise
+    })
+    const result = logout(false)
+    await started.promise
+    jest.advanceTimersByTime(2_000)
+    await result
+    revocation.resolve(true)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(unsubscribe).not.toHaveBeenCalled()
   })
 
   test("stopping impersonation never touches browser push or signs out the Admin", async () => {
