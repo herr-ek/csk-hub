@@ -1,6 +1,4 @@
 import { notFound } from "next/navigation"
-import { isUserAdmin } from "@/core/auth/permissions.server"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
@@ -13,9 +11,9 @@ import { ConfirmPostCommand } from "./ConfirmPostCommand"
 import { PostForm } from "./PostForm"
 
 export async function EditPostScreen({ postId }: { postId: string }) {
-  const post = await getEditablePost(postId, await requireAuthenticatedUser())
+  const post = await getEditablePost(postId)
   // Someone else's draft, and a Post the reader may not change, look like no Post at all.
-  if (!post || !(await isUserAdmin())) notFound()
+  if (!post) notFound()
 
   const t = await getTranslations("Posts")
   const draft = post.state === "draft"

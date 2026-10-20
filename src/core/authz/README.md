@@ -5,9 +5,9 @@ and relationship attributes. Features supply facts from trusted server reads; au
 owns the decisions. Better Auth retains authentication and its native account permissions.
 The module never imports features and does not load their resources itself.
 
-This module is not yet adopted by production features. Feature guards, routes and UI behavior
-are unchanged. Feature migration and reconciliation of the broader authorization design/adoption
-documents are separate work; this README describes the current module interface.
+Personal Post creation, reads and lifecycle commands use this module. Features load and lock
+Post attributes before checking their resource policy. Other feature migrations are tracked in
+the adoption guide.
 
 ## Calling the module
 

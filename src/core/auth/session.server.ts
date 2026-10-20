@@ -37,7 +37,8 @@ export const getRequestSession = cache(async () => {
  */
 export async function getFreshRequestSession() {
   await io()
-  return auth.api.getSession({ headers: await headers(), query: { disableCookieCache: true } })
+  // Validation must remain read-only when a caller already holds a Session lock.
+  return auth.api.getSession({ headers: await headers(), query: { disableCookieCache: true, disableRefresh: true } })
 }
 
 /** Returns the signed-in user's ID for server-side workflows. */
