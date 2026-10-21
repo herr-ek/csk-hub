@@ -125,33 +125,33 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     const choir = await t.groupId("KK")
     const section = await t.groupId("KKT", "KK")
     const singer = await t.user("Voice changing parent")
-    expectSuccess(await placeSinger(t.db, { userId: singer, choirId: choir, voice: "T1", startDate: "2057-01-01" }))
+    expectSuccess(await placeSinger(t.db, { userId: singer, choirId: choir, voice: "T1", startDate: "2024-01-01" }))
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId: singer,
         positionCode: "stamforalder",
         contextGroupId: section,
-        startDate: "2057-02-01"
+        startDate: "2024-02-01"
       })
     )
 
-    expectSuccess(await changeVoice(t.db, { userId: singer, choirId: choir, voice: "T2", date: "2057-03-01" }))
+    expectSuccess(await changeVoice(t.db, { userId: singer, choirId: choir, voice: "T2", date: "2024-03-01" }))
     expect(await listCurrentGroupMembers(t.db, section)).toMatchObject([{ userId: singer, voice: "T2" }])
     expect(
-      (await listAppointmentMembersAt(t.db, parents, "2057-03-01")).filter(({ userId }) => userId === singer)
+      (await listAppointmentMembersAt(t.db, parents, "2024-03-01")).filter(({ userId }) => userId === singer)
     ).toMatchObject([{ userId: singer, appointments: [{ id: appointment.id, contextGroupId: section }] }])
 
-    expect(await changeVoice(t.db, { userId: singer, choirId: choir, voice: "B1", date: "2057-04-01" })).toEqual({
+    expect(await changeVoice(t.db, { userId: singer, choirId: choir, voice: "B1", date: "2024-04-01" })).toEqual({
       success: false,
       error: "membership-dependency"
     })
-    expect(await endMembership(t.db, { userId: singer, groupId: choir, endDate: "2057-04-01" })).toEqual({
+    expect(await endMembership(t.db, { userId: singer, groupId: choir, endDate: "2024-04-01" })).toEqual({
       success: false,
       error: "membership-dependency"
     })
     expect(await listCurrentGroupMembers(t.db, section)).toMatchObject([{ userId: singer, voice: "T2" }])
     expect(
-      (await listAppointmentMembersAt(t.db, parents, "2057-04-01")).filter(({ userId }) => userId === singer)
+      (await listAppointmentMembersAt(t.db, parents, "2024-04-01")).filter(({ userId }) => userId === singer)
     ).toMatchObject([{ userId: singer, appointments: [{ id: appointment.id, contextGroupId: section }] }])
   })
 
