@@ -79,6 +79,7 @@ export function GroupLink({ group }: { group: GroupSummary }) {
 /** The member count, with the current Position holders one per line behind it. */
 export function GroupFacts({ group }: { group: GroupSummary }) {
   const t = useTranslations("Groups")
+  const positionLabel = useTranslations("Groups.positionLabels")
   const members = t("memberCount", { count: group.memberCount })
   if (group.holders.length === 0) return <p className="text-xs text-muted-foreground">{members}</p>
 
@@ -90,9 +91,12 @@ export function GroupFacts({ group }: { group: GroupSummary }) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-          {group.holders.map(({ position, holder }) => (
-            <div key={position} className="contents">
-              <dt className="text-muted-foreground">{position}</dt>
+          {group.holders.map(({ id, positionCode, position, context, holder }) => (
+            <div key={id} className="contents">
+              <dt className="text-muted-foreground">
+                {positionCode ? positionLabel(positionCode) : position}
+                {context ? ` (${context})` : ""}
+              </dt>
               <dd>{holder}</dd>
             </div>
           ))}

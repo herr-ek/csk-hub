@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import * as permissions from "@/core/auth/permissions.server"
 import * as session from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import * as messaging from "@/features/messaging/reading"
@@ -27,17 +28,20 @@ const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> 
 const sessionRead = spyOn(session, "getRequestSession")
 const profileRead = spyOn(service, "getMemberProfile")
 const conversationRead = spyOn(messaging, "findDirectConversation")
+const adminRead = spyOn(permissions, "isUserAdmin")
 
 beforeEach(() => {
   sessionRead.mockReset().mockResolvedValue(viewer)
   profileRead.mockReset().mockResolvedValue(member)
   conversationRead.mockReset().mockResolvedValue("conversation-1")
+  adminRead.mockReset().mockResolvedValue(false)
 })
 
 afterAll(() => {
   sessionRead.mockRestore()
   profileRead.mockRestore()
   conversationRead.mockRestore()
+  adminRead.mockRestore()
 })
 
 describe("profile conversation visibility", () => {
@@ -63,5 +67,12 @@ describe("profile conversation visibility", () => {
     sessionRead.mockResolvedValueOnce({ ...viewer, session: { ...viewer.session, impersonatedBy: "admin" } })
     expect(await getProfile("member")).toMatchObject({ canMessage: false, messageConversationId: null })
     expect(conversationRead).not.toHaveBeenCalled()
+  })
+
+  test("keeps organisation correction history behind the Admin check", async () => {
+    const result = await getProfile("member")
+    expect(result.canManageOrganisation).toBe(false)
+    expect(result.managementRecords).toBeNull()
+    expect(adminRead).toHaveBeenCalledWith(viewer)
   })
 })

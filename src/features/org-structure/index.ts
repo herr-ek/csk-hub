@@ -9,7 +9,11 @@ export {
   endAppointment,
   listAppointmentMembersAt,
   listAppointmentsForGroup,
+  listAppointmentsOfUser,
+  listEffectiveChoirAffiliationsOfUsersAt,
+  listEffectiveGroupsOfUserAt,
   listEffectiveMembersAt,
+  listEffectiveMembersCurrent,
   replaceAppointmentHolder
 } from "./appointments"
 export {
@@ -18,7 +22,8 @@ export {
   correctDirectMembership,
   endDirectMembership,
   listDirectMembersAt,
-  listDirectMemberships
+  listDirectMemberships,
+  listDirectMembershipsOfUser
 } from "./direct-membership"
 export { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
 export { endLinkedPosition, startLinkedPosition } from "./linked-positions"

@@ -4,10 +4,12 @@ import { user } from "@/core/db/schema/auth"
 import { conversation, directConversation } from "@/core/db/schema/messaging"
 import { findDirectConversation } from "@/features/messaging/reading"
 import {
+  appointPosition,
   archiveGroup,
   changeVoice,
   createChoir,
   createGroup,
+  createOrganisationGroup,
   createPosition,
   endPositionHolding,
   placeSinger,
@@ -145,6 +147,48 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const after = await getMemberProfile(db, holder, holder)
     expect(after?.groups.map((group) => group.groupId)).toEqual([board.id])
     expect(after?.positions[0].groups.map((group) => group.id)).toEqual([board.id])
+  })
+
+  test("effective profile affiliations show one dated appointment across grants without enrolling a singer", async () => {
+    const holder = await member("Appointed without Choir")
+    const boardName = unique("Board 26/27")
+    const board = success(await createOrganisationGroup(db, { name: boardName, type: "Board", organisationYear: 2026 }))
+    const sexName = unique("Sexmästeri 26/27")
+    const sex = success(
+      await createOrganisationGroup(db, {
+        name: sexName,
+        type: "Sexmästeri",
+        organisationYear: 2026
+      })
+    )
+    const appointment = success(
+      await appointPosition(db, {
+        userId: holder,
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        startDate: "2026-07-01"
+      })
+    )
+    const second = success(
+      await appointPosition(db, {
+        userId: holder,
+        positionCode: "sexmastarinna",
+        contextGroupId: sex.id,
+        startDate: "2026-07-01"
+      })
+    )
+    const profile = await getMemberProfile(db, holder, holder, "2026-08-01")
+    expect(profile?.choirs).toEqual([])
+    expect(profile?.positions.map((item) => item.id).sort()).toEqual([appointment.id, second.id].sort())
+    expect(profile?.positions.map((item) => item.contextName).sort()).toEqual([boardName, sexName].sort())
+    expect(profile?.groups.map((item) => item.groupId).sort()).toEqual([board.id, sex.id].sort())
+    expect(profile?.groups.find((item) => item.groupId === sex.id)?.positions).toHaveLength(2)
+    const future = await getMemberProfile(db, holder, holder, "2026-06-30")
+    expect(future?.positions).toEqual([])
+    expect(future?.groups).toEqual([])
+    const expired = await getMemberProfile(db, holder, holder, "2027-07-01")
+    expect(expired?.positions).toEqual([])
+    expect(expired?.groups).toEqual([])
   })
 
   test("directory paging is stable, includes unassigned Users, searches username literally and hides the viewer and inactive Users", async () => {

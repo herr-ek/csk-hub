@@ -1,4 +1,5 @@
 import { getFormatter, getTranslations } from "@/core/i18n/server"
+import { useTranslations } from "@/core/i18n/translations"
 import { Badge } from "@/shared/ui/base/badge"
 import { Card, CardContent, CardHeader } from "@/shared/ui/base/card"
 import type { ProfileAffiliations } from "./affiliations"
@@ -6,11 +7,12 @@ import type { ProfileAffiliations } from "./affiliations"
 type Group = ProfileAffiliations["groups"][number]
 
 function Positions({ positions }: { positions: Group["positions"] }) {
+  const label = useTranslations("Groups.positionLabels")
   return positions.length ? (
     <div className="flex flex-wrap gap-2">
       {positions.map((position) => (
-        <Badge key={position.positionId} variant="secondary">
-          {position.name}
+        <Badge key={position.id} variant="secondary">
+          {position.positionCode ? label(position.positionCode) : position.name}
         </Badge>
       ))}
     </div>

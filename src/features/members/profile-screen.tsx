@@ -29,10 +29,71 @@ export async function MemberProfileScreen({ memberId }: { memberId?: string }) {
       </Link>
       <ProfileHeader data={data} />
       <ProfilePositions positions={profile.positions} />
+      {data.canManageOrganisation ? <AdminParticipationHistory records={data.managementRecords} /> : null}
       <ProfileChoirs choirs={profile.choirs} />
       <ProfileGroups groups={profile.groups} otherGroups={profile.otherGroups} />
       <ProfileVoices capabilities={profile.capabilities} />
     </main>
+  )
+}
+
+async function AdminParticipationHistory({ records }: { records: ProfileData["managementRecords"] }) {
+  const [t, positionLabel] = await Promise.all([
+    getTranslations("MemberProfiles"),
+    getTranslations("Groups.positionLabels")
+  ])
+  if (!records) return null
+  const entries = [
+    ...records.appointments.map((item) => ({
+      key: item.id,
+      label: `${positionLabel(item.positionCode)} · ${item.contextName}`,
+      start: item.startDate,
+      end: item.endDate,
+      groupId: item.contextGroupId,
+      kind: t("appointmentRecord")
+    })),
+    ...records.memberships.map((item) => ({
+      key: item.id,
+      label: item.groupName,
+      start: item.startDate,
+      end: item.endDate,
+      groupId: item.groupId,
+      kind: t("membershipRecord")
+    }))
+  ]
+  return (
+    <section aria-labelledby="admin-participation-title">
+      <h2 id="admin-participation-title" className="mb-3 font-heading text-xl font-semibold">
+        {t("adminParticipation")}
+      </h2>
+      {entries.length ? (
+        <ul className="space-y-2">
+          {entries.map((entry) => (
+            <li
+              key={entry.key}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm"
+            >
+              <span>
+                {t("participationRecord", {
+                  kind: entry.kind,
+                  label: entry.label,
+                  start: entry.start,
+                  end: entry.end ?? t("ongoing")
+                })}
+              </span>
+              <Link className="underline underline-offset-4" href={`${ROUTES.adminOrgStructure}/${entry.groupId}`}>
+                {t("manageRecord")}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">{t("noAdminParticipation")}</p>
+      )}
+      <Link className="mt-3 inline-block text-sm underline underline-offset-4" href={ROUTES.adminOrgStructureGroups}>
+        {t("manageAllGroups")}
+      </Link>
+    </section>
   )
 }
 
@@ -98,7 +159,10 @@ async function ProfileActions({ data }: { data: ProfileData }) {
 
 async function ProfilePositions({ positions }: { positions: Profile["positions"] }) {
   if (positions.length === 0) return null
-  const t = await getTranslations("MemberProfiles")
+  const [t, positionLabel] = await Promise.all([
+    getTranslations("MemberProfiles"),
+    getTranslations("Groups.positionLabels")
+  ])
   return (
     <section aria-labelledby="positions-title">
       <h2 id="positions-title" className="mb-4 flex items-center gap-2 font-heading text-xl font-semibold">
@@ -109,13 +173,18 @@ async function ProfilePositions({ positions }: { positions: Profile["positions"]
         {positions.map((position) => (
           <Card key={position.id} size="sm">
             <CardContent>
-              <h3 className="font-semibold">{position.name}</h3>
+              <h3 className="font-semibold">
+                {position.positionCode ? positionLabel(position.positionCode) : position.name}
+              </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {position.groups
-                  .map((group) =>
+                {[
+                  position.organisationYear
+                    ? `${position.contextName} ${String(position.organisationYear).slice(-2)}/${String(position.organisationYear + 1).slice(-2)}`
+                    : position.contextName,
+                  ...position.groups.map((group) =>
                     group.choirName ? t("groupContext", { group: group.name, choir: group.choirName }) : group.name
                   )
-                  .join(", ")}
+                ].join(", ")}
               </p>
             </CardContent>
           </Card>
