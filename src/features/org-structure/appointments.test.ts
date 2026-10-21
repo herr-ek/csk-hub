@@ -1,7 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { eq, sql } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
-import { appointPosition, createOrganisationGroup, listAppointmentMembersAt } from "./appointments"
+import {
+  appointPosition,
+  correctAnnualAppointment,
+  createOrganisationGroup,
+  listAppointmentMembersAt,
+  replaceAppointmentHolder
+} from "./appointments"
 import { createOrgStructureTestDatabase, expectSuccess, type OrgStructureTestDatabase } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -36,6 +42,109 @@ describe.skipIf(!database)("appointment foundation", () => {
     ])
     expect(await listAppointmentMembersAt(t.db, board.id, "2027-07-01")).toEqual([])
   })
+
+  test("appointing a committee officer converts an overlapping Helper and preserves the earlier period", async () => {
+    const board = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Board 37/38 helper", type: "Board", organisationYear: 2037 })
+    )
+    const committee = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Sexmästeriet 37/38 helper",
+        type: "Sexmästeri",
+        organisationYear: 2037
+      })
+    )
+    const userId = await t.user()
+    await t.db.insert(directMembership).values({
+      userId,
+      groupId: committee.id,
+      startDate: "2037-07-01",
+      endDate: "2038-07-01"
+    })
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        startDate: "2037-09-15"
+      })
+    )
+    const helper = await t.db.select().from(directMembership).where(eq(directMembership.groupId, committee.id))
+    expect(helper).toMatchObject([{ startDate: "2037-07-01", endDate: "2037-09-15" }])
+    expect(await listAppointmentMembersAt(t.db, committee.id, "2037-09-15")).toMatchObject([{ userId }])
+  })
+
+  test("concurrent handovers preserve the started appointment and allow one successor", async () => {
+    const board = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Board 38/39 handover", type: "Board", organisationYear: 2038 })
+    )
+    const incumbent = await t.user()
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId: incumbent,
+        positionCode: "ordforande",
+        contextGroupId: board.id,
+        startDate: "2038-07-01"
+      })
+    )
+    const boundary = "2038-10-01"
+    const successors = [await t.user(), await t.user()]
+    const results = await Promise.all(
+      successors.map((userId) =>
+        replaceAppointmentHolder(t.db, {
+          userId,
+          positionCode: "ordforande",
+          contextGroupId: board.id,
+          organisationYear: 2038,
+          startDate: boundary
+        })
+      )
+    )
+    expect(results.filter((result) => result.success)).toHaveLength(1)
+    expect(await listAppointmentMembersAt(t.db, board.id, "2038-09-30")).toMatchObject([{ userId: incumbent }])
+    expect(await listAppointmentMembersAt(t.db, board.id, boundary)).toHaveLength(1)
+  })
+
+  test("correcting a Board appointment moves holder, year, and companion grant together", async () => {
+    const boardA = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Board 39/40 correction", type: "Board", organisationYear: 2039 })
+    )
+    const sexA = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Sex 39/40 correction", type: "Sexmästeri", organisationYear: 2039 })
+    )
+    const boardB = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Board 40/41 correction", type: "Board", organisationYear: 2040 })
+    )
+    const sexB = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Sex 40/41 correction", type: "Sexmästeri", organisationYear: 2040 })
+    )
+    const first = await t.user()
+    const corrected = await t.user()
+    const appointment = expectSuccess(
+      await appointPosition(t.db, {
+        userId: first,
+        positionCode: "sexmastare",
+        contextGroupId: boardA.id,
+        startDate: "2039-07-01"
+      })
+    )
+    expectSuccess(
+      await correctAnnualAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId: corrected,
+        positionCode: "sexmastare",
+        contextGroupId: boardB.id,
+        organisationYear: 2040,
+        startDate: "2040-08-01",
+        endDate: "2041-07-01"
+      })
+    )
+    expect(await listAppointmentMembersAt(t.db, boardA.id, "2039-08-01")).toEqual([])
+    expect(await listAppointmentMembersAt(t.db, sexA.id, "2039-08-01")).toEqual([])
+    expect(await listAppointmentMembersAt(t.db, boardB.id, "2040-08-01")).toMatchObject([{ userId: corrected }])
+    expect(await listAppointmentMembersAt(t.db, sexB.id, "2040-08-01")).toMatchObject([{ userId: corrected }])
+  })
+
   test("concurrent future assignments have one winner and return a typed occupancy refusal", async () => {
     const board = expectSuccess(
       await createOrganisationGroup(t.db, { name: "Board 27/28", type: "Board", organisationYear: 2027 })
@@ -187,6 +296,68 @@ describe.skipIf(!database)("appointment foundation", () => {
     )
     for (const name of ["Gig A", "Gig B"])
       expectSuccess(await createOrganisationGroup(t.db, { name, type: "GigGroup" }))
+  })
+
+  test("correcting Sekreterare retains the continuing parents meeting grant and a missing companion rolls back", async () => {
+    const parents = await t.groupId("Parents")
+    const oldBoard = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Board 41/42 secretary", type: "Board", organisationYear: 2041 })
+    )
+    const newBoard = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Board 42/43 secretary", type: "Board", organisationYear: 2042 })
+    )
+    const first = await t.user()
+    const replacement = await t.user()
+    const secretary = expectSuccess(
+      await appointPosition(t.db, {
+        userId: first,
+        positionCode: "sekreterare",
+        contextGroupId: oldBoard.id,
+        startDate: "2041-07-01"
+      })
+    )
+    expectSuccess(
+      await correctAnnualAppointment(t.db, {
+        appointmentId: secretary.id,
+        userId: replacement,
+        positionCode: "sekreterare",
+        contextGroupId: newBoard.id,
+        organisationYear: 2042,
+        startDate: "2042-07-01",
+        endDate: "2043-07-01"
+      })
+    )
+    expect(await listAppointmentMembersAt(t.db, oldBoard.id, "2041-08-01")).toEqual([])
+    expect(await listAppointmentMembersAt(t.db, parents, "2042-08-01")).toMatchObject([{ userId: replacement }])
+
+    const thirdBoard = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Board 43/44 missing companion",
+        type: "Board",
+        organisationYear: 2043
+      })
+    )
+    const thirdUser = await t.user()
+    const chair = expectSuccess(
+      await appointPosition(t.db, {
+        userId: thirdUser,
+        positionCode: "ordforande",
+        contextGroupId: thirdBoard.id,
+        startDate: "2043-07-01"
+      })
+    )
+    expect(
+      await correctAnnualAppointment(t.db, {
+        appointmentId: chair.id,
+        userId: replacement,
+        positionCode: "vice-ordforande",
+        contextGroupId: thirdBoard.id,
+        organisationYear: 2043,
+        startDate: "2043-07-01",
+        endDate: "2044-07-01"
+      })
+    ).toEqual({ success: false, error: "group-not-found" })
+    expect(await listAppointmentMembersAt(t.db, thirdBoard.id, "2043-08-01")).toMatchObject([{ userId: thirdUser }])
   })
 
   test("storage refuses wrong scope, wrong annual bounds, and independent grant years", async () => {

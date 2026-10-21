@@ -672,7 +672,14 @@
       "electedPostNotice": "I {group} har varje person bara en post, så medlemmar som redan har en visas inte.",
       "endHolding": "Avsluta",
       "endHoldingTitle": "Avsluta {name}s innehav av {position}?",
-      "endHoldingDescription": "Posten blir vakant. Medlemskapet påverkas inte."
+      "endHoldingDescription": "Posten blir vakant. Medlemskapet påverkas inte.",
+      "cancelAppointment": "Avbryt utnämning",
+      "cancelPreparedTitle": "Avbryta {name}s förberedda utnämning?",
+      "correctAppointment": "Rätta utnämning",
+      "correctAppointmentTitle": "Rätta {name}s utnämning",
+      "groupContext": "Sammanhangsgrupp",
+      "year": "Verksamhetsår",
+      "ongoing": "Pågår"
     },
     "types": {
       "Choir": "Kör",
@@ -766,6 +773,24 @@
       "section": "Stämgrupp",
       "yearRequired": "Välj verksamhetsår för denna årsgrupp.",
       "groupIdentity": "{type} · {year}"
+    },
+    "positionLabels": {
+      "ordforande": "Ordförande",
+      "vice-ordforande": "Vice ordförande",
+      "kassor": "Kassör",
+      "sekreterare": "Sekreterare",
+      "pr-mastare": "PR-mästare",
+      "forsta-konsertmastare": "1:a konsertmästare",
+      "csk-gigmastare": "CSK-gigmästare",
+      "sexmastare": "Sexmästare",
+      "sexmastarinna": "Sexmästarinna",
+      "ekonomiskt-ansvarig": "Ekonomiskt ansvarig",
+      "dirigent": "Dirigent",
+      "notfiskal": "Notfiskal",
+      "choir-konsertmastare": "Körens konsertmästare",
+      "choir-gigmastare": "Körens gigmästare",
+      "stamforalder": "Stämförälder",
+      "gigledare": "Gigledare"
     }
   }
 }
