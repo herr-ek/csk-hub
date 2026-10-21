@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
 import { Client } from "pg"
-import { choir, group, groupTypePosition, position, positionGroup, section } from "@/core/db/schema/org-structure"
+import { choir, group, section } from "@/core/db/schema/org-structure"
 import { createTestDatabase } from "../../test/database"
 import { createReferenceData, insertReferenceData, REFERENCE_DATA } from "./reference-data"
 
@@ -21,10 +21,10 @@ describe.skipIf(!database)("reference data", () => {
     }
   }
 
-  test("creates the Choirs, their Sections and Voices, the Board and the Positions", async () => {
+  test("creates Choirs, Sections, continuing parents and explicit current and future Groups", async () => {
     const created = await withClient(insertReferenceData)
     expect(created).toContain("KKB")
-    expect(created).toContain("Stämförälder")
+    expect(created).toContain("Föräldramötet")
 
     for (const definition of REFERENCE_DATA.choirs) {
       const [choirRow] = await t.db
@@ -42,27 +42,19 @@ describe.skipIf(!database)("reference data", () => {
     }
     expect(await t.db.select().from(choir)).toHaveLength(REFERENCE_DATA.choirs.length)
 
-    for (const { name, type } of REFERENCE_DATA.groups) {
+    for (const { name, type } of REFERENCE_DATA.continuingGroups) {
       const [row] = await t.db.select().from(group).where(eq(group.name, name))
       expect(row).toMatchObject({ type, choirId: null })
     }
-
-    const allowed = await t.db
-      .select({ name: position.name, type: groupTypePosition.type })
-      .from(groupTypePosition)
-      .innerJoin(position, eq(position.id, groupTypePosition.positionId))
-    expect(allowed.map(({ name, type }) => `${name}:${type}`).sort()).toEqual(
-      REFERENCE_DATA.positions.flatMap(({ name, groupTypes }) => groupTypes.map((type) => `${name}:${type}`)).sort()
-    )
-
-    const limits = await t.db
-      .select({ name: position.name, group: group.name })
-      .from(positionGroup)
-      .innerJoin(position, eq(position.id, positionGroup.positionId))
-      .innerJoin(group, eq(group.id, positionGroup.groupId))
-    expect(limits.map(({ name, group }) => `${name}:${group}`).sort()).toEqual(
-      REFERENCE_DATA.positions.flatMap(({ name, groups = [] }) => groups.map((group) => `${name}:${group}`)).sort()
-    )
+    for (const year of [2026, 2027]) {
+      for (const item of REFERENCE_DATA.annualGroups(year)) {
+        const [row] = await t.db
+          .select()
+          .from(group)
+          .where(and(eq(group.type, item.type as never), eq(group.organisationYear, year)))
+        expect(row).toMatchObject({ name: item.name, organisationYear: year, usesAppointmentModel: true })
+      }
+    }
   })
 
   test("is safe to run again", async () => {
@@ -70,9 +62,11 @@ describe.skipIf(!database)("reference data", () => {
     expect(await createReferenceData({ target: "local", url: t.url, host: "test" }, { skipConfirmation: false })).toBe(
       0
     )
-    const sections = REFERENCE_DATA.choirs.flatMap(({ sections }) => sections)
     expect(await t.db.select().from(group)).toHaveLength(
-      REFERENCE_DATA.choirs.length + sections.length + REFERENCE_DATA.groups.length
+      REFERENCE_DATA.choirs.length +
+        REFERENCE_DATA.choirs.reduce((total, item) => total + item.sections.length, 0) +
+        REFERENCE_DATA.continuingGroups.length +
+        20
     )
   })
 })

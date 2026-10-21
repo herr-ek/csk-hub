@@ -4,15 +4,12 @@ import { confirmProductionWrite } from "./guards"
 import { announce, type Database } from "./target"
 
 /**
- * The org structure every environment shares: the three Choirs with their four Sections and the
- * Voice each sings, the Board and the Gigmästeri, and the Position catalogue with the group types
- * each is allowed in. A Position may also be limited to some CSK-wide groups by name, as each
- * Choir's Gigmästare is to that Choir and the Gigmästeri.
+ * Fixed Groups every environment shares. Position rules live in the domain catalogue.
  */
 export const REFERENCE_DATA: {
   choirs: { name: string; sections: { name: string; voice: string }[] }[]
-  groups: { name: string; type: string }[]
-  positions: { name: string; groupTypes: string[]; groups?: string[] }[]
+  continuingGroups: { name: string; type: string }[]
+  annualGroups(year: number): { name: string; type: string; year: number }[]
 } = {
   choirs: [
     {
@@ -43,29 +40,22 @@ export const REFERENCE_DATA: {
       ]
     }
   ],
-  groups: [
-    { name: "Styret 25/26", type: "Board" },
-    { name: "Gigmästeri", type: "Gigmästeri" }
-  ],
-  positions: [
-    { name: "Ordförande", groupTypes: ["Board"] },
-    { name: "Vice Ordförande", groupTypes: ["Board", "Rekryteringskommitté"] },
-    { name: "Kassör", groupTypes: ["Board"] },
-    { name: "Sekreterare", groupTypes: ["Board", "Föräldramötet"] },
-    { name: "PR-mästare", groupTypes: ["Board"] },
-    { name: "1:a Konsertmästare", groupTypes: ["Board", "Konsertmästeri"] },
-    { name: "Gigmästare", groupTypes: ["Board", "Gigmästeri"] },
-    { name: "Sexmästare", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Sexmästarinna", groupTypes: ["Sexmästeri"] },
-    { name: "Dirigent", groupTypes: ["Choir"] },
-    { name: "Notfiskal", groupTypes: ["Choir"] },
-    { name: "Konsertmästare", groupTypes: ["Choir", "Konsertmästeri"] },
-    { name: "Gigmästare MK", groupTypes: ["Choir", "Gigmästeri"], groups: ["MK", "Gigmästeri"] },
-    { name: "Gigmästare DK", groupTypes: ["Choir", "Gigmästeri"], groups: ["DK", "Gigmästeri"] },
-    { name: "Gigmästare KK", groupTypes: ["Choir", "Gigmästeri"], groups: ["KK", "Gigmästeri"] },
-    { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] },
-    { name: "Ekonomiskt Ansvarig", groupTypes: ["Turnékommitté"] }
-  ]
+  continuingGroups: [{ name: "Föräldramötet", type: "Föräldramötet" }],
+  annualGroups: (year) => {
+    const label = `${String(year).slice(-2)}/${String(year + 1).slice(-2)}`
+    return [
+      ["Board", `Styret ${label}`],
+      ["Gigmästeri", `Gigmästeriet ${label}`],
+      ["Sexmästeri", `Sexmästeriet ${label}`],
+      ["Konsertmästeri", `Konsertmästeriet ${label}`],
+      ["Rekryteringskommitté", `Rekryteringskommittén ${label}`],
+      ["Turnékommitté", `Turnékommittén ${label}`],
+      ["Valberedning", `Valberedningen ${label}`],
+      ["Webmästeri", `Webmästeriet ${label}`],
+      ["Arkivarie", `Arkivet ${label}`],
+      ["Utantillkommitté", `Utantillkommittén ${label}`]
+    ].map(([type, name]) => ({ type: type as string, name: name as string, year }))
+  }
 }
 
 /**
@@ -99,60 +89,38 @@ export async function createReferenceData(
 }
 
 /**
- * Insert the missing reference data in one transaction and return the names of what was created.
- * Existing active groups and Positions are matched by name and left as they are.
+ * Insert missing fixed Groups in one transaction and return the names of what was created.
+ * Existing active Choirs/Sections and annual identities are retained.
  */
-export async function insertReferenceData(client: ClientBase): Promise<string[]> {
+export async function insertReferenceData(client: ClientBase, currentYear = 2026): Promise<string[]> {
   const created: string[] = []
   await client.query("BEGIN")
   try {
     for (const choir of REFERENCE_DATA.choirs) {
       let choirId = await activeGroupId(client, choir.name, "Choir", null)
       if (!choirId) {
-        choirId = await insertGroup(client, choir.name, "Choir", null)
+        choirId = await insertGroup(client, choir.name, "Choir", null, true)
         await client.query(`insert into "choir" ("group_id") values ($1)`, [choirId])
         created.push(choir.name)
       }
       for (const section of choir.sections) {
         if (await activeGroupId(client, section.name, "Section", choirId)) continue
-        const sectionId = await insertGroup(client, section.name, "Section", choirId)
+        const sectionId = await insertGroup(client, section.name, "Section", choirId, true)
         await client.query(`insert into "section" ("group_id", "voice") values ($1, $2)`, [sectionId, section.voice])
         created.push(section.name)
       }
     }
 
-    for (const group of REFERENCE_DATA.groups) {
-      if (await activeGroupId(client, group.name, group.type, null)) continue
-      await insertGroup(client, group.name, group.type, null)
-      created.push(group.name)
+    for (const definition of REFERENCE_DATA.continuingGroups) {
+      if (await activeGroupId(client, definition.name, definition.type, null)) continue
+      await insertGroup(client, definition.name, definition.type, null, true)
+      created.push(definition.name)
     }
-
-    for (const position of REFERENCE_DATA.positions) {
-      const { rowCount } = await client.query(
-        `insert into "position" ("name") values ($1) on conflict ("name") do nothing`,
-        [position.name]
-      )
-      if (rowCount) created.push(position.name)
-      for (const type of position.groupTypes) {
-        await client.query(
-          `insert into "group_type_position" ("type", "position_id")
-           select $1, "id" from "position" where "name" = $2
-           on conflict do nothing`,
-          [type, position.name]
-        )
-      }
-      for (const groupName of position.groups ?? []) {
-        const { rowCount: matched } = await client.query(
-          `insert into "position_group" ("position_id", "group_id")
-           select p."id", g."id" from "position" p, "group" g
-           where p."name" = $1 and g."name" = $2 and g."active" and g."choir_id" is null
-           on conflict do nothing`,
-          [position.name, groupName]
-        )
-        // Nothing inserted is either an existing limit or a missing group; only the second is wrong.
-        if (!matched && !(await activeCskWideGroupExists(client, groupName))) {
-          throw new Error(`The Position ${position.name} is limited to ${groupName}, which is not an active group.`)
-        }
+    for (const year of [currentYear, currentYear + 1]) {
+      for (const definition of REFERENCE_DATA.annualGroups(year)) {
+        if (await annualGroupId(client, definition.type, year)) continue
+        await insertGroup(client, definition.name, definition.type, null, true, year)
+        created.push(definition.name)
       }
     }
 
@@ -173,18 +141,26 @@ async function activeGroupId(client: ClientBase, name: string, type: string, cho
   return rows[0]?.id
 }
 
-async function activeCskWideGroupExists(client: ClientBase, name: string) {
-  const { rowCount } = await client.query(
-    `select 1 from "group" where "name" = $1 and "active" and "choir_id" is null`,
-    [name]
+async function annualGroupId(client: ClientBase, type: string, year: number) {
+  const { rows } = await client.query<{ id: string }>(
+    `select "id" from "group" where "type" = $1 and "organisation_year" = $2 and "uses_appointment_model"`,
+    [type, year]
   )
-  return Boolean(rowCount)
+  if (rows.length > 1) throw new Error(`More than one ${type} Group is marked for ${year}/${year + 1}.`)
+  return rows[0]?.id
 }
 
-async function insertGroup(client: ClientBase, name: string, type: string, choirId: string | null) {
+async function insertGroup(
+  client: ClientBase,
+  name: string,
+  type: string,
+  choirId: string | null,
+  managed = false,
+  year: number | null = null
+) {
   const { rows } = await client.query<{ id: string }>(
-    `insert into "group" ("name", "type", "choir_id") values ($1, $2, $3) returning "id"`,
-    [name, type, choirId]
+    `insert into "group" ("name", "type", "choir_id", "uses_appointment_model", "organisation_year") values ($1, $2, $3, $4, $5) returning "id"`,
+    [name, type, choirId, managed, year]
   )
   const [row] = rows
   if (!row) throw new Error(`Creating the group ${name} did not return a record.`)

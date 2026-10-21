@@ -98,12 +98,15 @@ On an empty database the demo contains:
 - Varied Choir join dates from 2021–2025, Section and division changes, independent
   self-reported Voice capabilities, and some Users who have declared none.
 - CSK-wide and Choir-owned committees, gig groups, roddgrupper, festgrupper and rephelgsgrupper,
-  with helpers, former members, rejoins and Position handovers. Six additional groups are
-  archived, including an old Board and completed concert/rephelg projects.
-- Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare; a Stämförälder for each
-  Section; a current Board with one elected Position per member. Board offices are linked
-  to their responsibility groups, and each Choir's Gigmästare also serves in the Gigmästeri,
-  respecting the Position catalogue's Group limits. Some singers hold multiple non-Board Positions.
+  with direct Helpers and seed singer placements across all twelve Sections.
+- Fixed-code appointments for Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare,
+  Stämföräldrar for all Sections, and Board roles including Sekreterare, 1:a Konsertmästare,
+  CSK Gigmästare, Sexmästare, Sexmästarinna and Turnékommitté Ekonomiskt Ansvarig. The Board
+  includes a vacancy, a presidential handover and a same-person renewal. Choir representatives
+  stay in their own Choir contexts while receiving the corresponding annual committee grants.
+- Fluid Gigledare, Choir appointment handovers, and Helpers before and after a Sexmästare
+  appointment. Seeded appointments and direct Memberships use stable identities so reruns
+  preserve later administrator corrections.
 - 24 fictional Swedish Posts with paragraphs, headings, lists, emphasis and blockquotes,
   published by the example Admins between August 2025 and October 2026. They use the editor's
   document format and appear in the shared News feed. Their event details are demo content.
