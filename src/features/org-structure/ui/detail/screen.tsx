@@ -7,6 +7,7 @@ import { Skeleton } from "@/shared/ui/base/skeleton"
 import { POSITION_DEFINITIONS } from "../../model"
 import { AppointmentManagement } from "./AppointmentManagement"
 import { DirectMembersSection } from "./DirectMembersSection"
+import { EffectiveMembersSection } from "./EffectiveMembersSection"
 import { GroupHeaderActions } from "./group-header-actions"
 import { MembersSection } from "./members-section"
 import { PositionsSection } from "./positions-section"
@@ -18,15 +19,15 @@ function today() {
 }
 
 export async function GroupDetailScreen({ groupId }: { groupId: string }) {
+  const date = today()
   const [detail, t, types] = await Promise.all([
-    getGroupDetail(groupId),
+    getGroupDetail(groupId, date),
     getTranslations("Groups"),
     getTranslations("Groups.types")
   ])
   if (!detail) notFound()
   const { group } = detail
   const isChoirOrSection = group.type === "Choir" || group.type === "Section"
-  const date = today()
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -64,10 +65,10 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
       </div>
 
       <DirectMembersSection detail={detail} today={date} />
+      {group.usesAppointmentModel ? <EffectiveMembersSection detail={detail} /> : null}
       {!group.usesAppointmentModel ? <MembersSection detail={detail} today={date} /> : null}
       {!group.usesAppointmentModel ? <PositionsSection detail={detail} today={date} /> : null}
-      {group.usesAppointmentModel &&
-      group.organisationYear !== null &&
+      {(group.usesAppointmentModel || group.type === "Choir") &&
       Object.values(POSITION_DEFINITIONS).some(({ context }) => context === group.type) ? (
         <AppointmentManagement detail={detail} today={date} />
       ) : null}

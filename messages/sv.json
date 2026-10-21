@@ -634,6 +634,7 @@
       "voice": "Stämma",
       "since": "Sedan",
       "positions": "Poster",
+      "positionWithContext": "{position} ({context})",
       "actions": "Åtgärder",
       "historyToggle": "Tidigare medlemskap ({count})",
       "holderHistoryToggle": "Tidigare innehavare ({count})",

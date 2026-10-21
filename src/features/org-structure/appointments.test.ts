@@ -6,8 +6,10 @@ import {
   correctAnnualAppointment,
   createOrganisationGroup,
   listAppointmentMembersAt,
+  listEffectiveMembersAt,
   replaceAppointmentHolder
 } from "./appointments"
+import { addDirectMembership, endDirectMembership, listDirectMembersAt } from "./direct-membership"
 import { createOrgStructureTestDatabase, expectSuccess, type OrgStructureTestDatabase } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -250,7 +252,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const userId = await t.user()
     for (const choir of ["MK", "DK", "KK"]) {
       const contextGroupId = await t.groupId(choir)
-      await t.db.insert(directMembership).values({ userId, groupId: contextGroupId, startDate: "2031-07-01" })
+      expectSuccess(await addDirectMembership(t.db, { userId, groupId: contextGroupId, startDate: "2031-07-01" }))
       expectSuccess(
         await appointPosition(t.db, {
           userId,
@@ -272,6 +274,200 @@ describe.skipIf(!database)("appointment foundation", () => {
     const members = await listAppointmentMembersAt(t.db, committee.id, "2031-10-01")
     expect(members).toHaveLength(2)
     expect(members.find((member) => member.userId === userId)?.appointments).toHaveLength(3)
+    const effective = await listEffectiveMembersAt(t.db, committee.id, "2031-10-01")
+    expect(effective).toHaveLength(2)
+    expect(effective.find((member) => member.userId === userId)?.positions).toHaveLength(3)
+    expect(
+      effective.find((member) => member.userId === userId)?.positions.map(({ contextName }) => contextName)
+    ).toEqual(["DK", "KK", "MK"])
+  })
+
+  test("Choir representative corrections retain prerequisite eligibility and move every annual grant", async () => {
+    const oldCommittee = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Konsert 45/46 reps",
+        type: "Konsertmästeri",
+        organisationYear: 2045
+      })
+    )
+    const nextCommittee = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Konsert 46/47 reps",
+        type: "Konsertmästeri",
+        organisationYear: 2046
+      })
+    )
+    const choir = await t.groupId("MK")
+    const original = await t.user("Original")
+    const corrected = await t.user("Corrected")
+    const originalMembership = expectSuccess(
+      await addDirectMembership(t.db, { userId: original, groupId: choir, startDate: "2045-07-01" })
+    )
+    expectSuccess(await addDirectMembership(t.db, { userId: corrected, groupId: choir, startDate: "2046-07-01" }))
+    const appointment = expectSuccess(
+      await appointPosition(t.db, {
+        userId: original,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: choir,
+        organisationYear: 2045,
+        startDate: "2045-09-01"
+      })
+    )
+    expect(await endDirectMembership(t.db, { membershipId: originalMembership.id, endDate: "2045-10-01" })).toEqual({
+      success: false,
+      error: "membership-dependency"
+    })
+    expectSuccess(
+      await correctAnnualAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId: corrected,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: choir,
+        organisationYear: 2046,
+        startDate: "2046-08-01",
+        endDate: "2047-07-01"
+      })
+    )
+    expect(await listAppointmentMembersAt(t.db, oldCommittee.id, "2045-10-01")).toEqual([])
+    expect(await listAppointmentMembersAt(t.db, nextCommittee.id, "2046-08-01")).toMatchObject([
+      { userId: corrected, appointments: [{ contextGroupId: choir, organisationYear: 2046 }] }
+    ])
+    const ineligible = await t.user("Not a singer")
+    const result = await appointPosition(t.db, {
+      userId: ineligible,
+      positionCode: "choir-konsertmastare",
+      contextGroupId: choir,
+      organisationYear: 2046,
+      startDate: "2046-09-01"
+    })
+    expect(result).toEqual({ success: false, error: "not-a-member" })
+    expect((await listDirectMembersAt(t.db, choir, "2046-09-01")).some(({ userId }) => userId === ineligible)).toBe(
+      false
+    )
+    expect(
+      await correctAnnualAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId: ineligible,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: choir,
+        organisationYear: 2046,
+        startDate: "2046-08-01",
+        endDate: "2047-07-01"
+      })
+    ).toEqual({ success: false, error: "not-a-member" })
+    expect(await listAppointmentMembersAt(t.db, nextCommittee.id, "2046-08-01")).toMatchObject([{ userId: corrected }])
+  })
+
+  test("Choir Gigmästare share annual Gigmästeri with the separate CSK office", async () => {
+    const gigCommittee = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Gig 47/48 reps", type: "Gigmästeri", organisationYear: 2047 })
+    )
+    const board = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Board 47/48 gig", type: "Board", organisationYear: 2047 })
+    )
+    for (const choirName of ["MK", "DK", "KK"]) {
+      const userId = await t.user(`${choirName} representative`)
+      const choirId = await t.groupId(choirName)
+      expectSuccess(await addDirectMembership(t.db, { userId, groupId: choirId, startDate: "2047-07-01" }))
+      expectSuccess(
+        await appointPosition(t.db, {
+          userId,
+          positionCode: "choir-gigmastare",
+          contextGroupId: choirId,
+          organisationYear: 2047,
+          startDate: "2047-09-01"
+        })
+      )
+    }
+    const cskHolder = await t.user("CSK Gigmästare")
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId: cskHolder,
+        positionCode: "csk-gigmastare",
+        contextGroupId: board.id,
+        startDate: "2047-07-01"
+      })
+    )
+    const roster = await listEffectiveMembersAt(t.db, gigCommittee.id, "2047-09-01")
+    expect(roster).toHaveLength(4)
+    expect(roster.map(({ positions }) => positions[0]?.positionCode).sort()).toEqual([
+      "choir-gigmastare",
+      "choir-gigmastare",
+      "choir-gigmastare",
+      "csk-gigmastare"
+    ])
+  })
+
+  test("existing Choir Membership remains valid prerequisite evidence during additive migration", async () => {
+    const choirId = await t.groupId("KK")
+    const userId = await t.user("Legacy singer")
+    await t.legacyMember({ userId, groupId: choirId, startDate: "2048-07-01" })
+    const gigCommittee = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Gig 48/49 legacy", type: "Gigmästeri", organisationYear: 2048 })
+    )
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "choir-gigmastare",
+        contextGroupId: choirId,
+        organisationYear: 2048,
+        startDate: "2048-09-01"
+      })
+    )
+    expect(await listEffectiveMembersAt(t.db, gigCommittee.id, "2048-09-01")).toMatchObject([{ userId }])
+  })
+
+  test("representative handover and explicit renewal preserve each dated annual roster", async () => {
+    const choirId = await t.groupId("MK")
+    const firstCommittee = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Konsert 49/50 lifecycle",
+        type: "Konsertmästeri",
+        organisationYear: 2049
+      })
+    )
+    const nextCommittee = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Konsert 50/51 lifecycle",
+        type: "Konsertmästeri",
+        organisationYear: 2050
+      })
+    )
+    const incumbent = await t.user("Choir incumbent")
+    const successor = await t.user("Choir successor")
+    for (const userId of [incumbent, successor])
+      expectSuccess(await addDirectMembership(t.db, { userId, groupId: choirId, startDate: "2049-07-01" }))
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId: incumbent,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: choirId,
+        organisationYear: 2049,
+        startDate: "2049-07-01"
+      })
+    )
+    expectSuccess(
+      await replaceAppointmentHolder(t.db, {
+        userId: successor,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: choirId,
+        organisationYear: 2049,
+        startDate: "2049-11-01"
+      })
+    )
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId: successor,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: choirId,
+        organisationYear: 2050,
+        startDate: "2050-07-01"
+      })
+    )
+    expect(await listEffectiveMembersAt(t.db, firstCommittee.id, "2049-10-31")).toMatchObject([{ userId: incumbent }])
+    expect(await listEffectiveMembersAt(t.db, firstCommittee.id, "2049-11-01")).toMatchObject([{ userId: successor }])
+    expect(await listEffectiveMembersAt(t.db, firstCommittee.id, "2050-07-01")).toMatchObject([])
+    expect(await listEffectiveMembersAt(t.db, nextCommittee.id, "2050-07-01")).toMatchObject([{ userId: successor }])
   })
 
   test("annual and scoped singleton identities are enforced independently of editable names", async () => {

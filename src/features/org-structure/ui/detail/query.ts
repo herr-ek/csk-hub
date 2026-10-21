@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, desc, eq, exists, isNotNull, isNull, notExists, or } from "drizzle-orm"
+import { and, asc, desc, eq, exists, inArray, isNotNull, isNull, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
@@ -15,7 +15,9 @@ import {
   positionHolder,
   section
 } from "@/core/db/schema/org-structure"
+import { timeZone } from "@/core/i18n/time-zone"
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
+import { listEffectiveMembersAt } from "../../appointments"
 import { listDirectMemberships } from "../../direct-membership"
 import type { GroupType, IsoDate } from "../../model"
 import { POSITION_DEFINITIONS, type PositionCode } from "../../model"
@@ -26,8 +28,12 @@ const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) 
 export type GroupDetail = NonNullable<Awaited<ReturnType<typeof getGroupDetail>>>
 
 /** Everything the group detail page shows and offers, or null when there is no such group. */
-export async function getGroupDetail(groupId: string) {
+export async function getGroupDetail(
+  groupId: string,
+  date: IsoDate = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
+) {
   const choirGroup = alias(group, "choir_group")
+  const appointmentContextGroup = alias(group, "appointment_context")
   const [row] = await db
     .select({
       id: group.id,
@@ -139,11 +145,16 @@ export async function getGroupDetail(groupId: string) {
             .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
         : Promise.resolve([]),
       db
-        .select({ appointment: positionAppointment, name: user.name })
-        .from(appointmentGrant)
-        .innerJoin(positionAppointment, eq(appointmentGrant.appointmentId, positionAppointment.id))
+        .selectDistinct({
+          appointment: positionAppointment,
+          name: user.name,
+          contextName: appointmentContextGroup.name
+        })
+        .from(positionAppointment)
+        .leftJoin(appointmentGrant, eq(appointmentGrant.appointmentId, positionAppointment.id))
         .innerJoin(user, eq(user.id, positionAppointment.userId))
-        .where(eq(appointmentGrant.groupId, groupId))
+        .innerJoin(appointmentContextGroup, eq(appointmentContextGroup.id, positionAppointment.contextGroupId))
+        .where(or(eq(appointmentGrant.groupId, groupId), eq(positionAppointment.contextGroupId, groupId)))
         .orderBy(desc(positionAppointment.startDate)),
       row.organisationYear !== null
         ? db
@@ -163,6 +174,18 @@ export async function getGroupDetail(groupId: string) {
   const singerVoices = new Map(singers.map(({ userId, voice }) => [userId, voice]))
 
   const current = holdings.filter(({ endDate }) => endDate === null)
+  const appointmentYears = await db
+    .select({ id: group.id, name: group.name, type: group.type, organisationYear: group.organisationYear })
+    .from(group)
+    .where(
+      and(
+        inArray(group.type, ["Konsertmästeri", "Gigmästeri"]),
+        eq(group.usesAppointmentModel, true),
+        eq(group.active, true),
+        isNotNull(group.organisationYear)
+      )
+    )
+    .orderBy(desc(group.organisationYear))
   return {
     group: {
       id: row.id,
@@ -233,18 +256,21 @@ export async function getGroupDetail(groupId: string) {
         startDate,
         endDate: endDate as IsoDate
       })),
-    appointments: appointments.map(({ appointment, name }) => ({
+    appointments: appointments.map(({ appointment, name, contextName }) => ({
       id: appointment.id,
       userId: appointment.userId,
       name,
       positionCode: appointment.positionCode as PositionCode,
       position: POSITION_DEFINITIONS[appointment.positionCode as PositionCode]?.label ?? appointment.positionCode,
       contextGroupId: appointment.contextGroupId,
+      contextName,
       startDate: appointment.startDate as IsoDate,
       endDate: appointment.endDate as IsoDate | null,
       organisationYear: appointment.organisationYear
     })),
     annualContexts,
+    appointmentYears,
+    effectiveMembers: row.usesAppointmentModel ? await listEffectiveMembersAt(db, groupId, date) : [],
     candidates
   }
 }

@@ -634,6 +634,7 @@
       "voice": "Voice",
       "since": "Since",
       "positions": "Positions",
+      "positionWithContext": "{position} ({context})",
       "actions": "Actions",
       "historyToggle": "Past Memberships ({count})",
       "holderHistoryToggle": "Past holders ({count})",
