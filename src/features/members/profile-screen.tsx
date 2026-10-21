@@ -4,6 +4,7 @@ import { getTranslations } from "@/core/i18n/server"
 import { conversationPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { StartConversationDialog } from "@/features/messaging"
+import { shiftDate } from "@/features/org-structure/model"
 import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardContent } from "@/shared/ui/base/card"
@@ -48,7 +49,7 @@ async function AdminParticipationHistory({ records }: { records: ProfileData["ma
       key: item.id,
       label: `${positionLabel(item.positionCode)} · ${item.contextName}`,
       start: item.startDate,
-      end: item.endDate,
+      end: item.endDate ? shiftDate(item.endDate, -1) : null,
       groupId: item.contextGroupId,
       kind: t("appointmentRecord")
     })),
@@ -56,7 +57,7 @@ async function AdminParticipationHistory({ records }: { records: ProfileData["ma
       key: item.id,
       label: item.groupName,
       start: item.startDate,
-      end: item.endDate,
+      end: item.endDate ? shiftDate(item.endDate, -1) : null,
       groupId: item.groupId,
       kind: t("membershipRecord")
     }))
@@ -181,9 +182,11 @@ async function ProfilePositions({ positions }: { positions: Profile["positions"]
                   position.organisationYear
                     ? `${position.contextName} ${String(position.organisationYear).slice(-2)}/${String(position.organisationYear + 1).slice(-2)}`
                     : position.contextName,
-                  ...position.groups.map((group) =>
-                    group.choirName ? t("groupContext", { group: group.name, choir: group.choirName }) : group.name
-                  )
+                  ...position.groups
+                    .filter((group) => group.id !== position.contextGroupId)
+                    .map((group) =>
+                      group.choirName ? t("groupContext", { group: group.name, choir: group.choirName }) : group.name
+                    )
                 ].join(", ")}
               </p>
             </CardContent>
