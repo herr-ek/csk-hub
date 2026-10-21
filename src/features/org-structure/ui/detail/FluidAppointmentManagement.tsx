@@ -75,6 +75,7 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
                 const open =
                   appointment.startDate <= today && (appointment.endDate === null || appointment.endDate > today)
                 const prepared = appointment.startDate > today
+                const historical = appointment.endDate !== null && appointment.endDate <= today
                 return (
                   <TableRow key={appointment.id}>
                     <TableCell>
@@ -90,7 +91,7 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        {appointment.contextGroupId === detail.group.id && detail.group.active ? (
+                        {appointment.contextGroupId === detail.group.id && (detail.group.active || historical) ? (
                           <CommandDialog
                             trigger={
                               <Button type="button" variant="ghost" size="sm">
@@ -169,7 +170,6 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
                             destructive
                           >
                             <input type="hidden" name="appointmentId" value={appointment.id} />
-                            <input type="hidden" name="today" value={today} />
                           </CommandDialog>
                         ) : null}
                       </div>

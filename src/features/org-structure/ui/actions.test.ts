@@ -481,10 +481,31 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
         startDate: "2053-09-01"
       })
       if (!appointment.success) throw new Error(appointment.error)
-      expect(
-        await cancelAppointmentAction(IDLE, form({ appointmentId: appointment.data.id, today: "2053-08-01" }))
-      ).toMatchObject({ status: "success" })
+      expect(await cancelAppointmentAction(IDLE, form({ appointmentId: appointment.data.id }))).toMatchObject({
+        status: "success"
+      })
       expect(await listAppointmentMembersAt(t.db, board.data.id, "2053-09-01")).toEqual([])
+    })
+
+    test("does not trust a submitted date to cancel an appointment that has started", async () => {
+      const board = await createOrganisationGroup(t.db, {
+        name: "Board 24/25 forged cancel date",
+        type: "Board",
+        organisationYear: 2024
+      })
+      if (!board.success) throw new Error(board.error)
+      const userId = await t.user()
+      const appointment = await appointPosition(t.db, {
+        userId,
+        positionCode: "ordforande",
+        contextGroupId: board.data.id,
+        startDate: "2024-09-01"
+      })
+      if (!appointment.success) throw new Error(appointment.error)
+      expect(
+        await cancelAppointmentAction(IDLE, form({ appointmentId: appointment.data.id, today: "2024-08-01" }))
+      ).toMatchObject({ status: "error", error: "period-conflict" })
+      expect(await listAppointmentMembersAt(t.db, board.data.id, "2024-10-01")).toMatchObject([{ userId }])
     })
   })
 })

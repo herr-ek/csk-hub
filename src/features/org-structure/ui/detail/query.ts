@@ -18,7 +18,7 @@ import { timeZone } from "@/core/i18n/time-zone"
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
 import { listAppointmentsForGroup, listEffectiveMembersAt } from "../../appointments"
 import { listDirectMemberships } from "../../direct-membership"
-import type { GroupType, IsoDate } from "../../model"
+import { type GroupType, type IsoDate, organisationYearPeriod } from "../../model"
 
 /** The Voices a singer can have in a Section singing `voice`: the division itself, or the family's divisions. */
 const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) ? [voice] : divisionsOf(voice))
@@ -154,22 +154,15 @@ export async function getGroupDetail(
     listAppointmentsForGroup(db, groupId),
     row.organisationYear !== null
       ? db
-          .select({ id: group.id, name: group.name, organisationYear: group.organisationYear })
+          .select({ id: group.id, name: group.name, active: group.active, organisationYear: group.organisationYear })
           .from(group)
-          .where(
-            and(
-              eq(group.type, row.type),
-              eq(group.usesAppointmentModel, true),
-              eq(group.active, true),
-              isNotNull(group.organisationYear)
-            )
-          )
+          .where(and(eq(group.type, row.type), eq(group.usesAppointmentModel, true), isNotNull(group.organisationYear)))
           .orderBy(desc(group.organisationYear))
       : Promise.resolve([]),
     db
       .select({ id: group.id, name: group.name, type: group.type, choirId: group.choirId })
       .from(group)
-      .where(and(eq(group.type, row.type), eq(group.active, true)))
+      .where(eq(group.type, row.type))
       .orderBy(asc(group.name))
   ])
   const singerVoices = new Map(singers.map(({ userId, voice }) => [userId, voice]))
@@ -188,17 +181,24 @@ export async function getGroupDetail(
   const appointmentCandidates = candidates.filter(({ id }) => eligibleIds.has(id))
   const current = holdings.filter(({ endDate }) => endDate === null)
   const appointmentYears = await db
-    .select({ id: group.id, name: group.name, type: group.type, organisationYear: group.organisationYear })
+    .select({
+      id: group.id,
+      name: group.name,
+      type: group.type,
+      active: group.active,
+      organisationYear: group.organisationYear
+    })
     .from(group)
     .where(
       and(
         inArray(group.type, ["Konsertmästeri", "Gigmästeri"]),
         eq(group.usesAppointmentModel, true),
-        eq(group.active, true),
         isNotNull(group.organisationYear)
       )
     )
     .orderBy(desc(group.organisationYear))
+  const historicalYear = (active: boolean, year: number | null) =>
+    active || (year !== null && organisationYearPeriod(year).endDate <= date)
   return {
     group: {
       id: row.id,
@@ -217,7 +217,7 @@ export async function getGroupDetail(
     choirs: await db
       .select({ id: group.id, name: group.name })
       .from(group)
-      .where(and(eq(group.type, "Choir"), eq(group.active, true)))
+      .where(eq(group.type, "Choir"))
       .orderBy(group.name),
     placementSections:
       row.type === "Section" && row.choirId
@@ -271,9 +271,11 @@ export async function getGroupDetail(
         endDate: endDate as IsoDate
       })),
     appointments,
-    annualContexts,
+    annualContexts: annualContexts.filter(({ active, organisationYear }) => historicalYear(active, organisationYear)),
     fluidContexts,
-    appointmentYears,
+    appointmentYears: appointmentYears.filter(({ active, organisationYear }) =>
+      historicalYear(active, organisationYear)
+    ),
     appointmentCandidates,
     candidates
   }

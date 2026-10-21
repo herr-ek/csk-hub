@@ -9,6 +9,7 @@ import {
   endAppointment,
   replaceAppointmentHolder
 } from "../../appointments"
+import { cskToday } from "../../effective-reads"
 import type { PositionCode } from "../../model"
 import { shiftDate } from "../../model/dates"
 import type { GroupCommandState } from "../command-state"
@@ -110,15 +111,14 @@ export async function correctAppointmentAction(_state: GroupCommandState, formDa
   )
 }
 
-const cancelSchema = z.object({ appointmentId: fields.id, today: fields.date })
+const cancelSchema = z.object({ appointmentId: fields.id })
 export async function cancelAppointmentAction(_state: GroupCommandState, formData: FormData) {
   return runGroupCommand(
     "cancel-appointment",
     cancelSchema,
     {
-      appointmentId: value(formData, "appointmentId"),
-      today: value(formData, "today")
+      appointmentId: value(formData, "appointmentId")
     },
-    (input) => cancelPreparedAppointment(db, input)
+    ({ appointmentId }) => cancelPreparedAppointment(db, { appointmentId, today: cskToday() })
   )
 }
