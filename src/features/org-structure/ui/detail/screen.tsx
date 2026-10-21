@@ -4,6 +4,8 @@ import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { POSITION_DEFINITIONS } from "../../model"
+import { AppointmentManagement } from "./AppointmentManagement"
 import { DirectMembersSection } from "./DirectMembersSection"
 import { GroupHeaderActions } from "./group-header-actions"
 import { MembersSection } from "./members-section"
@@ -64,6 +66,11 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
       <DirectMembersSection detail={detail} today={date} />
       {!group.usesAppointmentModel ? <MembersSection detail={detail} today={date} /> : null}
       {!group.usesAppointmentModel ? <PositionsSection detail={detail} today={date} /> : null}
+      {group.usesAppointmentModel &&
+      group.organisationYear !== null &&
+      Object.values(POSITION_DEFINITIONS).some(({ context }) => context === group.type) ? (
+        <AppointmentManagement detail={detail} today={date} />
+      ) : null}
     </main>
   )
 }

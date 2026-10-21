@@ -672,7 +672,14 @@
       "electedPostNotice": "In {group}, each person holds only one Position, so members who already hold one are not listed.",
       "endHolding": "End",
       "endHoldingTitle": "End {name}'s holding of {position}?",
-      "endHoldingDescription": "The Position becomes vacant. Their Membership is not affected."
+      "endHoldingDescription": "The Position becomes vacant. Their Membership is not affected.",
+      "cancelAppointment": "Cancel appointment",
+      "cancelPreparedTitle": "Cancel {name}'s prepared appointment?",
+      "correctAppointment": "Correct appointment",
+      "correctAppointmentTitle": "Correct {name}'s appointment",
+      "groupContext": "Context Group",
+      "year": "Organisational year",
+      "ongoing": "Ongoing"
     },
     "types": {
       "Choir": "Choir",
@@ -766,6 +773,24 @@
       "section": "Section",
       "yearRequired": "Choose a year for this annual Group.",
       "groupIdentity": "{type} · {year}"
+    },
+    "positionLabels": {
+      "ordforande": "Chair",
+      "vice-ordforande": "Vice Chair",
+      "kassor": "Treasurer",
+      "sekreterare": "Secretary",
+      "pr-mastare": "PR Officer",
+      "forsta-konsertmastare": "1st Concertmaster",
+      "csk-gigmastare": "CSK Gigmaster",
+      "sexmastare": "Party Officer",
+      "sexmastarinna": "Party Committee Officer",
+      "ekonomiskt-ansvarig": "Financial Officer",
+      "dirigent": "Conductor",
+      "notfiskal": "Music Librarian",
+      "choir-konsertmastare": "Choir Concertmaster",
+      "choir-gigmastare": "Choir Gigmaster",
+      "stamforalder": "Section Parent",
+      "gigledare": "Gig Leader"
     }
   }
 }

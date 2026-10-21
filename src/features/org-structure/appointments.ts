@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq, gt, isNull, lt, lte, or } from "drizzle-orm"
+import { and, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { requireActiveGroup, requireChoir } from "./lookup"
@@ -12,7 +12,74 @@ import {
   POSITION_DEFINITIONS,
   type PositionCode
 } from "./model"
-import { lockUser, type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
+import {
+  lockUser,
+  type OrgStructureDatabase,
+  type OrgStructureTransaction,
+  RuleViolation,
+  requireDate,
+  runOrgStructureCommand
+} from "./operation"
+
+async function resolveGrantGroups(
+  tx: OrgStructureTransaction,
+  definition: (typeof POSITION_DEFINITIONS)[PositionCode],
+  context: Awaited<ReturnType<typeof requireActiveGroup>>,
+  year: number | undefined
+) {
+  const ids: string[] = []
+  for (const type of definition.grants) {
+    if (type === context.type) {
+      if (!context.usesAppointmentModel) throw new RuleViolation("position-not-allowed")
+      ids.push(context.id)
+      continue
+    }
+    const [target] = await tx
+      .select({ id: group.id })
+      .from(group)
+      .where(
+        and(
+          eq(group.type, type),
+          eq(group.usesAppointmentModel, true),
+          eq(group.active, true),
+          GROUP_POLICIES[type].lifetime === "annual"
+            ? eq(group.organisationYear, year as number)
+            : isNull(group.organisationYear)
+        )
+      )
+      .for("share")
+    if (!target) throw new RuleViolation("group-not-found")
+    ids.push(target.id)
+  }
+  return ids
+}
+
+async function convertHelpers(
+  tx: OrgStructureTransaction,
+  userId: string,
+  grantIds: string[],
+  startDate: IsoDate,
+  endDate: IsoDate | null
+) {
+  const targets = await tx.select({ id: group.id, type: group.type }).from(group).where(inArray(group.id, grantIds))
+  for (const target of targets.filter(({ type }) => GROUP_POLICIES[type].directMembership === "helpers")) {
+    const helpers = await tx
+      .select()
+      .from(directMembership)
+      .where(
+        and(
+          eq(directMembership.userId, userId),
+          eq(directMembership.groupId, target.id),
+          lt(directMembership.startDate, endDate ?? "9999-12-31"),
+          or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate))
+        )
+      )
+    for (const helper of helpers) {
+      if (helper.startDate >= startDate) await tx.delete(directMembership).where(eq(directMembership.id, helper.id))
+      else await tx.update(directMembership).set({ endDate: startDate }).where(eq(directMembership.id, helper.id))
+    }
+  }
+}
 
 /**
  * Creates an explicitly modelled Group. Annual types require an integer organisationYear
@@ -116,30 +183,7 @@ export function appointPosition(
       if (coveredUntil !== null && (endDate === null || coveredUntil < endDate)) throw new RuleViolation("not-a-member")
     }
 
-    const grantIds: string[] = []
-    for (const type of definition.grants) {
-      if (type === context.type) {
-        if (!context.usesAppointmentModel) throw new RuleViolation("position-not-allowed")
-        grantIds.push(context.id)
-      } else {
-        const [target] = await tx
-          .select()
-          .from(group)
-          .where(
-            and(
-              eq(group.type, type),
-              eq(group.usesAppointmentModel, true),
-              eq(group.active, true),
-              GROUP_POLICIES[type].lifetime === "annual"
-                ? eq(group.organisationYear, year as number)
-                : isNull(group.organisationYear)
-            )
-          )
-          .for("share")
-        if (!target) throw new RuleViolation("group-not-found")
-        grantIds.push(target.id)
-      }
-    }
+    const grantIds = await resolveGrantGroups(tx, definition, context, year ?? undefined)
     const [created] = await tx
       .insert(positionAppointment)
       .values({
@@ -154,7 +198,151 @@ export function appointPosition(
     if (!created) throw new Error("Appointment creation returned no record.")
     if (grantIds.length)
       await tx.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: created.id, groupId })))
+    // Helper membership is a separate, voluntary record. Convert only overlapping direct
+    // membership in helper-enabled companion groups; preserve the earlier period.
+    await convertHelpers(tx, input.userId, grantIds, startDate, endDate)
     return created
+  })
+}
+
+/** Ends one appointment and all of its grants on an exclusive calendar-date boundary. */
+export function endAppointment(database: OrgStructureDatabase, input: { appointmentId: string; endDate: IsoDate }) {
+  return runOrgStructureCommand(database, async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:appointment:${input.appointmentId}`}))`)
+    const [appointment] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(eq(positionAppointment.id, input.appointmentId))
+    if (!appointment) throw new RuleViolation("not-holding-position")
+    await lockUser(tx, appointment.userId)
+    const endDate = requireDate(input.endDate)
+    if (endDate <= appointment.startDate || (appointment.endDate !== null && endDate > appointment.endDate))
+      throw new RuleViolation("period-conflict")
+    await tx.update(positionAppointment).set({ endDate }).where(eq(positionAppointment.id, appointment.id))
+    return { id: appointment.id }
+  })
+}
+
+/** Replaces the holder for one Position/context at an exact boundary, closing every old grant together. */
+export function replaceAppointmentHolder(
+  database: OrgStructureDatabase,
+  input: {
+    userId: string
+    positionCode: PositionCode
+    contextGroupId: string
+    organisationYear?: number
+    startDate: IsoDate
+    endDate?: IsoDate
+  }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const startDate = requireDate(input.startDate)
+    const [candidate] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(
+        and(
+          eq(positionAppointment.contextGroupId, input.contextGroupId),
+          eq(positionAppointment.positionCode, input.positionCode),
+          lte(positionAppointment.startDate, startDate),
+          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, startDate))
+        )
+      )
+    for (const userId of [
+      ...new Set([input.userId, candidate?.userId].filter((id): id is string => Boolean(id)))
+    ].sort())
+      await lockUser(tx, userId)
+    const [predecessor] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(
+        and(
+          eq(positionAppointment.contextGroupId, input.contextGroupId),
+          eq(positionAppointment.positionCode, input.positionCode),
+          lte(positionAppointment.startDate, startDate),
+          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, startDate))
+        )
+      )
+      .for("update")
+    if (predecessor) {
+      if (predecessor.startDate === startDate) throw new RuleViolation("period-conflict")
+      await tx.update(positionAppointment).set({ endDate: startDate }).where(eq(positionAppointment.id, predecessor.id))
+    }
+    const result = await appointPosition(tx, input)
+    if (!result.success) throw new RuleViolation(result.error)
+    return result.data
+  })
+}
+
+/** Cancels a prepared future appointment without rewriting started history. */
+export function cancelPreparedAppointment(
+  database: OrgStructureDatabase,
+  input: { appointmentId: string; today: IsoDate }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const today = requireDate(input.today)
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:appointment:${input.appointmentId}`}))`)
+    const [appointment] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(eq(positionAppointment.id, input.appointmentId))
+    if (!appointment) throw new RuleViolation("not-holding-position")
+    await lockUser(tx, appointment.userId)
+    if (appointment.startDate <= today) throw new RuleViolation("period-conflict")
+    await tx.delete(positionAppointment).where(eq(positionAppointment.id, appointment.id))
+    return { id: appointment.id }
+  })
+}
+
+/** Corrects an existing annual appointment and re-resolves every granted Group atomically. */
+export function correctAnnualAppointment(
+  database: OrgStructureDatabase,
+  input: {
+    appointmentId: string
+    userId: string
+    positionCode: PositionCode
+    contextGroupId: string
+    organisationYear: number
+    startDate: IsoDate
+    endDate: IsoDate
+  }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:appointment:${input.appointmentId}`}))`)
+    const [existing] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(eq(positionAppointment.id, input.appointmentId))
+    if (!existing) throw new RuleViolation("not-holding-position")
+    for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
+    const definition = POSITION_DEFINITIONS[input.positionCode]
+    if (!definition) throw new RuleViolation("position-not-allowed")
+    const context = await requireActiveGroup(tx, input.contextGroupId)
+    if (definition.endPolicy !== "annual" || context.type !== definition.context)
+      throw new RuleViolation("position-not-allowed")
+    if (context.organisationYear !== input.organisationYear) throw new RuleViolation("period-conflict")
+    const bounds = organisationYearPeriod(input.organisationYear)
+    const startDate = requireDate(input.startDate)
+    const endDate = requireDate(input.endDate)
+    if (startDate < bounds.startDate || endDate > bounds.endDate || endDate <= startDate)
+      throw new RuleViolation("period-conflict")
+    const grantIds = await resolveGrantGroups(tx, definition, context, input.organisationYear)
+    await tx
+      .update(positionAppointment)
+      .set({
+        userId: input.userId,
+        positionCode: input.positionCode,
+        contextGroupId: context.id,
+        organisationYear: input.organisationYear,
+        startDate,
+        endDate
+      })
+      .where(eq(positionAppointment.id, existing.id))
+    await tx.delete(appointmentGrant).where(eq(appointmentGrant.appointmentId, existing.id))
+    if (grantIds.length)
+      await tx.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: existing.id, groupId })))
+    await convertHelpers(tx, input.userId, grantIds, startDate, endDate)
+    return { id: existing.id }
   })
 }
 

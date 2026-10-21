@@ -672,7 +672,14 @@
       "electedPostNotice": "In {group} hat jede Person nur ein Amt, daher werden Mitglieder mit einem Amt nicht angezeigt.",
       "endHolding": "Beenden",
       "endHoldingTitle": "Amt {position} von {name} beenden?",
-      "endHoldingDescription": "Das Amt wird unbesetzt. Die Mitgliedschaft bleibt bestehen."
+      "endHoldingDescription": "Das Amt wird unbesetzt. Die Mitgliedschaft bleibt bestehen.",
+      "cancelAppointment": "Ernennung absagen",
+      "cancelPreparedTitle": "Vorbereitete Ernennung von {name} absagen?",
+      "correctAppointment": "Ernennung korrigieren",
+      "correctAppointmentTitle": "Ernennung von {name} korrigieren",
+      "groupContext": "Kontextgruppe",
+      "year": "Organisationsjahr",
+      "ongoing": "Laufend"
     },
     "types": {
       "Choir": "Chor",
@@ -766,6 +773,24 @@
       "section": "Stimmgruppe",
       "yearRequired": "Wähle ein Organisationsjahr für diese Jahresgruppe.",
       "groupIdentity": "{type} · {year}"
+    },
+    "positionLabels": {
+      "ordforande": "Vorsitzende:r",
+      "vice-ordforande": "Stellvertretende:r Vorsitzende:r",
+      "kassor": "Schatzmeister:in",
+      "sekreterare": "Sekretär:in",
+      "pr-mastare": "PR-Beauftragte:r",
+      "forsta-konsertmastare": "1. Konzertmeister:in",
+      "csk-gigmastare": "CSK-Gigmeister:in",
+      "sexmastare": "Festbeauftragte:r",
+      "sexmastarinna": "Festkomitee-Beauftragte:r",
+      "ekonomiskt-ansvarig": "Finanzbeauftragte:r",
+      "dirigent": "Dirigent:in",
+      "notfiskal": "Notenwart:in",
+      "choir-konsertmastare": "Chor-Konzertmeister:in",
+      "choir-gigmastare": "Chor-Gigmeister:in",
+      "stamforalder": "Stimmgruppen-Elternteil",
+      "gigledare": "Gigleitung"
     }
   }
 }

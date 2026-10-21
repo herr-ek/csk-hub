@@ -5,10 +5,12 @@ import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import {
+  appointmentGrant,
   group,
   groupMember,
   groupTypePosition,
   position,
+  positionAppointment,
   positionGroup,
   positionHolder,
   section
@@ -16,6 +18,7 @@ import {
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
 import { listDirectMemberships } from "../../direct-membership"
 import type { GroupType, IsoDate } from "../../model"
+import { POSITION_DEFINITIONS, type PositionCode } from "../../model"
 
 /** The Voices a singer can have in a Section singing `voice`: the division itself, or the family's divisions. */
 const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) ? [voice] : divisionsOf(voice))
@@ -42,99 +45,121 @@ export async function getGroupDetail(groupId: string) {
   if (!row) return null
   const choirMember = alias(groupMember, "choir_member")
 
-  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates, singers] = await Promise.all([
-    db
-      .select({
-        userId: groupMember.userId,
-        name: user.name,
-        email: user.email,
-        startDate: groupMember.startDate,
-        endDate: groupMember.endDate,
-        voice: groupMember.voice
-      })
-      .from(groupMember)
-      .innerJoin(user, eq(user.id, groupMember.userId))
-      .where(eq(groupMember.groupId, groupId))
-      .orderBy(asc(user.name), desc(groupMember.startDate)),
-    db
-      .select({
-        positionId: positionHolder.positionId,
-        position: position.name,
-        userId: positionHolder.userId,
-        name: user.name,
-        startDate: positionHolder.startDate,
-        endDate: positionHolder.endDate
-      })
-      .from(positionHolder)
-      .innerJoin(position, eq(position.id, positionHolder.positionId))
-      .innerJoin(user, eq(user.id, positionHolder.userId))
-      .where(eq(positionHolder.groupId, groupId))
-      .orderBy(desc(positionHolder.startDate)),
-    // The Positions the group's type allows, but not those limited to other groups.
-    db
-      .select({ id: position.id, name: position.name })
-      .from(groupTypePosition)
-      .innerJoin(position, eq(position.id, groupTypePosition.positionId))
-      .where(
-        and(
-          eq(groupTypePosition.type, row.type),
-          or(
-            notExists(db.select().from(positionGroup).where(eq(positionGroup.positionId, position.id))),
-            exists(
-              db
-                .select()
-                .from(positionGroup)
-                .where(and(eq(positionGroup.positionId, position.id), eq(positionGroup.groupId, groupId)))
+  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates, singers, appointments, annualContexts] =
+    await Promise.all([
+      db
+        .select({
+          userId: groupMember.userId,
+          name: user.name,
+          email: user.email,
+          startDate: groupMember.startDate,
+          endDate: groupMember.endDate,
+          voice: groupMember.voice
+        })
+        .from(groupMember)
+        .innerJoin(user, eq(user.id, groupMember.userId))
+        .where(eq(groupMember.groupId, groupId))
+        .orderBy(asc(user.name), desc(groupMember.startDate)),
+      db
+        .select({
+          positionId: positionHolder.positionId,
+          position: position.name,
+          userId: positionHolder.userId,
+          name: user.name,
+          startDate: positionHolder.startDate,
+          endDate: positionHolder.endDate
+        })
+        .from(positionHolder)
+        .innerJoin(position, eq(position.id, positionHolder.positionId))
+        .innerJoin(user, eq(user.id, positionHolder.userId))
+        .where(eq(positionHolder.groupId, groupId))
+        .orderBy(desc(positionHolder.startDate)),
+      // The Positions the group's type allows, but not those limited to other groups.
+      db
+        .select({ id: position.id, name: position.name })
+        .from(groupTypePosition)
+        .innerJoin(position, eq(position.id, groupTypePosition.positionId))
+        .where(
+          and(
+            eq(groupTypePosition.type, row.type),
+            or(
+              notExists(db.select().from(positionGroup).where(eq(positionGroup.positionId, position.id))),
+              exists(
+                db
+                  .select()
+                  .from(positionGroup)
+                  .where(and(eq(positionGroup.positionId, position.id), eq(positionGroup.groupId, groupId)))
+              )
             )
           )
         )
-      )
-      .orderBy(asc(position.name)),
-    db.select({ voice: section.voice }).from(section).where(eq(section.groupId, groupId)),
-    row.choirId ? choirVoicesOf(row.choirId) : Promise.resolve([]),
-    // Active Users who are not current members, for the add-member picker. A Choir's group other
-    // than a Section takes only current members of the Choir; placing a singer in a Section is
-    // how they join it.
-    db
-      .select({ id: user.id, name: user.name, email: user.email })
-      .from(user)
-      .where(
-        and(
-          or(isNull(user.banned), eq(user.banned, false)),
-          notExists(
-            db
-              .select()
-              .from(groupMember)
-              .where(
-                and(eq(groupMember.userId, user.id), eq(groupMember.groupId, groupId), isNull(groupMember.endDate))
-              )
-          ),
-          row.choirId && row.type !== "Section"
-            ? exists(
-                db
-                  .select()
-                  .from(choirMember)
-                  .where(
-                    and(
-                      eq(choirMember.userId, user.id),
-                      eq(choirMember.groupId, row.choirId),
-                      isNull(choirMember.endDate)
+        .orderBy(asc(position.name)),
+      db.select({ voice: section.voice }).from(section).where(eq(section.groupId, groupId)),
+      row.choirId ? choirVoicesOf(row.choirId) : Promise.resolve([]),
+      // Active Users who are not current members, for the add-member picker. A Choir's group other
+      // than a Section takes only current members of the Choir; placing a singer in a Section is
+      // how they join it.
+      db
+        .select({ id: user.id, name: user.name, email: user.email })
+        .from(user)
+        .where(
+          and(
+            or(isNull(user.banned), eq(user.banned, false)),
+            notExists(
+              db
+                .select()
+                .from(groupMember)
+                .where(
+                  and(eq(groupMember.userId, user.id), eq(groupMember.groupId, groupId), isNull(groupMember.endDate))
+                )
+            ),
+            row.choirId && row.type !== "Section"
+              ? exists(
+                  db
+                    .select()
+                    .from(choirMember)
+                    .where(
+                      and(
+                        eq(choirMember.userId, user.id),
+                        eq(choirMember.groupId, row.choirId),
+                        isNull(choirMember.endDate)
+                      )
                     )
-                  )
-              )
-            : undefined
+                )
+              : undefined
+          )
         )
-      )
-      .orderBy(asc(user.name)),
-    // On a Choir's page, each member's Voice comes from their current Section Membership in it.
-    row.type === "Choir"
-      ? db
-          .select({ userId: groupMember.userId, voice: groupMember.voice })
-          .from(groupMember)
-          .innerJoin(group, eq(group.id, groupMember.groupId))
-          .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
-      : Promise.resolve([])
-  ])
+        .orderBy(asc(user.name)),
+      // On a Choir's page, each member's Voice comes from their current Section Membership in it.
+      row.type === "Choir"
+        ? db
+            .select({ userId: groupMember.userId, voice: groupMember.voice })
+            .from(groupMember)
+            .innerJoin(group, eq(group.id, groupMember.groupId))
+            .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
+        : Promise.resolve([]),
+      db
+        .select({ appointment: positionAppointment, name: user.name })
+        .from(appointmentGrant)
+        .innerJoin(positionAppointment, eq(appointmentGrant.appointmentId, positionAppointment.id))
+        .innerJoin(user, eq(user.id, positionAppointment.userId))
+        .where(eq(appointmentGrant.groupId, groupId))
+        .orderBy(desc(positionAppointment.startDate)),
+      row.organisationYear !== null
+        ? db
+            .select({ id: group.id, name: group.name, organisationYear: group.organisationYear })
+            .from(group)
+            .where(
+              and(
+                eq(group.type, row.type),
+                eq(group.usesAppointmentModel, true),
+                eq(group.active, true),
+                isNotNull(group.organisationYear)
+              )
+            )
+            .orderBy(desc(group.organisationYear))
+        : Promise.resolve([])
+    ])
   const singerVoices = new Map(singers.map(({ userId, voice }) => [userId, voice]))
 
   const current = holdings.filter(({ endDate }) => endDate === null)
@@ -208,6 +233,18 @@ export async function getGroupDetail(groupId: string) {
         startDate,
         endDate: endDate as IsoDate
       })),
+    appointments: appointments.map(({ appointment, name }) => ({
+      id: appointment.id,
+      userId: appointment.userId,
+      name,
+      positionCode: appointment.positionCode as PositionCode,
+      position: POSITION_DEFINITIONS[appointment.positionCode as PositionCode]?.label ?? appointment.positionCode,
+      contextGroupId: appointment.contextGroupId,
+      startDate: appointment.startDate as IsoDate,
+      endDate: appointment.endDate as IsoDate | null,
+      organisationYear: appointment.organisationYear
+    })),
+    annualContexts,
     candidates
   }
 }

@@ -166,5 +166,21 @@ participation explicitly. Legacy linked-holding commands remain transitional and
 write new-model Groups. Archival refuses current/future appointment dependencies.
 
 The new direct workflows are shown alongside retained legacy data. The complete effective
-roster, appointment management, member-profile/directory cutover, and legacy conversion
-remain the following tickets; this branch still is not a deployable partial migration.
+roster, member-profile/directory cutover, and legacy conversion remain the following tickets;
+this branch still is not a deployable partial migration.
+
+## Annual appointment lifecycle (redesign ticket 03)
+
+`appointPosition` creates one appointment and resolves its mandatory companion Groups from the
+fixed catalogue in one transaction. Appointments in Groups that permit Helpers close any
+overlapping direct Helper period at the appointment start, preserving its earlier history.
+`replaceAppointmentHolder`, `endAppointment`, and `cancelPreparedAppointment` act on the
+appointment and its complete grant set. `correctAnnualAppointment` edits an annual appointment's
+holder, applicable Position, concrete context/year, and dates, then re-resolves the grant set in
+the same transaction. Refused edits leave the previous appointment and grants intact.
+
+Annual contexts use an exclusive 1 July end boundary; the Admin form displays and accepts the
+inclusive 30 June last day. The annual appointment manager lists current, future, and historical
+appointments on their context Group, with correction, early ending, handover, and prepared
+cancellation actions. Annual renewal remains a separate explicit appointment, including when the
+same person continues.
