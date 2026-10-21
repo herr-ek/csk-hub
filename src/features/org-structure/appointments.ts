@@ -15,7 +15,8 @@ import {
   type IsoDate,
   organisationYearPeriod,
   POSITION_DEFINITIONS,
-  type PositionCode
+  type PositionCode,
+  periodsCoverPeriod
 } from "./model"
 import {
   lockUser,
@@ -104,18 +105,8 @@ async function requirePrerequisiteCoverage(
           endDate === null ? undefined : lt(directMembership.startDate, endDate)
         )
       ))
-  ].sort((a, b) => a.startDate.localeCompare(b.startDate))
-  let coveredUntil: IsoDate | null = startDate
-  for (const membership of memberships) {
-    if (membership.startDate > coveredUntil) break
-    if (membership.endDate === null) {
-      coveredUntil = null
-      break
-    }
-    if (membership.endDate > coveredUntil) coveredUntil = membership.endDate
-    if (endDate !== null && coveredUntil >= endDate) break
-  }
-  if (coveredUntil !== null && (endDate === null || coveredUntil < endDate)) throw new RuleViolation("not-a-member")
+  ]
+  if (!periodsCoverPeriod(memberships, { startDate, endDate })) throw new RuleViolation("not-a-member")
 }
 
 /**

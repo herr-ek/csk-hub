@@ -1,7 +1,12 @@
 import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import { GROUP_POLICIES, POSITION_DEFINITIONS, type PositionCode } from "@/features/org-structure/model"
+import {
+  GROUP_POLICIES,
+  POSITION_DEFINITIONS,
+  type PositionCode,
+  periodsCoverPeriod
+} from "@/features/org-structure/model"
 import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./seed-data"
 
 const CURRENT_YEAR = 2026
@@ -58,14 +63,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
           endDate === null ? undefined : lt(directMembership.startDate, endDate)
         )
       )
-    let coveredUntil: string | null = startDate
-    for (const period of periods.toSorted((left, right) => left.startDate.localeCompare(right.startDate))) {
-      if (period.startDate > coveredUntil) return false
-      if (period.endDate === null) return true
-      if (period.endDate > coveredUntil) coveredUntil = period.endDate
-      if (endDate !== null && coveredUntil >= endDate) return true
-    }
-    return coveredUntil === null || (endDate !== null && coveredUntil >= endDate)
+    return periodsCoverPeriod(periods, { startDate, endDate })
   }
   const memberOf = async (groupId: string, date: string, offset: number) => {
     const rows = await database

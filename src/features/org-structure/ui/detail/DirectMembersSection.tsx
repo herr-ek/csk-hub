@@ -13,6 +13,7 @@ import {
   addDirectMemberAction,
   changeDirectMemberAction,
   correctDirectMemberAction,
+  endChoirMemberAction,
   endDirectMemberAction
 } from "./direct-actions"
 import type { GroupDetail } from "./query"
@@ -91,10 +92,18 @@ export function DirectMembersSection({ detail, today }: { detail: GroupDetail; t
                   </Button>
                 }
                 title={t("management.end")}
-                action={endDirectMemberAction}
+                action={detail.group.type === "Choir" ? endChoirMemberAction : endDirectMemberAction}
                 submitLabel={t("management.end")}
               >
-                <input type="hidden" name="membershipId" value={member.id} />
+                {detail.group.type === "Choir" ? (
+                  <>
+                    <input type="hidden" name="membershipId" value={member.id} />
+                    <input type="hidden" name="groupId" value={detail.group.id} />
+                    <input type="hidden" name="userId" value={member.userId} />
+                  </>
+                ) : (
+                  <input type="hidden" name="membershipId" value={member.id} />
+                )}
                 <InputField
                   label={t("management.lastDay")}
                   name="lastDay"
@@ -175,7 +184,13 @@ function MembershipFields({
             name="groupId"
             defaultValue={detail.group.id}
             required
-            options={detail.placementSections.map((section) => ({ value: section.id, label: section.name }))}
+            options={detail.placementSections
+              .filter(
+                (section) =>
+                  section.active ||
+                  (!change && member?.endDate !== null && member?.endDate !== undefined && member.endDate <= today)
+              )
+              .map((section) => ({ value: section.id, label: section.name }))}
           />
           <SelectField
             label={t("management.voice")}

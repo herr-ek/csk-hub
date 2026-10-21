@@ -8,6 +8,7 @@ import {
   correctDirectMembership,
   endDirectMembership
 } from "../../direct-membership"
+import { endMembership } from "../../membership"
 import { shiftDate } from "../../model/dates"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
@@ -73,5 +74,27 @@ export async function endDirectMemberAction(_state: GroupCommandState, formData:
     endSchema,
     { membershipId: value(formData, "membershipId"), lastDay: value(formData, "lastDay") },
     (input) => endDirectMembership(db, { membershipId: input.membershipId, endDate: shiftDate(input.lastDay, 1) })
+  )
+}
+
+const endChoirMemberSchema = z.object({
+  membershipId: fields.id,
+  groupId: fields.id,
+  userId: fields.userId,
+  lastDay: fields.date
+})
+
+/** Leaves the Choir and its dependent singer/team periods through one atomic domain command. */
+export async function endChoirMemberAction(_state: GroupCommandState, formData: FormData) {
+  return runGroupCommand(
+    "end-membership",
+    endChoirMemberSchema,
+    {
+      membershipId: value(formData, "membershipId"),
+      groupId: value(formData, "groupId"),
+      userId: value(formData, "userId"),
+      lastDay: value(formData, "lastDay")
+    },
+    ({ lastDay, ...input }) => endMembership(db, { ...input, endDate: shiftDate(lastDay, 1) })
   )
 }

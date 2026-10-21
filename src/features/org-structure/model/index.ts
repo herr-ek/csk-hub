@@ -1,6 +1,6 @@
 import type { groupType } from "@/core/db/schema/org-structure"
 
-export { shiftDate } from "./dates"
+export { annualAppointmentDefaults, periodsCoverPeriod, shiftDate } from "./dates"
 export type { EffectiveGroup, EffectivePosition } from "./effective"
 export type { OrgStructureResult, OrgStructureViolation } from "./result"
 

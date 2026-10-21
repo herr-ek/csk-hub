@@ -28,9 +28,12 @@ describe.skipIf(!database)("Choir and Group structure", () => {
     })
     const [choir] = await t.db.select().from(group).where(eq(group.name, name))
     expect(choir?.type).toBe("Choir")
-    const sectionRows = await t.db.select({ id: group.id }).from(group).where(eq(group.choirId, choir!.id))
+    if (!choir) throw new Error("Expected the Choir to exist.")
+    const sectionRows = await t.db.select({ id: group.id }).from(group).where(eq(group.choirId, choir.id))
     expect(sectionRows).toHaveLength(4)
-    expect(await t.db.select().from(section).where(eq(section.groupId, sectionRows[0]!.id))).toHaveLength(1)
+    const firstSection = sectionRows[0]
+    if (!firstSection) throw new Error("Expected the first Section to exist.")
+    expect(await t.db.select().from(section).where(eq(section.groupId, firstSection.id))).toHaveLength(1)
   })
 
   test("invalid or overlapping Section sets leave no Choir behind", async () => {
