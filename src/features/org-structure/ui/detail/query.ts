@@ -48,126 +48,139 @@ export async function getGroupDetail(
   if (!row) return null
   const choirMember = alias(groupMember, "choir_member")
 
-  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates, singers, appointments, annualContexts, fluidContexts] =
-    await Promise.all([
-      db
-        .select({
-          userId: groupMember.userId,
-          name: user.name,
-          email: user.email,
-          startDate: groupMember.startDate,
-          endDate: groupMember.endDate,
-          voice: groupMember.voice
-        })
-        .from(groupMember)
-        .innerJoin(user, eq(user.id, groupMember.userId))
-        .where(eq(groupMember.groupId, groupId))
-        .orderBy(asc(user.name), desc(groupMember.startDate)),
-      db
-        .select({
-          positionId: positionHolder.positionId,
-          position: position.name,
-          userId: positionHolder.userId,
-          name: user.name,
-          startDate: positionHolder.startDate,
-          endDate: positionHolder.endDate
-        })
-        .from(positionHolder)
-        .innerJoin(position, eq(position.id, positionHolder.positionId))
-        .innerJoin(user, eq(user.id, positionHolder.userId))
-        .where(eq(positionHolder.groupId, groupId))
-        .orderBy(desc(positionHolder.startDate)),
-      // The Positions the group's type allows, but not those limited to other groups.
-      db
-        .select({ id: position.id, name: position.name })
-        .from(groupTypePosition)
-        .innerJoin(position, eq(position.id, groupTypePosition.positionId))
-        .where(
-          and(
-            eq(groupTypePosition.type, row.type),
-            or(
-              notExists(db.select().from(positionGroup).where(eq(positionGroup.positionId, position.id))),
-              exists(
-                db
-                  .select()
-                  .from(positionGroup)
-                  .where(and(eq(positionGroup.positionId, position.id), eq(positionGroup.groupId, groupId)))
-              )
-            )
-          )
-        )
-        .orderBy(asc(position.name)),
-      db.select({ voice: section.voice }).from(section).where(eq(section.groupId, groupId)),
-      row.choirId ? choirVoicesOf(row.choirId) : Promise.resolve([]),
-      // Active Users who are not current members, for the add-member picker. A Choir's group other
-      // than a Section takes only current members of the Choir; placing a singer in a Section is
-      // how they join it.
-      db
-        .select({ id: user.id, name: user.name, email: user.email })
-        .from(user)
-        .where(
-          and(
-            or(isNull(user.banned), eq(user.banned, false)),
-            notExists(
+  const [
+    memberships,
+    holdings,
+    allowed,
+    [sectionRow],
+    choirVoices,
+    candidates,
+    singers,
+    appointments,
+    annualContexts,
+    fluidContexts
+  ] = await Promise.all([
+    db
+      .select({
+        userId: groupMember.userId,
+        name: user.name,
+        email: user.email,
+        startDate: groupMember.startDate,
+        endDate: groupMember.endDate,
+        voice: groupMember.voice
+      })
+      .from(groupMember)
+      .innerJoin(user, eq(user.id, groupMember.userId))
+      .where(eq(groupMember.groupId, groupId))
+      .orderBy(asc(user.name), desc(groupMember.startDate)),
+    db
+      .select({
+        positionId: positionHolder.positionId,
+        position: position.name,
+        userId: positionHolder.userId,
+        name: user.name,
+        startDate: positionHolder.startDate,
+        endDate: positionHolder.endDate
+      })
+      .from(positionHolder)
+      .innerJoin(position, eq(position.id, positionHolder.positionId))
+      .innerJoin(user, eq(user.id, positionHolder.userId))
+      .where(eq(positionHolder.groupId, groupId))
+      .orderBy(desc(positionHolder.startDate)),
+    // The Positions the group's type allows, but not those limited to other groups.
+    db
+      .select({ id: position.id, name: position.name })
+      .from(groupTypePosition)
+      .innerJoin(position, eq(position.id, groupTypePosition.positionId))
+      .where(
+        and(
+          eq(groupTypePosition.type, row.type),
+          or(
+            notExists(db.select().from(positionGroup).where(eq(positionGroup.positionId, position.id))),
+            exists(
               db
                 .select()
-                .from(groupMember)
-                .where(
-                  and(eq(groupMember.userId, user.id), eq(groupMember.groupId, groupId), isNull(groupMember.endDate))
-                )
-            ),
-            row.choirId && row.type !== "Section"
-              ? exists(
-                  db
-                    .select()
-                    .from(choirMember)
-                    .where(
-                      and(
-                        eq(choirMember.userId, user.id),
-                        eq(choirMember.groupId, row.choirId),
-                        isNull(choirMember.endDate)
-                      )
-                    )
-                )
-              : undefined
+                .from(positionGroup)
+                .where(and(eq(positionGroup.positionId, position.id), eq(positionGroup.groupId, groupId)))
+            )
           )
         )
-        .orderBy(asc(user.name)),
-      // On a Choir's page, each member's Voice comes from their current Section Membership in it.
-      row.type === "Choir"
-        ? db
-            .select({ userId: groupMember.userId, voice: groupMember.voice })
-            .from(groupMember)
-            .innerJoin(group, eq(group.id, groupMember.groupId))
-            .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
-        : Promise.resolve([]),
-      listAppointmentsForGroup(db, groupId),
-      row.organisationYear !== null
-        ? db
-            .select({ id: group.id, name: group.name, organisationYear: group.organisationYear })
-            .from(group)
-            .where(
-              and(
-                eq(group.type, row.type),
-                eq(group.usesAppointmentModel, true),
-                eq(group.active, true),
-                isNotNull(group.organisationYear)
+      )
+      .orderBy(asc(position.name)),
+    db.select({ voice: section.voice }).from(section).where(eq(section.groupId, groupId)),
+    row.choirId ? choirVoicesOf(row.choirId) : Promise.resolve([]),
+    // Active Users who are not current members, for the add-member picker. A Choir's group other
+    // than a Section takes only current members of the Choir; placing a singer in a Section is
+    // how they join it.
+    db
+      .select({ id: user.id, name: user.name, email: user.email })
+      .from(user)
+      .where(
+        and(
+          or(isNull(user.banned), eq(user.banned, false)),
+          notExists(
+            db
+              .select()
+              .from(groupMember)
+              .where(
+                and(eq(groupMember.userId, user.id), eq(groupMember.groupId, groupId), isNull(groupMember.endDate))
               )
+          ),
+          row.choirId && row.type !== "Section"
+            ? exists(
+                db
+                  .select()
+                  .from(choirMember)
+                  .where(
+                    and(
+                      eq(choirMember.userId, user.id),
+                      eq(choirMember.groupId, row.choirId),
+                      isNull(choirMember.endDate)
+                    )
+                  )
+              )
+            : undefined
+        )
+      )
+      .orderBy(asc(user.name)),
+    // On a Choir's page, each member's Voice comes from their current Section Membership in it.
+    row.type === "Choir"
+      ? db
+          .select({ userId: groupMember.userId, voice: groupMember.voice })
+          .from(groupMember)
+          .innerJoin(group, eq(group.id, groupMember.groupId))
+          .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
+      : Promise.resolve([]),
+    listAppointmentsForGroup(db, groupId),
+    row.organisationYear !== null
+      ? db
+          .select({ id: group.id, name: group.name, organisationYear: group.organisationYear })
+          .from(group)
+          .where(
+            and(
+              eq(group.type, row.type),
+              eq(group.usesAppointmentModel, true),
+              eq(group.active, true),
+              isNotNull(group.organisationYear)
             )
-            .orderBy(desc(group.organisationYear))
-        : Promise.resolve([]),
-      db
-        .select({ id: group.id, name: group.name, type: group.type, choirId: group.choirId })
-        .from(group)
-        .where(and(eq(group.type, row.type), eq(group.active, true)))
-        .orderBy(asc(group.name))
-    ])
+          )
+          .orderBy(desc(group.organisationYear))
+      : Promise.resolve([]),
+    db
+      .select({ id: group.id, name: group.name, type: group.type, choirId: group.choirId })
+      .from(group)
+      .where(and(eq(group.type, row.type), eq(group.active, true)))
+      .orderBy(asc(group.name))
+  ])
   const singerVoices = new Map(singers.map(({ userId, voice }) => [userId, voice]))
   const directMemberships = await listDirectMemberships(db, groupId)
   const contextIds = fluidContexts.map(({ id }) => id)
   const [directContextMembers, legacyContextMembers] = contextIds.length
     ? await Promise.all([
-        db.select({ userId: directMembership.userId }).from(directMembership).where(inArray(directMembership.groupId, contextIds)),
+        db
+          .select({ userId: directMembership.userId })
+          .from(directMembership)
+          .where(inArray(directMembership.groupId, contextIds)),
         db.select({ userId: groupMember.userId }).from(groupMember).where(inArray(groupMember.groupId, contextIds))
       ])
     : [[], []]
