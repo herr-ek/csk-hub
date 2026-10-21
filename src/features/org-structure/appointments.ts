@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import {
@@ -10,7 +10,7 @@ import {
   groupMember,
   positionAppointment
 } from "@/core/db/schema/org-structure"
-import { listDirectMembersAt } from "./direct-membership"
+import { listDirectMembersAt, validateUserParticipation } from "./direct-membership"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { requireActiveGroup, requireChoir } from "./lookup"
 import {
@@ -378,6 +378,53 @@ export function correctAnnualAppointment(
   })
 }
 
+/** Corrects a fluid Position appointment and re-resolves its grants atomically. */
+export function correctFluidAppointment(
+  database: OrgStructureDatabase,
+  input: {
+    appointmentId: string
+    userId: string
+    positionCode: PositionCode
+    contextGroupId: string
+    startDate: IsoDate
+    endDate: IsoDate | null
+  }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:appointment:${input.appointmentId}`}))`)
+    const [existing] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(eq(positionAppointment.id, input.appointmentId))
+    if (!existing) throw new RuleViolation("not-holding-position")
+    for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
+    const definition = POSITION_DEFINITIONS[input.positionCode]
+    if (definition?.endPolicy !== "fluid") throw new RuleViolation("position-not-allowed")
+    const context = await requireActiveGroup(tx, input.contextGroupId)
+    if (context.type !== definition.context) throw new RuleViolation("position-not-allowed")
+    const startDate = requireDate(input.startDate)
+    const endDate = input.endDate === null ? null : requireDate(input.endDate)
+    if (endDate !== null && endDate <= startDate) throw new RuleViolation("period-conflict")
+    const grantIds = await resolveGrantGroups(tx, definition, context, undefined)
+    await tx
+      .update(positionAppointment)
+      .set({
+        userId: input.userId,
+        positionCode: input.positionCode,
+        contextGroupId: context.id,
+        organisationYear: null,
+        startDate,
+        endDate
+      })
+      .where(eq(positionAppointment.id, existing.id))
+    await tx.delete(appointmentGrant).where(eq(appointmentGrant.appointmentId, existing.id))
+    if (grantIds.length)
+      await tx.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: existing.id, groupId })))
+    await validateUserParticipation(tx, input.userId)
+    return { id: existing.id }
+  })
+}
+
 /** Dated appointment participation only; legacy live rosters are deliberately unchanged until cutover. */
 export async function listAppointmentMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
   requireDate(date)
@@ -463,4 +510,29 @@ export async function listEffectiveMembersAt(database: OrgStructureDatabase, gro
     members.set(appointment.userId, member)
   }
   return [...members.values()].sort((a, b) => a.name.localeCompare(b.name, "sv"))
+}
+
+/** Lists every appointment attached to a Group as its context or a granted Membership. */
+export async function listAppointmentsForGroup(database: OrgStructureDatabase, groupId: string) {
+  const contextGroup = alias(group, "appointment_context")
+  const rows = await database
+    .selectDistinct({ appointment: positionAppointment, name: user.name, contextName: contextGroup.name })
+    .from(positionAppointment)
+    .leftJoin(appointmentGrant, eq(appointmentGrant.appointmentId, positionAppointment.id))
+    .innerJoin(user, eq(user.id, positionAppointment.userId))
+    .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
+    .where(or(eq(appointmentGrant.groupId, groupId), eq(positionAppointment.contextGroupId, groupId)))
+    .orderBy(desc(positionAppointment.startDate))
+  return rows.map(({ appointment, name, contextName }) => ({
+    id: appointment.id,
+    userId: appointment.userId,
+    name,
+    positionCode: appointment.positionCode as PositionCode,
+    position: POSITION_DEFINITIONS[appointment.positionCode as PositionCode]?.label ?? appointment.positionCode,
+    contextGroupId: appointment.contextGroupId,
+    contextName,
+    startDate: appointment.startDate as IsoDate,
+    endDate: appointment.endDate as IsoDate | null,
+    organisationYear: appointment.organisationYear
+  }))
 }
