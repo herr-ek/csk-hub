@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { POSITION_DEFINITIONS, type PositionCode } from "../../model"
 import { shiftDate } from "../../model/dates"
 import { CommandDialog } from "../command-dialog"
+import { cancelAppointmentAction } from "./appointment-actions"
 import {
   assignFluidAppointmentAction,
   correctFluidAppointmentAction,
@@ -19,7 +20,7 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
   const t = useTranslations("Groups.detail")
   const labels = useTranslations("Groups.positionLabels")
   const positions = Object.entries(POSITION_DEFINITIONS).filter(
-    ([, definition]) => definition.context === detail.group.type
+    ([, definition]) => definition.context === detail.group.type && definition.endPolicy === "fluid"
   )
   const fluid = detail.appointments.filter(({ organisationYear }) => organisationYear === null)
   const contexts = detail.fluidContexts
@@ -27,19 +28,19 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("positionsTitle")}</CardTitle>
+        <CardTitle>{t("fluidResponsibilitiesTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {detail.group.active && positions.length > 0 ? (
           <CommandDialog
             trigger={
               <Button type="button" size="sm">
-                {t("assignHolder")}
+                {t("assignFluidResponsibility")}
               </Button>
             }
-            title={t("positionsTitle")}
+            title={t("fluidResponsibilitiesTitle")}
             action={assignFluidAppointmentAction}
-            submitLabel={t("assignHolder")}
+            submitLabel={t("assignFluidResponsibility")}
           >
             <input type="hidden" name="contextGroupId" value={detail.group.id} />
             <SelectField
@@ -73,6 +74,7 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
               {fluid.map((appointment) => {
                 const open =
                   appointment.startDate <= today && (appointment.endDate === null || appointment.endDate > today)
+                const prepared = appointment.startDate > today
                 return (
                   <TableRow key={appointment.id}>
                     <TableCell>
@@ -152,6 +154,22 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
                           >
                             <input type="hidden" name="appointmentId" value={appointment.id} />
                             <InputField label={t("endDate")} name="lastDay" defaultValue={today} type="date" required />
+                          </CommandDialog>
+                        ) : null}
+                        {prepared && appointment.contextGroupId === detail.group.id && detail.group.active ? (
+                          <CommandDialog
+                            trigger={
+                              <Button type="button" variant="ghost" size="sm">
+                                {t("cancelAppointment")}
+                              </Button>
+                            }
+                            title={t("cancelPreparedTitle", { name: appointment.name })}
+                            action={cancelAppointmentAction}
+                            submitLabel={t("cancelAppointment")}
+                            destructive
+                          >
+                            <input type="hidden" name="appointmentId" value={appointment.id} />
+                            <input type="hidden" name="today" value={today} />
                           </CommandDialog>
                         ) : null}
                       </div>
