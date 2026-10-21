@@ -69,9 +69,9 @@ export async function getGroupDetail(
   const placementSections =
     row.type === "Section" && row.choirId
       ? await db
-          .select({ id: group.id, name: group.name })
+          .select({ id: group.id, name: group.name, active: group.active })
           .from(group)
-          .where(and(eq(group.type, "Section"), eq(group.choirId, row.choirId), eq(group.active, true)))
+          .where(and(eq(group.type, "Section"), eq(group.choirId, row.choirId)))
           .orderBy(asc(group.name))
       : []
   const effectiveMembers = await listEffectiveMembersAt(db, groupId, date)

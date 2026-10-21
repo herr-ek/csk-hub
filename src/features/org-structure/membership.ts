@@ -113,7 +113,7 @@ export function changeVoice(database: OrgStructureDatabase, input: ChangeVoiceIn
   })
 }
 
-type EndMembershipInput = { userId: string; groupId: string; endDate: IsoDate }
+type EndMembershipInput = { userId: string; groupId: string; endDate: IsoDate; membershipId?: string }
 
 /** Ends direct membership; leaving a Choir atomically ends its Section and Choir-team periods too. */
 export function endMembership(database: OrgStructureDatabase, input: EndMembershipInput) {
@@ -122,6 +122,25 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
     await lockUser(tx, input.userId)
     const [target] = await tx.select().from(group).where(eq(group.id, input.groupId)).for("share")
     if (!target) throw new RuleViolation("group-not-found")
+    let selectedAlreadyEnded = false
+    if (input.membershipId) {
+      const [selected] = await tx
+        .select({
+          id: directMembership.id,
+          userId: directMembership.userId,
+          groupId: directMembership.groupId,
+          startDate: directMembership.startDate,
+          endDate: directMembership.endDate
+        })
+        .from(directMembership)
+        .where(eq(directMembership.id, input.membershipId))
+        .for("update")
+      if (!selected || selected.userId !== input.userId || selected.groupId !== input.groupId)
+        throw new RuleViolation("not-a-member")
+      selectedAlreadyEnded = endDate === selected.endDate
+      if (endDate <= selected.startDate || (selected.endDate !== null && endDate > selected.endDate))
+        throw new RuleViolation("period-conflict")
+    }
     const currentPeriods = await tx
       .select({ id: directMembership.id, startDate: directMembership.startDate, endDate: directMembership.endDate })
       .from(directMembership)
@@ -137,8 +156,8 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
         )
       )
       .for("update", { of: directMembership })
-    const membership = currentPeriods.find(({ id }) => id)
-    if (!membership) throw new RuleViolation("not-a-member")
+    if (!currentPeriods.length && selectedAlreadyEnded) return
+    if (!currentPeriods.length) throw new RuleViolation("not-a-member")
     for (const row of currentPeriods) {
       if (endDate <= row.startDate || (row.endDate !== null && endDate > row.endDate))
         throw new RuleViolation("period-conflict")

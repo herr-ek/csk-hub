@@ -677,6 +677,7 @@
       "assignHolder": "Besetzen",
       "assignFluidResponsibility": "Aufgabe übertragen",
       "replaceHolder": "Ersetzen",
+      "positionOption": "{position}{occupied, select, true { · {replace}} other {}}",
       "assignTitle": "{position} in {group}",
       "replaceNotice": "Das Amt von {name} endet am Startdatum des neuen Inhabers.",
       "noHolderCandidates": "Nur aktuelle Mitglieder der Gruppe können ein Amt innehaben. Füge zuerst ein Mitglied hinzu.",

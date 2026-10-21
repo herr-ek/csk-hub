@@ -6,7 +6,14 @@ import { appointmentGrant, directMembership, group, positionAppointment, section
 import { contains, type VoiceDivision } from "@/features/voice/model"
 import { cskToday } from "./effective-reads"
 import { requireActiveGroup, requireGroup } from "./lookup"
-import { GROUP_POLICIES, type IsoDate, organisationYearPeriod, POSITION_DEFINITIONS, type PositionCode } from "./model"
+import {
+  GROUP_POLICIES,
+  type IsoDate,
+  organisationYearPeriod,
+  POSITION_DEFINITIONS,
+  type PositionCode,
+  periodsCoverPeriod
+} from "./model"
 import {
   lockUser,
   type OrgStructureDatabase,
@@ -192,17 +199,6 @@ async function membershipValues(tx: OrgStructureTransaction, input: MembershipIn
   return { userId: input.userId, groupId: input.groupId, startDate, endDate, voice }
 }
 
-function covers(rows: Period[], period: Period) {
-  let until: IsoDate | null = period.startDate
-  for (const row of rows.toSorted((a, b) => a.startDate.localeCompare(b.startDate))) {
-    if (row.endDate !== null && row.endDate <= until) continue
-    if (row.startDate > until) break
-    until = row.endDate
-    if (until === null || (period.endDate !== null && until >= period.endDate)) return true
-  }
-  return false
-}
-
 async function ensurePlacementChoir(tx: OrgStructureTransaction, input: typeof directMembership.$inferInsert) {
   const target = await requireGroup(tx, input.groupId)
   if (target.type !== "Section" || !target.choirId) return
@@ -212,7 +208,7 @@ async function ensurePlacementChoir(tx: OrgStructureTransaction, input: typeof d
     .from(directMembership)
     .where(and(eq(directMembership.userId, input.userId), eq(directMembership.groupId, target.choirId)))
   const period = { startDate: input.startDate, endDate: input.endDate ?? null }
-  if (!covers(direct, period)) {
+  if (!periodsCoverPeriod(direct, period)) {
     if (direct.some((row) => overlaps(row, period))) throw new RuleViolation("not-a-choir-member")
     await tx.insert(directMembership).values({ userId: input.userId, groupId: target.choirId, ...period })
   }
@@ -244,7 +240,7 @@ export async function validateUserParticipation(tx: OrgStructureTransaction, use
       throw new RuleViolation("already-holding-position")
     if (
       row.group.choirId &&
-      !covers(
+      !periodsCoverPeriod(
         rows.filter((other) => other.group.id === row.group.choirId).map((other) => other.membership),
         row.membership
       )
@@ -265,7 +261,7 @@ export async function validateUserParticipation(tx: OrgStructureTransaction, use
   for (const appointment of appointments) {
     if (!POSITION_DEFINITIONS[appointment.positionCode as PositionCode].prerequisite) continue
     if (
-      !covers(
+      !periodsCoverPeriod(
         rows.filter((row) => row.group.id === appointment.contextGroupId).map((row) => row.membership),
         appointment
       )

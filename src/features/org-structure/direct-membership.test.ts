@@ -248,9 +248,10 @@ describe.skipIf(!database)("dated direct Membership", () => {
     )
     const membership = (await listDirectMemberships(t.db, groupId))[0]
     expect(membership).toBeDefined()
+    if (!membership) throw new Error("Expected the corrected membership to exist.")
     expectSuccess(
       await correctDirectMembership(t.db, {
-        membershipId: membership!.id,
+        membershipId: membership.id,
         groupId: await t.groupId("DKS2"),
         voice: "S2",
         startDate: "2024-09-01",

@@ -677,6 +677,7 @@
       "assignHolder": "Assign",
       "assignFluidResponsibility": "Assign responsibility",
       "replaceHolder": "Replace",
+      "positionOption": "{position}{occupied, select, true { · {replace}} other {}}",
       "assignTitle": "{position} in {group}",
       "replaceNotice": "{name}'s holding ends on the new holder's start date.",
       "noHolderCandidates": "Only current members of the group can hold a Position. Add a member first.",

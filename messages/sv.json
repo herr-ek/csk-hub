@@ -677,6 +677,7 @@
       "assignHolder": "Tillsätt",
       "assignFluidResponsibility": "Tillsätt ansvarsuppgift",
       "replaceHolder": "Ersätt",
+      "positionOption": "{position}{occupied, select, true { · {replace}} other {}}",
       "assignTitle": "{position} i {group}",
       "replaceNotice": "{name}s innehav avslutas på den nya innehavarens startdatum.",
       "noHolderCandidates": "Bara nuvarande medlemmar i gruppen kan ha en post. Lägg till en medlem först.",
