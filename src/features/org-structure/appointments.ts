@@ -2,6 +2,7 @@ import "server-only"
 
 import { and, eq, gt, isNull, lt, lte, or } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { requireChoirTeamAvailable } from "./group-cardinality"
 import { requireActiveGroup, requireChoir } from "./lookup"
 import {
   GROUP_POLICIES,
@@ -32,7 +33,8 @@ export function createOrganisationGroup(
     const policy = GROUP_POLICIES[input.type]
     if (!policy || (input.type as GroupType) === "Choir" || (input.type as GroupType) === "Section")
       throw new RuleViolation("choir-created-with-sections")
-    if ((policy.scope === "choir") !== Boolean(input.choirId)) throw new RuleViolation("choir-not-found")
+    if ((policy.scope === "choir") !== Boolean(input.choirId)) throw new RuleViolation("invalid-group-scope")
+    if (!input.name.trim()) throw new RuleViolation("invalid-group-name")
     if (input.choirId) await requireChoir(tx, input.choirId)
     if (
       (policy.lifetime === "annual") !== (input.organisationYear !== undefined) ||
@@ -40,6 +42,7 @@ export function createOrganisationGroup(
         (!Number.isInteger(input.organisationYear) || input.organisationYear < 1000 || input.organisationYear > 9998))
     )
       throw new RuleViolation("period-conflict")
+    await requireChoirTeamAvailable(tx, input)
     const [created] = await tx
       .insert(group)
       .values({ ...input, name: input.name.trim(), usesAppointmentModel: true })

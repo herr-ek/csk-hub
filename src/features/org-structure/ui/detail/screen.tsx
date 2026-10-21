@@ -4,6 +4,7 @@ import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { DirectMembersSection } from "./DirectMembersSection"
 import { GroupHeaderActions } from "./group-header-actions"
 import { MembersSection } from "./members-section"
 import { PositionsSection } from "./positions-section"
@@ -44,19 +45,25 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
                 ? t("detail.typeInChoir", { type: types(group.type), choir: group.choir.name })
                 : t("detail.typeCskWide", { type: types(group.type) })}
             </p>
+            {group.organisationYear !== null ? (
+              <Badge variant="outline">
+                {t("management.yearValue", { start: group.organisationYear, end: group.organisationYear + 1 })}
+              </Badge>
+            ) : null}
             {detail.sectionVoice ? (
               <div className="mt-2 flex flex-wrap gap-1">
                 <Badge variant="outline">{detail.sectionVoice}</Badge>
               </div>
             ) : null}
           </div>
-          {group.active ? <GroupHeaderActions group={group} /> : null}
+          {group.active ? <GroupHeaderActions group={group} choirs={detail.choirs} /> : null}
         </div>
         {group.active ? null : <p className="text-sm text-muted-foreground">{t("detail.archivedNotice")}</p>}
       </div>
 
-      <MembersSection detail={detail} today={date} />
-      <PositionsSection detail={detail} today={date} />
+      <DirectMembersSection detail={detail} today={date} />
+      {!group.usesAppointmentModel ? <MembersSection detail={detail} today={date} /> : null}
+      {!group.usesAppointmentModel ? <PositionsSection detail={detail} today={date} /> : null}
     </main>
   )
 }

@@ -145,7 +145,7 @@ describe.skipIf(!database)("Groups scheme examples", () => {
       })
     )
     for (const userId of [bertil, cecilia, david]) {
-      expectSuccess(await startMembership(t.db, { userId, groupId: sexmasteri, startDate: "2025-07-01" }))
+      await t.legacyMember({ userId, groupId: sexmasteri, startDate: "2025-07-01" })
     }
     expectSuccess(
       await startPositionHolding(t.db, {

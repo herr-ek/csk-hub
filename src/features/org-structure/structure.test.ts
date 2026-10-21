@@ -217,7 +217,7 @@ describe.skipIf(!database)("groups structure", () => {
 
       const styret = await t.groupId("Styret")
       const userId = await t.user()
-      expectSuccess(await startMembership(t.db, { userId, groupId: styret, startDate: "2025-01-01" }))
+      await t.legacyMember({ userId, groupId: styret, startDate: "2025-01-01" })
       expectSuccess(
         await startPositionHolding(t.db, { userId, groupId: styret, positionId: id, startDate: "2025-01-01" })
       )
@@ -235,7 +235,7 @@ describe.skipIf(!database)("groups structure", () => {
       const { id } = expectSuccess(await createPosition(t.db, { name, groupTypes: ["Board"] }))
       const styret = await t.groupId("Styret")
       const userId = await t.user()
-      expectSuccess(await startMembership(t.db, { userId, groupId: styret, startDate: "2025-01-01" }))
+      await t.legacyMember({ userId, groupId: styret, startDate: "2025-01-01" })
       expectSuccess(
         await startPositionHolding(t.db, { userId, groupId: styret, positionId: id, startDate: "2025-01-01" })
       )

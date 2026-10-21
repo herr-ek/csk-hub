@@ -14,6 +14,7 @@ import {
   section
 } from "@/core/db/schema/org-structure"
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
+import { listDirectMemberships } from "../../direct-membership"
 import type { GroupType, IsoDate } from "../../model"
 
 /** The Voices a singer can have in a Section singing `voice`: the division itself, or the family's divisions. */
@@ -30,6 +31,8 @@ export async function getGroupDetail(groupId: string) {
       name: group.name,
       type: group.type,
       active: group.active,
+      organisationYear: group.organisationYear,
+      usesAppointmentModel: group.usesAppointmentModel,
       choirId: group.choirId,
       choirName: choirGroup.name
     })
@@ -141,10 +144,32 @@ export async function getGroupDetail(groupId: string) {
       name: row.name,
       type: row.type as GroupType,
       active: row.active,
+      organisationYear: row.organisationYear,
+      usesAppointmentModel: row.usesAppointmentModel,
       choir: row.choirId ? { id: row.choirId, name: row.choirName as string } : null
     },
     /** The Section's own Voice, or null for any other group. */
     sectionVoice: sectionRow?.voice ?? null,
+    directMemberships: await listDirectMemberships(db, groupId),
+    legacyMemberships: memberships,
+    choirs: await db
+      .select({ id: group.id, name: group.name })
+      .from(group)
+      .where(and(eq(group.type, "Choir"), eq(group.active, true)))
+      .orderBy(group.name),
+    placementSections:
+      row.type === "Section" && row.choirId
+        ? await db
+            .select({ id: group.id, name: group.name })
+            .from(group)
+            .where(and(eq(group.type, "Section"), eq(group.choirId, row.choirId), eq(group.active, true)))
+            .orderBy(group.name)
+        : [],
+    directCandidates: await db
+      .select({ id: user.id, name: user.name, email: user.email })
+      .from(user)
+      .where(or(isNull(user.banned), eq(user.banned, false)))
+      .orderBy(user.name),
     /** The Voices a singer in this Section can have. */
     sectionVoices: sectionRow ? voicesWithin(sectionRow.voice) : [],
     choirVoices,

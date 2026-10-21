@@ -1,11 +1,13 @@
 import "server-only"
 
-import { and, eq, inArray, isNull, notInArray } from "drizzle-orm"
+import { and, eq, gt, inArray, isNull, notInArray, or } from "drizzle-orm"
 import {
+  appointmentGrant,
   choir,
   group,
   groupTypePosition,
   position,
+  positionAppointment,
   positionGroup,
   positionHolder,
   section
@@ -103,10 +105,30 @@ export function renameGroup(database: OrgStructureDatabase, groupId: string, nam
  */
 export function archiveGroup(database: OrgStructureDatabase, groupId: string) {
   return runOrgStructureCommand(database, async (tx) => {
-    const row = await requireGroup(tx, groupId)
+    const [row] = await tx.select().from(group).where(eq(group.id, groupId)).for("update")
+    if (!row) throw new RuleViolation("group-not-found")
     if (!row.active) throw new RuleViolation("group-archived")
     if (row.type === "Section") throw new RuleViolation("section-archived-with-choir")
 
+    const affected = await tx
+      .select({ id: group.id })
+      .from(group)
+      .where(or(eq(group.id, groupId), row.type === "Choir" ? eq(group.choirId, groupId) : undefined))
+      .for("update")
+    const ids = affected.map(({ id }) => id)
+    const date = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm" }).format(new Date())
+    const [dependent] = await tx
+      .select({ id: positionAppointment.id })
+      .from(positionAppointment)
+      .leftJoin(appointmentGrant, eq(appointmentGrant.appointmentId, positionAppointment.id))
+      .where(
+        and(
+          or(inArray(positionAppointment.contextGroupId, ids), inArray(appointmentGrant.groupId, ids)),
+          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
+        )
+      )
+      .limit(1)
+    if (dependent) throw new RuleViolation("membership-dependency")
     await tx.update(group).set({ active: false }).where(eq(group.id, groupId))
     if (row.type === "Choir") {
       await tx

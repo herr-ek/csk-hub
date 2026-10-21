@@ -2,7 +2,6 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
 import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { endLinkedPosition, startLinkedPosition } from "./linked-positions"
-import { startMembership } from "./membership"
 import { endPositionHolding, replacePositionHolder, startPositionHolding } from "./positions"
 import { getCurrentPositionHolder } from "./reads"
 import { createGroup } from "./structure"
@@ -16,7 +15,7 @@ describe.skipIf(!database)("groups positions", () => {
 
   async function member(groupId: string, startDate = "2025-01-01") {
     const userId = await t.user()
-    expectSuccess(await startMembership(t.db, { userId, groupId, startDate }))
+    await t.legacyMember({ userId, groupId, startDate })
     return userId
   }
 

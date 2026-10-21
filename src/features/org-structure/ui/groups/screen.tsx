@@ -7,6 +7,7 @@ import { PositionCatalogue } from "../catalogue/position-catalogue"
 import { listPositionCatalogue } from "../catalogue/query"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { GroupsOverview } from "./overview"
+import { PrepareYearDialog } from "./PrepareYearDialog"
 import { getGroupsOverview } from "./query"
 
 /** The groups beside the Choirs' Sections, and the Positions they can have. */
@@ -34,7 +35,10 @@ export async function GroupsScreen() {
             {t("groupsPage.choirsLink")}
           </Link>
         </div>
-        <CreateGroupDialog choirs={choirs} />
+        <div className="flex flex-wrap gap-2">
+          <PrepareYearDialog />
+          <CreateGroupDialog choirs={choirs} />
+        </div>
       </div>
 
       <GroupsOverview overview={overview} />

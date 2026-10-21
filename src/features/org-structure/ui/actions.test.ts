@@ -15,11 +15,25 @@ mock.module("@/core/db", () => ({ db: database?.db }))
 mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
-const { createGroupAction, renameGroupAction, archiveGroupAction } = await import("./groups/actions")
+const { createGroupAction, renameGroupAction, archiveGroupAction, prepareYearAction, editGroupAction } = await import(
+  "./groups/actions"
+)
 const { addMemberAction, endMembershipAction, changeVoiceAction, assignHolderAction, endHoldingAction } = await import(
   "./detail/actions"
 )
 const { createPositionAction, updatePositionAction } = await import("./catalogue/actions")
+
+const {
+  addDirectMemberAction,
+  correctDirectMemberAction,
+  changeDirectMemberAction,
+  endDirectMemberAction,
+  correctLegacyMemberAction
+} = await import("./detail/direct-actions")
+const { listDirectMembersAt, listDirectMemberships } = await import("../direct-membership")
+const { createGroup: createLegacyGroup } = await import("../structure")
+const { listCurrentGroupMembers } = await import("../reads")
+const { listOrganisationGroups } = await import("../group-management")
 
 const IDLE = { status: "idle" } as const
 
@@ -64,6 +78,13 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
     test("guards every action", async () => {
       const actions = [
         createGroupAction,
+        prepareYearAction,
+        editGroupAction,
+        addDirectMemberAction,
+        correctDirectMemberAction,
+        changeDirectMemberAction,
+        endDirectMemberAction,
+        correctLegacyMemberAction,
         renameGroupAction,
         archiveGroupAction,
         addMemberAction,
@@ -98,7 +119,7 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
     })
 
     test("passes a module violation through as a typed failure", async () => {
-      expect(await createGroupAction(IDLE, form({ name: "Styret", type: "Board" }))).toEqual({
+      expect(await createGroupAction(IDLE, form({ name: "Styret", type: "Board", organisationYear: "2026" }))).toEqual({
         status: "error",
         error: "group-name-taken"
       })
@@ -186,6 +207,69 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
     })
   })
 
+  describe("annual Groups and direct periods", () => {
+    test("refuses unresolved annual additions without invalidating or writing", async () => {
+      const created = await createLegacyGroup(t.db, { name: "Unresolved annual action fixture", type: "Webmästeri" })
+      if (!created.success) throw new Error(created.error)
+      const groupId = created.data.id
+      const userId = await t.user()
+      expect(await addMemberAction(IDLE, form({ groupId, userId, startDate: "2026-09-01" }))).toEqual({
+        status: "error",
+        error: "annual-group-needs-year"
+      })
+      expect(await addDirectMemberAction(IDLE, form({ groupId, userId, startDate: "2026-09-01" }))).toEqual({
+        status: "error",
+        error: "annual-group-needs-year"
+      })
+      expect(await listCurrentGroupMembers(t.db, groupId)).toEqual([])
+      expect(await listDirectMemberships(t.db, groupId)).toEqual([])
+      expect(revalidatePath).not.toHaveBeenCalled()
+    })
+    test("prepares a year and translates inclusive last days at the action boundary", async () => {
+      expect(await prepareYearAction(IDLE, form({ organisationYear: "2050" }))).toMatchObject({ status: "success" })
+      expect(await prepareYearAction(IDLE, form({ organisationYear: "2050.5" }))).toEqual({
+        status: "error",
+        error: "invalid-input"
+      })
+      const groups = await listOrganisationGroups(t.db, "2050-09-01")
+      const archive = groups.find((row) => row.type === "Arkivarie" && row.organisationYear === 2050)
+      const groupId = archive?.id as string
+      const userId = await t.user()
+      expect(
+        await addDirectMemberAction(IDLE, form({ groupId, userId, startDate: "2050-09-01", lastDay: "2051-06-30" }))
+      ).toMatchObject({ status: "success" })
+      expect(await listDirectMembersAt(t.db, groupId, "2051-06-30")).toMatchObject([{ userId }])
+      expect(await listDirectMembersAt(t.db, groupId, "2051-07-01")).toEqual([])
+      const [membership] = await listDirectMemberships(t.db, groupId)
+      expect(
+        await correctDirectMemberAction(
+          IDLE,
+          form({ membershipId: membership?.id as string, groupId, startDate: "2050-08-01", lastDay: "2051-06-30" })
+        )
+      ).toMatchObject({ status: "success" })
+      const before = await listDirectMemberships(t.db, groupId)
+      revalidatePath.mockClear()
+      expect(
+        await editGroupAction(
+          IDLE,
+          form({ groupId, name: "Invalid year change", type: "Arkivarie", organisationYear: "2051" })
+        )
+      ).toEqual({ status: "error", error: "group-has-participation" })
+      expect(
+        await correctDirectMemberAction(
+          IDLE,
+          form({ membershipId: membership?.id as string, groupId, startDate: "2050-08-01", lastDay: "2051-07-01" })
+        )
+      ).toEqual({ status: "error", error: "period-conflict" })
+      expect(await listDirectMemberships(t.db, groupId)).toEqual(before)
+      expect(revalidatePath).not.toHaveBeenCalled()
+      expect(
+        await endDirectMemberAction(IDLE, form({ membershipId: membership?.id as string, lastDay: "2051-05-31" }))
+      ).toMatchObject({ status: "success" })
+      expect(await listDirectMembersAt(t.db, groupId, "2051-06-01")).toEqual([])
+    })
+  })
+
   describe("Positions", () => {
     test("assigns, replaces and ends a holder, only among current members", async () => {
       const dk = await t.groupId("DK")
@@ -230,7 +314,11 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
     test("refuses a Position the group type does not allow", async () => {
       const userId = await t.user()
       const styret = await t.groupId("Styret")
-      await addMemberAction(IDLE, form({ groupId: styret, userId, startDate: "2025-01-01" }))
+      expect(await addMemberAction(IDLE, form({ groupId: styret, userId, startDate: "2025-01-01" }))).toEqual({
+        status: "error",
+        error: "direct-membership-forbidden"
+      })
+      await t.legacyMember({ userId, groupId: styret, startDate: "2025-01-01" })
       expect(
         await assignHolderAction(
           IDLE,

@@ -134,3 +134,37 @@ appointment handover/end/renewal, departure and archival protections, and combin
 participation reads are delivered by the subsequent behaviour tickets. The implemented
 storage and its hand-written exclusions/triggers are described in
 [`Groups - DB Scheme.md`](../../../docs/schemas/Groups%20-%20DB%20Scheme.md).
+
+## Concrete Groups and direct Memberships (redesign ticket 02)
+
+The Groups page creates new-model Groups and prepares each year's ten annual Groups
+with `prepareOrganisationYear`. Preparation is atomic and idempotent, preserves existing
+identities and never copies participation. Year badges and lifecycle phases use the
+explicit year and evaluated date. Legacy Groups remain discoverable pending reconciliation.
+
+`updateOrganisationGroup` edits concrete metadata. A name correction keeps participation;
+changing the type, Choir or year of an occupied Group returns `group-has-participation`
+before writing anything. Empty legacy Groups may be explicitly classified. This command
+does not infer annual identity from a legacy name or convert populated legacy records.
+
+`addDirectMembership`, `changeDirectMembership`, `correctDirectMembership`, and
+`endDirectMembership` manage dated direct participation. Ordinary changes split periods;
+explicit corrections edit the selected record, including historical/prepared participation.
+`listDirectMemberships` exposes all periods and `listDirectMembersAt` evaluates a date.
+Annual periods default to an exclusive 1 July end; admin forms display/input the inclusive
+last day. Fluid participation has no invented June expiry. Section placement retains
+Voice containment, Choir coverage and one overlapping Section per Choir. Corrections and
+legacy departure paths refuse changes that strand prerequisites. `correctLegacyMembership`
+corrects retained singer/fluid records without silently converting them. Annual legacy
+periods require the later explicit year reconciliation before their dates can change.
+Unresolved annual Groups also refuse new public direct additions with `annual-group-needs-year`;
+admin forms explain how to prepare/select a concrete year and omit the legacy Add action.
+
+Board and Föräldramötet additions are refused by both direct-member commands and
+`startMembership`, and absent from the interface. Legacy holding tests seed retained
+participation explicitly. Legacy linked-holding commands remain transitional and cannot
+write new-model Groups. Archival refuses current/future appointment dependencies.
+
+The new direct workflows are shown alongside retained legacy data. The complete effective
+roster, appointment management, member-profile/directory cutover, and legacy conversion
+remain the following tickets; this branch still is not a deployable partial migration.

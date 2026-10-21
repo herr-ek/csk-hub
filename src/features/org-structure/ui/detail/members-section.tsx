@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
+import { GROUP_POLICIES } from "../../model"
 import { CommandDialog } from "../command-dialog"
 import { SortableHead, useSortedRows } from "../sortable-table"
 import { addMemberAction, changeVoiceAction, endMembershipAction } from "./actions"
+import { LegacyCorrectionDialog } from "./DirectMembersSection"
 import type { GroupDetail } from "./query"
 
 type Member = GroupDetail["members"][number]
@@ -54,7 +56,11 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
         <CardTitle>{t("membersTitle", { count: detail.members.length })}</CardTitle>
-        {group.active ? <AddMemberDialog detail={detail} today={today} /> : null}
+        {group.active &&
+        GROUP_POLICIES[group.type].directMembership !== "no" &&
+        (GROUP_POLICIES[group.type].lifetime !== "annual" || group.organisationYear !== null) ? (
+          <AddMemberDialog detail={detail} today={today} />
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         {detail.members.length === 0 ? (
@@ -95,6 +101,11 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
                       {isSection && group.active ? (
                         <ChangeVoiceDialog detail={detail} member={member} today={today} />
                       ) : null}
+                      {detail.legacyMemberships
+                        .filter((row) => row.userId === member.userId && row.startDate === member.startDate)
+                        .map((row) => (
+                          <LegacyCorrectionDialog key={row.startDate} detail={detail} member={row} today={today} />
+                        ))}
                       <EndMembershipDialog detail={detail} member={member} today={today} />
                     </div>
                   </TableCell>
@@ -133,7 +144,14 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
                     <TableRow key={`${past.userId}-${past.startDate}`}>
                       <TableCell>{past.name}</TableCell>
                       {isSection ? <TableCell>{past.voice}</TableCell> : null}
-                      <TableCell>{t("periodValue", { start: past.startDate, end: past.endDate })}</TableCell>
+                      <TableCell>
+                        {t("periodValue", { start: past.startDate, end: past.endDate })}
+                        {detail.legacyMemberships
+                          .filter((row) => row.userId === past.userId && row.startDate === past.startDate)
+                          .map((row) => (
+                            <LegacyCorrectionDialog key={row.startDate} detail={detail} member={row} today={today} />
+                          ))}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

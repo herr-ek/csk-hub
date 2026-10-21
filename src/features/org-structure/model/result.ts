@@ -4,9 +4,16 @@
  */
 export type OrgStructureViolation =
   | "invalid-date"
+  | "annual-group-needs-year"
+  | "invalid-group-name"
+  | "invalid-group-scope"
+  | "group-has-participation"
+  | "direct-membership-forbidden"
+  | "membership-dependency"
   | "group-not-found"
   | "group-archived"
   | "group-name-taken"
+  | "group-type-taken"
   | "choir-not-found"
   | "choir-created-with-sections"
   | "section-count"

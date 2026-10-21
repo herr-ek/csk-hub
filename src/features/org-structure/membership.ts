@@ -3,8 +3,10 @@ import "server-only"
 import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm"
 import { group, groupMember, section } from "@/core/db/schema/org-structure"
 import { contains, familyOf, type VoiceDivision } from "@/features/voice/model"
+import { addDirectMembership, validateUserParticipation } from "./direct-membership"
 import { findCurrentMembership, requireActiveGroup, requireChoir, requireGroup } from "./lookup"
 import type { IsoDate } from "./model"
+import { GROUP_POLICIES } from "./model"
 import {
   lockUser,
   type OrgStructureDatabase,
@@ -18,13 +20,24 @@ import { endHoldingsInGroups } from "./positions"
 type StartMembershipInput = { userId: string; groupId: string; startDate: IsoDate }
 
 /**
- * Starts a Membership in any group but a Section. A group that belongs to a Choir takes only
+ * Starts direct participation where the fixed type policy allows it. Annual Groups need
+ * a concrete year; unresolved legacy annual Groups must be reconciled first. A Choir-scoped Group takes only
  * current members of that Choir; someone joins a Choir by being placed in one of its Sections.
  */
 export function startMembership(database: OrgStructureDatabase, input: StartMembershipInput) {
   return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
     await lockUser(tx, input.userId)
+    const target = await requireActiveGroup(tx, input.groupId)
+    if (GROUP_POLICIES[target.type].directMembership === "no") throw new RuleViolation("direct-membership-forbidden")
+    if (target.type === "Section") throw new RuleViolation("section-requires-placement")
+    if (GROUP_POLICIES[target.type].lifetime === "annual" && target.organisationYear === null)
+      throw new RuleViolation("annual-group-needs-year")
+    if (target.usesAppointmentModel || GROUP_POLICIES[target.type].lifetime === "annual") {
+      const result = await addDirectMembership(tx, input)
+      if (!result.success) throw new RuleViolation(result.error)
+      return
+    }
     await addMembership(tx, input.userId, input.groupId, startDate)
   })
 }
@@ -35,6 +48,7 @@ export function startMembership(database: OrgStructureDatabase, input: StartMemb
  */
 export async function addMembership(tx: OrgStructureTransaction, userId: string, groupId: string, startDate: IsoDate) {
   const row = await requireActiveGroup(tx, groupId)
+  if (row.usesAppointmentModel) throw new RuleViolation("position-not-allowed")
   if (row.type === "Section") throw new RuleViolation("section-requires-placement")
   if (row.choirId) await requireChoirMembership(tx, userId, row.choirId, startDate)
   await insertMembership(tx, { userId, groupId, startDate, voice: null })
@@ -79,6 +93,7 @@ async function addSinger(tx: OrgStructureTransaction, input: Omit<PlaceSingerInp
   const sectionId = await sectionSinging(tx, input.choirId, input.voice)
   await ensureChoirMembership(tx, input.userId, input.choirId, startDate)
   await insertMembership(tx, { userId: input.userId, groupId: sectionId, startDate, voice: input.voice })
+  await validateUserParticipation(tx, input.userId)
   return { sectionId }
 }
 
@@ -105,6 +120,7 @@ export function changeVoice(database: OrgStructureDatabase, input: ChangeVoiceIn
     await tx
       .insert(groupMember)
       .values({ userId: input.userId, groupId: sectionId, startDate: date, voice: input.voice })
+    await validateUserParticipation(tx, input.userId)
     return { sectionId }
   })
 }
@@ -135,6 +151,7 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
 
     await endHoldingsInGroups(tx, input.userId, groupIds, endDate)
     for (const groupId of groupIds) await closeMembership(tx, input.userId, groupId, endDate)
+    await validateUserParticipation(tx, input.userId)
   })
 }
 

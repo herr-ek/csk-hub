@@ -58,10 +58,19 @@ export function GroupItems({ groups }: { groups: GroupSummary[] }) {
 export function GroupLink({ group }: { group: GroupSummary }) {
   const t = useTranslations("Groups")
   return (
-    <span className="inline-flex items-center gap-2">
-      <Link href={groupDetailPath(group.id)} className="font-medium underline-offset-4 hover:underline">
+    <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
+      <Link
+        href={groupDetailPath(group.id)}
+        className="min-w-0 break-words font-medium underline-offset-4 hover:underline"
+      >
         {group.name}
       </Link>
+      {group.organisationYear !== null ? (
+        <Badge variant="outline">
+          {t("management.yearValue", { start: group.organisationYear, end: group.organisationYear + 1 })}
+        </Badge>
+      ) : null}
+      {group.organisationYear !== null ? <Badge variant="secondary">{t(`management.${group.phase}`)}</Badge> : null}
       {group.active ? null : <Badge variant="secondary">{t("archived")}</Badge>}
     </span>
   )

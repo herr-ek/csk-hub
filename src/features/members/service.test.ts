@@ -12,8 +12,7 @@ import {
   endPositionHolding,
   placeSinger,
   startLinkedPosition,
-  startMembership,
-  startPositionHolding
+  startMembership
 } from "@/features/org-structure"
 import type { OrgStructureResult } from "@/features/org-structure/model"
 import { setVoiceCapabilities } from "@/features/voice"
@@ -120,12 +119,11 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
       await createPosition(db, { name: unique("Sexmästare"), groupTypes: ["Board", "Sexmästeri"] })
     )
     const ended = success(await createPosition(db, { name: unique("Former position"), groupTypes: ["Board"] }))
-    success(await startMembership(db, { userId: holder, groupId: board.id, startDate: "2025-01-01" }))
     success(
-      await startPositionHolding(db, {
+      await startLinkedPosition(db, {
         userId: holder,
         positionId: ended.id,
-        groupId: board.id,
+        groupIds: [board.id],
         startDate: "2025-01-01"
       })
     )

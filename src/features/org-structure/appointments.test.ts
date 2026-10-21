@@ -180,7 +180,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(await createOrganisationGroup(t.db, { name: "MK rodd", type: "Roddgrupp", choirId }))
     expect(await createOrganisationGroup(t.db, { name: "MK other rodd", type: "Roddgrupp", choirId })).toEqual({
       success: false,
-      error: "group-name-taken"
+      error: "group-type-taken"
     })
     expectSuccess(
       await createOrganisationGroup(t.db, { name: "DK rodd", type: "Roddgrupp", choirId: await t.groupId("DK") })

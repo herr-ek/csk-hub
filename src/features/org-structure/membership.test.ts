@@ -75,7 +75,7 @@ describe.skipIf(!database)("groups membership", () => {
 
     test("a CSK-wide group needs no Choir Membership", async () => {
       const userId = await t.user()
-      const { id } = expectSuccess(await createGroup(t.db, { name: uniqueName("Styret"), type: "Board" }))
+      const { id } = expectSuccess(await createGroup(t.db, { name: uniqueName("Gig"), type: "GigGroup" }))
       expectSuccess(await startMembership(t.db, { userId, groupId: id, startDate: "2025-01-01" }))
       expect(await historyOf(userId)).toEqual([{ groupId: id, startDate: "2025-01-01", endDate: null, voice: null }])
     })

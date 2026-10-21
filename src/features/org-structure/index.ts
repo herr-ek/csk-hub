@@ -1,6 +1,15 @@
 import "server-only"
 
 export { appointPosition, createOrganisationGroup, listAppointmentMembersAt } from "./appointments"
+export {
+  addDirectMembership,
+  changeDirectMembership,
+  correctDirectMembership,
+  endDirectMembership,
+  listDirectMembersAt,
+  listDirectMemberships
+} from "./direct-membership"
+export { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
 export { endLinkedPosition, startLinkedPosition } from "./linked-positions"
 export { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 export type { GroupType, IsoDate, OrgStructureResult, OrgStructureViolation } from "./model"

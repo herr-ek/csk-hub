@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { sql } from "drizzle-orm"
 import { startLinkedPosition } from "./linked-positions"
-import { placeSinger, startMembership } from "./membership"
+import { placeSinger } from "./membership"
 import { endPositionHolding, startPositionHolding } from "./positions"
 import { inventoryOrganisation } from "./reconciliation"
 import { createGroup, createPosition } from "./structure"
@@ -18,7 +18,7 @@ describe.skipIf(!t)("read-only organisation reconciliation", () => {
     expectSuccess(await createGroup(t.db, { name: "Other board 26/27", type: "Board" }))
     const unsupported = expectSuccess(await createPosition(t.db, { name: "Webbansvarig", groupTypes: ["Board"] }))
     const userId = await t.user()
-    expectSuccess(await startMembership(t.db, { userId, groupId: board.id, startDate: "2026-07-01" }))
+    await t.legacyMember({ userId, groupId: board.id, startDate: "2026-07-01" })
     expectSuccess(
       await startPositionHolding(t.db, {
         userId,
@@ -28,7 +28,7 @@ describe.skipIf(!t)("read-only organisation reconciliation", () => {
       })
     )
     const helperGroup = expectSuccess(await createGroup(t.db, { name: uniqueName("Unknown year"), type: "Sexmästeri" }))
-    expectSuccess(await startMembership(t.db, { userId, groupId: helperGroup.id, startDate: "2026-07-01" }))
+    await t.legacyMember({ userId, groupId: helperGroup.id, startDate: "2026-07-01" })
     const first = await inventoryOrganisation(t.db)
     expect(first.unsupportedPositions).toContainEqual({ positionId: unsupported.id, name: "Webbansvarig" })
     expect(first.ambiguousYears).toContainEqual(expect.objectContaining({ groupId: helperGroup.id }))

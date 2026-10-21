@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { group, position } from "@/core/db/schema/org-structure"
+import { group, groupMember, position } from "@/core/db/schema/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
 import type { GroupType, OrgStructureResult } from "./model"
@@ -76,6 +76,11 @@ function fixture({ db, drop }: TestDatabase) {
       const id = crypto.randomUUID()
       await db.insert(user).values({ id, name, email: `${id}@example.com` })
       return id
+    },
+
+    /** Retained legacy participation for tests of the old holding representation, not a live addition API. */
+    async legacyMember(input: { userId: string; groupId: string; startDate: string }) {
+      await db.insert(groupMember).values(input)
     },
 
     /** The id of an active group by name, within a Choir when given. */
