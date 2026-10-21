@@ -9,9 +9,11 @@ export {
   endAppointment,
   listAppointmentMembersAt,
   listAppointmentsForGroup,
+  listAppointmentsForGroups,
   listAppointmentsOfUser,
   listEffectiveMembersAt,
   listEffectiveMembersCurrent,
+  listEffectiveMembersForGroupsAt,
   replaceAppointmentHolder
 } from "./appointments"
 export {
