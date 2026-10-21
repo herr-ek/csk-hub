@@ -52,7 +52,7 @@ describe.skipIf(!database)("reference data", () => {
           .select()
           .from(group)
           .where(and(eq(group.type, item.type as never), eq(group.organisationYear, year)))
-        expect(row).toMatchObject({ name: item.name, organisationYear: year, usesAppointmentModel: true })
+        expect(row).toMatchObject({ name: item.name, organisationYear: year })
       }
     }
   })

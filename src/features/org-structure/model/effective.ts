@@ -37,7 +37,7 @@ export type EffectiveGroup = {
   sectionVoice: Voice | null
   membershipPeriods: {
     id: string
-    source: "direct" | "appointment" | "legacy"
+    source: "direct" | "appointment"
     startDate: IsoDate
     endDate: IsoDate | null
     voice: VoiceDivision | null

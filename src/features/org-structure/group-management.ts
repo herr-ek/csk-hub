@@ -1,14 +1,7 @@
 import "server-only"
 
 import { and, eq, sql } from "drizzle-orm"
-import {
-  appointmentGrant,
-  directMembership,
-  group,
-  groupMember,
-  positionAppointment,
-  positionHolder
-} from "@/core/db/schema/org-structure"
+import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { createOrganisationGroup } from "./appointments"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { GROUP_POLICIES, type GroupType, type IsoDate, organisationYearPeriod } from "./model"
@@ -38,7 +31,7 @@ export function prepareOrganisationYear(database: OrgStructureDatabase, year: nu
       const [existing] = await tx
         .select()
         .from(group)
-        .where(and(eq(group.type, type), eq(group.organisationYear, year), eq(group.usesAppointmentModel, true)))
+        .where(and(eq(group.type, type), eq(group.organisationYear, year)))
         .for("share")
       if (existing) {
         if (!existing.active) throw new RuleViolation("group-archived")
@@ -78,7 +71,6 @@ export async function listOrganisationGroups(database: OrgStructureDatabase, dat
 /**
  * Corrects a concrete Group's metadata. Structural changes on occupied Groups are refused
  * atomically: handle participation first. Choirs/Sections keep their reference structure.
- * Empty legacy Groups may be explicitly classified; populated legacy conversion belongs to reconciliation.
  */
 export function updateOrganisationGroup(
   database: OrgStructureDatabase,
@@ -102,22 +94,15 @@ export function updateOrganisationGroup(
     if (!current.active && structural) throw new RuleViolation("group-archived")
     if (current.type === "Choir" || current.type === "Section" || input.type === "Choir" || input.type === "Section") {
       if (structural) throw new RuleViolation("choir-created-with-sections")
-    } else if (structural || !current.usesAppointmentModel) {
+    } else if (structural) {
       const [dependencies] = await tx
         .execute(sql`
         SELECT 1 WHERE EXISTS (${tx.select({ id: directMembership.id }).from(directMembership).where(eq(directMembership.groupId, current.id))})
-        OR EXISTS (${tx.select({ id: groupMember.userId }).from(groupMember).where(eq(groupMember.groupId, current.id))})
-        OR EXISTS (${tx.select({ id: positionHolder.userId }).from(positionHolder).where(eq(positionHolder.groupId, current.id))})
         OR EXISTS (${tx.select({ id: positionAppointment.id }).from(positionAppointment).where(eq(positionAppointment.contextGroupId, current.id))})
         OR EXISTS (${tx.select({ id: appointmentGrant.appointmentId }).from(appointmentGrant).where(eq(appointmentGrant.groupId, current.id))})
       `)
         .then((result) => result.rows)
       if (dependencies && structural) throw new RuleViolation("group-has-participation")
-      if (dependencies && !current.usesAppointmentModel) {
-        // Renaming legacy data does not silently convert its model.
-        await tx.update(group).set({ name }).where(eq(group.id, current.id))
-        return { id: current.id }
-      }
       const policy = GROUP_POLICIES[input.type]
       if ((policy.scope === "choir") !== Boolean(choirId)) throw new RuleViolation("invalid-group-scope")
       if ((policy.lifetime === "annual") !== (organisationYear !== null)) throw new RuleViolation("period-conflict")
@@ -143,9 +128,7 @@ export function updateOrganisationGroup(
         name,
         type: input.type,
         choirId,
-        organisationYear,
-        usesAppointmentModel:
-          current.type === "Choir" || current.type === "Section" ? current.usesAppointmentModel : true
+        organisationYear
       })
       .where(eq(group.id, current.id))
     return { id: current.id }

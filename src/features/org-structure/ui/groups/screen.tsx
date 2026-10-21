@@ -3,8 +3,6 @@ import { getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
 import { Skeleton } from "@/shared/ui/base/skeleton"
-import { PositionCatalogue } from "../catalogue/position-catalogue"
-import { listPositionCatalogue } from "../catalogue/query"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { GroupsOverview } from "./overview"
 import { PrepareYearDialog } from "./PrepareYearDialog"
@@ -12,11 +10,7 @@ import { getGroupsOverview } from "./query"
 
 /** The groups beside the Choirs' Sections, and the Positions they can have. */
 export async function GroupsScreen() {
-  const [overview, catalogue, t] = await Promise.all([
-    getGroupsOverview(),
-    listPositionCatalogue(),
-    getTranslations("Groups")
-  ])
+  const [overview, t] = await Promise.all([getGroupsOverview(), getTranslations("Groups")])
   const choirs = overview.choirs
     .filter(({ choir }) => choir.active)
     .map(({ choir }) => ({ id: choir.id, name: choir.name }))
@@ -42,7 +36,6 @@ export async function GroupsScreen() {
       </div>
 
       <GroupsOverview overview={overview} />
-      <PositionCatalogue catalogue={catalogue} />
     </main>
   )
 }

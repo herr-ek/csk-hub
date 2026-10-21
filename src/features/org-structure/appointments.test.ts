@@ -541,12 +541,12 @@ describe.skipIf(!database)("appointment foundation", () => {
     ])
   })
 
-  test("existing Choir Membership remains valid prerequisite evidence during additive migration", async () => {
+  test("direct Choir Membership remains prerequisite evidence for a Choir appointment", async () => {
     const choirId = await t.groupId("KK")
     const userId = await t.user("Legacy singer")
-    await t.legacyMember({ userId, groupId: choirId, startDate: "2048-07-01" })
+    expectSuccess(await addDirectMembership(t.db, { userId, groupId: choirId, startDate: "2048-07-01" }))
     const gigCommittee = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Gig 48/49 legacy", type: "Gigmästeri", organisationYear: 2048 })
+      await createOrganisationGroup(t.db, { name: "Gig 48/49", type: "Gigmästeri", organisationYear: 2048 })
     )
     expectSuccess(
       await appointPosition(t.db, {
@@ -817,7 +817,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     await expect(
       t.db
         .insert(group)
-        .values({ name: "Bad scope", type: "GigGroup", choirId: await t.groupId("MK"), usesAppointmentModel: true })
+        .values({ name: "Bad scope", type: "GigGroup", choirId: await t.groupId("MK") })
         .execute()
     ).rejects.toMatchObject({ cause: { constraint: "group_organisation_policy_check" } })
     const board = expectSuccess(

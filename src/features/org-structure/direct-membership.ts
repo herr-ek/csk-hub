@@ -2,14 +2,7 @@ import "server-only"
 
 import { and, desc, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import {
-  appointmentGrant,
-  directMembership,
-  group,
-  groupMember,
-  positionAppointment,
-  section
-} from "@/core/db/schema/org-structure"
+import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { contains, type VoiceDivision } from "@/features/voice/model"
 import { cskToday } from "./effective-reads"
 import { requireActiveGroup, requireGroup } from "./lookup"
@@ -218,13 +211,9 @@ async function ensurePlacementChoir(tx: OrgStructureTransaction, input: typeof d
     .select()
     .from(directMembership)
     .where(and(eq(directMembership.userId, input.userId), eq(directMembership.groupId, target.choirId)))
-  const legacy = await tx
-    .select()
-    .from(groupMember)
-    .where(and(eq(groupMember.userId, input.userId), eq(groupMember.groupId, target.choirId)))
   const period = { startDate: input.startDate, endDate: input.endDate ?? null }
-  if (!covers([...direct, ...legacy], period)) {
-    if ([...direct, ...legacy].some((row) => overlaps(row, period))) throw new RuleViolation("not-a-choir-member")
+  if (!covers(direct, period)) {
+    if (direct.some((row) => overlaps(row, period))) throw new RuleViolation("not-a-choir-member")
     await tx.insert(directMembership).values({ userId: input.userId, groupId: target.choirId, ...period })
   }
 }
@@ -233,25 +222,20 @@ function overlaps(a: Period, b: Period) {
   return (a.endDate === null || b.startDate < a.endDate) && (b.endDate === null || a.startDate < b.endDate)
 }
 
-/** Checks complete dated dependencies under the user's command lock, across the transitional stores. */
+/** Checks complete dated dependencies under the user's command lock. */
 export async function validateUserParticipation(tx: OrgStructureTransaction, userId: string) {
   const direct = await tx
     .select({ membership: directMembership, group })
     .from(directMembership)
     .innerJoin(group, eq(group.id, directMembership.groupId))
     .where(eq(directMembership.userId, userId))
-  const legacy = await tx
-    .select({ membership: groupMember, group })
-    .from(groupMember)
-    .innerJoin(group, eq(group.id, groupMember.groupId))
-    .where(eq(groupMember.userId, userId))
   const appointments = await tx.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))
   const grants = await tx
     .select({ groupId: appointmentGrant.groupId, appointment: positionAppointment })
     .from(appointmentGrant)
     .innerJoin(positionAppointment, eq(positionAppointment.id, appointmentGrant.appointmentId))
     .where(eq(positionAppointment.userId, userId))
-  const rows = [...direct, ...legacy]
+  const rows = direct
   for (const row of rows) {
     if (
       GROUP_POLICIES[row.group.type].directMembership === "helpers" &&
@@ -288,37 +272,4 @@ export async function validateUserParticipation(tx: OrgStructureTransaction, use
     )
       throw new RuleViolation("membership-dependency")
   }
-}
-
-/** Corrects a retained legacy period without converting or deleting it. Existing inclusive UI
- * contracts remain untouched; this explicit correction uses the new exclusive-end contract.
- * Annual legacy data needs reconciliation to a concrete year before dates can be edited.
- */
-export function correctLegacyMembership(
-  database: OrgStructureDatabase,
-  input: {
-    userId: string
-    originalGroupId: string
-    originalStartDate: IsoDate
-    groupId: string
-    startDate: IsoDate
-    endDate: IsoDate | null
-    voice?: VoiceDivision | null
-  }
-) {
-  return runOrgStructureCommand(database, async (tx) => {
-    await lockUser(tx, input.userId)
-    const key = and(
-      eq(groupMember.userId, input.userId),
-      eq(groupMember.groupId, input.originalGroupId),
-      eq(groupMember.startDate, input.originalStartDate)
-    )
-    const [current] = await tx.select().from(groupMember).where(key).for("update")
-    if (!current) throw new RuleViolation("not-a-member")
-    await requireAllowedMembershipTransfer(tx, current.groupId, input.groupId)
-    const values = await membershipValues(tx, input, true)
-    await tx.update(groupMember).set(values).where(key)
-    await validateUserParticipation(tx, input.userId)
-    return { userId: input.userId, groupId: input.groupId, startDate: input.startDate }
-  })
 }

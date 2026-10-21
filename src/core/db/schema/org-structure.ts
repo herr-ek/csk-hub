@@ -16,7 +16,7 @@ import {
 import { user } from "./auth"
 import { voice, voiceDivision } from "./voice"
 
-// Groups, their Memberships, and the Positions held in them: the organisation's structure. Every
+// Groups, their Memberships, and Positions held in them: the organisation's structure. Every
 // write to these tables goes through `src/features/org-structure`, which enforces the rules the
 // database cannot express. See GLOSSARY.md#groups for the language.
 //
@@ -24,8 +24,7 @@ import { voice, voiceDivision } from "./voice"
 // written by hand for these tables, each marked "Hand-written in drizzle/0011_groups.sql" here and
 // "Added by hand" there ((1), the voice domains, is described in `./voice.ts`):
 //   2. NULLS NOT DISTINCT on `group_name_choir_active_unique`
-//   3. the `group_member_voice_check` trigger and its function, replaced in
-//      `drizzle/0013_member-voice-division.sql` when `group_member.voice` became a division
+//   3. the direct_membership policy triggers and appointment constraints in the final cutover migration.
 // drizzle-kit neither generates nor diffs them. A regenerated migration loses them unless they are
 // copied back, and changing one later takes a hand-written migration.
 
@@ -59,9 +58,7 @@ export const group = pgTable(
     // Null means CSK-wide. A Choir group itself is always CSK-wide, and a Section always belongs to one.
     choirId: uuid("choir_id").references((): AnyPgColumn => choir.groupId, { onDelete: "restrict" }),
     active: boolean("active").default(true).notNull(),
-    organisationYear: integer("organisation_year"),
-    // Compatibility marker: removed with the legacy representation in redesign ticket 08.
-    usesAppointmentModel: boolean("uses_appointment_model").default(false).notNull()
+    organisationYear: integer("organisation_year")
   },
   (table) => [
     // Hand-written in drizzle/0011_groups.sql (2): the index is NULLS NOT DISTINCT, which Drizzle's
@@ -70,15 +67,11 @@ export const group = pgTable(
     uniqueIndex("group_name_choir_active_unique").on(table.name, table.choirId).where(sql`${table.active}`),
     uniqueIndex("group_annual_identity_unique")
       .on(table.type, table.organisationYear)
-      .where(sql`${table.usesAppointmentModel} AND ${table.organisationYear} IS NOT NULL`),
-    uniqueIndex("group_continuing_singleton_unique")
-      .on(table.type)
-      .where(sql`${table.usesAppointmentModel} AND ${table.type} = 'Föräldramötet'`),
+      .where(sql`${table.organisationYear} IS NOT NULL`),
+    uniqueIndex("group_continuing_singleton_unique").on(table.type).where(sql`${table.type} = 'Föräldramötet'`),
     uniqueIndex("group_choir_team_unique")
       .on(table.type, table.choirId)
-      .where(
-        sql`${table.usesAppointmentModel} AND ${table.active} AND ${table.type} IN ('Roddgrupp', 'Festgrupp', 'Rephelg')`
-      ),
+      .where(sql`${table.active} AND ${table.type} IN ('Roddgrupp', 'Festgrupp', 'Rephelg')`),
     check(
       "group_organisation_year_check",
       sql`${table.organisationYear} IS NULL OR ${table.organisationYear} BETWEEN 1000 AND 9998`
@@ -105,110 +98,12 @@ export const section = pgTable("section", {
   voice: voice("voice").notNull()
 })
 
-export const groupMember = pgTable(
-  "group_member",
-  {
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    groupId: uuid("group_id")
-      .notNull()
-      .references(() => group.id, { onDelete: "restrict" }),
-    startDate: date("start_date").notNull(),
-    // Null while the Membership is current.
-    endDate: date("end_date"),
-    // Set exactly on Section Memberships: a division, by the column's `voice_division` domain (see
-    // ./voice.ts), contained in the Section's Voice (B1 or B2 in KKB, which sings B).
-    // Hand-written in drizzle/0011_groups.sql (3): the `group_member_voice_check` trigger checks
-    // both on insert and update, raising `group_member_voice_section_check` or
-    // `group_member_voice_containment_check`. Drizzle cannot express triggers.
-    voice: voiceDivision("voice")
-  },
-  (table) => [
-    primaryKey({ columns: [table.userId, table.groupId, table.startDate] }),
-    uniqueIndex("group_member_current_unique").on(table.userId, table.groupId).where(sql`${table.endDate} IS NULL`),
-    index("group_member_groupId_idx").on(table.groupId),
-    check("group_member_period_check", sql`${table.endDate} IS NULL OR ${table.endDate} >= ${table.startDate}`)
-  ]
-)
-
-export const position = pgTable(
-  "position",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    name: text("name").notNull()
-  },
-  (table) => [
-    uniqueIndex("position_name_unique").on(table.name),
-    check("position_name_not_blank_check", sql`length(btrim(${table.name})) > 0`)
-  ]
-)
-
-/** Which Positions may be held in which GroupType. */
-export const groupTypePosition = pgTable(
-  "group_type_position",
-  {
-    type: groupType("type").notNull(),
-    positionId: uuid("position_id")
-      .notNull()
-      .references(() => position.id, { onDelete: "restrict" })
-  },
-  (table) => [primaryKey({ columns: [table.type, table.positionId] })]
-)
-
-/**
- * The groups a Position is limited to, if any: with rows here, the Position is held only in these
- * groups, and still only where their type allows it, as Gigmästare KK in KK and the Gigmästeri.
- * Without rows, every group of an allowed type has it.
- */
-export const positionGroup = pgTable(
-  "position_group",
-  {
-    positionId: uuid("position_id")
-      .notNull()
-      .references(() => position.id, { onDelete: "restrict" }),
-    groupId: uuid("group_id")
-      .notNull()
-      .references(() => group.id, { onDelete: "restrict" })
-  },
-  (table) => [
-    primaryKey({ columns: [table.positionId, table.groupId] }),
-    index("position_group_groupId_idx").on(table.groupId)
-  ]
-)
-
-export const positionHolder = pgTable(
-  "position_holder",
-  {
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    groupId: uuid("group_id")
-      .notNull()
-      .references(() => group.id, { onDelete: "restrict" }),
-    positionId: uuid("position_id")
-      .notNull()
-      .references(() => position.id, { onDelete: "restrict" }),
-    startDate: date("start_date").notNull(),
-    // Null while the holding is current.
-    endDate: date("end_date")
-  },
-  (table) => [
-    primaryKey({ columns: [table.userId, table.groupId, table.positionId, table.startDate] }),
-    uniqueIndex("position_holder_current_unique")
-      .on(table.groupId, table.positionId)
-      .where(sql`${table.endDate} IS NULL`),
-    index("position_holder_userId_idx").on(table.userId),
-    check("position_holder_period_check", sql`${table.endDate} IS NULL OR ${table.endDate} >= ${table.startDate}`)
-  ]
-)
-
 export const groupRelations = relations(group, ({ one, many }) => ({
   choir: one(choir, { fields: [group.choirId], references: [choir.groupId], relationName: "choirGroups" }),
   choirExtension: one(choir, { fields: [group.id], references: [choir.groupId], relationName: "choirExtension" }),
   sectionExtension: one(section, { fields: [group.id], references: [section.groupId] }),
-  members: many(groupMember),
-  positionHolders: many(positionHolder)
+  directMembers: many(directMembership),
+  appointments: many(positionAppointment)
 }))
 
 export const choirRelations = relations(choir, ({ one, many }) => ({
@@ -218,32 +113,6 @@ export const choirRelations = relations(choir, ({ one, many }) => ({
 
 export const sectionRelations = relations(section, ({ one }) => ({
   group: one(group, { fields: [section.groupId], references: [group.id] })
-}))
-
-export const groupMemberRelations = relations(groupMember, ({ one }) => ({
-  group: one(group, { fields: [groupMember.groupId], references: [group.id] }),
-  member: one(user, { fields: [groupMember.userId], references: [user.id], relationName: "groupMember" })
-}))
-
-export const positionRelations = relations(position, ({ many }) => ({
-  groupTypes: many(groupTypePosition),
-  groups: many(positionGroup),
-  holders: many(positionHolder)
-}))
-
-export const positionGroupRelations = relations(positionGroup, ({ one }) => ({
-  position: one(position, { fields: [positionGroup.positionId], references: [position.id] }),
-  group: one(group, { fields: [positionGroup.groupId], references: [group.id] })
-}))
-
-export const groupTypePositionRelations = relations(groupTypePosition, ({ one }) => ({
-  position: one(position, { fields: [groupTypePosition.positionId], references: [position.id] })
-}))
-
-export const positionHolderRelations = relations(positionHolder, ({ one }) => ({
-  group: one(group, { fields: [positionHolder.groupId], references: [group.id] }),
-  position: one(position, { fields: [positionHolder.positionId], references: [position.id] }),
-  holder: one(user, { fields: [positionHolder.userId], references: [user.id], relationName: "positionHolder" })
 }))
 
 /** Independent direct participation. Appointment grants never copy rows here. */

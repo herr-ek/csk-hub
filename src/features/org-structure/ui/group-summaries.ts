@@ -1,10 +1,8 @@
 import "server-only"
 
-import { and, asc, eq, gt, isNull, lte, or } from "drizzle-orm"
 import { io } from "next/cache"
 import { db } from "@/core/db"
-import { user } from "@/core/db/schema/auth"
-import { group, position, positionHolder, section } from "@/core/db/schema/org-structure"
+import { section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import type { Voice } from "@/features/voice/model"
 import { listAppointmentsForGroups, listEffectiveMembersForGroupsAt } from "../appointments"
@@ -28,24 +26,7 @@ export type GroupSummary = {
 export async function listGroupSummaries(): Promise<GroupSummary[]> {
   await io()
   const date = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
-  const [groups, sections, legacyHolders] = await Promise.all([
-    listOrganisationGroups(db, date),
-    db.select().from(section),
-    db
-      .select({ groupId: positionHolder.groupId, position: position.name, holder: user.name })
-      .from(positionHolder)
-      .innerJoin(position, eq(position.id, positionHolder.positionId))
-      .innerJoin(user, eq(user.id, positionHolder.userId))
-      .innerJoin(group, eq(group.id, positionHolder.groupId))
-      .where(
-        and(
-          eq(group.usesAppointmentModel, false),
-          lte(positionHolder.startDate, date),
-          or(isNull(positionHolder.endDate), gt(positionHolder.endDate, date))
-        )
-      )
-      .orderBy(asc(position.name))
-  ])
+  const [groups, sections] = await Promise.all([listOrganisationGroups(db, date), db.select().from(section)])
   const [effectiveMembers, appointmentsByGroup] = await Promise.all([
     listEffectiveMembersForGroupsAt(
       db,
@@ -60,35 +41,25 @@ export async function listGroupSummaries(): Promise<GroupSummary[]> {
   return groups.map((row) => {
     const members = effectiveMembers.get(row.id) ?? []
     const appointments = appointmentsByGroup.get(row.id) ?? []
-    const holders = row.usesAppointmentModel
-      ? appointments
-          .filter(
-            (appointment) =>
-              appointment.startDate <= date &&
-              (appointment.endDate === null || appointment.endDate > date) &&
-              (appointment.contextGroupId === row.id ||
-                (members ?? []).some(
-                  (member) =>
-                    member.userId === appointment.userId &&
-                    member.positions.some((position) => position.id === appointment.id)
-                ))
-          )
-          .map((appointment) => ({
-            id: appointment.id,
-            positionCode: appointment.positionCode,
-            position: appointment.position,
-            context: appointment.contextName,
-            holder: appointment.name
-          }))
-      : legacyHolders
-          .filter(({ groupId }) => groupId === row.id)
-          .map((holder) => ({
-            id: `${holder.groupId}:${holder.position}:${holder.holder}`,
-            positionCode: null,
-            position: holder.position,
-            context: null,
-            holder: holder.holder
-          }))
+    const holders = appointments
+      .filter(
+        (appointment) =>
+          appointment.startDate <= date &&
+          (appointment.endDate === null || appointment.endDate > date) &&
+          (appointment.contextGroupId === row.id ||
+            members.some(
+              (member) =>
+                member.userId === appointment.userId &&
+                member.positions.some((position) => position.id === appointment.id)
+            ))
+      )
+      .map((appointment) => ({
+        id: appointment.id,
+        positionCode: appointment.positionCode,
+        position: appointment.position,
+        context: appointment.contextName,
+        holder: appointment.name
+      }))
     return {
       id: row.id,
       name: row.name,

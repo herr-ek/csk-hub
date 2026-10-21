@@ -102,7 +102,7 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
       let choirId = await seededGroupId(client, choirSeedId, "Choir", null)
       choirId ??= await activeGroupId(client, choir.name, "Choir", null)
       if (!choirId) {
-        choirId = await insertGroup(client, choir.name, "Choir", null, true, null, choirSeedId)
+        choirId = await insertGroup(client, choir.name, "Choir", null, null, choirSeedId)
         await client.query(`insert into "choir" ("group_id") values ($1)`, [choirId])
         created.push(choir.name)
       }
@@ -111,7 +111,7 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
         let sectionId = await seededGroupId(client, sectionSeedId, "Section", choirId)
         sectionId ??= await activeGroupId(client, section.name, "Section", choirId)
         if (sectionId) continue
-        sectionId = await insertGroup(client, section.name, "Section", choirId, true, null, sectionSeedId)
+        sectionId = await insertGroup(client, section.name, "Section", choirId, null, sectionSeedId)
         await client.query(`insert into "section" ("group_id", "voice") values ($1, $2)`, [sectionId, section.voice])
         created.push(section.name)
       }
@@ -121,13 +121,13 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
       const id = referenceContinuingGroupId(definition.type)
       const existingId = await seededGroupId(client, id, definition.type, null)
       if (existingId || (await activeGroupId(client, definition.name, definition.type, null))) continue
-      await insertGroup(client, definition.name, definition.type, null, true, null, id)
+      await insertGroup(client, definition.name, definition.type, null, null, id)
       created.push(definition.name)
     }
     for (const year of [currentYear, currentYear + 1]) {
       for (const definition of REFERENCE_DATA.annualGroups(year)) {
         if (await annualGroupId(client, definition.type, year)) continue
-        await insertGroup(client, definition.name, definition.type, null, true, year)
+        await insertGroup(client, definition.name, definition.type, null, year)
         created.push(definition.name)
       }
     }
@@ -164,7 +164,7 @@ async function seededGroupId(client: ClientBase, id: string, type: string, choir
 
 async function annualGroupId(client: ClientBase, type: string, year: number) {
   const { rows } = await client.query<{ id: string }>(
-    `select "id" from "group" where "type" = $1 and "organisation_year" = $2 and "uses_appointment_model"`,
+    `select "id" from "group" where "type" = $1 and "organisation_year" = $2`,
     [type, year]
   )
   if (rows.length > 1) throw new Error(`More than one ${type} Group is marked for ${year}/${year + 1}.`)
@@ -176,18 +176,17 @@ async function insertGroup(
   name: string,
   type: string,
   choirId: string | null,
-  managed = false,
   year: number | null = null,
   id?: string
 ) {
   const { rows } = id
     ? await client.query<{ id: string }>(
-        `insert into "group" ("id", "name", "type", "choir_id", "uses_appointment_model", "organisation_year") values ($1, $2, $3, $4, $5, $6) returning "id"`,
-        [id, name, type, choirId, managed, year]
+        `insert into "group" ("id", "name", "type", "choir_id", "organisation_year") values ($1, $2, $3, $4, $5) returning "id"`,
+        [id, name, type, choirId, year]
       )
     : await client.query<{ id: string }>(
-        `insert into "group" ("name", "type", "choir_id", "uses_appointment_model", "organisation_year") values ($1, $2, $3, $4, $5) returning "id"`,
-        [name, type, choirId, managed, year]
+        `insert into "group" ("name", "type", "choir_id", "organisation_year") values ($1, $2, $3, $4) returning "id"`,
+        [name, type, choirId, year]
       )
   const [row] = rows
   if (!row) throw new Error(`Creating the group ${name} did not return a record.`)

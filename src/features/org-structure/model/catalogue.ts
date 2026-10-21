@@ -37,7 +37,7 @@ type PositionDefinition = {
   endPolicy: "annual" | "fluid"
 }
 
-/** Stable appointment identities, independent of the editable legacy catalogue and display labels. */
+/** Stable appointment identities, independent of display labels. */
 export const POSITION_DEFINITIONS = {
   ordforande: { label: "Ordförande", context: "Board", prerequisite: false, grants: ["Board"], endPolicy: "annual" },
   "vice-ordforande": {

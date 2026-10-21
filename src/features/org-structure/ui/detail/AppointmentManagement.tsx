@@ -35,10 +35,12 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
   const applicablePositions = Object.entries(POSITION_DEFINITIONS).filter(
     ([, definition]) => definition.context === detail.group.type && definition.endPolicy === "annual"
   )
-  const choirMembers = [
-    ...detail.directMemberships.map(({ userId, name, startDate, endDate }) => ({ userId, name, startDate, endDate })),
-    ...detail.legacyMemberships.map(({ userId, name, startDate, endDate }) => ({ userId, name, startDate, endDate }))
-  ]
+  const choirMembers = detail.directMemberships.map(({ userId, name, startDate, endDate }) => ({
+    userId,
+    name,
+    startDate,
+    endDate
+  }))
   const choirCandidates = [...new Map(choirMembers.map((member) => [member.userId, member])).values()]
   const annualAppointments = detail.appointments.filter(
     ({ positionCode }) => POSITION_DEFINITIONS[positionCode].endPolicy === "annual"

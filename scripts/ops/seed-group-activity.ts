@@ -26,7 +26,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
 
   const byId = new Map(groups.map((row) => [row.id, row]))
   const annual = (type: (typeof group.type.enumValues)[number], year: number) => {
-    const match = groups.filter((row) => row.type === type && row.organisationYear === year && row.usesAppointmentModel)
+    const match = groups.filter((row) => row.type === type && row.organisationYear === year)
     if (match.length !== 1) throw new Error(`Expected one ${type} Group for ${year}/${year + 1}.`)
     const row = match[0]
     if (!row) throw new Error(`Missing ${type} Group for ${year}/${year + 1}.`)
@@ -37,7 +37,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     if (!singer) throw new Error(`At least ${index + 1} seeded singers are required.`)
     return singer
   }
-  const continuing = groups.find((row) => row.type === "Föräldramötet" && row.usesAppointmentModel)
+  const continuing = groups.find((row) => row.type === "Föräldramötet")
   if (!continuing) throw new Error("Föräldramötet is missing; run `bun run ops reference-data` first.")
 
   const addDirect = async (key: string, userId: string, groupId: string, startDate: string, endDate: string | null) => {

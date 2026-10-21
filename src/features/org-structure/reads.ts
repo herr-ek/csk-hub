@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
-import { directMembership, group, groupMember, positionHolder, section } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
 import { listEffectiveMembersAt } from "./appointments"
 import {
@@ -66,18 +66,18 @@ export async function listCurrentChoirAffiliationsOfUsers(
 export async function getCurrentPositionHolder(
   database: OrgStructureDatabase,
   groupId: string,
-  positionId: string,
+  positionCode: string,
   date = cskToday()
 ) {
   const [holder] = await database
-    .select({ userId: positionHolder.userId, startDate: positionHolder.startDate })
-    .from(positionHolder)
+    .select({ userId: positionAppointment.userId, startDate: positionAppointment.startDate })
+    .from(positionAppointment)
     .where(
       and(
-        eq(positionHolder.groupId, groupId),
-        eq(positionHolder.positionId, positionId),
-        lte(positionHolder.startDate, date),
-        or(isNull(positionHolder.endDate), gt(positionHolder.endDate, date))
+        eq(positionAppointment.contextGroupId, groupId),
+        eq(positionAppointment.positionCode, positionCode),
+        lte(positionAppointment.startDate, date),
+        or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
       )
     )
   return holder ?? null
@@ -94,40 +94,22 @@ export async function listChoirMembersByVoiceFamily(
   date = cskToday()
 ) {
   const voices = [family, ...divisionsOf(family)]
-  const [direct, legacy] = await Promise.all([
-    database
-      .select({ userId: directMembership.userId, sectionId: directMembership.groupId, voice: directMembership.voice })
-      .from(directMembership)
-      .innerJoin(group, eq(group.id, directMembership.groupId))
-      .innerJoin(section, eq(section.groupId, group.id))
-      .where(
-        and(
-          eq(group.choirId, choirId),
-          eq(group.type, "Section"),
-          eq(group.active, true),
-          inArray(section.voice, voices),
-          lte(directMembership.startDate, date),
-          or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
-        )
-      ),
-    database
-      .select({ userId: groupMember.userId, sectionId: groupMember.groupId, voice: groupMember.voice })
-      .from(groupMember)
-      .innerJoin(group, eq(group.id, groupMember.groupId))
-      .innerJoin(section, eq(section.groupId, group.id))
-      .where(
-        and(
-          eq(group.choirId, choirId),
-          eq(group.type, "Section"),
-          eq(group.active, true),
-          eq(group.usesAppointmentModel, false),
-          inArray(section.voice, voices),
-          lte(groupMember.startDate, date),
-          or(isNull(groupMember.endDate), gt(groupMember.endDate, date))
-        )
+  const rows = await database
+    .select({ userId: directMembership.userId, sectionId: directMembership.groupId, voice: directMembership.voice })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .innerJoin(section, eq(section.groupId, group.id))
+    .where(
+      and(
+        eq(group.choirId, choirId),
+        eq(group.type, "Section"),
+        eq(group.active, true),
+        inArray(section.voice, voices),
+        lte(directMembership.startDate, date),
+        or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
       )
-  ])
-  return [...new Map([...direct, ...legacy].map((row) => [`${row.userId}:${row.sectionId}`, row])).values()].sort(
-    (a, b) => a.userId.localeCompare(b.userId)
+    )
+  return [...new Map(rows.map((row) => [`${row.userId}:${row.sectionId}`, row])).values()].sort((a, b) =>
+    a.userId.localeCompare(b.userId)
   )
 }

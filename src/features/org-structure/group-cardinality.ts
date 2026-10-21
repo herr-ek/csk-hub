@@ -5,9 +5,7 @@ import { group } from "@/core/db/schema/org-structure"
 import { GROUP_POLICIES, type GroupType } from "./model"
 import { type OrgStructureTransaction, RuleViolation } from "./operation"
 
-/** Serializes new-model Choir-team creation/reclassification and includes retained legacy
- * Groups in the singleton check. Call after validating the type's required Choir scope.
- */
+/** Serializes Choir-team creation/reclassification against the current concrete Group set. */
 export async function requireChoirTeamAvailable(
   tx: OrgStructureTransaction,
   input: { type: GroupType; choirId?: string | null; exceptGroupId?: string }
