@@ -20,11 +20,31 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
   const t = useTranslations("Groups.detail")
   const positionLabel = useTranslations("Groups.positionLabels")
   const year = detail.group.organisationYear
+  const choirContext = detail.group.type === "Choir"
+  const availableYears = choirContext
+    ? [
+        ...new Set(
+          detail.appointmentYears.flatMap(({ organisationYear }) =>
+            organisationYear === null ? [] : [organisationYear]
+          )
+        )
+      ]
+    : year === null
+      ? []
+      : [year]
   const applicablePositions = Object.entries(POSITION_DEFINITIONS).filter(
-    ([, definition]) => definition.context === detail.group.type
+    ([, definition]) => definition.context === detail.group.type && definition.endPolicy === "annual"
+  )
+  const choirMembers = [
+    ...detail.directMemberships.map(({ userId, name, startDate, endDate }) => ({ userId, name, startDate, endDate })),
+    ...detail.legacyMemberships.map(({ userId, name, startDate, endDate }) => ({ userId, name, startDate, endDate }))
+  ]
+  const choirCandidates = [...new Map(choirMembers.map((member) => [member.userId, member])).values()]
+  const annualAppointments = detail.appointments.filter(
+    ({ positionCode }) => POSITION_DEFINITIONS[positionCode].endPolicy === "annual"
   )
   const occupied = new Set(
-    detail.appointments
+    annualAppointments
       .filter(({ endDate }) => endDate === null || endDate > today)
       .map(({ positionCode }) => positionCode)
   )
@@ -35,7 +55,7 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
         <CardTitle>{t("positionsTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {detail.group.active && year !== null ? (
+        {detail.group.active && (year !== null || choirContext) && availableYears.length > 0 ? (
           <CommandDialog
             trigger={
               <Button type="button" size="sm">
@@ -47,7 +67,16 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
             submitLabel={t("assignHolder")}
           >
             <input type="hidden" name="contextGroupId" value={detail.group.id} />
-            <input type="hidden" name="organisationYear" value={year} />
+            {choirContext ? (
+              <SelectField
+                label={t("year")}
+                name="organisationYear"
+                required
+                options={availableYears.map((value) => ({ value: String(value), label: `${value}/${value + 1}` }))}
+              />
+            ) : (
+              <input type="hidden" name="organisationYear" value={year as number} />
+            )}
             <SelectField
               label={t("position")}
               name="positionCode"
@@ -61,13 +90,23 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
               label={t("holder")}
               name="userId"
               required
-              options={detail.directCandidates.map(({ id, name }) => ({ value: id, label: name }))}
+              options={
+                choirContext
+                  ? choirCandidates.map(({ userId, name }) => ({ value: userId, label: name }))
+                  : detail.directCandidates.map(({ id, name }) => ({ value: id, label: name }))
+              }
             />
             <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
-            <InputField label={t("endDate")} name="lastDay" defaultValue={`${year + 1}-06-30`} type="date" required />
+            <InputField
+              label={t("endDate")}
+              name="lastDay"
+              defaultValue={`${(year ?? availableYears[0] ?? new Date().getFullYear()) + 1}-06-30`}
+              type="date"
+              required
+            />
           </CommandDialog>
         ) : null}
-        {detail.appointments.length === 0 ? (
+        {annualAppointments.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("noHistory")}</p>
         ) : (
           <Table>
@@ -80,14 +119,18 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {detail.appointments.map((appointment) => {
+              {annualAppointments.map((appointment) => {
                 const prepared = appointment.startDate > today
                 const open =
                   appointment.startDate <= today && (appointment.endDate === null || appointment.endDate > today)
                 const isContextGroup = appointment.contextGroupId === detail.group.id
+                const correctable = isContextGroup && detail.group.active && (year !== null || choirContext)
                 return (
                   <TableRow key={appointment.id}>
-                    <TableCell>{positionLabel(appointment.positionCode as PositionCode)}</TableCell>
+                    <TableCell>
+                      {positionLabel(appointment.positionCode as PositionCode)}
+                      {appointment.contextName ? ` · ${appointment.contextName}` : ""}
+                    </TableCell>
                     <TableCell>{appointment.name}</TableCell>
                     <TableCell>
                       {t("periodValue", {
@@ -97,7 +140,7 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        {isContextGroup && detail.group.active && year !== null ? (
+                        {correctable ? (
                           <CommandDialog
                             trigger={
                               <Button type="button" variant="ghost" size="sm">
@@ -119,33 +162,50 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
                                 label: positionLabel(code as PositionCode)
                               }))}
                             />
-                            <SelectField
-                              label={t("groupContext")}
-                              name="contextGroupId"
-                              required
-                              defaultValue={appointment.contextGroupId}
-                              options={detail.annualContexts.map((context) => ({
-                                value: context.id,
-                                label: `${context.name} (${context.organisationYear}/${(context.organisationYear ?? 0) + 1})`
-                              }))}
-                            />
+                            {choirContext ? (
+                              <SelectField
+                                label={t("groupContext")}
+                                name="contextGroupId"
+                                required
+                                defaultValue={appointment.contextGroupId}
+                                options={detail.choirs.map((context) => ({ value: context.id, label: context.name }))}
+                              />
+                            ) : (
+                              <SelectField
+                                label={t("groupContext")}
+                                name="contextGroupId"
+                                required
+                                defaultValue={appointment.contextGroupId}
+                                options={detail.annualContexts.map((context) => ({
+                                  value: context.id,
+                                  label: `${context.name} (${context.organisationYear}/${(context.organisationYear ?? 0) + 1})`
+                                }))}
+                              />
+                            )}
                             <SelectField
                               label={t("year")}
                               name="organisationYear"
                               required
                               defaultValue={String(appointment.organisationYear)}
-                              options={[
-                                ...new Set(
-                                  detail.annualContexts.map(({ organisationYear }) => String(organisationYear))
-                                )
-                              ].map((value) => ({ value, label: value }))}
+                              options={(choirContext
+                                ? [...new Set(availableYears.map(String))]
+                                : [
+                                    ...new Set(
+                                      detail.annualContexts.map(({ organisationYear }) => String(organisationYear))
+                                    )
+                                  ]
+                              ).map((value) => ({ value, label: value }))}
                             />
                             <SelectField
                               label={t("holder")}
                               name="userId"
                               required
                               defaultValue={appointment.userId}
-                              options={detail.directCandidates.map(({ id, name }) => ({ value: id, label: name }))}
+                              options={
+                                choirContext
+                                  ? choirCandidates.map(({ userId, name }) => ({ value: userId, label: name }))
+                                  : detail.directCandidates.map(({ id, name }) => ({ value: id, label: name }))
+                              }
                             />
                             <InputField
                               label={t("startDate")}
@@ -158,7 +218,9 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
                               label={t("endDate")}
                               name="lastDay"
                               defaultValue={
-                                appointment.endDate ? shiftDate(appointment.endDate, -1) : `${year + 1}-06-30`
+                                appointment.endDate
+                                  ? shiftDate(appointment.endDate, -1)
+                                  : `${(appointment.organisationYear ?? year ?? 0) + 1}-06-30`
                               }
                               type="date"
                               required

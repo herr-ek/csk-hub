@@ -184,3 +184,16 @@ inclusive 30 June last day. The annual appointment manager lists current, future
 appointments on their context Group, with correction, early ending, handover, and prepared
 cancellation actions. Annual renewal remains a separate explicit appointment, including when the
 same person continues.
+
+Choir-scoped annual Konsertmästare and Gigmästare use the Choir as appointment context
+and share the concrete year's Konsertmästeri or Gigmästeri with CSK-wide offices.
+Each Choir appointment requires membership covering its full tenure; while legacy
+Choir Membership rows remain during the additive transition, they count as evidence too.
+Correcting a representative re-resolves its annual grant and checks the destination
+Choir's membership in the same transaction. `listEffectiveMembersAt` combines direct
+membership with dated appointment grants, deduplicates each person, and retains each
+Position's context for aggregate rosters. The Choir Admin page assigns, corrects, ends,
+and cancels annual representative appointments; the shared committee roster links each
+responsibility back to its Choir.
+Ticket06 will consolidate this roster with all current and dated membership consumers;
+this slice uses the effective read in the Admin Group detail flow only.

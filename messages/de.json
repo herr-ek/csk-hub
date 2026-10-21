@@ -634,6 +634,7 @@
       "voice": "Stimme",
       "since": "Seit",
       "positions": "Ämter",
+      "positionWithContext": "{position} ({context})",
       "actions": "Aktionen",
       "historyToggle": "Frühere Mitgliedschaften ({count})",
       "holderHistoryToggle": "Frühere Amtsinhaber ({count})",

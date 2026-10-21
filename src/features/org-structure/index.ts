@@ -1,6 +1,15 @@
 import "server-only"
 
-export { appointPosition, createOrganisationGroup, listAppointmentMembersAt } from "./appointments"
+export {
+  appointPosition,
+  cancelPreparedAppointment,
+  correctAnnualAppointment,
+  createOrganisationGroup,
+  endAppointment,
+  listAppointmentMembersAt,
+  listEffectiveMembersAt,
+  replaceAppointmentHolder
+} from "./appointments"
 export {
   addDirectMembership,
   changeDirectMembership,

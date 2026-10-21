@@ -1,7 +1,16 @@
 import "server-only"
 
-import { and, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
-import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { and, asc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
+import { user } from "@/core/db/schema/auth"
+import {
+  appointmentGrant,
+  directMembership,
+  group,
+  groupMember,
+  positionAppointment
+} from "@/core/db/schema/org-structure"
+import { listDirectMembersAt } from "./direct-membership"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { requireActiveGroup, requireChoir } from "./lookup"
 import {
@@ -81,6 +90,50 @@ async function convertHelpers(
   }
 }
 
+async function requirePrerequisiteCoverage(
+  tx: OrgStructureTransaction,
+  userId: string,
+  contextGroupId: string,
+  startDate: IsoDate,
+  endDate: IsoDate | null
+) {
+  const memberships = [
+    ...(await tx
+      .select({ startDate: directMembership.startDate, endDate: directMembership.endDate })
+      .from(directMembership)
+      .where(
+        and(
+          eq(directMembership.userId, userId),
+          eq(directMembership.groupId, contextGroupId),
+          or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate)),
+          endDate === null ? undefined : lt(directMembership.startDate, endDate)
+        )
+      )),
+    ...(await tx
+      .select({ startDate: groupMember.startDate, endDate: groupMember.endDate })
+      .from(groupMember)
+      .where(
+        and(
+          eq(groupMember.userId, userId),
+          eq(groupMember.groupId, contextGroupId),
+          or(isNull(groupMember.endDate), gt(groupMember.endDate, startDate)),
+          endDate === null ? undefined : lt(groupMember.startDate, endDate)
+        )
+      ))
+  ].sort((a, b) => a.startDate.localeCompare(b.startDate))
+  let coveredUntil: IsoDate | null = startDate
+  for (const membership of memberships) {
+    if (membership.startDate > coveredUntil) break
+    if (membership.endDate === null) {
+      coveredUntil = null
+      break
+    }
+    if (membership.endDate > coveredUntil) coveredUntil = membership.endDate
+    if (endDate !== null && coveredUntil >= endDate) break
+  }
+  if (coveredUntil !== null && (endDate === null || coveredUntil < endDate)) throw new RuleViolation("not-a-member")
+}
+
 /**
  * Creates an explicitly modelled Group. Annual types require an integer organisationYear
  * from 1000 through 9998; other types forbid it. Choir-scoped types require choirId;
@@ -157,31 +210,7 @@ export function appointPosition(
       (bounds && (startDate < bounds.startDate || endDate === null || endDate > bounds.endDate))
     )
       throw new RuleViolation("period-conflict")
-    if (definition.prerequisite) {
-      const memberships = await tx
-        .select({ startDate: directMembership.startDate, endDate: directMembership.endDate })
-        .from(directMembership)
-        .where(
-          and(
-            eq(directMembership.userId, input.userId),
-            eq(directMembership.groupId, context.id),
-            or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate)),
-            endDate === null ? undefined : lt(directMembership.startDate, endDate)
-          )
-        )
-        .orderBy(directMembership.startDate)
-      let coveredUntil: IsoDate | null = startDate
-      for (const membership of memberships) {
-        if (membership.startDate > coveredUntil) break
-        if (membership.endDate === null) {
-          coveredUntil = null
-          break
-        }
-        if (membership.endDate > coveredUntil) coveredUntil = membership.endDate
-        if (endDate !== null && coveredUntil >= endDate) break
-      }
-      if (coveredUntil !== null && (endDate === null || coveredUntil < endDate)) throw new RuleViolation("not-a-member")
-    }
+    if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
 
     const grantIds = await resolveGrantGroups(tx, definition, context, year ?? undefined)
     const [created] = await tx
@@ -320,12 +349,15 @@ export function correctAnnualAppointment(
     const context = await requireActiveGroup(tx, input.contextGroupId)
     if (definition.endPolicy !== "annual" || context.type !== definition.context)
       throw new RuleViolation("position-not-allowed")
-    if (context.organisationYear !== input.organisationYear) throw new RuleViolation("period-conflict")
+    const choirScopedAnnual = context.type === "Choir" && definition.prerequisite
+    if (!choirScopedAnnual && context.organisationYear !== input.organisationYear)
+      throw new RuleViolation("period-conflict")
     const bounds = organisationYearPeriod(input.organisationYear)
     const startDate = requireDate(input.startDate)
     const endDate = requireDate(input.endDate)
     if (startDate < bounds.startDate || endDate > bounds.endDate || endDate <= startDate)
       throw new RuleViolation("period-conflict")
+    if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
     const grantIds = await resolveGrantGroups(tx, definition, context, input.organisationYear)
     await tx
       .update(positionAppointment)
@@ -368,4 +400,67 @@ export async function listAppointmentMembersAt(database: OrgStructureDatabase, g
     members.set(appointment.userId, member)
   }
   return [...members.values()]
+}
+
+/** Current or dated effective roster, deduplicating direct Members and appointment grants. */
+export async function listEffectiveMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
+  const contextGroup = alias(group, "appointment_context")
+  const [direct, grants] = await Promise.all([
+    listDirectMembersAt(database, groupId, date),
+    database
+      .select({
+        appointment: positionAppointment,
+        name: user.name,
+        email: user.email,
+        contextName: contextGroup.name
+      })
+      .from(appointmentGrant)
+      .innerJoin(positionAppointment, eq(appointmentGrant.appointmentId, positionAppointment.id))
+      .innerJoin(user, eq(user.id, positionAppointment.userId))
+      .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
+      .where(
+        and(
+          eq(appointmentGrant.groupId, groupId),
+          lte(positionAppointment.startDate, date),
+          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
+        )
+      )
+      .orderBy(asc(contextGroup.name), asc(positionAppointment.positionCode))
+  ])
+  const members = new Map<
+    string,
+    {
+      userId: string
+      name: string
+      email: string
+      voice: string | null
+      positions: { id: string; positionCode: PositionCode; contextGroupId: string; contextName: string }[]
+    }
+  >()
+  for (const member of direct) {
+    members.set(member.userId, {
+      userId: member.userId,
+      name: member.name,
+      email: member.email,
+      voice: member.voice,
+      positions: []
+    })
+  }
+  for (const { appointment, name, email, contextName } of grants) {
+    const member = members.get(appointment.userId) ?? {
+      userId: appointment.userId,
+      name,
+      email,
+      voice: null,
+      positions: []
+    }
+    member.positions.push({
+      id: appointment.id,
+      positionCode: appointment.positionCode as PositionCode,
+      contextGroupId: appointment.contextGroupId,
+      contextName
+    })
+    members.set(appointment.userId, member)
+  }
+  return [...members.values()].sort((a, b) => a.name.localeCompare(b.name, "sv"))
 }
