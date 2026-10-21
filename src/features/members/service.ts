@@ -3,16 +3,12 @@ import "server-only"
 import { and, asc, count, eq, ilike, isNull, ne, or } from "drizzle-orm"
 import type { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
-import { timeZone } from "@/core/i18n/time-zone"
 import {
-  listAppointmentsOfUser,
-  listCurrentChoirAffiliationsOfUsers,
-  listCurrentGroupsOfUser,
-  listCurrentPositionsOfUser,
+  cskToday,
   listEffectiveChoirAffiliationsOfUsersAt,
-  listEffectiveGroupsOfUserAt
+  listEffectiveParticipationOfUserAt
 } from "@/features/org-structure"
-import { POSITION_DEFINITIONS } from "@/features/org-structure/model"
+import type { IsoDate } from "@/features/org-structure/model"
 import { listVoiceCapabilities } from "@/features/voice"
 import { buildAffiliations } from "./affiliations"
 
@@ -42,7 +38,7 @@ export async function getMemberProfile(
   database: MemberDatabase,
   viewerId: string,
   memberId: string,
-  date: string = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
+  date: IsoDate = cskToday()
 ) {
   await requireActiveViewer(database, viewerId)
   const [member] = await database
@@ -51,77 +47,16 @@ export async function getMemberProfile(
     .where(and(eq(user.id, memberId), activeUser()))
     .limit(1)
   if (!member) return null
-  const [legacyMemberships, legacyHoldings, capabilities, effective, allAppointments] = await Promise.all([
-    listCurrentGroupsOfUser(database, memberId),
-    listCurrentPositionsOfUser(database, memberId),
-    listVoiceCapabilities(database, memberId),
-    listEffectiveGroupsOfUserAt(database, memberId, date),
-    listAppointmentsOfUser(database, memberId)
+  const [participation, capabilities] = await Promise.all([
+    listEffectiveParticipationOfUserAt(database, memberId, date),
+    listVoiceCapabilities(database, memberId)
   ])
-  const modeled = effective
-  const memberships = [
-    ...legacyMemberships.filter((membership) => !modeled.some((item) => item.groupId === membership.groupId)),
-    ...modeled.map((membership) => ({
-      ...membership,
-      choirName: effective.find((row) => row.groupId === membership.choirId)?.name ?? null
-    }))
-  ]
-  const appointments = allAppointments.filter(
-    (appointment) => appointment.startDate <= date && (appointment.endDate === null || appointment.endDate > date)
-  )
-  const holdings = appointments.map((appointment) => {
-    const context = effective.find((membership) => membership.groupId === appointment.contextGroupId)
-    const grantIds = effective
-      .filter((membership) => membership.sources.some((source) => source.appointmentId === appointment.id))
-      .map((membership) => membership.groupId)
-    if (effective.some((membership) => membership.groupId === appointment.contextGroupId))
-      grantIds.push(appointment.contextGroupId)
-    return {
-      id: appointment.id,
-      positionCode: appointment.positionCode,
-      name: POSITION_DEFINITIONS[appointment.positionCode]?.label ?? appointment.positionCode,
-      contextGroupId: appointment.contextGroupId,
-      contextName: appointment.contextName,
-      contextType: appointment.contextType,
-      contextChoirName: context?.choirId
-        ? (effective.find((membership) => membership.groupId === context.choirId)?.name ?? null)
-        : null,
-      organisationYear: appointment.organisationYear,
-      startDate: appointment.startDate,
-      endDate: appointment.endDate,
-      groupIds: grantIds
-    }
-  })
-  const legacyByPosition = new Map<string, NonNullable<typeof legacyHoldings>[number]>()
-  for (const holding of legacyHoldings) legacyByPosition.set(holding.positionId, holding)
-  const legacyPositionSummaries = [...legacyByPosition.values()].flatMap((holding) => {
-    const context = legacyMemberships.find((membership) => membership.groupId === holding.groupId)
-    return context
-      ? [
-          {
-            id: holding.positionId,
-            positionCode: null,
-            name: holding.name,
-            contextGroupId: holding.groupId,
-            contextName: context.name,
-            contextType: context.type,
-            contextChoirName: context.choirName,
-            organisationYear: null,
-            startDate: context.startDate,
-            endDate: null,
-            groupIds: legacyHoldings
-              .filter((item) => item.positionId === holding.positionId)
-              .map((item) => item.groupId)
-          }
-        ]
-      : []
-  })
   return {
     ...member,
     isOwn: viewerId === memberId,
     email: viewerId === memberId ? member.email : null,
     capabilities,
-    ...buildAffiliations(memberships as never, [...holdings, ...legacyPositionSummaries])
+    ...buildAffiliations(participation.groups, participation.positions)
   }
 }
 
@@ -151,19 +86,7 @@ export async function listMemberDirectory(
     .limit(DIRECTORY_PAGE_SIZE)
     .offset((page - 1) * DIRECTORY_PAGE_SIZE)
   const ids = members.map((member) => member.id)
-  const date = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
-  const [legacyMemberships, effectiveMemberships] = await Promise.all([
-    listCurrentChoirAffiliationsOfUsers(database, ids),
-    listEffectiveChoirAffiliationsOfUsersAt(database, ids, date)
-  ])
-  const memberships = [
-    ...new Map(
-      [...legacyMemberships, ...effectiveMemberships].map((membership) => [
-        `${membership.userId}:${membership.groupId}`,
-        membership
-      ])
-    ).values()
-  ]
+  const memberships = await listEffectiveChoirAffiliationsOfUsersAt(database, ids, cskToday())
   return {
     query,
     page,

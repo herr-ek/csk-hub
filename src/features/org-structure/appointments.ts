@@ -453,7 +453,7 @@ export async function listAppointmentMembersAt(database: OrgStructureDatabase, g
 /** Current or dated effective roster, deduplicating direct Members and appointment grants. */
 export async function listEffectiveMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
   const contextGroup = alias(group, "appointment_context")
-  const [direct, grants] = await Promise.all([
+  const [direct, grants, legacy] = await Promise.all([
     listDirectMembersAt(database, groupId, date),
     database
       .select({
@@ -473,7 +473,20 @@ export async function listEffectiveMembersAt(database: OrgStructureDatabase, gro
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
         )
       )
-      .orderBy(asc(contextGroup.name), asc(positionAppointment.positionCode))
+      .orderBy(asc(contextGroup.name), asc(positionAppointment.positionCode)),
+    database
+      .select({ membership: groupMember, name: user.name, email: user.email })
+      .from(groupMember)
+      .innerJoin(group, eq(group.id, groupMember.groupId))
+      .innerJoin(user, eq(user.id, groupMember.userId))
+      .where(
+        and(
+          eq(groupMember.groupId, groupId),
+          eq(group.usesAppointmentModel, false),
+          lte(groupMember.startDate, date),
+          or(isNull(groupMember.endDate), gt(groupMember.endDate, date))
+        )
+      )
   ])
   const members = new Map<
     string,
@@ -482,7 +495,7 @@ export async function listEffectiveMembersAt(database: OrgStructureDatabase, gro
       name: string
       email: string
       voice: string | null
-      memberships: { id: string; startDate: IsoDate; endDate: IsoDate | null; source: "direct" }[]
+      memberships: { id: string; startDate: IsoDate; endDate: IsoDate | null; source: "direct" | "legacy" }[]
       positions: {
         id: string
         positionCode: PositionCode
@@ -494,21 +507,38 @@ export async function listEffectiveMembersAt(database: OrgStructureDatabase, gro
     }
   >()
   for (const member of direct) {
-    members.set(member.userId, {
+    const current = members.get(member.userId) ?? {
       userId: member.userId,
       name: member.name,
       email: member.email,
       voice: member.voice,
-      memberships: [
-        {
-          id: member.id,
-          startDate: member.startDate as IsoDate,
-          endDate: member.endDate as IsoDate | null,
-          source: "direct"
-        }
-      ],
+      memberships: [],
       positions: []
+    }
+    current.memberships.push({
+      id: member.id,
+      startDate: member.startDate as IsoDate,
+      endDate: member.endDate as IsoDate | null,
+      source: "direct"
     })
+    members.set(member.userId, current)
+  }
+  for (const { membership, name, email } of legacy) {
+    const member = members.get(membership.userId) ?? {
+      userId: membership.userId,
+      name,
+      email,
+      voice: membership.voice,
+      memberships: [],
+      positions: []
+    }
+    member.memberships.push({
+      id: `${membership.userId}:${membership.groupId}:${membership.startDate}`,
+      startDate: membership.startDate as IsoDate,
+      endDate: membership.endDate as IsoDate | null,
+      source: "legacy"
+    })
+    members.set(membership.userId, member)
   }
   for (const { appointment, name, email, contextName } of grants) {
     const member = members.get(appointment.userId) ?? {
@@ -538,97 +568,6 @@ export function listEffectiveMembersCurrent(database: OrgStructureDatabase, grou
   return listEffectiveMembersAt(database, groupId, date)
 }
 
-/** Effective Groups for one person on a calendar date, retaining all appointment sources. */
-export async function listEffectiveGroupsOfUserAt(database: OrgStructureDatabase, userId: string, date: IsoDate) {
-  requireDate(date)
-  const contextGroup = alias(group, "effective_appointment_context")
-  const [direct, grants] = await Promise.all([
-    database
-      .select({ membership: directMembership, group })
-      .from(directMembership)
-      .innerJoin(group, eq(group.id, directMembership.groupId))
-      .where(
-        and(
-          eq(directMembership.userId, userId),
-          lte(directMembership.startDate, date),
-          or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
-        )
-      ),
-    database
-      .select({ appointment: positionAppointment, group, context: contextGroup })
-      .from(appointmentGrant)
-      .innerJoin(positionAppointment, eq(positionAppointment.id, appointmentGrant.appointmentId))
-      .innerJoin(group, eq(group.id, appointmentGrant.groupId))
-      .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
-      .where(
-        and(
-          eq(positionAppointment.userId, userId),
-          lte(positionAppointment.startDate, date),
-          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
-        )
-      )
-  ])
-  const result = new Map<
-    string,
-    {
-      groupId: string
-      name: string
-      type: GroupType
-      choirId: string | null
-      active: boolean
-      organisationYear: number | null
-      startDate: IsoDate
-      endDate: IsoDate | null
-      voice: string | null
-      sources: {
-        appointmentId: string
-        positionCode: PositionCode
-        contextGroupId: string
-        contextName: string
-        startDate: IsoDate
-        endDate: IsoDate | null
-      }[]
-    }
-  >()
-  for (const { membership, group: row } of direct)
-    result.set(row.id, {
-      groupId: row.id,
-      name: row.name,
-      type: row.type as GroupType,
-      choirId: row.choirId,
-      active: row.active,
-      organisationYear: row.organisationYear,
-      startDate: membership.startDate as IsoDate,
-      endDate: membership.endDate as IsoDate | null,
-      voice: membership.voice,
-      sources: []
-    })
-  for (const row of grants) {
-    const member = result.get(row.group.id) ?? {
-      groupId: row.group.id,
-      name: row.group.name,
-      type: row.group.type as GroupType,
-      choirId: row.group.choirId,
-      active: row.group.active,
-      organisationYear: row.group.organisationYear,
-      startDate: row.appointment.startDate as IsoDate,
-      endDate: row.appointment.endDate as IsoDate | null,
-      voice: null,
-      sources: []
-    }
-    member.sources.push({
-      appointmentId: row.appointment.id,
-      positionCode: row.appointment.positionCode as PositionCode,
-      contextGroupId: row.appointment.contextGroupId,
-      contextName: row.context.name,
-      startDate: row.appointment.startDate as IsoDate,
-      endDate: row.appointment.endDate as IsoDate | null
-    })
-    result.set(row.group.id, member)
-  }
-  return [...result.values()].sort((a, b) => a.name.localeCompare(b.name, "sv"))
-}
-
 /** Every appointment for a person, including future and historical responsibility contexts. */
 export async function listAppointmentsOfUser(database: OrgStructureDatabase, userId: string) {
   const context = alias(group, "appointment_context")
@@ -650,58 +589,6 @@ export async function listAppointmentsOfUser(database: OrgStructureDatabase, use
     startDate: appointment.startDate as IsoDate,
     endDate: appointment.endDate as IsoDate | null
   }))
-}
-
-/** Batched current Choir and Section affiliations for directory cards. */
-export async function listEffectiveChoirAffiliationsOfUsersAt(
-  database: OrgStructureDatabase,
-  userIds: string[],
-  date: IsoDate
-) {
-  requireDate(date)
-  if (!userIds.length) return []
-  const [direct, grants] = await Promise.all([
-    database
-      .select({
-        userId: directMembership.userId,
-        groupId: group.id,
-        name: group.name,
-        type: group.type,
-        choirId: group.choirId
-      })
-      .from(directMembership)
-      .innerJoin(group, eq(group.id, directMembership.groupId))
-      .where(
-        and(
-          inArray(directMembership.userId, userIds),
-          inArray(group.type, ["Choir", "Section"]),
-          eq(group.active, true),
-          lte(directMembership.startDate, date),
-          or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
-        )
-      ),
-    database
-      .select({
-        userId: positionAppointment.userId,
-        groupId: group.id,
-        name: group.name,
-        type: group.type,
-        choirId: group.choirId
-      })
-      .from(appointmentGrant)
-      .innerJoin(positionAppointment, eq(positionAppointment.id, appointmentGrant.appointmentId))
-      .innerJoin(group, eq(group.id, appointmentGrant.groupId))
-      .where(
-        and(
-          inArray(positionAppointment.userId, userIds),
-          inArray(group.type, ["Choir", "Section"]),
-          eq(group.active, true),
-          lte(positionAppointment.startDate, date),
-          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
-        )
-      )
-  ])
-  return [...new Map([...direct, ...grants].map((row) => [`${row.userId}:${row.groupId}`, row])).values()]
 }
 
 /** Lists every appointment attached to a Group as its context or a granted Membership. */
