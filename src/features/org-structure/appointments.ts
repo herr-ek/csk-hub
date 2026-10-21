@@ -10,7 +10,8 @@ import {
   groupMember,
   positionAppointment
 } from "@/core/db/schema/org-structure"
-import { listDirectMembersAt, validateUserParticipation } from "./direct-membership"
+import { timeZone } from "@/core/i18n/time-zone"
+import { validateUserParticipation } from "./direct-membership"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { requireActiveGroup, requireChoir } from "./lookup"
 import {
@@ -449,14 +450,47 @@ export async function listAppointmentMembersAt(database: OrgStructureDatabase, g
   return [...members.values()]
 }
 
-/** Current or dated effective roster, deduplicating direct Members and appointment grants. */
-export async function listEffectiveMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
+/** Batched current or dated effective rosters, deduplicating direct Members and appointment grants. */
+export async function listEffectiveMembersForGroupsAt(
+  database: OrgStructureDatabase,
+  groupIds: string[],
+  date: IsoDate
+) {
+  requireDate(date)
+  const ids = [...new Set(groupIds)]
+  type RosterMember = {
+    userId: string
+    name: string
+    email: string
+    voice: string | null
+    memberships: { id: string; startDate: IsoDate; endDate: IsoDate | null; source: "direct" | "legacy" }[]
+    positions: {
+      id: string
+      positionCode: PositionCode
+      contextGroupId: string
+      contextName: string
+      startDate: IsoDate
+      endDate: IsoDate | null
+    }[]
+  }
+  if (!ids.length) return new Map<string, RosterMember[]>()
   const contextGroup = alias(group, "appointment_context")
-  const [direct, grants] = await Promise.all([
-    listDirectMembersAt(database, groupId, date),
+  const [direct, grants, legacy] = await Promise.all([
+    database
+      .select({ membership: directMembership, name: user.name, email: user.email })
+      .from(directMembership)
+      .innerJoin(user, eq(user.id, directMembership.userId))
+      .where(
+        and(
+          inArray(directMembership.groupId, ids),
+          lte(directMembership.startDate, date),
+          or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
+        )
+      ),
     database
       .select({
         appointment: positionAppointment,
+        groupId: appointmentGrant.groupId,
         name: user.name,
         email: user.email,
         contextName: contextGroup.name
@@ -467,72 +501,176 @@ export async function listEffectiveMembersAt(database: OrgStructureDatabase, gro
       .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
       .where(
         and(
-          eq(appointmentGrant.groupId, groupId),
+          inArray(appointmentGrant.groupId, ids),
           lte(positionAppointment.startDate, date),
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
         )
       )
-      .orderBy(asc(contextGroup.name), asc(positionAppointment.positionCode))
+      .orderBy(asc(appointmentGrant.groupId), asc(contextGroup.name), asc(positionAppointment.positionCode)),
+    database
+      .select({ membership: groupMember, name: user.name, email: user.email })
+      .from(groupMember)
+      .innerJoin(group, eq(group.id, groupMember.groupId))
+      .innerJoin(user, eq(user.id, groupMember.userId))
+      .where(
+        and(
+          inArray(groupMember.groupId, ids),
+          eq(group.usesAppointmentModel, false),
+          lte(groupMember.startDate, date),
+          or(isNull(groupMember.endDate), gt(groupMember.endDate, date))
+        )
+      )
   ])
-  const members = new Map<
-    string,
-    {
-      userId: string
-      name: string
-      email: string
-      voice: string | null
-      positions: { id: string; positionCode: PositionCode; contextGroupId: string; contextName: string }[]
-    }
-  >()
+  const rosters = new Map(ids.map((id) => [id, new Map<string, RosterMember>()]))
+  const getMember = (groupId: string, userId: string, name: string, email: string, voice: string | null) => {
+    const roster = rosters.get(groupId)
+    if (!roster) return undefined
+    const current = roster.get(userId) ?? { userId, name, email, voice, memberships: [], positions: [] }
+    roster.set(userId, current)
+    return current
+  }
   for (const member of direct) {
-    members.set(member.userId, {
-      userId: member.userId,
-      name: member.name,
-      email: member.email,
-      voice: member.voice,
-      positions: []
+    const current = getMember(
+      member.membership.groupId,
+      member.membership.userId,
+      member.name,
+      member.email,
+      member.membership.voice
+    )
+    if (!current) continue
+    current.memberships.push({
+      id: member.membership.id,
+      startDate: member.membership.startDate as IsoDate,
+      endDate: member.membership.endDate as IsoDate | null,
+      source: "direct"
     })
   }
-  for (const { appointment, name, email, contextName } of grants) {
-    const member = members.get(appointment.userId) ?? {
-      userId: appointment.userId,
-      name,
-      email,
-      voice: null,
-      positions: []
-    }
+  for (const { membership, name, email } of legacy) {
+    const member = getMember(membership.groupId, membership.userId, name, email, membership.voice)
+    if (!member) continue
+    member.memberships.push({
+      id: `${membership.userId}:${membership.groupId}:${membership.startDate}`,
+      startDate: membership.startDate as IsoDate,
+      endDate: membership.endDate as IsoDate | null,
+      source: "legacy"
+    })
+  }
+  for (const { appointment, name, email, contextName, groupId } of grants) {
+    const member = getMember(groupId, appointment.userId, name, email, null)
+    if (!member) continue
     member.positions.push({
       id: appointment.id,
       positionCode: appointment.positionCode as PositionCode,
       contextGroupId: appointment.contextGroupId,
-      contextName
+      contextName,
+      startDate: appointment.startDate as IsoDate,
+      endDate: appointment.endDate as IsoDate | null
     })
-    members.set(appointment.userId, member)
   }
-  return [...members.values()].sort((a, b) => a.name.localeCompare(b.name, "sv"))
+  return new Map(
+    [...rosters].map(([id, roster]) => [id, [...roster.values()].sort((a, b) => a.name.localeCompare(b.name, "sv"))])
+  )
 }
 
-/** Lists every appointment attached to a Group as its context or a granted Membership. */
-export async function listAppointmentsForGroup(database: OrgStructureDatabase, groupId: string) {
+/** Dated effective roster for one Group, backed by the shared batched read. */
+export async function listEffectiveMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
+  return (await listEffectiveMembersForGroupsAt(database, [groupId], date)).get(groupId) ?? []
+}
+
+/** Today's effective roster in CSK's calendar time zone. */
+export function listEffectiveMembersCurrent(database: OrgStructureDatabase, groupId: string) {
+  const date = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date()) as IsoDate
+  return listEffectiveMembersAt(database, groupId, date)
+}
+
+/** Every appointment for a person, including future and historical responsibility contexts. */
+export async function listAppointmentsOfUser(database: OrgStructureDatabase, userId: string) {
+  const context = alias(group, "appointment_context")
+  const rows = await database
+    .select({ appointment: positionAppointment, context })
+    .from(positionAppointment)
+    .innerJoin(context, eq(context.id, positionAppointment.contextGroupId))
+    .where(eq(positionAppointment.userId, userId))
+    .orderBy(desc(positionAppointment.startDate))
+  return rows.map(({ appointment, context: row }) => ({
+    id: appointment.id,
+    userId,
+    positionCode: appointment.positionCode as PositionCode,
+    contextGroupId: row.id,
+    contextName: row.name,
+    contextType: row.type as GroupType,
+    contextChoirId: row.choirId,
+    organisationYear: appointment.organisationYear,
+    startDate: appointment.startDate as IsoDate,
+    endDate: appointment.endDate as IsoDate | null
+  }))
+}
+
+/** Batched appointment history attached to each Group as context or a granted Membership. */
+export async function listAppointmentsForGroups(
+  database: OrgStructureDatabase,
+  groupIds: string[]
+): Promise<
+  Map<
+    string,
+    {
+      id: string
+      userId: string
+      name: string
+      positionCode: PositionCode
+      position: string
+      contextGroupId: string
+      contextName: string
+      startDate: IsoDate
+      endDate: IsoDate | null
+      organisationYear: number | null
+    }[]
+  >
+> {
+  const ids = [...new Set(groupIds)]
+  if (!ids.length) return new Map<string, []>()
   const contextGroup = alias(group, "appointment_context")
   const rows = await database
-    .selectDistinct({ appointment: positionAppointment, name: user.name, contextName: contextGroup.name })
+    .selectDistinct({
+      appointment: positionAppointment,
+      grantGroupId: appointmentGrant.groupId,
+      name: user.name,
+      contextName: contextGroup.name
+    })
     .from(positionAppointment)
     .leftJoin(appointmentGrant, eq(appointmentGrant.appointmentId, positionAppointment.id))
     .innerJoin(user, eq(user.id, positionAppointment.userId))
     .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
-    .where(or(eq(appointmentGrant.groupId, groupId), eq(positionAppointment.contextGroupId, groupId)))
+    .where(or(inArray(appointmentGrant.groupId, ids), inArray(positionAppointment.contextGroupId, ids)))
     .orderBy(desc(positionAppointment.startDate))
-  return rows.map(({ appointment, name, contextName }) => ({
-    id: appointment.id,
-    userId: appointment.userId,
-    name,
-    positionCode: appointment.positionCode as PositionCode,
-    position: POSITION_DEFINITIONS[appointment.positionCode as PositionCode]?.label ?? appointment.positionCode,
-    contextGroupId: appointment.contextGroupId,
-    contextName,
-    startDate: appointment.startDate as IsoDate,
-    endDate: appointment.endDate as IsoDate | null,
-    organisationYear: appointment.organisationYear
-  }))
+  const byGroup = new Map(ids.map((id) => [id, new Map<string, (typeof rows)[number]>()]))
+  for (const row of rows) {
+    for (const id of [row.grantGroupId, row.appointment.contextGroupId]) {
+      if (!id) continue
+      const appointments = byGroup.get(id)
+      if (appointments) appointments.set(row.appointment.id, row)
+    }
+  }
+  return new Map(
+    [...byGroup].map(([id, appointments]) => [
+      id,
+      [...appointments.values()].map(({ appointment, name, contextName }) => ({
+        id: appointment.id,
+        userId: appointment.userId,
+        name,
+        positionCode: appointment.positionCode as PositionCode,
+        position: POSITION_DEFINITIONS[appointment.positionCode as PositionCode]?.label ?? appointment.positionCode,
+        contextGroupId: appointment.contextGroupId,
+        contextName,
+        startDate: appointment.startDate as IsoDate,
+        endDate: appointment.endDate as IsoDate | null,
+        organisationYear: appointment.organisationYear
+      }))
+    ])
+  )
+}
+
+/** Lists every appointment attached to a Group as its context or a granted Membership. */
+export async function listAppointmentsForGroup(database: OrgStructureDatabase, groupId: string) {
+  return (await listAppointmentsForGroups(database, [groupId])).get(groupId) ?? []
 }

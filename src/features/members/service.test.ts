@@ -4,12 +4,18 @@ import { user } from "@/core/db/schema/auth"
 import { conversation, directConversation } from "@/core/db/schema/messaging"
 import { findDirectConversation } from "@/features/messaging/reading"
 import {
+  addDirectMembership,
+  appointPosition,
   archiveGroup,
   changeVoice,
+  correctAnnualAppointment,
   createChoir,
   createGroup,
+  createOrganisationGroup,
   createPosition,
+  endDirectMembership,
   endPositionHolding,
+  listCurrentGroupMembers,
   placeSinger,
   startLinkedPosition,
   startMembership
@@ -145,6 +151,180 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const after = await getMemberProfile(db, holder, holder)
     expect(after?.groups.map((group) => group.groupId)).toEqual([board.id])
     expect(after?.positions[0].groups.map((group) => group.id)).toEqual([board.id])
+  })
+
+  test("effective profile affiliations show one dated appointment across grants without enrolling a singer", async () => {
+    const holder = await member("Appointed without Choir")
+    const boardName = unique("Board 26/27")
+    const board = success(await createOrganisationGroup(db, { name: boardName, type: "Board", organisationYear: 2026 }))
+    const sexName = unique("Sexmästeri 26/27")
+    const sex = success(
+      await createOrganisationGroup(db, {
+        name: sexName,
+        type: "Sexmästeri",
+        organisationYear: 2026
+      })
+    )
+    const appointment = success(
+      await appointPosition(db, {
+        userId: holder,
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        startDate: "2026-07-01"
+      })
+    )
+    const second = success(
+      await appointPosition(db, {
+        userId: holder,
+        positionCode: "sexmastarinna",
+        contextGroupId: sex.id,
+        startDate: "2026-07-01"
+      })
+    )
+    const profile = await getMemberProfile(db, holder, holder, "2026-08-01")
+    expect(profile?.choirs).toEqual([])
+    expect(profile?.positions.map((item) => item.id).sort()).toEqual([appointment.id, second.id].sort())
+    expect(profile?.positions.map((item) => item.contextName).sort()).toEqual([boardName, sexName].sort())
+    expect(profile?.groups.map((item) => item.groupId).sort()).toEqual([board.id, sex.id].sort())
+    expect(profile?.groups.find((item) => item.groupId === sex.id)?.positions).toHaveLength(2)
+    expect(await listCurrentGroupMembers(db, board.id)).toMatchObject([{ userId: holder, startDate: "2026-07-01" }])
+    const future = await getMemberProfile(db, holder, holder, "2026-06-30")
+    expect(future?.positions).toEqual([])
+    expect(future?.groups).toEqual([])
+    const expired = await getMemberProfile(db, holder, holder, "2027-07-01")
+    expect(expired?.positions).toEqual([])
+    expect(expired?.groups).toEqual([])
+    const finalJuneDay = await getMemberProfile(db, holder, holder, "2027-06-30")
+    expect(finalJuneDay?.positions.map((item) => item.id)).toEqual([appointment.id, second.id])
+    expect(finalJuneDay?.groups.map((item) => item.groupId).sort()).toEqual([board.id, sex.id].sort())
+  })
+
+  test("same-code Choir appointments keep independent contexts and IDs", async () => {
+    const singer = await member("Two Choir appointments")
+    const mk = await choir("MK representatives")
+    const kk = await choir("KK representatives")
+    const concert = success(
+      await createOrganisationGroup(db, {
+        name: unique("Konsertmästeri 26/27"),
+        type: "Konsertmästeri",
+        organisationYear: 2026
+      })
+    )
+    success(await placeSinger(db, { userId: singer, choirId: mk.choirId, voice: "B1", startDate: "2026-07-01" }))
+    success(await placeSinger(db, { userId: singer, choirId: kk.choirId, voice: "S1", startDate: "2026-07-01" }))
+    const first = success(
+      await appointPosition(db, {
+        userId: singer,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: mk.choirId,
+        startDate: "2026-07-01",
+        organisationYear: 2026
+      })
+    )
+    const second = success(
+      await appointPosition(db, {
+        userId: singer,
+        positionCode: "choir-konsertmastare",
+        contextGroupId: kk.choirId,
+        startDate: "2026-07-01",
+        organisationYear: 2026
+      })
+    )
+    const profile = await getMemberProfile(db, singer, singer, "2026-08-01")
+    expect(
+      profile?.positions
+        .filter((item) => item.positionCode === "choir-konsertmastare")
+        .map((item) => item.id)
+        .sort()
+    ).toEqual([first.id, second.id].sort())
+    expect(
+      profile?.positions
+        .filter((item) => item.positionCode === "choir-konsertmastare")
+        .map((item) => item.contextGroupId)
+        .sort()
+    ).toEqual([kk.choirId, mk.choirId].sort())
+    expect(profile?.groups.find((item) => item.groupId === concert.id)?.positions).toHaveLength(2)
+  })
+
+  test("corrected holder and annual context appear through the same dated profile read", async () => {
+    const predecessor = await member("Predecessor")
+    const successor = await member("Successor")
+    const year = 2500 + Math.floor(Math.random() * 1_000)
+    const yearAfter = year + 1
+    const startDate = `${year}-07-01`
+    const correctionDate = `${yearAfter}-07-01`
+    const readDate = `${yearAfter}-08-01`
+    const endDate = `${yearAfter + 1}-07-01`
+    const board26 = success(
+      await createOrganisationGroup(db, {
+        name: unique(`Board ${year}/${yearAfter} correction`),
+        type: "Board",
+        organisationYear: year
+      })
+    )
+    const board27 = success(
+      await createOrganisationGroup(db, {
+        name: unique(`Board ${yearAfter}/${yearAfter + 1} correction`),
+        type: "Board",
+        organisationYear: yearAfter
+      })
+    )
+    const sex26 = success(
+      await createOrganisationGroup(db, {
+        name: unique(`Sex ${year}/${yearAfter} correction`),
+        type: "Sexmästeri",
+        organisationYear: year
+      })
+    )
+    const sex27 = success(
+      await createOrganisationGroup(db, {
+        name: unique(`Sex ${yearAfter}/${yearAfter + 1} correction`),
+        type: "Sexmästeri",
+        organisationYear: yearAfter
+      })
+    )
+    const appointment = success(
+      await appointPosition(db, {
+        userId: predecessor,
+        positionCode: "sexmastare",
+        contextGroupId: board26.id,
+        startDate
+      })
+    )
+    success(
+      await correctAnnualAppointment(db, {
+        appointmentId: appointment.id,
+        userId: successor,
+        positionCode: "sexmastare",
+        contextGroupId: board27.id,
+        organisationYear: yearAfter,
+        startDate: correctionDate,
+        endDate
+      })
+    )
+    expect((await getMemberProfile(db, predecessor, predecessor, readDate))?.positions).toEqual([])
+    const corrected = await getMemberProfile(db, successor, successor, readDate)
+    expect(corrected?.positions).toMatchObject([
+      { id: appointment.id, contextGroupId: board27.id, organisationYear: yearAfter }
+    ])
+    expect(corrected?.groups.map((item) => item.groupId).sort()).toEqual([board27.id, sex27.id].sort())
+    expect(corrected?.groups.map((item) => item.groupId)).not.toContain(sex26.id)
+  })
+
+  test("adjacent direct periods use one exclusive handover boundary", async () => {
+    const singer = await member("Adjacent periods")
+    const group = success(await createOrganisationGroup(db, { name: unique("Fluid participation"), type: "Övrig" }))
+    const predecessor = success(
+      await addDirectMembership(db, { userId: singer, groupId: group.id, startDate: "2026-01-01" })
+    )
+    success(await endDirectMembership(db, { membershipId: predecessor.id, endDate: "2026-08-01" }))
+    const successor = success(
+      await addDirectMembership(db, { userId: singer, groupId: group.id, startDate: "2026-08-01" })
+    )
+    const before = await getMemberProfile(db, singer, singer, "2026-07-31")
+    const boundary = await getMemberProfile(db, singer, singer, "2026-08-01")
+    expect(before?.groups[0].membershipPeriods.map((period) => period.id)).toEqual([predecessor.id])
+    expect(boundary?.groups[0].membershipPeriods.map((period) => period.id)).toEqual([successor.id])
   })
 
   test("directory paging is stable, includes unassigned Users, searches username literally and hides the viewer and inactive Users", async () => {

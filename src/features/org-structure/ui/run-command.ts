@@ -38,5 +38,8 @@ export async function runGroupCommand<Schema extends z.ZodType>(
   if (!result.success) return { status: "error", error: result.error }
 
   revalidatePath(ROUTES.adminOrgStructure, "layout")
+  revalidatePath("/[locale]/(app)/members", "page")
+  revalidatePath("/[locale]/(app)/members/[memberId]", "page")
+  revalidatePath("/[locale]/(app)/me", "page")
   return { status: "success", completedAt: Date.now() }
 }

@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, groupMember, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { contains, type VoiceDivision } from "@/features/voice/model"
@@ -55,6 +55,23 @@ export async function listDirectMemberships(database: OrgStructureDatabase, grou
     .innerJoin(user, eq(user.id, directMembership.userId))
     .where(eq(directMembership.groupId, groupId))
     .orderBy(user.name, directMembership.startDate)
+}
+
+/** Every direct Membership for one User, for Admin correction history. */
+export async function listDirectMembershipsOfUser(database: OrgStructureDatabase, userId: string) {
+  return database
+    .select({
+      id: directMembership.id,
+      groupId: group.id,
+      groupName: group.name,
+      startDate: directMembership.startDate,
+      endDate: directMembership.endDate,
+      voice: directMembership.voice
+    })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .where(eq(directMembership.userId, userId))
+    .orderBy(desc(directMembership.startDate))
 }
 
 /** Direct participation at an inclusive calendar date; never interprets a null end as current by itself. */

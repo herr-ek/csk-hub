@@ -1,11 +1,13 @@
 import "server-only"
 
 import { notFound, redirect } from "next/navigation"
+import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getRequestSession } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { loginPath, memberProfilePath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { findDirectConversation } from "@/features/messaging/reading"
+import { listAppointmentsOfUser, listDirectMembershipsOfUser } from "@/features/org-structure"
 import { getOwnVoiceCapabilities } from "./edit-profile/service"
 import { getMemberProfile, InactiveViewerError, listMemberDirectory } from "./service"
 
@@ -25,8 +27,16 @@ export async function getProfile(memberId?: string) {
       canMessage ? findDirectConversation(db, session.user.id, targetId) : Promise.resolve(null)
     ])
     if (!profile) notFound()
+    const canManageOrganisation = await isUserAdmin(session)
+    const managementRecords = canManageOrganisation
+      ? await Promise.all([listAppointmentsOfUser(db, targetId), listDirectMembershipsOfUser(db, targetId)]).then(
+          ([appointments, memberships]) => ({ appointments, memberships })
+        )
+      : null
     return {
       profile,
+      canManageOrganisation,
+      managementRecords,
       canMessage,
       messageConversationId,
       canEditProfile: profile.isOwn && !session.session.impersonatedBy

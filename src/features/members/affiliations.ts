@@ -1,25 +1,17 @@
-import type { GroupType } from "@/features/org-structure/model"
-import type { Voice, VoiceDivision } from "@/features/voice/model"
+import type { EffectiveGroup, EffectivePosition } from "@/features/org-structure/model"
 
-export type MemberGroup = {
-  groupId: string
-  name: string
-  type: GroupType
-  choirId: string | null
-  choirName: string | null
-  active: boolean
-  startDate: string
-  voice: VoiceDivision | null
-  sectionVoice: Voice | null
-}
+export type MemberGroup = EffectiveGroup
 
-export type MemberPosition = { groupId: string; positionId: string; name: string }
+export type MemberPosition = EffectivePosition
 
 /** Summaries preserve Group context; matching titles do not imply a shared appointment. */
 export function buildAffiliations(memberships: MemberGroup[], holdings: MemberPosition[]) {
   const activeGroups = memberships.filter((membership) => membership.active)
-  const positions = holdings.filter((holding) => activeGroups.some((group) => group.groupId === holding.groupId))
-  const groupPositions = (groupId: string) => positions.filter((holding) => holding.groupId === groupId)
+  const positions = holdings.filter((holding) =>
+    holding.affiliationGroups.some((context) => activeGroups.some((group) => group.groupId === context.id))
+  )
+  const groupPositions = (groupId: string) =>
+    positions.filter((holding) => holding.affiliationGroups.some((context) => context.id === groupId))
   const withPositions = (group: MemberGroup) => ({ ...group, positions: groupPositions(group.groupId) })
   const choirs = activeGroups
     .filter((group) => group.type === "Choir")
@@ -40,18 +32,20 @@ export function buildAffiliations(memberships: MemberGroup[], holdings: MemberPo
       (group) => group.choirId && group.type !== "Section" && !choirs.some((choir) => choir.groupId === group.choirId)
     )
     .map(withPositions)
-  const summary = [
-    ...new Map(
-      positions.map((position) => [position.positionId, { id: position.positionId, name: position.name }])
-    ).values()
-  ].map((position) => ({
-    ...position,
-    groups: positions
-      .filter((holding) => holding.positionId === position.id)
-      .flatMap((holding) => {
-        const group = activeGroups.find((group) => group.groupId === holding.groupId)
-        return group ? [{ id: group.groupId, name: group.name, choirName: group.choirName }] : []
-      })
+  const summary = positions.map((holding) => ({
+    id: holding.id,
+    positionCode: holding.positionCode,
+    name: holding.name,
+    contextGroupId: holding.contextGroupId,
+    contextName: holding.contextName,
+    contextType: holding.contextType,
+    contextChoirName: holding.contextChoirName,
+    organisationYear: holding.organisationYear,
+    startDate: holding.startDate,
+    endDate: holding.endDate,
+    groups: holding.affiliationGroups
+      .filter((context) => activeGroups.some((group) => group.groupId === context.id))
+      .map((context) => ({ id: context.id, name: context.name, choirName: context.choirName }))
   }))
   return { choirs, groups, otherGroups, positions: summary }
 }

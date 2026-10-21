@@ -9,6 +9,7 @@ import {
   endAppointment,
   listAppointmentMembersAt,
   listEffectiveMembersAt,
+  listEffectiveMembersForGroupsAt,
   replaceAppointmentHolder
 } from "./appointments"
 import { addDirectMembership, endDirectMembership, listDirectMembersAt } from "./direct-membership"
@@ -50,6 +51,32 @@ describe.skipIf(!database)("appointment foundation", () => {
       { userId, appointments: [{ id: appointment.id, contextGroupId: board.id, endDate: "2027-07-01" }] }
     ])
     expect(await listAppointmentMembersAt(t.db, board.id, "2027-07-01")).toEqual([])
+  })
+
+  test("the batched effective roster read preserves one appointment across all granted Groups", async () => {
+    const year = 3000 + Math.floor(Math.random() * 500)
+    const board = expectSuccess(
+      await createOrganisationGroup(t.db, { name: uniqueName("Batched Board"), type: "Board", organisationYear: year })
+    )
+    const sex = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: uniqueName("Batched Sexmästeri"),
+        type: "Sexmästeri",
+        organisationYear: year
+      })
+    )
+    const userId = await t.user()
+    const appointment = expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        startDate: `${year}-09-01`
+      })
+    )
+    const batched = await listEffectiveMembersForGroupsAt(t.db, [board.id, sex.id], `${year}-10-01`)
+    expect(batched.get(board.id)).toMatchObject([{ userId, positions: [{ id: appointment.id }] }])
+    expect(batched.get(sex.id)).toMatchObject([{ userId, positions: [{ id: appointment.id }] }])
   })
 
   test("appointing a committee officer converts an overlapping Helper and preserves the earlier period", async () => {
