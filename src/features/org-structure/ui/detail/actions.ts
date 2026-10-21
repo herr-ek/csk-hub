@@ -3,7 +3,6 @@
 import { z } from "zod"
 import { db } from "@/core/db"
 import { changeVoice, endMembership, placeSingerInSection, startMembership } from "../../membership"
-import { endPositionHolding, replacePositionHolder } from "../../positions"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"
@@ -74,48 +73,5 @@ export async function changeVoiceAction(_state: GroupCommandState, formData: For
       if (!choirId) return { success: false, error: "not-a-singer" }
       return changeVoice(db, { userId: input.userId, choirId, voice: input.voice, date: input.date })
     }
-  )
-}
-
-const assignHolderSchema = z.object({
-  groupId: fields.id,
-  positionId: fields.id,
-  userId: fields.userId,
-  startDate: fields.date
-})
-
-/** Gives a Position to a member, ending any current holder's holding on the same day. */
-export async function assignHolderAction(_state: GroupCommandState, formData: FormData) {
-  return runGroupCommand(
-    "assign-holder",
-    assignHolderSchema,
-    {
-      groupId: value(formData, "groupId"),
-      positionId: value(formData, "positionId"),
-      userId: value(formData, "userId"),
-      startDate: value(formData, "startDate")
-    },
-    (input) => replacePositionHolder(db, input)
-  )
-}
-
-const endHoldingSchema = z.object({
-  groupId: fields.id,
-  positionId: fields.id,
-  userId: fields.userId,
-  endDate: fields.date
-})
-
-export async function endHoldingAction(_state: GroupCommandState, formData: FormData) {
-  return runGroupCommand(
-    "end-holding",
-    endHoldingSchema,
-    {
-      groupId: value(formData, "groupId"),
-      positionId: value(formData, "positionId"),
-      userId: value(formData, "userId"),
-      endDate: value(formData, "endDate")
-    },
-    (input) => endPositionHolding(db, input)
   )
 }

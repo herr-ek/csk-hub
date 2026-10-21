@@ -3,15 +3,7 @@ import { verifyPassword } from "better-auth/crypto"
 import { eq } from "drizzle-orm"
 import { Client } from "pg"
 import { account, user } from "@/core/db/schema/auth"
-import {
-  appointmentGrant,
-  directMembership,
-  group,
-  groupMember,
-  position,
-  positionAppointment,
-  positionHolder
-} from "@/core/db/schema/org-structure"
+import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { post } from "@/core/db/schema/posts"
 import { voiceCapability } from "@/core/db/schema/voice"
 import { GROUP_POLICIES, POSITION_DEFINITIONS } from "@/features/org-structure/model"
@@ -87,9 +79,6 @@ describe.skipIf(!database)("complete local demo seed", () => {
     const memberships = await db.select().from(directMembership)
     const appointments = await db.select().from(positionAppointment)
     const grants = await db.select().from(appointmentGrant)
-    expect(await db.select().from(groupMember)).toHaveLength(0)
-    expect(await db.select().from(positionHolder)).toHaveLength(0)
-    expect(await db.select().from(position)).toHaveLength(0)
     expect(memberships.filter(({ endDate }) => endDate).length).toBeGreaterThanOrEqual(15)
     expect(appointments.length).toBeGreaterThan(30)
     expect(grants.length).toBeGreaterThan(30)

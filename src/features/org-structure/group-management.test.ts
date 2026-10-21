@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { appointPosition, createOrganisationGroup, listAppointmentMembersAt } from "./appointments"
 import { addDirectMembership, listDirectMemberships } from "./direct-membership"
 import { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
-import { archiveGroup, createGroup } from "./structure"
+import { archiveGroup } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -122,9 +122,11 @@ describe.skipIf(!database)("concrete Group management", () => {
     ])
     expect(expectSuccess(first)).toEqual(expectSuccess(second))
   })
-  test("Choir-team cardinality also includes active legacy Groups", async () => {
+  test("Choir-team cardinality excludes archived Groups", async () => {
     const choirId = await t.groupId("DK")
-    const legacyId = expectSuccess(await createGroup(t.db, { name: "Legacy DK rephelg", type: "Rephelg", choirId })).id
+    const existingId = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "DK rephelg", type: "Rephelg", choirId })
+    ).id
     expect(await createOrganisationGroup(t.db, { name: "New DK rephelg", type: "Rephelg", choirId })).toEqual({
       success: false,
       error: "group-type-taken"
@@ -140,7 +142,7 @@ describe.skipIf(!database)("concrete Group management", () => {
       type: "GigGroup",
       choirId: null
     })
-    expectSuccess(await archiveGroup(t.db, legacyId))
+    expectSuccess(await archiveGroup(t.db, existingId))
     expectSuccess(
       await updateOrganisationGroup(t.db, { groupId: editableId, name: "Edited DK rephelg", type: "Rephelg", choirId })
     )

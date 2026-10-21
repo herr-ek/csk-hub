@@ -4,14 +4,12 @@ import {
   addDirectMembership,
   changeDirectMembership,
   correctDirectMembership,
-  correctLegacyMembership,
   endDirectMembership,
   listDirectMembersAt,
   listDirectMemberships
 } from "./direct-membership"
-import { endMembership, placeSingerInSection, startMembership } from "./membership"
-import { listCurrentGroupMembers } from "./reads"
-import { archiveGroup, createGroup } from "./structure"
+import { endMembership, placeSingerInSection } from "./membership"
+import { archiveGroup } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -242,17 +240,17 @@ describe.skipIf(!database)("dated direct Membership", () => {
     )
   })
 
-  test("an explicit legacy singer correction updates dated placement without overlapping another Section", async () => {
+  test("a corrected singer placement updates the direct period without overlapping another Section", async () => {
     const userId = await t.user()
     const groupId = await t.groupId("DKS1")
     expectSuccess(
       await placeSingerInSection(t.db, { userId, sectionId: groupId, voice: "S1", startDate: "2024-09-01" })
     )
+    const membership = (await listDirectMemberships(t.db, groupId))[0]
+    expect(membership).toBeDefined()
     expectSuccess(
-      await correctLegacyMembership(t.db, {
-        userId,
-        originalGroupId: groupId,
-        originalStartDate: "2024-09-01",
+      await correctDirectMembership(t.db, {
+        membershipId: membership!.id,
         groupId: await t.groupId("DKS2"),
         voice: "S2",
         startDate: "2024-09-01",
@@ -264,7 +262,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
       error: "already-in-section"
     })
   })
-  test("legacy Choir departure cannot strand new-model scoped membership", async () => {
+  test("leaving a Choir ends its Section and Choir-team membership in one command", async () => {
     const userId = await t.user()
     const choirId = await t.groupId("MK")
     expectSuccess(
@@ -279,24 +277,13 @@ describe.skipIf(!database)("dated direct Membership", () => {
       await createOrganisationGroup(t.db, { name: "Departure fest", type: "Festgrupp", choirId })
     ).id
     expectSuccess(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" }))
-    expect(await endMembership(t.db, { userId, groupId: choirId, endDate: "2027-01-01" })).toEqual({
-      success: false,
-      error: "not-a-choir-member"
-    })
-    expect(await listDirectMembersAt(t.db, groupId, "2027-01-01")).toMatchObject([{ userId }])
+    expectSuccess(await endMembership(t.db, { userId, groupId: choirId, endDate: "2027-01-01" }))
+    expect(await listDirectMembersAt(t.db, groupId, "2027-01-01")).toEqual([])
   })
-  test("unresolved legacy annual Groups cannot accept open-ended direct participation", async () => {
-    const groupId = expectSuccess(await createGroup(t.db, { name: "Legacy unresolved annual", type: "Sexmästeri" })).id
-    const userId = await t.user()
-    expect(await startMembership(t.db, { userId, groupId, startDate: "2026-09-01" })).toEqual({
+  test("annual Groups cannot be created without their year", async () => {
+    expect(await createOrganisationGroup(t.db, { name: "Missing year committee", type: "Sexmästeri" })).toEqual({
       success: false,
-      error: "annual-group-needs-year"
+      error: "period-conflict"
     })
-    expect(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" })).toEqual({
-      success: false,
-      error: "annual-group-needs-year"
-    })
-    expect(await listCurrentGroupMembers(t.db, groupId)).toEqual([])
-    expect(await listDirectMemberships(t.db, groupId)).toEqual([])
   })
 })

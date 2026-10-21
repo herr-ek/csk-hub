@@ -39,15 +39,7 @@ const CONSTRAINT_VIOLATIONS: Record<string, OrgStructureViolation> = {
   direct_membership_annual_check: "period-conflict",
   direct_membership_policy_check: "position-not-allowed",
   direct_membership_voice_check: "voice-not-sung-in-section",
-  group_name_choir_active_unique: "group-name-taken",
-  group_member_current_unique: "already-member",
-  group_member_user_id_group_id_start_date_pk: "period-conflict",
-  group_member_period_check: "period-conflict",
-  group_member_voice_containment_check: "voice-not-sung-in-section",
-  position_name_unique: "position-name-taken",
-  position_holder_current_unique: "position-taken",
-  position_holder_user_id_group_id_position_id_start_date_pk: "period-conflict",
-  position_holder_period_check: "period-conflict"
+  group_name_choir_active_unique: "group-name-taken"
 }
 
 function violationOf(error: unknown): OrgStructureViolation | undefined {

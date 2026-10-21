@@ -127,6 +127,13 @@
       "when": 1792531280222,
       "tag": "0017_expand-organisation-appointments",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792606667787,
+      "tag": "0018_retire-legacy-organisation-model",
+      "breakpoints": true
     }
   ]
 }

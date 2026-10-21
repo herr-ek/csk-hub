@@ -13,13 +13,11 @@ import {
   addDirectMemberAction,
   changeDirectMemberAction,
   correctDirectMemberAction,
-  correctLegacyMemberAction,
   endDirectMemberAction
 } from "./direct-actions"
 import type { GroupDetail } from "./query"
 
 type Membership = GroupDetail["directMemberships"][number]
-type LegacyMembership = GroupDetail["legacyMemberships"][number]
 
 /** Shows every direct period, including prepared and historical records, with explicit correction actions. */
 export function DirectMembersSection({ detail, today }: { detail: GroupDetail; today: string }) {
@@ -145,38 +143,6 @@ function EditDirectMemberDialog({
   )
 }
 
-/** Explicit correction for retained legacy singer/fluid records, without a conversion side effect. */
-export function LegacyCorrectionDialog({
-  detail,
-  member,
-  today
-}: {
-  detail: GroupDetail
-  member: LegacyMembership
-  today: string
-}) {
-  const t = useTranslations("Groups.management")
-  if (GROUP_POLICIES[detail.group.type].directMembership === "no") return null
-  return (
-    <CommandDialog
-      trigger={
-        <Button type="button" variant="ghost" size="sm">
-          {t("correct")}
-        </Button>
-      }
-      title={t("correct")}
-      description={t("correctDescription")}
-      action={correctLegacyMemberAction}
-      submitLabel={t("save")}
-    >
-      <input type="hidden" name="userId" value={member.userId} />
-      <input type="hidden" name="originalGroupId" value={detail.group.id} />
-      <input type="hidden" name="originalStartDate" value={member.startDate} />
-      <MembershipFields detail={detail} today={today} member={member} />
-    </CommandDialog>
-  )
-}
-
 function MembershipFields({
   detail,
   today,
@@ -185,7 +151,7 @@ function MembershipFields({
 }: {
   detail: GroupDetail
   today: string
-  member?: Membership | LegacyMembership
+  member?: Membership
   change?: boolean
 }) {
   const t = useTranslations("Groups")

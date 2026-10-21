@@ -2,16 +2,7 @@ import "server-only"
 
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
-import {
-  appointmentGrant,
-  directMembership,
-  group,
-  groupMember,
-  position,
-  positionAppointment,
-  positionHolder,
-  section
-} from "@/core/db/schema/org-structure"
+import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import type { Voice } from "@/features/voice/model"
 import {
@@ -29,9 +20,7 @@ export function cskToday(): IsoDate {
   return new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date()) as IsoDate
 }
 
-/** One interpretation of a person's participation and responsibilities on a calendar date.
- * The compatibility adapter reads legacy rows only for Groups not yet marked as converted.
- */
+/** One interpretation of a person's direct and appointment-granted participation on a date. */
 export async function listEffectiveParticipationOfUserAt(
   database: OrgStructureDatabase,
   userId: string,
@@ -40,7 +29,7 @@ export async function listEffectiveParticipationOfUserAt(
   requireDate(date)
   const owningChoir = alias(group, "effective_owning_choir")
   const contextGroup = alias(group, "effective_appointment_context")
-  const [directRows, legacyRows, grantRows, appointmentRows, legacyHolderRows] = await Promise.all([
+  const [directRows, grantRows, appointmentRows] = await Promise.all([
     database
       .select({ membership: directMembership, group, sectionVoice: section.voice, choirName: owningChoir.name })
       .from(directMembership)
@@ -52,20 +41,6 @@ export async function listEffectiveParticipationOfUserAt(
           eq(directMembership.userId, userId),
           lte(directMembership.startDate, date),
           or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
-        )
-      ),
-    database
-      .select({ membership: groupMember, group, sectionVoice: section.voice, choirName: owningChoir.name })
-      .from(groupMember)
-      .innerJoin(group, eq(group.id, groupMember.groupId))
-      .leftJoin(section, eq(section.groupId, group.id))
-      .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
-      .where(
-        and(
-          eq(groupMember.userId, userId),
-          eq(group.usesAppointmentModel, false),
-          lte(groupMember.startDate, date),
-          or(isNull(groupMember.endDate), gt(groupMember.endDate, date))
         )
       ),
     database
@@ -91,20 +66,6 @@ export async function listEffectiveParticipationOfUserAt(
           eq(positionAppointment.userId, userId),
           lte(positionAppointment.startDate, date),
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
-        )
-      ),
-    database
-      .select({ holding: positionHolder, positionName: position.name, group, choirName: owningChoir.name })
-      .from(positionHolder)
-      .innerJoin(position, eq(position.id, positionHolder.positionId))
-      .innerJoin(group, eq(group.id, positionHolder.groupId))
-      .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
-      .where(
-        and(
-          eq(positionHolder.userId, userId),
-          eq(group.usesAppointmentModel, false),
-          lte(positionHolder.startDate, date),
-          or(isNull(positionHolder.endDate), gt(positionHolder.endDate, date))
         )
       )
   ])
@@ -147,19 +108,6 @@ export async function listEffectiveParticipationOfUserAt(
       {
         id: row.membership.id,
         source: "direct",
-        startDate: row.membership.startDate as IsoDate,
-        endDate: row.membership.endDate as IsoDate | null,
-        voice: row.membership.voice
-      },
-      row.sectionVoice,
-      row.choirName
-    )
-  for (const row of legacyRows)
-    addGroup(
-      row.group,
-      {
-        id: `${row.membership.userId}:${row.membership.groupId}:${row.membership.startDate}`,
-        source: "legacy",
         startDate: row.membership.startDate as IsoDate,
         endDate: row.membership.endDate as IsoDate | null,
         voice: row.membership.voice
@@ -213,52 +161,6 @@ export async function listEffectiveParticipationOfUserAt(
       affiliationGroups: []
     })
   }
-  const legacyGroups = new Map<string, Set<string>>()
-  for (const row of legacyHolderRows) {
-    const key = `${row.holding.userId}:${row.holding.positionId}:${row.holding.startDate}`
-    const groupIds = legacyGroups.get(key) ?? new Set<string>()
-    groupIds.add(row.group.id)
-    legacyGroups.set(key, groupIds)
-    if (!positionsById.has(key))
-      positionsById.set(key, {
-        id: key,
-        positionCode: null,
-        name: row.positionName,
-        contextGroupId: row.group.id,
-        contextName: row.group.name,
-        contextType: row.group.type as GroupType,
-        contextChoirId: row.group.choirId,
-        contextChoirName: row.choirName,
-        organisationYear: row.group.organisationYear,
-        startDate: row.holding.startDate as IsoDate,
-        endDate: row.holding.endDate as IsoDate | null,
-        grantedGroups: [],
-        affiliationGroups: []
-      })
-  }
-  for (const [key, ids] of legacyGroups) {
-    const appointment = positionsById.get(key)
-    if (!appointment) continue
-    appointment.grantedGroups = [...ids].flatMap((id) => {
-      const row = legacyHolderRows.find(
-        (candidate) =>
-          candidate.group.id === id &&
-          `${candidate.holding.userId}:${candidate.holding.positionId}:${candidate.holding.startDate}` === key
-      )
-      return row
-        ? [
-            {
-              id,
-              name: row.group.name,
-              type: row.group.type as GroupType,
-              choirId: row.group.choirId,
-              organisationYear: row.group.organisationYear
-            }
-          ]
-        : []
-    })
-  }
-
   const positions = [...positionsById.values()]
   for (const appointment of positions) {
     const visibleIds = new Set(appointment.grantedGroups.map(({ id }) => id))
@@ -278,7 +180,7 @@ export async function listEffectiveParticipationOfUserAt(
   return { groups: [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, "sv")), positions }
 }
 
-/** Batched current Choir/Section summary, with the same legacy adapter and date rules. */
+/** Batched current Choir/Section summary using direct placement and appointment grants. */
 export async function listEffectiveChoirAffiliationsOfUsersAt(
   database: OrgStructureDatabase,
   userIds: string[],
@@ -286,7 +188,7 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
 ) {
   requireDate(date)
   if (!userIds.length) return []
-  const [direct, legacy, grants] = await Promise.all([
+  const [direct, grants] = await Promise.all([
     database
       .select({
         userId: directMembership.userId,
@@ -304,26 +206,6 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
           eq(group.active, true),
           lte(directMembership.startDate, date),
           or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
-        )
-      ),
-    database
-      .select({
-        userId: groupMember.userId,
-        groupId: group.id,
-        name: group.name,
-        type: group.type,
-        choirId: group.choirId
-      })
-      .from(groupMember)
-      .innerJoin(group, eq(group.id, groupMember.groupId))
-      .where(
-        and(
-          inArray(groupMember.userId, userIds),
-          eq(group.usesAppointmentModel, false),
-          inArray(group.type, ["Choir", "Section"]),
-          eq(group.active, true),
-          lte(groupMember.startDate, date),
-          or(isNull(groupMember.endDate), gt(groupMember.endDate, date))
         )
       ),
     database
@@ -347,7 +229,7 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
         )
       )
   ])
-  return [...new Map([...direct, ...legacy, ...grants].map((row) => [`${row.userId}:${row.groupId}`, row])).values()]
+  return [...new Map([...direct, ...grants].map((row) => [`${row.userId}:${row.groupId}`, row])).values()]
 }
 
 /** Public current read, using the same dated interpretation as historical lookups. */

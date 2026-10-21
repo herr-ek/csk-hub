@@ -10,14 +10,11 @@ import {
   changeVoice,
   correctAnnualAppointment,
   createChoir,
-  createGroup,
   createOrganisationGroup,
-  createPosition,
+  endAppointment,
   endDirectMembership,
-  endPositionHolding,
   listCurrentGroupMembers,
   placeSinger,
-  startLinkedPosition,
   startMembership
 } from "@/features/org-structure"
 import type { OrgStructureResult } from "@/features/org-structure/model"
@@ -89,7 +86,9 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     success(await changeVoice(db, { userId: singer, choirId: kk.choirId, voice: "B2", date: "2026-09-01" }))
     success(await placeSinger(db, { userId: singer, choirId: mk.choirId, voice: "T2", startDate: "2024-08-20" }))
     await setVoiceCapabilities(db, singer, ["B1", "B2", "T1"])
-    const committee = success(await createGroup(db, { name: unique("Committee"), type: "Övrig", choirId: kk.choirId }))
+    const committee = success(
+      await createOrganisationGroup(db, { name: unique("Crew"), type: "Roddgrupp", choirId: kk.choirId })
+    )
     success(await startMembership(db, { userId: singer, groupId: committee.id, startDate: "2025-01-01" }))
     const profile = await getMemberProfile(db, singer, singer)
     expect(profile?.choirs).toHaveLength(2)
@@ -117,40 +116,34 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     expect(profile?.choirs[0]).toMatchObject({ groupId: kk.choirId, section: null, startDate: "2020-01-10" })
   })
 
-  test("Positions retain both Group contexts, omit ended holdings and exclude archived Groups", async () => {
+  test("one appointment grants both Group contexts and expires as a single responsibility", async () => {
     const holder = await member()
-    const board = success(await createGroup(db, { name: unique("Styret"), type: "Board" }))
-    const sexmasteri = success(await createGroup(db, { name: unique("Sexmästeriet"), type: "Sexmästeri" }))
-    const position = success(
-      await createPosition(db, { name: unique("Sexmästare"), groupTypes: ["Board", "Sexmästeri"] })
+    const board = success(
+      await createOrganisationGroup(db, { name: unique("Styret 25/26"), type: "Board", organisationYear: 2025 })
     )
-    const ended = success(await createPosition(db, { name: unique("Former position"), groupTypes: ["Board"] }))
-    success(
-      await startLinkedPosition(db, {
-        userId: holder,
-        positionId: ended.id,
-        groupIds: [board.id],
-        startDate: "2025-01-01"
+    const sexmasteri = success(
+      await createOrganisationGroup(db, {
+        name: unique("Sexmästeriet 25/26"),
+        type: "Sexmästeri",
+        organisationYear: 2025
       })
     )
-    success(
-      await endPositionHolding(db, { userId: holder, positionId: ended.id, groupId: board.id, endDate: "2026-01-01" })
-    )
-    success(
-      await startLinkedPosition(db, {
+    const appointment = success(
+      await appointPosition(db, {
         userId: holder,
-        positionId: position.id,
-        groupIds: [board.id, sexmasteri.id],
-        startDate: "2026-01-01"
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        startDate: "2025-07-01"
       })
     )
-    const before = await getMemberProfile(db, holder, holder)
-    expect(before?.positions).toHaveLength(1)
+    const before = await getMemberProfile(db, holder, holder, "2025-08-01")
+    expect(before?.positions).toMatchObject([{ id: appointment.id, positionCode: "sexmastare" }])
     expect(before?.positions[0].groups.map((group) => group.id).sort()).toEqual([board.id, sexmasteri.id].sort())
+    success(await endAppointment(db, { appointmentId: appointment.id, endDate: "2026-07-01" }))
     success(await archiveGroup(db, sexmasteri.id))
     const after = await getMemberProfile(db, holder, holder)
-    expect(after?.groups.map((group) => group.groupId)).toEqual([board.id])
-    expect(after?.positions[0].groups.map((group) => group.id)).toEqual([board.id])
+    expect(after?.groups).toEqual([])
+    expect(after?.positions).toEqual([])
   })
 
   test("effective profile affiliations show one dated appointment across grants without enrolling a singer", async () => {

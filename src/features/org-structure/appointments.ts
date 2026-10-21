@@ -3,13 +3,7 @@ import "server-only"
 import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
-import {
-  appointmentGrant,
-  directMembership,
-  group,
-  groupMember,
-  positionAppointment
-} from "@/core/db/schema/org-structure"
+import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import { validateUserParticipation } from "./direct-membership"
 import { cskToday } from "./effective-reads"
@@ -42,7 +36,6 @@ async function resolveGrantGroups(
   const ids: string[] = []
   for (const type of definition.grants) {
     if (type === context.type) {
-      if (!context.usesAppointmentModel) throw new RuleViolation("position-not-allowed")
       ids.push(context.id)
       continue
     }
@@ -52,7 +45,6 @@ async function resolveGrantGroups(
       .where(
         and(
           eq(group.type, type),
-          eq(group.usesAppointmentModel, true),
           allowArchived ? undefined : eq(group.active, true),
           GROUP_POLICIES[type].lifetime === "annual"
             ? eq(group.organisationYear, year as number)
@@ -111,17 +103,6 @@ async function requirePrerequisiteCoverage(
           or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate)),
           endDate === null ? undefined : lt(directMembership.startDate, endDate)
         )
-      )),
-    ...(await tx
-      .select({ startDate: groupMember.startDate, endDate: groupMember.endDate })
-      .from(groupMember)
-      .where(
-        and(
-          eq(groupMember.userId, userId),
-          eq(groupMember.groupId, contextGroupId),
-          or(isNull(groupMember.endDate), gt(groupMember.endDate, startDate)),
-          endDate === null ? undefined : lt(groupMember.startDate, endDate)
-        )
       ))
   ].sort((a, b) => a.startDate.localeCompare(b.startDate))
   let coveredUntil: IsoDate | null = startDate
@@ -140,8 +121,7 @@ async function requirePrerequisiteCoverage(
 /**
  * Creates an explicitly modelled Group. Annual types require an integer organisationYear
  * from 1000 through 9998; other types forbid it. Choir-scoped types require choirId;
- * CSK-wide types forbid it. Choirs/Sections still use createChoir. Legacy creation and
- * the internal compatibility marker remain until redesign ticket 08.
+ * CSK-wide types forbid it. Choirs/Sections still use createChoir.
  */
 export function createOrganisationGroup(
   database: OrgStructureDatabase,
@@ -168,7 +148,7 @@ export function createOrganisationGroup(
     await requireChoirTeamAvailable(tx, input)
     const [created] = await tx
       .insert(group)
-      .values({ ...input, name: input.name.trim(), usesAppointmentModel: true })
+      .values({ ...input, name: input.name.trim() })
       .returning({ id: group.id })
     if (!created) throw new Error("Group creation returned no record.")
     return created
@@ -176,10 +156,10 @@ export function createOrganisationGroup(
 }
 
 /**
- * Records one appointment and resolves its grants from the fixed catalogue in one savepoint.
+ * Records one appointment and resolves its grants from the fixed definitions in one savepoint.
  * Dates are inclusive/exclusive. Annual Choir appointments need an explicit year; annual
  * Group contexts supply their year. Prerequisite participation must cover the entire tenure.
- * This additive API does not convert legacy holdings or feed legacy live reads (removed in 08).
+ * All organisation Positions are appointments with one shared tenure across their grants.
  */
 export function appointPosition(
   database: OrgStructureDatabase,
@@ -432,7 +412,7 @@ export function correctFluidAppointment(
   })
 }
 
-/** Dated appointment participation only; legacy live rosters are deliberately unchanged until cutover. */
+/** Dated appointment participation in groups where the fixed definitions grant membership. */
 export async function listAppointmentMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
   requireDate(date)
   const rows = await database
@@ -469,7 +449,7 @@ export async function listEffectiveMembersForGroupsAt(
     name: string
     email: string
     voice: string | null
-    memberships: { id: string; startDate: IsoDate; endDate: IsoDate | null; source: "direct" | "legacy" }[]
+    memberships: { id: string; startDate: IsoDate; endDate: IsoDate | null; source: "direct" }[]
     positions: {
       id: string
       positionCode: PositionCode
@@ -481,7 +461,7 @@ export async function listEffectiveMembersForGroupsAt(
   }
   if (!ids.length) return new Map<string, RosterMember[]>()
   const contextGroup = alias(group, "appointment_context")
-  const [direct, grants, legacy] = await Promise.all([
+  const [direct, grants] = await Promise.all([
     database
       .select({ membership: directMembership, name: user.name, email: user.email })
       .from(directMembership)
@@ -512,20 +492,7 @@ export async function listEffectiveMembersForGroupsAt(
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
         )
       )
-      .orderBy(asc(appointmentGrant.groupId), asc(contextGroup.name), asc(positionAppointment.positionCode)),
-    database
-      .select({ membership: groupMember, name: user.name, email: user.email })
-      .from(groupMember)
-      .innerJoin(group, eq(group.id, groupMember.groupId))
-      .innerJoin(user, eq(user.id, groupMember.userId))
-      .where(
-        and(
-          inArray(groupMember.groupId, ids),
-          eq(group.usesAppointmentModel, false),
-          lte(groupMember.startDate, date),
-          or(isNull(groupMember.endDate), gt(groupMember.endDate, date))
-        )
-      )
+      .orderBy(asc(appointmentGrant.groupId), asc(contextGroup.name), asc(positionAppointment.positionCode))
   ])
   const rosters = new Map(ids.map((id) => [id, new Map<string, RosterMember>()]))
   const getMember = (groupId: string, userId: string, name: string, email: string, voice: string | null) => {
@@ -549,16 +516,6 @@ export async function listEffectiveMembersForGroupsAt(
       startDate: member.membership.startDate as IsoDate,
       endDate: member.membership.endDate as IsoDate | null,
       source: "direct"
-    })
-  }
-  for (const { membership, name, email } of legacy) {
-    const member = getMember(membership.groupId, membership.userId, name, email, membership.voice)
-    if (!member) continue
-    member.memberships.push({
-      id: `${membership.userId}:${membership.groupId}:${membership.startDate}`,
-      startDate: membership.startDate as IsoDate,
-      endDate: membership.endDate as IsoDate | null,
-      source: "legacy"
     })
   }
   for (const { appointment, name, email, contextName, groupId } of grants) {

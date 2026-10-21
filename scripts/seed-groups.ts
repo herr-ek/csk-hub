@@ -2,7 +2,7 @@
 import { and, asc, count, eq, gt, inArray, isNull, lte, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
-import { group, directMembership as groupMember, section } from "@/core/db/schema/org-structure"
+import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { voiceCapability } from "@/core/db/schema/voice"
 import { assertLocalDatabase } from "./ops/guards"
 import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./ops/seed-data"
@@ -18,7 +18,7 @@ import { seedGroupActivity } from "./ops/seed-group-activity"
  */
 
 type Database = SeedDatabase
-type Division = NonNullable<typeof groupMember.$inferInsert.voice>
+type Division = NonNullable<typeof directMembership.$inferInsert.voice>
 
 const CHOIRS = ["MK", "DK", "KK"] as const
 
@@ -52,9 +52,7 @@ async function seed(database: Database) {
     const [seeded] = await database.select({ id: group.id }).from(group).where(eq(group.id, id))
     if (seeded) continue
     if (await activeGroupId(database, example.name, choirId)) continue
-    await database
-      .insert(group)
-      .values({ id, name: example.name, type: example.type, choirId, usesAppointmentModel: true })
+    await database.insert(group).values({ id, name: example.name, type: example.type, choirId })
     created.push(example.name)
   }
 
@@ -64,7 +62,7 @@ async function seed(database: Database) {
     .where(
       and(
         or(isNull(user.banned), eq(user.banned, false)),
-        notExists(database.select().from(groupMember).where(eq(groupMember.userId, user.id)))
+        notExists(database.select().from(directMembership).where(eq(directMembership.userId, user.id)))
       )
     )
     .orderBy(user.createdAt)
@@ -86,7 +84,7 @@ async function seed(database: Database) {
         ? slot
         : slots.find((other) => other.choirId === choirId && other.sectionId !== slot.sectionId)
     if (changed && previous) {
-      await database.insert(groupMember).values({
+      await database.insert(directMembership).values({
         id: seedId(`placement:${id}:${previous.sectionId}:${startDate}`),
         userId: id,
         groupId: previous.sectionId,
@@ -95,7 +93,7 @@ async function seed(database: Database) {
         voice: previous === slot ? slot.divisions.find((division) => division !== voice) : previous.divisions[0]
       })
     }
-    await database.insert(groupMember).values([
+    await database.insert(directMembership).values([
       { id: seedId(`placement:${id}:${slot.choirId}:${startDate}`), userId: id, groupId: slot.choirId, startDate },
       {
         id: seedId(`placement:${id}:${slot.sectionId}:${changed ? "2026-02-01" : startDate}`),
@@ -142,15 +140,15 @@ async function sectionSlots(database: Database) {
     throw new Error("The three Choirs and their twelve Sections are required; run `bun run ops reference-data` first.")
   }
   const sizes = await database
-    .select({ groupId: groupMember.groupId, members: count() })
-    .from(groupMember)
+    .select({ groupId: directMembership.groupId, members: count() })
+    .from(directMembership)
     .where(
       and(
-        lte(groupMember.startDate, "2026-10-01"),
-        or(isNull(groupMember.endDate), gt(groupMember.endDate, "2026-10-01"))
+        lte(directMembership.startDate, "2026-10-01"),
+        or(isNull(directMembership.endDate), gt(directMembership.endDate, "2026-10-01"))
       )
     )
-    .groupBy(groupMember.groupId)
+    .groupBy(directMembership.groupId)
   return sections.map(({ choirId, sectionId, voice }) => ({
     choirId,
     sectionId,

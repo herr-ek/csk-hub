@@ -6,7 +6,6 @@ import {
   addDirectMembership,
   changeDirectMembership,
   correctDirectMembership,
-  correctLegacyMembership,
   endDirectMembership
 } from "../../direct-membership"
 import { shiftDate } from "../../model/dates"
@@ -74,27 +73,5 @@ export async function endDirectMemberAction(_state: GroupCommandState, formData:
     endSchema,
     { membershipId: value(formData, "membershipId"), lastDay: value(formData, "lastDay") },
     (input) => endDirectMembership(db, { membershipId: input.membershipId, endDate: shiftDate(input.lastDay, 1) })
-  )
-}
-
-const legacyCorrectionSchema = z.object({
-  ...periodFields,
-  userId: fields.userId,
-  originalGroupId: fields.id,
-  originalStartDate: fields.date
-})
-
-export async function correctLegacyMemberAction(_state: GroupCommandState, formData: FormData) {
-  return runGroupCommand(
-    "correct-legacy-member",
-    legacyCorrectionSchema,
-    {
-      ...periodValues(formData),
-      userId: value(formData, "userId"),
-      originalGroupId: value(formData, "originalGroupId"),
-      originalStartDate: value(formData, "originalStartDate")
-    },
-    ({ lastDay, ...input }) =>
-      correctLegacyMembership(db, { ...input, endDate: lastDay ? shiftDate(lastDay, 1) : null })
   )
 }
