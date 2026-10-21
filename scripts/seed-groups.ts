@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
-import { and, asc, count, eq, gt, isNull, lte, notExists, or } from "drizzle-orm"
+import { and, asc, count, eq, gt, inArray, isNull, lte, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { group, directMembership as groupMember, section } from "@/core/db/schema/org-structure"
 import { voiceCapability } from "@/core/db/schema/voice"
 import { assertLocalDatabase } from "./ops/guards"
-import { SEED_USERS, type SeedDatabase, seedId } from "./ops/seed-data"
+import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./ops/seed-data"
 import { seedGroupActivity } from "./ops/seed-group-activity"
 
 /**
@@ -20,7 +20,7 @@ import { seedGroupActivity } from "./ops/seed-group-activity"
 type Database = SeedDatabase
 type Division = NonNullable<typeof groupMember.$inferInsert.voice>
 
-const CHOIRS = ["MK", "DK", "KK"]
+const CHOIRS = ["MK", "DK", "KK"] as const
 
 const EXAMPLE_GROUPS: { name: string; type: (typeof group.type.enumValues)[number]; choir?: string }[] = [
   { name: "Jubileumskommittén", type: "Övrig" },
@@ -116,7 +116,7 @@ async function seed(database: Database) {
     slot.members++
   }
 
-  created.push(...(await seedGroupActivity(database)))
+  await seedGroupActivity(database)
   return { created, placed: unplaced.length }
 }
 
@@ -126,14 +126,13 @@ async function seed(database: Database) {
  */
 async function sectionSlots(database: Database) {
   const choirGroup = alias(group, "choir_group")
+  const choirIds = CHOIRS.map(referenceChoirId)
   const sections = await database
     .select({ choirId: choirGroup.id, sectionId: group.id, voice: section.voice })
     .from(section)
     .innerJoin(group, eq(group.id, section.groupId))
     .innerJoin(choirGroup, eq(choirGroup.id, group.choirId))
-    .where(
-      and(eq(group.active, true), eq(choirGroup.active, true), or(...CHOIRS.map((name) => eq(choirGroup.name, name))))
-    )
+    .where(and(eq(group.active, true), eq(choirGroup.active, true), inArray(choirGroup.id, choirIds)))
     .orderBy(asc(choirGroup.name), asc(group.name))
   if (
     sections.length !== 12 ||
@@ -161,9 +160,14 @@ async function sectionSlots(database: Database) {
 }
 
 async function requireChoir(database: Database, name: string) {
-  const id = await activeGroupId(database, name, null)
-  if (!id) throw new Error(`Choir ${name} is missing; run \`bun run ops reference-data\` first.`)
-  return id
+  const id = referenceChoirId(name as (typeof CHOIRS)[number])
+  const [row] = await database
+    .select({ id: group.id, type: group.type, active: group.active })
+    .from(group)
+    .where(eq(group.id, id))
+  if (row?.type !== "Choir" || !row.active)
+    throw new Error(`Choir ${name} is missing or archived; run \`bun run ops reference-data\` first.`)
+  return row.id
 }
 
 async function activeGroupId(database: Database, name: string, choirId: string | null) {

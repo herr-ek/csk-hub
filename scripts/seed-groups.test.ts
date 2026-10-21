@@ -2,16 +2,17 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq, isNull } from "drizzle-orm"
 import { Client } from "pg"
 import { user } from "@/core/db/schema/auth"
-import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import {
   correctAnnualAppointment,
   correctFluidAppointment,
   createOrganisationGroup
 } from "@/features/org-structure/appointments"
 import { addDirectMembership, correctDirectMembership } from "@/features/org-structure/direct-membership"
+import { renameGroup } from "@/features/org-structure/structure"
 import { createTestDatabase } from "../test/database"
 import { insertReferenceData } from "./ops/reference-data"
-import { SEED_USERS, seedId } from "./ops/seed-data"
+import { referenceChoirId, referenceContinuingGroupId, referenceSectionId, SEED_USERS, seedId } from "./ops/seed-data"
 import { seedGroups } from "./seed-groups"
 import { seedUsers } from "./seed-users"
 
@@ -41,6 +42,7 @@ describe.skipIf(!database)("seedGroups", () => {
 
     const { created, placed } = await seedGroups(t.db)
     expect(created).toContain("KK roddgrupp")
+    expect(created).not.toContain("fixed annual Groups and stable appointment examples")
     expect(placed).toBe(2)
 
     for (const userId of users) {
@@ -162,5 +164,63 @@ describe.skipIf(!database)("seedGroups", () => {
       startDate: gigAppointment.startDate,
       endDate: gigAppointment.endDate
     })
+  })
+
+  test("reference and demo reruns preserve renamed Choir, Section, and continuing Group identities", async () => {
+    await seedUsers(t.db)
+    const client = new Client({ connectionString: t.url })
+    await client.connect()
+    try {
+      await insertReferenceData(client)
+    } finally {
+      await client.end()
+    }
+    await seedGroups(t.db)
+
+    const [choir] = await t.db
+      .select()
+      .from(group)
+      .where(and(eq(group.name, "DK"), eq(group.type, "Choir")))
+    const [sectionRow] = await t.db
+      .select()
+      .from(group)
+      .where(and(eq(group.name, "DKS1"), eq(group.type, "Section")))
+    const [continuing] = await t.db.select().from(group).where(eq(group.type, "Föräldramötet"))
+    if (!choir || !sectionRow || !continuing) throw new Error("Missing reference Groups")
+    expect(choir.id).toBe(referenceChoirId("DK"))
+    expect(sectionRow.id).toBe(referenceSectionId("DK", "DKS1"))
+    expect(continuing.id).toBe(referenceContinuingGroupId("Föräldramötet"))
+    expect((await renameGroup(t.db, choir.id, "Edited DK")).success).toBe(true)
+    expect((await renameGroup(t.db, sectionRow.id, "Edited DKS1")).success).toBe(true)
+    expect((await renameGroup(t.db, continuing.id, "Edited Parents Meeting")).success).toBe(true)
+
+    const groupsBefore = await t.db.select().from(group)
+    const membershipsBefore = await t.db.select().from(directMembership)
+    const appointmentsBefore = await t.db.select().from(positionAppointment)
+    const grantsBefore = await t.db.select().from(appointmentGrant)
+    const sectionsBefore = await t.db.select().from(section)
+    const clientAgain = new Client({ connectionString: t.url })
+    await clientAgain.connect()
+    try {
+      expect(await insertReferenceData(clientAgain)).toEqual([])
+    } finally {
+      await clientAgain.end()
+    }
+    const rerun = await seedGroups(t.db)
+    expect(rerun.created).toEqual([])
+    expect(await t.db.select().from(group)).toEqual(groupsBefore)
+    expect(await t.db.select().from(directMembership)).toEqual(membershipsBefore)
+    expect(await t.db.select().from(positionAppointment)).toEqual(appointmentsBefore)
+    expect(await t.db.select().from(appointmentGrant)).toEqual(grantsBefore)
+    expect(await t.db.select().from(section)).toEqual(sectionsBefore)
+    expect(await t.db.select().from(group).where(eq(group.id, choir.id))).toMatchObject([
+      expect.objectContaining({ name: "Edited DK", type: "Choir" })
+    ])
+    expect(await t.db.select().from(group).where(eq(group.id, sectionRow.id))).toMatchObject([
+      expect.objectContaining({ name: "Edited DKS1", type: "Section", choirId: choir.id })
+    ])
+    expect(await t.db.select().from(group).where(eq(group.id, continuing.id))).toMatchObject([
+      expect.objectContaining({ name: "Edited Parents Meeting", type: "Föräldramötet" })
+    ])
   })
 })

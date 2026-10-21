@@ -24,3 +24,16 @@ export function seedId(key: string): string {
   const hex = createHash("sha256").update(`csk-hub-demo:${key}`).digest("hex")
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`
 }
+
+/** Stable identity keys for reference Groups whose display names admins may edit. */
+export function referenceChoirId(name: "MK" | "DK" | "KK") {
+  return seedId(`reference:choir:${name}`)
+}
+
+export function referenceSectionId(choir: "MK" | "DK" | "KK", section: string) {
+  return seedId(`reference:section:${choir}:${section}`)
+}
+
+export function referenceContinuingGroupId(type: string) {
+  return seedId(`reference:continuing:${type}`)
+}

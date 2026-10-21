@@ -1,6 +1,7 @@
 import { Client, type ClientBase } from "pg"
 import { secureConnection } from "@/core/db/tls"
 import { confirmProductionWrite } from "./guards"
+import { referenceChoirId, referenceContinuingGroupId, referenceSectionId } from "./seed-data"
 import { announce, type Database } from "./target"
 
 /**
@@ -97,23 +98,30 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
   await client.query("BEGIN")
   try {
     for (const choir of REFERENCE_DATA.choirs) {
-      let choirId = await activeGroupId(client, choir.name, "Choir", null)
+      const choirSeedId = referenceChoirId(choir.name as "MK" | "DK" | "KK")
+      let choirId = await seededGroupId(client, choirSeedId, "Choir", null)
+      choirId ??= await activeGroupId(client, choir.name, "Choir", null)
       if (!choirId) {
-        choirId = await insertGroup(client, choir.name, "Choir", null, true)
+        choirId = await insertGroup(client, choir.name, "Choir", null, true, null, choirSeedId)
         await client.query(`insert into "choir" ("group_id") values ($1)`, [choirId])
         created.push(choir.name)
       }
       for (const section of choir.sections) {
-        if (await activeGroupId(client, section.name, "Section", choirId)) continue
-        const sectionId = await insertGroup(client, section.name, "Section", choirId, true)
+        const sectionSeedId = referenceSectionId(choir.name as "MK" | "DK" | "KK", section.name)
+        let sectionId = await seededGroupId(client, sectionSeedId, "Section", choirId)
+        sectionId ??= await activeGroupId(client, section.name, "Section", choirId)
+        if (sectionId) continue
+        sectionId = await insertGroup(client, section.name, "Section", choirId, true, null, sectionSeedId)
         await client.query(`insert into "section" ("group_id", "voice") values ($1, $2)`, [sectionId, section.voice])
         created.push(section.name)
       }
     }
 
     for (const definition of REFERENCE_DATA.continuingGroups) {
-      if (await activeGroupId(client, definition.name, definition.type, null)) continue
-      await insertGroup(client, definition.name, definition.type, null, true)
+      const id = referenceContinuingGroupId(definition.type)
+      const existingId = await seededGroupId(client, id, definition.type, null)
+      if (existingId || (await activeGroupId(client, definition.name, definition.type, null))) continue
+      await insertGroup(client, definition.name, definition.type, null, true, null, id)
       created.push(definition.name)
     }
     for (const year of [currentYear, currentYear + 1]) {
@@ -141,6 +149,19 @@ async function activeGroupId(client: ClientBase, name: string, type: string, cho
   return rows[0]?.id
 }
 
+async function seededGroupId(client: ClientBase, id: string, type: string, choirId: string | null) {
+  const { rows } = await client.query<{ id: string; type: string; choir_id: string | null; active: boolean }>(
+    `select "id", "type", "choir_id", "active" from "group" where "id" = $1`,
+    [id]
+  )
+  const row = rows[0]
+  if (!row) return undefined
+  if (row.type !== type || row.choir_id !== choirId)
+    throw new Error(`Reference Group identity ${id} has edited structural metadata; review it before seeding.`)
+  if (!row.active) throw new Error(`Reference Group identity ${id} is archived; seeding will not recreate it.`)
+  return row.id
+}
+
 async function annualGroupId(client: ClientBase, type: string, year: number) {
   const { rows } = await client.query<{ id: string }>(
     `select "id" from "group" where "type" = $1 and "organisation_year" = $2 and "uses_appointment_model"`,
@@ -156,12 +177,18 @@ async function insertGroup(
   type: string,
   choirId: string | null,
   managed = false,
-  year: number | null = null
+  year: number | null = null,
+  id?: string
 ) {
-  const { rows } = await client.query<{ id: string }>(
-    `insert into "group" ("name", "type", "choir_id", "uses_appointment_model", "organisation_year") values ($1, $2, $3, $4, $5) returning "id"`,
-    [name, type, choirId, managed, year]
-  )
+  const { rows } = id
+    ? await client.query<{ id: string }>(
+        `insert into "group" ("id", "name", "type", "choir_id", "uses_appointment_model", "organisation_year") values ($1, $2, $3, $4, $5, $6) returning "id"`,
+        [id, name, type, choirId, managed, year]
+      )
+    : await client.query<{ id: string }>(
+        `insert into "group" ("name", "type", "choir_id", "uses_appointment_model", "organisation_year") values ($1, $2, $3, $4, $5) returning "id"`,
+        [name, type, choirId, managed, year]
+      )
   const [row] = rows
   if (!row) throw new Error(`Creating the group ${name} did not return a record.`)
   return row.id

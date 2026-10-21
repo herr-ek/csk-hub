@@ -1,16 +1,17 @@
-import { and, count, eq, gt, inArray, isNull, lt, or } from "drizzle-orm"
+import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { GROUP_POLICIES, POSITION_DEFINITIONS, type PositionCode } from "@/features/org-structure/model"
-import { SEED_USERS, type SeedDatabase, seedId } from "./seed-data"
+import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./seed-data"
 
 const CURRENT_YEAR = 2026
 
 /** Add only stable demo records. Deterministic IDs make reruns additive and preserve manual edits. */
-export async function seedGroupActivity(database: SeedDatabase): Promise<string[]> {
-  const created: string[] = []
+export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
   const groups = await database.select().from(group)
-  const choirs = groups.filter((row) => row.type === "Choir" && ["MK", "DK", "KK"].includes(row.name))
+  const choirs = (["MK", "DK", "KK"] as const)
+    .map((name) => ({ id: referenceChoirId(name), name }))
+    .filter(({ id }) => groups.some((row) => row.id === id && row.type === "Choir" && row.active))
   const singers = await database
     .select({ id: user.id })
     .from(user)
@@ -21,12 +22,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<string[
       )
     )
     .then((rows) => rows.map(({ id }) => id))
-  if (choirs.length !== 3 || singers.length < 24) return created
-
-  const before = {
-    memberships: Number((await database.select({ count: count() }).from(directMembership))[0]?.count ?? 0),
-    appointments: Number((await database.select({ count: count() }).from(positionAppointment))[0]?.count ?? 0)
-  }
+  if (choirs.length !== 3 || singers.length < 24) return
 
   const byId = new Map(groups.map((row) => [row.id, row]))
   const annual = (type: (typeof group.type.enumValues)[number], year: number) => {
@@ -293,12 +289,4 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<string[
     await addDirect("gigleader-prerequisite", gigLeader, gigGroup.id, "2026-07-01", null)
     await appoint(`gigleader-${gigGroup.id}`, gigLeader, "gigledare", gigGroup.id, null, "2026-07-01", null, [])
   }
-
-  const after = {
-    memberships: Number((await database.select({ count: count() }).from(directMembership))[0]?.count ?? 0),
-    appointments: Number((await database.select({ count: count() }).from(positionAppointment))[0]?.count ?? 0)
-  }
-  if (after.memberships > before.memberships || after.appointments > before.appointments)
-    created.push("fixed annual Groups and stable appointment examples")
-  return created
 }
