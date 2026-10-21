@@ -104,10 +104,15 @@ in, and their Voice is a Voice division contained by that Section's Voice: B1 or
 _Avoid_: Voice, part, stämma
 
 **Membership**:
-Being part of a Group, either through a Position appointment or independently through a
-manual addition, as a singer or Helper. Choir and Section Memberships are not bound to an
-Organisational year; membership in a Group belonging to a Choir implies membership in that Choir.
+Being part of a Group, either through a Position appointment or independently as a singer or
+Helper. Choir and Section Memberships are not bound to an Organisational year; membership in a
+Group belonging to a Choir implies membership in that Choir.
 _Avoid_: Enrolment, role
+
+**Direct Membership**:
+An explicit period of participation in a Group that does not depend on a Position appointment,
+such as a singer's placement or a Helper's participation.
+_Avoid_: Position appointment
 
 **Helper**:
 A person explicitly added to a Group without a Position in it; taking a Position replaces
@@ -155,11 +160,15 @@ permission role; use Post only for a news announcement.
 _Avoid_: Post, role, title, Admin
 
 **Position appointment**:
-One person's tenure in a Position, bringing them into every Group that Position entails,
-as one appointment as Sexmästare brings its holder into both Styret and Sexmästeriet.
-A Choir- or Section-scoped appointment requires existing Membership there; renewal beyond
-an appointment's end is explicit.
+One person's tenure in a Position in a particular context; its defined Group Memberships may
+include that context, other Groups, or both. A Choir- or Section-scoped appointment requires
+existing Membership there; renewal beyond an appointment's end is explicit.
 _Avoid_: Separate appointment per Group
+
+**Position context**:
+The Group in which a Position is held and that gives the responsibility its specific meaning,
+such as the Choir whose Konsertmästare is appointed. Membership in additional Groups does not
+change the context.
 
 **Position holder**:
 A person with a Position appointment; replacing them transfers the places in Groups that

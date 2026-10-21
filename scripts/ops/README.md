@@ -11,11 +11,11 @@ bun run ops status               # local and production migration status side by
 bun run ops migrate              # apply pending migrations locally
 bun run ops studio               # Drizzle Studio against the local database
 bun run ops grant-admin <email>  # make an existing user an admin
-bun run ops reference-data       # Choirs, Sections, Styret and Positions; also with --prod
+bun run ops reference-data       # Choirs, Sections and fixed concrete Groups; also with --prod
 bun run ops reset                # erase the local database, migrate it and add the reference data
 bun run ops seed-admin           # local admin account
 bun run ops seed-users           # 100 verified local example accounts, including three Admins
-bun run ops seed-groups          # balanced placements, groups, Positions and their history
+bun run ops seed-groups          # balanced placements, direct Memberships, appointments and history
 bun run ops seed-posts           # 24 published example Posts, after seed-users
 bun run ops seed-demo            # reference data + all of the above, after migrating
 
@@ -47,10 +47,9 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
   regain admin access, and it is allowed in production because it creates no account
   and no credentials. The user must already exist; their existing roles are kept, and
   a deactivated user stays deactivated.
-- `reference-data` against production also requires typing `prod`. It is allowed there
-  because every environment needs the same org structure (the Choirs, their Sections,
-  Styret, the Gigmästeri and the Position catalogue), and it fabricates no people. It only creates what
-  is missing, matching existing groups and Positions by name, in one transaction.
+- `reference-data` against production also requires typing `prod`. It creates only the shared
+  organisation structure, matching existing Groups by Choir, type, and annual identity. Formal
+  Positions are fixed in code; reference data does not create or edit a Position catalogue.
 - `reset` refuses outright with `--prod`, and refuses any `POSTGRES_URL` that is not a
   local database. Locally it asks before erasing; `--yes` skips the question, and without a
   terminal it refuses instead of waiting. It drops the `public` and `drizzle` schemas, runs
@@ -114,15 +113,12 @@ On an empty database the demo contains:
 Stable identities make these seeds repeatable: they insert missing fixtures and keep existing
 passwords, profile edits and Post edits. A conflicting existing Position assignment fails the
 demo transaction rather than displacing its holder. Direct scripts also enforce the local-only
-database guard. To return to the original demo after editing it, deliberately run
-`bun run ops reset`, then `bun run ops seed-demo`.
+database guard.
 
-## Organisation reconciliation inventory
+## Fresh local organisation
 
-`bun run ops organisation-inventory` prints a JSON report without changing data. `--prod`
-uses the usual explicit target selection and production banner; the database transaction is
-`REPEATABLE READ, READ ONLY`. The report runs before any conversion. It includes supported
-Position candidates, explicit and name-derived year evidence, duplicate singleton Groups,
-incompatible scope, unclassified Groups, linked-holding candidates and partial periods,
-conflicting Memberships, and unresolved direct-member intent. Matching names, Users or dates
-never approve a merge. Even paired candidates require review in redesign ticket 07.
+Ticket 08 resets the explicitly disposable configured local database after the final schema is
+ready, then seeds the redesigned examples. No existing-data conversion or audit step is part of
+this workflow. To intentionally recreate a local demo later, run `bun run ops reset`, then
+`bun run ops seed-demo`. Reset refuses a production target and refuses non-local `POSTGRES_URL`
+values; seed commands never reset data.
