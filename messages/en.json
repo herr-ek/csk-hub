@@ -634,7 +634,7 @@
     "detail": {
       "typeInChoir": "{type} in {choir}",
       "typeCskWide": "{type}, CSK-wide",
-      "archivedNotice": "This group is archived. Its history is kept, but it can no longer be changed.",
+      "archivedNotice": "This group is archived. Completed history can still be corrected; new, current, and future participation cannot be added.",
       "loading": "Loading group",
       "membersTitle": "Members ({count})",
       "noMembers": "No current members.",
@@ -742,7 +742,7 @@
       "already-holding-position": "This person already holds this Position.",
       "already-holding-elected-post": "In this group a person holds only one Position, and this person already holds one.",
       "not-holding-position": "This person does not hold this Position.",
-      "period-conflict": "The date overlaps an earlier period. Choose a later date.",
+      "period-conflict": "The period conflicts with another record or falls outside the Group's organisational year. Check the dates.",
       "invalid-input": "Check the form and try again.",
       "unexpected": "Something went wrong. Please try again.",
       "invalid-group-name": "Enter a non-empty Group name.",

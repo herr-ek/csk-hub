@@ -99,6 +99,7 @@ export function updateOrganisationGroup(
     const organisationYear = input.organisationYear ?? null
     const structural =
       current.type !== input.type || current.choirId !== choirId || current.organisationYear !== organisationYear
+    if (!current.active && structural) throw new RuleViolation("group-archived")
     if (current.type === "Choir" || current.type === "Section" || input.type === "Choir" || input.type === "Section") {
       if (structural) throw new RuleViolation("choir-created-with-sections")
     } else if (structural || !current.usesAppointmentModel) {

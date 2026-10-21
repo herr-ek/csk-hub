@@ -189,7 +189,10 @@ describe.skipIf(!database)("groups structure", () => {
       expect(row?.name).toBe(renamed)
 
       expectSuccess(await archiveGroup(t.db, id))
-      expect(await renameGroup(t.db, id, uniqueName("Festgrupp"))).toEqual({ success: false, error: "group-archived" })
+      const archivedName = uniqueName("Historisk Festgrupp")
+      expectSuccess(await renameGroup(t.db, id, archivedName))
+      const [archived] = await t.db.select().from(group).where(eq(group.id, id))
+      expect(archived?.name).toBe(archivedName)
     })
   })
 

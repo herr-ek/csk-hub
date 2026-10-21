@@ -61,7 +61,7 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
               </div>
             ) : null}
           </div>
-          {group.active ? <GroupHeaderActions group={group} choirs={detail.choirs} /> : null}
+          <GroupHeaderActions group={group} choirs={detail.choirs} />
         </div>
         {group.active ? null : <p className="text-sm text-muted-foreground">{t("detail.archivedNotice")}</p>}
       </div>

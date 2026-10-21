@@ -11,8 +11,8 @@ import {
 } from "./direct-membership"
 import { endMembership, placeSingerInSection, startMembership } from "./membership"
 import { listCurrentGroupMembers } from "./reads"
-import { createGroup } from "./structure"
-import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
+import { archiveGroup, createGroup } from "./structure"
+import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
 describe.skipIf(!database)("dated direct Membership", () => {
@@ -28,6 +28,103 @@ describe.skipIf(!database)("dated direct Membership", () => {
     expect(await listDirectMembersAt(t.db, groupId, "2027-06-30")).toMatchObject([{ userId }])
     expect(await listDirectMembersAt(t.db, groupId, "2027-07-01")).toEqual([])
     expect(await listDirectMemberships(t.db, groupId)).toMatchObject([{ id: membership.id, endDate: "2027-07-01" }])
+  })
+
+  test("Helpers cannot overlap their committee appointment but may rejoin after it ends", async () => {
+    const year = 3000 + Math.floor(Math.random() * 500)
+    const board = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: uniqueName(`Helper overlap Board ${year}`),
+        type: "Board",
+        organisationYear: year
+      })
+    )
+    const committee = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: uniqueName(`Helper overlap Sex ${year}`),
+        type: "Sexmästeri",
+        organisationYear: year
+      })
+    )
+    const userId = await t.user()
+    const helper = expectSuccess(
+      await addDirectMembership(t.db, {
+        userId,
+        groupId: committee.id,
+        startDate: `${year}-07-01`
+      })
+    )
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        startDate: `${year}-09-01`,
+        endDate: `${year}-12-01`
+      })
+    )
+
+    expect(await addDirectMembership(t.db, { userId, groupId: committee.id, startDate: `${year}-10-01` })).toEqual({
+      success: false,
+      error: "already-holding-position"
+    })
+    expect(
+      await correctDirectMembership(t.db, {
+        membershipId: helper.id,
+        groupId: committee.id,
+        startDate: `${year}-07-01`,
+        endDate: `${year}-10-01`
+      })
+    ).toEqual({ success: false, error: "already-holding-position" })
+    expect(
+      await changeDirectMembership(t.db, {
+        membershipId: helper.id,
+        date: `${year}-08-01`,
+        groupId: committee.id,
+        endDate: `${year}-12-01`
+      })
+    ).toEqual({ success: false, error: "already-holding-position" })
+    expect(await listDirectMemberships(t.db, committee.id)).toMatchObject([
+      { id: helper.id, startDate: `${year}-07-01`, endDate: `${year}-09-01` }
+    ])
+
+    expectSuccess(await addDirectMembership(t.db, { userId, groupId: committee.id, startDate: `${year}-12-01` }))
+  })
+
+  test("archived Groups allow ended Membership corrections but reject current or future placement", async () => {
+    const gigGroup = expectSuccess(
+      await createOrganisationGroup(t.db, { name: uniqueName("Archived Membership correction"), type: "GigGroup" })
+    )
+    const userId = await t.user()
+    const membership = expectSuccess(
+      await addDirectMembership(t.db, {
+        userId,
+        groupId: gigGroup.id,
+        startDate: "2020-01-01",
+        endDate: "2020-03-01"
+      })
+    )
+    expectSuccess(await archiveGroup(t.db, gigGroup.id))
+
+    expect(
+      await correctDirectMembership(t.db, {
+        membershipId: membership.id,
+        groupId: gigGroup.id,
+        startDate: "2020-01-02",
+        endDate: "2020-03-01"
+      })
+    ).toEqual({ success: true, data: { id: membership.id } })
+    expect(
+      await correctDirectMembership(t.db, {
+        membershipId: membership.id,
+        groupId: gigGroup.id,
+        startDate: "2020-01-02",
+        endDate: null
+      })
+    ).toEqual({ success: false, error: "group-archived" })
+    expect(await listDirectMemberships(t.db, gigGroup.id)).toMatchObject([
+      { id: membership.id, startDate: "2020-01-02", endDate: "2020-03-01" }
+    ])
   })
   test("corrections update historical and prepared records while invalid corrections leave reads unchanged", async () => {
     const groupId = expectSuccess(

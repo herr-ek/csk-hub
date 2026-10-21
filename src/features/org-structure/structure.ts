@@ -90,11 +90,10 @@ export function createChoir(database: OrgStructureDatabase, input: CreateChoirIn
   })
 }
 
-/** Renames an active group. Names stay unique among active groups within the same Choir. */
+/** Renames a Group's concrete identity, including archived historical Groups. */
 export function renameGroup(database: OrgStructureDatabase, groupId: string, name: string) {
   return runOrgStructureCommand(database, async (tx) => {
-    const row = await requireGroup(tx, groupId)
-    if (!row.active) throw new RuleViolation("group-archived")
+    await requireGroup(tx, groupId)
     await tx.update(group).set({ name: name.trim() }).where(eq(group.id, groupId))
   })
 }

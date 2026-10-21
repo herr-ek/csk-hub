@@ -634,7 +634,7 @@
     "detail": {
       "typeInChoir": "{type} in {choir}",
       "typeCskWide": "{type}, ganz CSK",
-      "archivedNotice": "Diese Gruppe ist archiviert. Ihr Verlauf bleibt erhalten, aber sie kann nicht mehr geändert werden.",
+      "archivedNotice": "Diese Gruppe ist archiviert. Abgeschlossene Einträge können weiterhin korrigiert werden; neue, aktuelle oder zukünftige Teilnahme ist nicht möglich.",
       "loading": "Gruppe wird geladen",
       "membersTitle": "Mitglieder ({count})",
       "noMembers": "Keine aktuellen Mitglieder.",
@@ -742,7 +742,7 @@
       "already-holding-position": "Diese Person hat dieses Amt bereits inne.",
       "already-holding-elected-post": "In dieser Gruppe hat eine Person nur ein Amt, und diese Person hat bereits eines.",
       "not-holding-position": "Diese Person hat dieses Amt nicht inne.",
-      "period-conflict": "Das Datum überschneidet sich mit einem früheren Zeitraum. Wähle ein späteres Datum.",
+      "period-conflict": "Der Zeitraum überschneidet sich mit einem anderen Eintrag oder liegt außerhalb des Organisationsjahres der Gruppe. Bitte prüfe die Daten.",
       "invalid-input": "Prüfe das Formular und versuche es erneut.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
       "invalid-group-name": "Gib einen nicht leeren Gruppennamen ein.",

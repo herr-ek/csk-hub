@@ -50,7 +50,7 @@ export function GroupHeaderActions({
         <input type="hidden" name="groupId" value={group.id} />
         <InputField label={t("name")} name="name" defaultValue={group.name} required maxLength={NAME_MAX_LENGTH} />
       </CommandDialog>
-      {archivable ? (
+      {archivable && group.active ? (
         <CommandDialog
           trigger={
             <Button type="button" variant="destructive">

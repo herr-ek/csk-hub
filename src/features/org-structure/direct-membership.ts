@@ -2,8 +2,16 @@ import "server-only"
 
 import { and, desc, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { directMembership, group, groupMember, positionAppointment, section } from "@/core/db/schema/org-structure"
+import {
+  appointmentGrant,
+  directMembership,
+  group,
+  groupMember,
+  positionAppointment,
+  section
+} from "@/core/db/schema/org-structure"
 import { contains, type VoiceDivision } from "@/features/voice/model"
+import { cskToday } from "./effective-reads"
 import { requireActiveGroup, requireGroup } from "./lookup"
 import { GROUP_POLICIES, type IsoDate, organisationYearPeriod, POSITION_DEFINITIONS, type PositionCode } from "./model"
 import {
@@ -177,6 +185,7 @@ async function membershipValues(tx: OrgStructureTransaction, input: MembershipIn
   if (policy.lifetime === "annual" && !bounds) throw new RuleViolation("annual-group-needs-year")
   const endDate = input.endDate === undefined ? (bounds?.endDate ?? null) : input.endDate
   if (endDate !== null) requireDate(endDate)
+  if (!target.active && (endDate === null || endDate > cskToday())) throw new RuleViolation("group-archived")
   if (
     (endDate !== null && endDate <= startDate) ||
     (bounds && (startDate < bounds.startDate || endDate === null || endDate > bounds.endDate))
@@ -237,8 +246,18 @@ export async function validateUserParticipation(tx: OrgStructureTransaction, use
     .innerJoin(group, eq(group.id, groupMember.groupId))
     .where(eq(groupMember.userId, userId))
   const appointments = await tx.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))
+  const grants = await tx
+    .select({ groupId: appointmentGrant.groupId, appointment: positionAppointment })
+    .from(appointmentGrant)
+    .innerJoin(positionAppointment, eq(positionAppointment.id, appointmentGrant.appointmentId))
+    .where(eq(positionAppointment.userId, userId))
   const rows = [...direct, ...legacy]
   for (const row of rows) {
+    if (
+      GROUP_POLICIES[row.group.type].directMembership === "helpers" &&
+      grants.some((grant) => grant.groupId === row.group.id && overlaps(grant.appointment, row.membership))
+    )
+      throw new RuleViolation("already-holding-position")
     if (
       row.group.choirId &&
       !covers(

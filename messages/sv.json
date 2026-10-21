@@ -634,7 +634,7 @@
     "detail": {
       "typeInChoir": "{type} i {choir}",
       "typeCskWide": "{type}, hela CSK",
-      "archivedNotice": "Gruppen är arkiverad. Historiken finns kvar, men gruppen kan inte längre ändras.",
+      "archivedNotice": "Gruppen är arkiverad. Avslutad historik kan fortfarande rättas, men nytt, pågående eller framtida deltagande kan inte läggas till.",
       "loading": "Laddar grupp",
       "membersTitle": "Medlemmar ({count})",
       "noMembers": "Inga nuvarande medlemmar.",
@@ -742,7 +742,7 @@
       "already-holding-position": "Personen har redan posten.",
       "already-holding-elected-post": "I den här gruppen har en person bara en post, och personen har redan en.",
       "not-holding-position": "Personen har inte posten.",
-      "period-conflict": "Datumet överlappar en tidigare period. Välj ett senare datum.",
+      "period-conflict": "Perioden krockar med en annan post eller ligger utanför gruppens verksamhetsår. Kontrollera datumen.",
       "invalid-input": "Kontrollera formuläret och försök igen.",
       "unexpected": "Något gick fel. Försök igen.",
       "invalid-group-name": "Ange ett gruppnamn som inte är tomt.",

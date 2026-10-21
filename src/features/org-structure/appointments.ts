@@ -12,8 +12,9 @@ import {
 } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import { validateUserParticipation } from "./direct-membership"
+import { cskToday } from "./effective-reads"
 import { requireChoirTeamAvailable } from "./group-cardinality"
-import { requireActiveGroup, requireChoir } from "./lookup"
+import { requireActiveGroup, requireChoir, requireGroup } from "./lookup"
 import {
   GROUP_POLICIES,
   type GroupType,
@@ -34,8 +35,9 @@ import {
 async function resolveGrantGroups(
   tx: OrgStructureTransaction,
   definition: (typeof POSITION_DEFINITIONS)[PositionCode],
-  context: Awaited<ReturnType<typeof requireActiveGroup>>,
-  year: number | undefined
+  context: Awaited<ReturnType<typeof requireGroup>>,
+  year: number | undefined,
+  allowArchived = false
 ) {
   const ids: string[] = []
   for (const type of definition.grants) {
@@ -51,7 +53,7 @@ async function resolveGrantGroups(
         and(
           eq(group.type, type),
           eq(group.usesAppointmentModel, true),
-          eq(group.active, true),
+          allowArchived ? undefined : eq(group.active, true),
           GROUP_POLICIES[type].lifetime === "annual"
             ? eq(group.organisationYear, year as number)
             : isNull(group.organisationYear)
@@ -347,7 +349,7 @@ export function correctAnnualAppointment(
     for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
     const definition = POSITION_DEFINITIONS[input.positionCode]
     if (!definition) throw new RuleViolation("position-not-allowed")
-    const context = await requireActiveGroup(tx, input.contextGroupId)
+    const context = await requireGroup(tx, input.contextGroupId)
     if (definition.endPolicy !== "annual" || context.type !== definition.context)
       throw new RuleViolation("position-not-allowed")
     const choirScopedAnnual = context.type === "Choir" && definition.prerequisite
@@ -358,8 +360,10 @@ export function correctAnnualAppointment(
     const endDate = requireDate(input.endDate)
     if (startDate < bounds.startDate || endDate > bounds.endDate || endDate <= startDate)
       throw new RuleViolation("period-conflict")
+    const historical = endDate <= cskToday()
+    if (!context.active && !historical) throw new RuleViolation("group-archived")
     if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
-    const grantIds = await resolveGrantGroups(tx, definition, context, input.organisationYear)
+    const grantIds = await resolveGrantGroups(tx, definition, context, input.organisationYear, historical)
     await tx
       .update(positionAppointment)
       .set({
@@ -401,12 +405,14 @@ export function correctFluidAppointment(
     for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
     const definition = POSITION_DEFINITIONS[input.positionCode]
     if (definition?.endPolicy !== "fluid") throw new RuleViolation("position-not-allowed")
-    const context = await requireActiveGroup(tx, input.contextGroupId)
+    const context = await requireGroup(tx, input.contextGroupId)
     if (context.type !== definition.context) throw new RuleViolation("position-not-allowed")
     const startDate = requireDate(input.startDate)
     const endDate = input.endDate === null ? null : requireDate(input.endDate)
     if (endDate !== null && endDate <= startDate) throw new RuleViolation("period-conflict")
-    const grantIds = await resolveGrantGroups(tx, definition, context, undefined)
+    const historical = endDate !== null && endDate <= cskToday()
+    if (!context.active && !historical) throw new RuleViolation("group-archived")
+    const grantIds = await resolveGrantGroups(tx, definition, context, undefined, historical)
     await tx
       .update(positionAppointment)
       .set({

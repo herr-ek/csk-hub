@@ -8,11 +8,14 @@ import {
   createOrganisationGroup,
   endAppointment,
   listAppointmentMembersAt,
+  listAppointmentsForGroup,
   listEffectiveMembersAt,
   listEffectiveMembersForGroupsAt,
   replaceAppointmentHolder
 } from "./appointments"
 import { addDirectMembership, endDirectMembership, listDirectMembersAt } from "./direct-membership"
+import { updateOrganisationGroup } from "./group-management"
+import { archiveGroup } from "./structure"
 import {
   createOrgStructureTestDatabase,
   expectSuccess,
@@ -77,6 +80,112 @@ describe.skipIf(!database)("appointment foundation", () => {
     const batched = await listEffectiveMembersForGroupsAt(t.db, [board.id, sex.id], `${year}-10-01`)
     expect(batched.get(board.id)).toMatchObject([{ userId, positions: [{ id: appointment.id }] }])
     expect(batched.get(sex.id)).toMatchObject([{ userId, positions: [{ id: appointment.id }] }])
+  })
+
+  test("completed annual appointments and archived Groups remain correctable and identifiable", async () => {
+    const year = new Date().getUTCFullYear() - 3 - Math.floor(Math.random() * 5)
+    const board = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: uniqueName(`Historical Board ${year}`),
+        type: "Board",
+        organisationYear: year
+      })
+    )
+    const committee = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: uniqueName(`Historical Sex ${year}`),
+        type: "Sexmästeri",
+        organisationYear: year
+      })
+    )
+    const userId = await t.user()
+    const appointment = expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        startDate: `${year}-09-01`
+      })
+    )
+    expectSuccess(await archiveGroup(t.db, board.id))
+    expectSuccess(await archiveGroup(t.db, committee.id))
+
+    expect(
+      await correctAnnualAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId,
+        positionCode: "sexmastare",
+        contextGroupId: board.id,
+        organisationYear: year,
+        startDate: `${year}-10-01`,
+        endDate: `${year + 1}-07-01`
+      })
+    ).toEqual({ success: true, data: { id: appointment.id } })
+    expect(await listAppointmentsForGroup(t.db, board.id)).toMatchObject([
+      { id: appointment.id, contextGroupId: board.id, startDate: `${year}-10-01` }
+    ])
+    expect(
+      await updateOrganisationGroup(t.db, {
+        groupId: board.id,
+        name: uniqueName(`Renamed historical Board ${year}`),
+        type: "Board",
+        organisationYear: year
+      })
+    ).toEqual({ success: true, data: { id: board.id } })
+    expect(
+      await updateOrganisationGroup(t.db, {
+        groupId: board.id,
+        name: uniqueName(`Moved historical Board ${year}`),
+        type: "Board",
+        organisationYear: year + 1
+      })
+    ).toEqual({ success: false, error: "group-archived" })
+  })
+
+  test("archived fluid Groups allow ended corrections but refuse current or future participation", async () => {
+    const gigGroup = expectSuccess(
+      await createOrganisationGroup(t.db, { name: uniqueName("Historical GigGroup"), type: "GigGroup" })
+    )
+    const userId = await t.user()
+    expectSuccess(
+      await addDirectMembership(t.db, {
+        userId,
+        groupId: gigGroup.id,
+        startDate: "2020-01-01",
+        endDate: "2020-03-01"
+      })
+    )
+    const appointment = expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "gigledare",
+        contextGroupId: gigGroup.id,
+        startDate: "2020-01-01",
+        endDate: "2020-03-01"
+      })
+    )
+    expectSuccess(await archiveGroup(t.db, gigGroup.id))
+
+    expect(
+      await correctFluidAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId,
+        positionCode: "gigledare",
+        contextGroupId: gigGroup.id,
+        startDate: "2020-01-02",
+        endDate: "2020-03-01"
+      })
+    ).toEqual({ success: true, data: { id: appointment.id } })
+    expect(
+      await correctFluidAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId,
+        positionCode: "gigledare",
+        contextGroupId: gigGroup.id,
+        startDate: "2020-01-02",
+        endDate: "2028-03-01"
+      })
+    ).toEqual({ success: false, error: "group-archived" })
   })
 
   test("appointing a committee officer converts an overlapping Helper and preserves the earlier period", async () => {

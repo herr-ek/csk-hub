@@ -124,7 +124,9 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
                 const open =
                   appointment.startDate <= today && (appointment.endDate === null || appointment.endDate > today)
                 const isContextGroup = appointment.contextGroupId === detail.group.id
-                const correctable = isContextGroup && detail.group.active && (year !== null || choirContext)
+                const historical = appointment.endDate !== null && appointment.endDate <= today
+                const correctable =
+                  isContextGroup && (detail.group.active || historical) && (year !== null || choirContext)
                 return (
                   <TableRow key={appointment.id}>
                     <TableCell>
@@ -255,7 +257,6 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
                             destructive
                           >
                             <input type="hidden" name="appointmentId" value={appointment.id} />
-                            <input type="hidden" name="today" value={today} />
                           </CommandDialog>
                         ) : null}
                       </div>
