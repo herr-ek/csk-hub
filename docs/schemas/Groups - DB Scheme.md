@@ -79,8 +79,8 @@ appointment holder per Position and context at a time, and the Board rule that o
 most one Board Position at a time. Group policy checks validate direct-membership eligibility,
 annual bounds, Section Voice containment, appointment code/context/year, and that each grant
 targets an allowed Group type and year. A grant to a Position's context type must point to that
-exact context Group. Foreign keys retain the referenced User, Group, and appointment records;
-deleting an appointment cascades its grants.
+exact context Group. Group references use restricted deletion so Group identity is preserved;
+User references cascade on User deletion, and deleting an appointment cascades its grants.
 
 The organisation feature adds rules that require coordinated reads and writes: complete required
 grant sets, continuous direct-Membership coverage for Choir, Section, and GigGroup prerequisites,
