@@ -78,8 +78,8 @@ the same direct Membership rules and preserve the explicit Section Voice.
 Position workflows use `appointPosition`, `replaceAppointmentHolder`, `endAppointment`,
 `cancelPreparedAppointment`, `correctAnnualAppointment`, and `correctFluidAppointment`. The
 catalogue fixes each appointment's context type, prerequisite, grants, and annual or fluid end
-policy. `correctAnnualAppointment` and `correctFluidAppointment` keep those respective policies;
-they cannot turn an annual responsibility into a fluid one or vice versa.
+policy. Each correction command validates the selected Position's policy and recomputes the
+appointment's grants.
 
 Use effective reads whenever a caller needs Group participation, rather than adding the direct
 and appointed sides independently:
