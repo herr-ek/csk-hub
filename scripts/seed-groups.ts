@@ -1,21 +1,20 @@
 #!/usr/bin/env bun
-import { and, asc, count, eq, isNull, notExists, or } from "drizzle-orm"
+import { and, asc, count, eq, gt, isNull, lte, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
-import { group, groupMember, section } from "@/core/db/schema/org-structure"
+import { group, directMembership as groupMember, section } from "@/core/db/schema/org-structure"
 import { voiceCapability } from "@/core/db/schema/voice"
 import { assertLocalDatabase } from "./ops/guards"
-import { SEED_USERS, type SeedDatabase } from "./ops/seed-data"
+import { SEED_USERS, type SeedDatabase, seedId } from "./ops/seed-data"
 import { seedGroupActivity } from "./ops/seed-group-activity"
 
 /**
- * Local example data on top of the reference data (`bun run ops reference-data`): the remaining
- * groups of the scheme's "Example placement", balanced singer placements, and demo Membership
- * and Position history. Scripts write directly, keeping the rules without importing features.
+ * Local example data on top of reference Groups: balanced singer placements and demo participation.
+ * Scripts write directly, keeping the rules without importing features.
  *
  * It writes the tables directly, so scripts never depend on a feature. The rows it writes keep the
- * org-structure rules: a singer joins the Choir and one of its Sections, with a Voice the Section's
- * Voice contains.
+ * org-structure rules: a singer has dated Choir and Section Memberships, with a Voice the Section
+ * contains.
  */
 
 type Database = SeedDatabase
@@ -24,9 +23,6 @@ type Division = NonNullable<typeof groupMember.$inferInsert.voice>
 const CHOIRS = ["MK", "DK", "KK"]
 
 const EXAMPLE_GROUPS: { name: string; type: (typeof group.type.enumValues)[number]; choir?: string }[] = [
-  { name: "Sexmästeri", type: "Sexmästeri" },
-  { name: "Konsertmästeri", type: "Konsertmästeri" },
-  { name: "Valberedningen", type: "Valberedning" },
   { name: "Jubileumskommittén", type: "Övrig" },
   { name: "Giggrupp vår", type: "GigGroup" },
   ...CHOIRS.flatMap((choir) => [
@@ -52,8 +48,13 @@ async function seed(database: Database) {
 
   for (const example of EXAMPLE_GROUPS) {
     const choirId = example.choir ? await requireChoir(database, example.choir) : null
+    const id = seedId(`example-group:${example.type}:${example.name}:${choirId ?? "csk"}`)
+    const [seeded] = await database.select({ id: group.id }).from(group).where(eq(group.id, id))
+    if (seeded) continue
     if (await activeGroupId(database, example.name, choirId)) continue
-    await database.insert(group).values({ name: example.name, type: example.type, choirId })
+    await database
+      .insert(group)
+      .values({ id, name: example.name, type: example.type, choirId, usesAppointmentModel: true })
     created.push(example.name)
   }
 
@@ -86,6 +87,7 @@ async function seed(database: Database) {
         : slots.find((other) => other.choirId === choirId && other.sectionId !== slot.sectionId)
     if (changed && previous) {
       await database.insert(groupMember).values({
+        id: seedId(`placement:${id}:${previous.sectionId}:${startDate}`),
         userId: id,
         groupId: previous.sectionId,
         startDate,
@@ -94,8 +96,14 @@ async function seed(database: Database) {
       })
     }
     await database.insert(groupMember).values([
-      { userId: id, groupId: slot.choirId, startDate },
-      { userId: id, groupId: slot.sectionId, startDate: changed ? "2026-02-01" : startDate, voice }
+      { id: seedId(`placement:${id}:${slot.choirId}:${startDate}`), userId: id, groupId: slot.choirId, startDate },
+      {
+        id: seedId(`placement:${id}:${slot.sectionId}:${changed ? "2026-02-01" : startDate}`),
+        userId: id,
+        groupId: slot.sectionId,
+        startDate: changed ? "2026-02-01" : startDate,
+        voice
+      }
     ])
     if (singer && index % 7 !== 0) {
       const capabilities =
@@ -137,7 +145,12 @@ async function sectionSlots(database: Database) {
   const sizes = await database
     .select({ groupId: groupMember.groupId, members: count() })
     .from(groupMember)
-    .where(isNull(groupMember.endDate))
+    .where(
+      and(
+        lte(groupMember.startDate, "2026-10-01"),
+        or(isNull(groupMember.endDate), gt(groupMember.endDate, "2026-10-01"))
+      )
+    )
     .groupBy(groupMember.groupId)
   return sections.map(({ choirId, sectionId, voice }) => ({
     choirId,
@@ -170,7 +183,7 @@ if (import.meta.main) {
   try {
     const { created, placed } = await seedGroups(db)
     console.log(created.length > 0 ? `Created groups: ${created.join(", ")}` : "Example groups already exist.")
-    console.log(`Placed ${placed} user(s) in a Section; added missing demo group and Position history.`)
+    console.log(`Placed ${placed} user(s) in a Section; added missing fixed appointments and Membership history.`)
   } finally {
     await db.$client.end()
   }
