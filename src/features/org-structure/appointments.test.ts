@@ -1,16 +1,23 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import {
   appointPosition,
   correctAnnualAppointment,
+  correctFluidAppointment,
   createOrganisationGroup,
+  endAppointment,
   listAppointmentMembersAt,
   listEffectiveMembersAt,
   replaceAppointmentHolder
 } from "./appointments"
 import { addDirectMembership, endDirectMembership, listDirectMembersAt } from "./direct-membership"
-import { createOrgStructureTestDatabase, expectSuccess, type OrgStructureTestDatabase } from "./test-support"
+import {
+  createOrgStructureTestDatabase,
+  expectSuccess,
+  type OrgStructureTestDatabase,
+  uniqueName
+} from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
 describe.skipIf(!database)("appointment foundation", () => {
@@ -492,6 +499,120 @@ describe.skipIf(!database)("appointment foundation", () => {
     )
     for (const name of ["Gig A", "Gig B"])
       expectSuccess(await createOrganisationGroup(t.db, { name, type: "GigGroup" }))
+  })
+
+  test("fluid responsibilities cross the year boundary and correction preserves the Section singer", async () => {
+    const otherChoir = await t.groupId("DK")
+    const section = await t.groupId("KKB")
+    const parents = await t.groupId("Parents")
+    const userId = await t.user()
+    expectSuccess(await addDirectMembership(t.db, { userId, groupId: section, startDate: "2052-01-01", voice: "B1" }))
+    const appointment = expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: "stamforalder",
+        contextGroupId: section,
+        startDate: "2052-06-01"
+      })
+    )
+    expect(await listAppointmentMembersAt(t.db, parents, "2052-07-01")).toMatchObject([{ userId }])
+    expect(await listAppointmentMembersAt(t.db, parents, "2053-07-01")).toMatchObject([{ userId }])
+    expectSuccess(
+      await correctFluidAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId,
+        positionCode: "stamforalder",
+        contextGroupId: section,
+        startDate: "2052-06-15",
+        endDate: null
+      })
+    )
+    expect(await listAppointmentMembersAt(t.db, parents, "2052-06-14")).toEqual([])
+    expect(await listAppointmentMembersAt(t.db, parents, "2052-06-15")).toMatchObject([{ userId }])
+    const [singerMembership] = await t.db
+      .select({
+        id: directMembership.id,
+        groupId: directMembership.groupId,
+        voice: directMembership.voice,
+        endDate: directMembership.endDate
+      })
+      .from(directMembership)
+      .where(and(eq(directMembership.userId, userId), eq(directMembership.groupId, section)))
+    expect(singerMembership).toMatchObject({ groupId: section, voice: "B1", endDate: null })
+    expect(await endDirectMembership(t.db, { membershipId: singerMembership.id, endDate: "2052-07-01" })).toEqual({
+      success: false,
+      error: "membership-dependency"
+    })
+    expect(
+      await correctFluidAppointment(t.db, {
+        appointmentId: appointment.id,
+        userId,
+        positionCode: "dirigent",
+        contextGroupId: otherChoir,
+        startDate: "2052-06-15",
+        endDate: null
+      })
+    ).toEqual({ success: false, error: "membership-dependency" })
+    expect(await listAppointmentMembersAt(t.db, parents, "2052-06-15")).toMatchObject([{ userId }])
+  })
+
+  test("Dirigent, Notfiskal, and Gigledare stay fluid and ending Gigledare preserves direct Membership", async () => {
+    const choir = await t.groupId("MK")
+    const singer = await t.user()
+    expectSuccess(await addDirectMembership(t.db, { userId: singer, groupId: choir, startDate: "2054-06-01" }))
+    const dirigent = expectSuccess(
+      await appointPosition(t.db, {
+        userId: singer,
+        positionCode: "dirigent",
+        contextGroupId: choir,
+        startDate: "2054-06-15"
+      })
+    )
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId: singer,
+        positionCode: "notfiskal",
+        contextGroupId: choir,
+        startDate: "2054-06-15"
+      })
+    )
+    expect(await listAppointmentMembersAt(t.db, choir, "2054-07-01")).toEqual([])
+    expect(await endAppointment(t.db, { appointmentId: dirigent.id, endDate: "2054-08-01" })).toEqual({
+      success: true,
+      data: { id: dirigent.id }
+    })
+
+    const gigGroup = expectSuccess(await createOrganisationGroup(t.db, { name: uniqueName("Gig"), type: "GigGroup" }))
+    const gigSinger = await t.user()
+    expectSuccess(await addDirectMembership(t.db, { userId: gigSinger, groupId: gigGroup.id, startDate: "2054-01-01" }))
+    const leader = expectSuccess(
+      await appointPosition(t.db, {
+        userId: gigSinger,
+        positionCode: "gigledare",
+        contextGroupId: gigGroup.id,
+        startDate: "2054-06-15"
+      })
+    )
+    expect(await listAppointmentMembersAt(t.db, gigGroup.id, "2054-07-01")).toEqual([])
+    const [gigMembership] = await t.db
+      .select({ id: directMembership.id })
+      .from(directMembership)
+      .where(and(eq(directMembership.userId, gigSinger), eq(directMembership.groupId, gigGroup.id)))
+    expect(await endDirectMembership(t.db, { membershipId: gigMembership.id, endDate: "2054-08-01" })).toEqual({
+      success: false,
+      error: "membership-dependency"
+    })
+    expect(await endAppointment(t.db, { appointmentId: leader.id, endDate: "2054-08-01" })).toMatchObject({
+      success: true
+    })
+    const [membershipAfterLeadership] = await t.db
+      .select()
+      .from(directMembership)
+      .where(and(eq(directMembership.userId, gigSinger), eq(directMembership.groupId, gigGroup.id)))
+    expect(membershipAfterLeadership).toMatchObject({ startDate: "2054-01-01", endDate: null })
+    expect(await endDirectMembership(t.db, { membershipId: gigMembership.id, endDate: "2054-08-01" })).toMatchObject({
+      success: true
+    })
   })
 
   test("correcting Sekreterare retains the continuing parents meeting grant and a missing companion rolls back", async () => {

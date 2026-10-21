@@ -8,6 +8,7 @@ import { POSITION_DEFINITIONS } from "../../model"
 import { AppointmentManagement } from "./AppointmentManagement"
 import { DirectMembersSection } from "./DirectMembersSection"
 import { EffectiveMembersSection } from "./EffectiveMembersSection"
+import { FluidAppointmentManagement } from "./FluidAppointmentManagement"
 import { GroupHeaderActions } from "./group-header-actions"
 import { MembersSection } from "./members-section"
 import { PositionsSection } from "./positions-section"
@@ -28,6 +29,7 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
   if (!detail) notFound()
   const { group } = detail
   const isChoirOrSection = group.type === "Choir" || group.type === "Section"
+  const fluidAppointmentContext = group.usesAppointmentModel || group.type === "Choir" || group.type === "Section"
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -71,6 +73,13 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
       {(group.usesAppointmentModel || group.type === "Choir") &&
       Object.values(POSITION_DEFINITIONS).some(({ context }) => context === group.type) ? (
         <AppointmentManagement detail={detail} today={date} />
+      ) : null}
+      {fluidAppointmentContext &&
+      (Object.values(POSITION_DEFINITIONS).some(
+        ({ context, endPolicy }) => context === group.type && endPolicy === "fluid"
+      ) ||
+        detail.appointments.some(({ organisationYear }) => organisationYear === null)) ? (
+        <FluidAppointmentManagement detail={detail} today={date} />
       ) : null}
     </main>
   )

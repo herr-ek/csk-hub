@@ -5,22 +5,20 @@ import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import {
-  appointmentGrant,
+  directMembership,
   group,
   groupMember,
   groupTypePosition,
   position,
-  positionAppointment,
   positionGroup,
   positionHolder,
   section
 } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
-import { listEffectiveMembersAt } from "../../appointments"
+import { listAppointmentsForGroup, listEffectiveMembersAt } from "../../appointments"
 import { listDirectMemberships } from "../../direct-membership"
 import type { GroupType, IsoDate } from "../../model"
-import { POSITION_DEFINITIONS, type PositionCode } from "../../model"
 
 /** The Voices a singer can have in a Section singing `voice`: the division itself, or the family's divisions. */
 const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) ? [voice] : divisionsOf(voice))
@@ -33,7 +31,6 @@ export async function getGroupDetail(
   date: IsoDate = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
 ) {
   const choirGroup = alias(group, "choir_group")
-  const appointmentContextGroup = alias(group, "appointment_context")
   const [row] = await db
     .select({
       id: group.id,
@@ -51,7 +48,7 @@ export async function getGroupDetail(
   if (!row) return null
   const choirMember = alias(groupMember, "choir_member")
 
-  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates, singers, appointments, annualContexts] =
+  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates, singers, appointments, annualContexts, fluidContexts] =
     await Promise.all([
       db
         .select({
@@ -144,18 +141,7 @@ export async function getGroupDetail(
             .innerJoin(group, eq(group.id, groupMember.groupId))
             .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
         : Promise.resolve([]),
-      db
-        .selectDistinct({
-          appointment: positionAppointment,
-          name: user.name,
-          contextName: appointmentContextGroup.name
-        })
-        .from(positionAppointment)
-        .leftJoin(appointmentGrant, eq(appointmentGrant.appointmentId, positionAppointment.id))
-        .innerJoin(user, eq(user.id, positionAppointment.userId))
-        .innerJoin(appointmentContextGroup, eq(appointmentContextGroup.id, positionAppointment.contextGroupId))
-        .where(or(eq(appointmentGrant.groupId, groupId), eq(positionAppointment.contextGroupId, groupId)))
-        .orderBy(desc(positionAppointment.startDate)),
+      listAppointmentsForGroup(db, groupId),
       row.organisationYear !== null
         ? db
             .select({ id: group.id, name: group.name, organisationYear: group.organisationYear })
@@ -169,10 +155,24 @@ export async function getGroupDetail(
               )
             )
             .orderBy(desc(group.organisationYear))
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      db
+        .select({ id: group.id, name: group.name, type: group.type, choirId: group.choirId })
+        .from(group)
+        .where(and(eq(group.type, row.type), eq(group.active, true)))
+        .orderBy(asc(group.name))
     ])
   const singerVoices = new Map(singers.map(({ userId, voice }) => [userId, voice]))
-
+  const directMemberships = await listDirectMemberships(db, groupId)
+  const contextIds = fluidContexts.map(({ id }) => id)
+  const [directContextMembers, legacyContextMembers] = contextIds.length
+    ? await Promise.all([
+        db.select({ userId: directMembership.userId }).from(directMembership).where(inArray(directMembership.groupId, contextIds)),
+        db.select({ userId: groupMember.userId }).from(groupMember).where(inArray(groupMember.groupId, contextIds))
+      ])
+    : [[], []]
+  const eligibleIds = new Set([...directContextMembers, ...legacyContextMembers].map(({ userId }) => userId))
+  const appointmentCandidates = candidates.filter(({ id }) => eligibleIds.has(id))
   const current = holdings.filter(({ endDate }) => endDate === null)
   const appointmentYears = await db
     .select({ id: group.id, name: group.name, type: group.type, organisationYear: group.organisationYear })
@@ -198,7 +198,8 @@ export async function getGroupDetail(
     },
     /** The Section's own Voice, or null for any other group. */
     sectionVoice: sectionRow?.voice ?? null,
-    directMemberships: await listDirectMemberships(db, groupId),
+    directMemberships,
+    effectiveMembers: row.usesAppointmentModel ? await listEffectiveMembersAt(db, groupId, date) : [],
     legacyMemberships: memberships,
     choirs: await db
       .select({ id: group.id, name: group.name })
@@ -256,21 +257,11 @@ export async function getGroupDetail(
         startDate,
         endDate: endDate as IsoDate
       })),
-    appointments: appointments.map(({ appointment, name, contextName }) => ({
-      id: appointment.id,
-      userId: appointment.userId,
-      name,
-      positionCode: appointment.positionCode as PositionCode,
-      position: POSITION_DEFINITIONS[appointment.positionCode as PositionCode]?.label ?? appointment.positionCode,
-      contextGroupId: appointment.contextGroupId,
-      contextName,
-      startDate: appointment.startDate as IsoDate,
-      endDate: appointment.endDate as IsoDate | null,
-      organisationYear: appointment.organisationYear
-    })),
+    appointments,
     annualContexts,
+    fluidContexts,
     appointmentYears,
-    effectiveMembers: row.usesAppointmentModel ? await listEffectiveMembersAt(db, groupId, date) : [],
+    appointmentCandidates,
     candidates
   }
 }

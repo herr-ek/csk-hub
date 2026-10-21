@@ -4,9 +4,11 @@ export {
   appointPosition,
   cancelPreparedAppointment,
   correctAnnualAppointment,
+  correctFluidAppointment,
   createOrganisationGroup,
   endAppointment,
   listAppointmentMembersAt,
+  listAppointmentsForGroup,
   listEffectiveMembersAt,
   replaceAppointmentHolder
 } from "./appointments"
