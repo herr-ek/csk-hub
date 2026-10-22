@@ -72,9 +72,9 @@ describe.skipIf(!database)("Choir and Group structure", () => {
     })
     const existingName = `Unique ${crypto.randomUUID()}`
     const first = expectSuccess(
-      await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig }, "4000-10-22")
+      await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Other }, "4000-10-22")
     )
-    expect(await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig }, "4000-10-22")).toEqual({
+    expect(await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Other }, "4000-10-22")).toEqual({
       success: false,
       error: "group-name-taken"
     })

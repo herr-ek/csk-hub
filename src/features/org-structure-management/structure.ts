@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq, gt, inArray, isNull, or } from "drizzle-orm"
 import { appointmentGrant, choir, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import { GroupType } from "@/core/org-structure"
+import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { contains, type Voice } from "@/features/voice/model"
 import { type OrgStructureDatabase, RuleViolation, runOrgStructureCommand } from "./operation"
 
@@ -14,6 +14,7 @@ export function renameGroup(database: OrgStructureDatabase, groupId: string, nam
   return runOrgStructureCommand(database, async (tx) => {
     const [current] = await tx.select().from(group).where(eq(group.id, groupId)).for("update")
     if (!current) throw new RuleViolation("group-not-found")
+    if (!hasExplicitGroupName(current.type)) throw new RuleViolation("group-name-derived")
     const cleanName = name.trim()
     if (!cleanName) throw new RuleViolation("invalid-group-name")
     await tx.update(group).set({ name: cleanName }).where(eq(group.id, groupId))

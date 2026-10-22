@@ -21,7 +21,8 @@ export function buildAffiliations(memberships: MemberGroup[], holdings: MemberPo
       section:
         activeGroups
           .filter((group) => group.type === GroupType.Section && group.choirId === choir.groupId)
-          .map(withPositions)[0] ?? null,
+          .map(withPositions)
+          .at(0) ?? null,
       groups: activeGroups
         .filter((group) => group.choirId === choir.groupId && group.type !== GroupType.Section)
         .map(withPositions)

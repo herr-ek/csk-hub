@@ -90,7 +90,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const committee = success(
       await createOrganisationGroup(
         db,
-        { name: unique("Crew"), type: GroupType.Roddgrupp, choirId: kk.choirId },
+        { name: unique("Crew"), type: GroupType.EquipmentTeam, choirId: kk.choirId },
         "4000-10-22"
       )
     )
@@ -135,7 +135,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
         db,
         {
           name: unique("Sexmästeriet 25/26"),
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: 2025
         },
         "4000-10-22"
@@ -144,13 +144,13 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const appointment = success(
       await appointPosition(db, {
         userId: holder,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: "2025-07-01"
       })
     )
     const before = await getMemberProfile(db, holder, holder, "2025-08-01")
-    expect(before?.positions).toMatchObject([{ id: appointment.id, positionCode: PositionCode.Sexmastare }])
+    expect(before?.positions).toMatchObject([{ id: appointment.id, positionCode: PositionCode.SocialCoordinator }])
     expect(before?.positions[0].groups.map((group) => group.id).sort()).toEqual([board.id, sexmasteri.id].sort())
     success(await endAppointment(db, { appointmentId: appointment.id, endDate: "2026-07-01" }))
     success(await archiveGroup(db, sexmasteri.id))
@@ -175,7 +175,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
         db,
         {
           name: sexName,
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: 2026
         },
         "4000-10-22"
@@ -184,7 +184,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const appointment = success(
       await appointPosition(db, {
         userId: holder,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: "2026-07-01"
       })
@@ -192,7 +192,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const second = success(
       await appointPosition(db, {
         userId: holder,
-        positionCode: PositionCode.Sexmastarinna,
+        positionCode: PositionCode.DeputySocialCoordinator,
         contextGroupId: sex.id,
         startDate: "2026-07-01"
       })
@@ -200,7 +200,8 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const profile = await getMemberProfile(db, holder, holder, "2026-08-01")
     expect(profile?.choirs).toEqual([])
     expect(profile?.positions.map((item) => item.id).sort()).toEqual([appointment.id, second.id].sort())
-    expect(profile?.positions.map((item) => item.contextName).sort()).toEqual([boardName, sexName].sort())
+    expect(profile?.positions.map((item) => item.contextGroupId).sort()).toEqual([board.id, sex.id].sort())
+    expect(profile?.positions.map((item) => item.contextName)).toEqual([null, null])
     expect(profile?.groups.map((item) => item.groupId).sort()).toEqual([board.id, sex.id].sort())
     expect(profile?.groups.find((item) => item.groupId === sex.id)?.positions).toHaveLength(2)
     expect(await listCurrentGroupMembers(db, board.id)).toMatchObject([{ userId: holder, startDate: "2026-07-01" }])
@@ -224,7 +225,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
         db,
         {
           name: unique("Konsertmästeri 26/27"),
-          type: GroupType.Konsertmästeri,
+          type: GroupType.ConcertCommittee,
           organisationYear: 2026
         },
         "4000-10-22"
@@ -235,7 +236,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const first = success(
       await appointPosition(db, {
         userId: singer,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: mk.choirId,
         startDate: "2026-07-01",
         organisationYear: 2026
@@ -244,7 +245,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const second = success(
       await appointPosition(db, {
         userId: singer,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: kk.choirId,
         startDate: "2026-07-01",
         organisationYear: 2026
@@ -253,13 +254,13 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const profile = await getMemberProfile(db, singer, singer, "2026-08-01")
     expect(
       profile?.positions
-        .filter((item) => item.positionCode === PositionCode.ChoirKonsertmastare)
+        .filter((item) => item.positionCode === PositionCode.ChoirConcertMaster)
         .map((item) => item.id)
         .sort()
     ).toEqual([first.id, second.id].sort())
     expect(
       profile?.positions
-        .filter((item) => item.positionCode === PositionCode.ChoirKonsertmastare)
+        .filter((item) => item.positionCode === PositionCode.ChoirConcertMaster)
         .map((item) => item.contextGroupId)
         .sort()
     ).toEqual([kk.choirId, mk.choirId].sort())
@@ -302,7 +303,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
         db,
         {
           name: unique(`Sex ${year}/${yearAfter} correction`),
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: year
         },
         "4000-10-22"
@@ -313,7 +314,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
         db,
         {
           name: unique(`Sex ${yearAfter}/${yearAfter + 1} correction`),
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: yearAfter
         },
         "4000-10-22"
@@ -322,7 +323,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const appointment = success(
       await appointPosition(db, {
         userId: predecessor,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board26.id,
         startDate
       })
@@ -331,7 +332,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
       await correctAnnualAppointment(db, {
         appointmentId: appointment.id,
         userId: successor,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board27.id,
         organisationYear: yearAfter,
         startDate: correctionDate,
@@ -350,7 +351,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
   test("adjacent direct periods use one exclusive handover boundary", async () => {
     const singer = await member("Adjacent periods")
     const group = success(
-      await createOrganisationGroup(db, { name: unique("Fluid participation"), type: GroupType.Övrig }, "4000-10-22")
+      await createOrganisationGroup(db, { name: unique("Fluid participation"), type: GroupType.Other }, "4000-10-22")
     )
     const predecessor = success(
       await addDirectMembership(db, { userId: singer, groupId: group.id, startDate: "2026-01-01" })

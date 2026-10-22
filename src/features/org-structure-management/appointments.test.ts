@@ -47,7 +47,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Sexmästeriet 26/27",
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: 2026
         },
         "4000-10-22"
@@ -57,7 +57,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: "2026-09-01"
       })
@@ -87,7 +87,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: uniqueName("Batched Sexmästeri"),
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: year
         },
         "4000-10-22"
@@ -97,7 +97,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: `${year}-09-01`
       })
@@ -125,7 +125,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: uniqueName(`Historical Sex ${year}`),
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: year
         },
         "4000-10-22"
@@ -135,7 +135,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: `${year}-09-01`
       })
@@ -147,7 +147,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctAnnualAppointment(t.db, {
         appointmentId: appointment.id,
         userId,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         organisationYear: year,
         startDate: `${year}-10-01`,
@@ -203,7 +203,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: gigGroup.id,
         startDate: "2020-01-01",
         endDate: "2020-03-01"
@@ -215,7 +215,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctFluidAppointment(t.db, {
         appointmentId: appointment.id,
         userId,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: gigGroup.id,
         startDate: "2020-01-02",
         endDate: "2020-03-01"
@@ -225,7 +225,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctFluidAppointment(t.db, {
         appointmentId: appointment.id,
         userId,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: gigGroup.id,
         startDate: "2020-01-02",
         endDate: "2028-03-01"
@@ -246,7 +246,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Sexmästeriet 37/38 helper",
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: 2037
         },
         "4000-10-22"
@@ -262,7 +262,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: "2037-09-15"
       })
@@ -288,7 +288,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: incumbent,
-        positionCode: PositionCode.Ordforande,
+        positionCode: PositionCode.Chair,
         contextGroupId: board.id,
         startDate: "2038-07-01"
       })
@@ -299,7 +299,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       successors.map((userId) =>
         replaceAppointmentHolder(t.db, {
           userId,
-          positionCode: PositionCode.Ordforande,
+          positionCode: PositionCode.Chair,
           contextGroupId: board.id,
           organisationYear: 2038,
           startDate: boundary
@@ -328,7 +328,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Sex 39/40 correction",
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: 2039
         },
         "4000-10-22"
@@ -350,7 +350,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Sex 40/41 correction",
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: 2040
         },
         "4000-10-22"
@@ -361,7 +361,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId: first,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: boardA.id,
         startDate: "2039-07-01"
       })
@@ -370,7 +370,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctAnnualAppointment(t.db, {
         appointmentId: appointment.id,
         userId: corrected,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: boardB.id,
         organisationYear: 2040,
         startDate: "2040-08-01",
@@ -395,7 +395,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       [await t.user(), await t.user()].map((userId) =>
         appointPosition(t.db, {
           userId,
-          positionCode: PositionCode.Ordforande,
+          positionCode: PositionCode.Chair,
           contextGroupId: board.id,
           startDate: "2027-09-01",
           endDate: "2028-01-01"
@@ -419,7 +419,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       expect(
         await appointPosition(tx, {
           userId: await t.user(),
-          positionCode: PositionCode.Sexmastare,
+          positionCode: PositionCode.SocialCoordinator,
           contextGroupId: board.id,
           startDate: "2028-07-01"
         })
@@ -428,7 +428,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       expectSuccess(
         await appointPosition(tx, {
           userId: await t.user(),
-          positionCode: PositionCode.Ordforande,
+          positionCode: PositionCode.Chair,
           contextGroupId: board.id,
           startDate: "2028-07-01",
           endDate: "2029-01-01"
@@ -453,7 +453,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: first,
-        positionCode: PositionCode.Ordforande,
+        positionCode: PositionCode.Chair,
         contextGroupId: board.id,
         startDate: "2029-09-01",
         endDate: "2030-01-01"
@@ -462,7 +462,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: second,
-        positionCode: PositionCode.Ordforande,
+        positionCode: PositionCode.Chair,
         contextGroupId: board.id,
         startDate: "2030-01-01"
       })
@@ -482,7 +482,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     )
     const userId = await t.user()
     const results = await Promise.all(
-      ([PositionCode.Ordforande, PositionCode.Kassor] as const).map((positionCode) =>
+      ([PositionCode.Chair, PositionCode.Treasurer] as const).map((positionCode) =>
         appointPosition(t.db, { userId, positionCode, contextGroupId: board.id, startDate: "2030-07-01" })
       )
     )
@@ -496,7 +496,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Konsertmästeriet 31/32",
-          type: GroupType.Konsertmästeri,
+          type: GroupType.ConcertCommittee,
           organisationYear: 2031
         },
         "4000-10-22"
@@ -516,7 +516,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       expectSuccess(
         await appointPosition(t.db, {
           userId,
-          positionCode: PositionCode.ChoirKonsertmastare,
+          positionCode: PositionCode.ChoirConcertMaster,
           contextGroupId,
           organisationYear: 2031,
           startDate: "2031-09-01"
@@ -526,7 +526,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: await t.user(),
-        positionCode: PositionCode.ForstaKonsertmastare,
+        positionCode: PositionCode.FirstConcertMaster,
         contextGroupId: board.id,
         startDate: "2031-07-01"
       })
@@ -548,7 +548,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Konsert 45/46 reps",
-          type: GroupType.Konsertmästeri,
+          type: GroupType.ConcertCommittee,
           organisationYear: 2045
         },
         "4000-10-22"
@@ -559,7 +559,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Konsert 46/47 reps",
-          type: GroupType.Konsertmästeri,
+          type: GroupType.ConcertCommittee,
           organisationYear: 2046
         },
         "4000-10-22"
@@ -575,7 +575,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId: original,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: choir,
         organisationYear: 2045,
         startDate: "2045-09-01"
@@ -589,7 +589,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctAnnualAppointment(t.db, {
         appointmentId: appointment.id,
         userId: corrected,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: choir,
         organisationYear: 2046,
         startDate: "2046-08-01",
@@ -603,7 +603,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const ineligible = await t.user("Not a singer")
     const result = await appointPosition(t.db, {
       userId: ineligible,
-      positionCode: PositionCode.ChoirKonsertmastare,
+      positionCode: PositionCode.ChoirConcertMaster,
       contextGroupId: choir,
       organisationYear: 2046,
       startDate: "2046-09-01"
@@ -616,7 +616,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctAnnualAppointment(t.db, {
         appointmentId: appointment.id,
         userId: ineligible,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: choir,
         organisationYear: 2046,
         startDate: "2046-08-01",
@@ -632,7 +632,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Gig 47/48 reps",
-          type: GroupType.Gigmästeri,
+          type: GroupType.GigCommittee,
           organisationYear: 2047
         },
         "4000-10-22"
@@ -652,7 +652,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       expectSuccess(
         await appointPosition(t.db, {
           userId,
-          positionCode: PositionCode.ChoirGigmastare,
+          positionCode: PositionCode.ChoirGigCoordinator,
           contextGroupId: choirId,
           organisationYear: 2047,
           startDate: "2047-09-01"
@@ -663,7 +663,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: cskHolder,
-        positionCode: PositionCode.CskGigmastare,
+        positionCode: PositionCode.OrganisationGigCoordinator,
         contextGroupId: board.id,
         startDate: "2047-07-01"
       })
@@ -671,10 +671,10 @@ describe.skipIf(!database)("appointment foundation", () => {
     const roster = await listEffectiveMembersAt(t.db, gigCommittee.id, "2047-09-01")
     expect(roster).toHaveLength(4)
     expect(roster.map(({ positions }) => positions[0]?.positionCode).sort()).toEqual([
-      PositionCode.ChoirGigmastare,
-      PositionCode.ChoirGigmastare,
-      PositionCode.ChoirGigmastare,
-      PositionCode.CskGigmastare
+      PositionCode.ChoirGigCoordinator,
+      PositionCode.ChoirGigCoordinator,
+      PositionCode.ChoirGigCoordinator,
+      PositionCode.OrganisationGigCoordinator
     ])
   })
 
@@ -685,14 +685,14 @@ describe.skipIf(!database)("appointment foundation", () => {
     const gigCommittee = expectSuccess(
       await createOrganisationGroup(
         t.db,
-        { name: "Gig 48/49", type: GroupType.Gigmästeri, organisationYear: 2048 },
+        { name: "Gig 48/49", type: GroupType.GigCommittee, organisationYear: 2048 },
         "4000-10-22"
       )
     )
     expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.ChoirGigmastare,
+        positionCode: PositionCode.ChoirGigCoordinator,
         contextGroupId: choirId,
         organisationYear: 2048,
         startDate: "2048-09-01"
@@ -708,7 +708,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Konsert 49/50 lifecycle",
-          type: GroupType.Konsertmästeri,
+          type: GroupType.ConcertCommittee,
           organisationYear: 2049
         },
         "4000-10-22"
@@ -719,7 +719,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "Konsert 50/51 lifecycle",
-          type: GroupType.Konsertmästeri,
+          type: GroupType.ConcertCommittee,
           organisationYear: 2050
         },
         "4000-10-22"
@@ -732,7 +732,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: incumbent,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: choirId,
         organisationYear: 2049,
         startDate: "2049-07-01"
@@ -741,7 +741,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await replaceAppointmentHolder(t.db, {
         userId: successor,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: choirId,
         organisationYear: 2049,
         startDate: "2049-11-01"
@@ -750,7 +750,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: successor,
-        positionCode: PositionCode.ChoirKonsertmastare,
+        positionCode: PositionCode.ChoirConcertMaster,
         contextGroupId: choirId,
         organisationYear: 2050,
         startDate: "2050-07-01"
@@ -770,19 +770,25 @@ describe.skipIf(!database)("appointment foundation", () => {
     )
     expect(results.filter((result) => result.success)).toHaveLength(1)
     expect(results.find((result) => !result.success)).toEqual({ success: false, error: "group-name-taken" })
-    expectSuccess(await createOrganisationGroup(t.db, { name: "Parents", type: GroupType.Föräldramötet }, "4000-10-22"))
+    expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Parents", type: GroupType.ParentsMeeting }, "4000-10-22")
+    )
     expect(
-      await createOrganisationGroup(t.db, { name: "Other parents", type: GroupType.Föräldramötet }, "4000-10-22")
+      await createOrganisationGroup(t.db, { name: "Other parents", type: GroupType.ParentsMeeting }, "4000-10-22")
     ).toEqual({
       success: false,
       error: "group-name-taken"
     })
     const choirId = await t.groupId("MK")
     expectSuccess(
-      await createOrganisationGroup(t.db, { name: "MK rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+      await createOrganisationGroup(t.db, { name: "MK rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
     )
     expect(
-      await createOrganisationGroup(t.db, { name: "MK other rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+      await createOrganisationGroup(
+        t.db,
+        { name: "MK other rodd", type: GroupType.EquipmentTeam, choirId },
+        "4000-10-22"
+      )
     ).toEqual({
       success: false,
       error: "group-type-taken"
@@ -792,7 +798,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         t.db,
         {
           name: "DK rodd",
-          type: GroupType.Roddgrupp,
+          type: GroupType.EquipmentTeam,
           choirId: await t.groupId("DK")
         },
         "4000-10-22"
@@ -805,13 +811,13 @@ describe.skipIf(!database)("appointment foundation", () => {
   test("fluid responsibilities cross the year boundary and correction preserves the Section singer", async () => {
     const otherChoir = await t.groupId("DK")
     const section = await t.groupId("KKB")
-    const parents = await t.groupId("Parents")
+    const parents = await t.groupIdOfType(GroupType.ParentsMeeting)
     const userId = await t.user()
     expectSuccess(await addDirectMembership(t.db, { userId, groupId: section, startDate: "2052-01-01", voice: "B1" }))
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Stamforalder,
+        positionCode: PositionCode.SectionParent,
         contextGroupId: section,
         startDate: "2052-06-01"
       })
@@ -822,7 +828,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctFluidAppointment(t.db, {
         appointmentId: appointment.id,
         userId,
-        positionCode: PositionCode.Stamforalder,
+        positionCode: PositionCode.SectionParent,
         contextGroupId: section,
         startDate: "2052-06-15",
         endDate: null
@@ -848,7 +854,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctFluidAppointment(t.db, {
         appointmentId: appointment.id,
         userId,
-        positionCode: PositionCode.Dirigent,
+        positionCode: PositionCode.Conductor,
         contextGroupId: otherChoir,
         startDate: "2052-06-15",
         endDate: null
@@ -864,7 +870,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const dirigent = expectSuccess(
       await appointPosition(t.db, {
         userId: singer,
-        positionCode: PositionCode.Dirigent,
+        positionCode: PositionCode.Conductor,
         contextGroupId: choir,
         startDate: "2054-06-15"
       })
@@ -872,7 +878,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: singer,
-        positionCode: PositionCode.Notfiskal,
+        positionCode: PositionCode.MusicLibrarian,
         contextGroupId: choir,
         startDate: "2054-06-15"
       })
@@ -891,7 +897,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const leader = expectSuccess(
       await appointPosition(t.db, {
         userId: gigSinger,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: gigGroup.id,
         startDate: "2054-06-15"
       })
@@ -919,7 +925,7 @@ describe.skipIf(!database)("appointment foundation", () => {
   })
 
   test("correcting Sekreterare retains the continuing parents meeting grant and a missing companion rolls back", async () => {
-    const parents = await t.groupId("Parents")
+    const parents = await t.groupIdOfType(GroupType.ParentsMeeting)
     const oldBoard = expectSuccess(
       await createOrganisationGroup(
         t.db,
@@ -947,7 +953,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const secretary = expectSuccess(
       await appointPosition(t.db, {
         userId: first,
-        positionCode: PositionCode.Sekreterare,
+        positionCode: PositionCode.Secretary,
         contextGroupId: oldBoard.id,
         startDate: "2041-07-01"
       })
@@ -956,7 +962,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctAnnualAppointment(t.db, {
         appointmentId: secretary.id,
         userId: replacement,
-        positionCode: PositionCode.Sekreterare,
+        positionCode: PositionCode.Secretary,
         contextGroupId: newBoard.id,
         organisationYear: 2042,
         startDate: "2042-07-01",
@@ -981,7 +987,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const chair = expectSuccess(
       await appointPosition(t.db, {
         userId: thirdUser,
-        positionCode: PositionCode.Ordforande,
+        positionCode: PositionCode.Chair,
         contextGroupId: thirdBoard.id,
         startDate: "2043-07-01"
       })
@@ -990,7 +996,7 @@ describe.skipIf(!database)("appointment foundation", () => {
       await correctAnnualAppointment(t.db, {
         appointmentId: chair.id,
         userId: replacement,
-        positionCode: PositionCode.ViceOrdforande,
+        positionCode: PositionCode.ViceChair,
         contextGroupId: thirdBoard.id,
         organisationYear: 2043,
         startDate: "2043-07-01",
@@ -1020,7 +1026,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         .insert(positionAppointment)
         .values({
           userId,
-          positionCode: PositionCode.Ordforande,
+          positionCode: PositionCode.Chair,
           contextGroupId: board.id,
           organisationYear: 2033,
           startDate: "2033-07-01",
@@ -1031,7 +1037,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Ordforande,
+        positionCode: PositionCode.Chair,
         contextGroupId: board.id,
         startDate: "2033-07-01"
       })
@@ -1049,7 +1055,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Kassor,
+        positionCode: PositionCode.Treasurer,
         contextGroupId: board.id,
         startDate: "2033-02-31"
       })
@@ -1060,7 +1066,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(
         t.db,
-        { name: "Archive 35/36", type: GroupType.Arkivarie, organisationYear: 2035 },
+        { name: "Archive 35/36", type: GroupType.Archives, organisationYear: 2035 },
         "4000-10-22"
       )
     ).id
@@ -1103,7 +1109,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(
       await appointPosition(t.db, {
         userId: await t.user(),
-        positionCode: PositionCode.Dirigent,
+        positionCode: PositionCode.Conductor,
         contextGroupId: await t.groupId("MK"),
         startDate: "2035-07-01"
       })
@@ -1125,7 +1131,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: groupId,
         startDate: "2038-09-01"
       })
@@ -1138,7 +1144,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(
       await appointPosition(t.db, {
         userId: otherUser,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: groupId,
         startDate: "2038-09-01"
       })

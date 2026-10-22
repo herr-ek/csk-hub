@@ -1,3 +1,4 @@
+import { listLocalizedGroupLabels } from "../group-labels"
 import "server-only"
 
 import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm"
@@ -35,6 +36,8 @@ export async function getGroupDetail(
     .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
     .where(eq(group.id, groupId))
   if (!row) return null
+  const labels = await listLocalizedGroupLabels()
+  const label = (id: string) => labels.get(id) ?? id
 
   const [sectionRows, directMemberships, appointments, annualContexts, fluidContexts, candidates, choirs] =
     await Promise.all([
@@ -97,7 +100,7 @@ export async function getGroupDetail(
     })
     .from(group)
     .where(
-      and(inArray(group.type, [GroupType.Konsertmästeri, GroupType.Gigmästeri]), isNotNull(group.organisationYear))
+      and(inArray(group.type, [GroupType.ConcertCommittee, GroupType.GigCommittee]), isNotNull(group.organisationYear))
     )
     .orderBy(desc(group.organisationYear))
   const historicalYear = (active: boolean, year: number | null) =>
@@ -106,7 +109,7 @@ export async function getGroupDetail(
   return {
     group: {
       id: row.id,
-      name: row.name,
+      name: label(row.id),
       type: row.type as GroupType,
       active: row.active,
       organisationYear: row.organisationYear,
@@ -114,18 +117,23 @@ export async function getGroupDetail(
     },
     sectionVoice,
     directMemberships,
-    effectiveMembers,
-    choirs,
-    placementSections,
+    effectiveMembers: effectiveMembers.map((row) => ({
+      ...row,
+      positions: row.positions.map((position) => ({ ...position, contextName: label(position.contextGroupId) }))
+    })),
+    choirs: choirs.map((row) => ({ ...row, name: label(row.id) })),
+    placementSections: placementSections.map((row) => ({ ...row, name: label(row.id) })),
     directCandidates: candidates,
     sectionVoices: sectionVoice ? voicesWithin(sectionVoice) : [],
     choirVoices,
-    appointments,
-    annualContexts: annualContexts.filter(({ active, organisationYear }) => historicalYear(active, organisationYear)),
-    fluidContexts,
-    appointmentYears: appointmentYears.filter(({ active, organisationYear }) =>
-      historicalYear(active, organisationYear)
-    ),
+    appointments: appointments.map((row) => ({ ...row, contextName: label(row.contextGroupId) })),
+    annualContexts: annualContexts
+      .filter(({ active, organisationYear }) => historicalYear(active, organisationYear))
+      .map((row) => ({ ...row, name: label(row.id) })),
+    fluidContexts: fluidContexts.map((row) => ({ ...row, name: label(row.id) })),
+    appointmentYears: appointmentYears
+      .map((row) => ({ ...row, name: label(row.id) }))
+      .filter(({ active, organisationYear }) => historicalYear(active, organisationYear)),
     appointmentCandidates
   }
 }

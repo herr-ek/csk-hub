@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
-import { GROUP_POLICIES, GroupType } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, groupTypeKey, hasExplicitGroupName } from "@/core/org-structure"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
@@ -25,11 +25,22 @@ export function GroupFields({
   const id = useId()
   const options = (Object.keys(GROUP_POLICIES) as GroupType[])
     .filter((type) => type !== GroupType.Choir && type !== GroupType.Section)
-    .map((type) => ({ value: type, label: t(`types.${type}`) }))
+    .map((type) => ({ value: type, label: t(`types.${groupTypeKey(type)}`) }))
   const policy = GROUP_POLICIES[type]
   return (
     <>
-      <InputField label={t("name")} name="name" defaultValue={initial?.name} required maxLength={NAME_MAX_LENGTH} />
+      {hasExplicitGroupName(type) ? (
+        <InputField
+          key={type}
+          label={t("name")}
+          name="name"
+          defaultValue={initial && hasExplicitGroupName(initial.type) ? initial.name : undefined}
+          required
+          maxLength={NAME_MAX_LENGTH}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">{t("management.derivedName")}</p>
+      )}
       <Field>
         <FieldLabel htmlFor={id}>{t("type")}</FieldLabel>
         <Select

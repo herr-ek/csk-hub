@@ -25,7 +25,7 @@ describe.skipIf(!database)("reference data", () => {
   test("creates Choirs, Sections, continuing parents and explicit current and future Groups", async () => {
     const created = await withClient(insertReferenceData)
     expect(created).toContain("KKB")
-    expect(created).toContain(GroupType.Föräldramötet)
+    expect(created).toContain(GroupType.ParentsMeeting)
 
     for (const definition of REFERENCE_DATA.choirs) {
       const [choirRow] = await t.db
@@ -43,9 +43,9 @@ describe.skipIf(!database)("reference data", () => {
     }
     expect(await t.db.select().from(choir)).toHaveLength(REFERENCE_DATA.choirs.length)
 
-    for (const { name, type } of REFERENCE_DATA.continuingGroups) {
-      const [row] = await t.db.select().from(group).where(eq(group.name, name))
-      expect(row).toMatchObject({ type, choirId: null })
+    for (const { type } of REFERENCE_DATA.continuingGroups) {
+      const [row] = await t.db.select().from(group).where(eq(group.type, type))
+      expect(row).toMatchObject({ type, choirId: null, name: null })
     }
     for (const year of [2026, 2027]) {
       for (const item of REFERENCE_DATA.annualGroups(year)) {
@@ -53,7 +53,7 @@ describe.skipIf(!database)("reference data", () => {
           .select()
           .from(group)
           .where(and(eq(group.type, item.type as never), eq(group.organisationYear, year)))
-        expect(row).toMatchObject({ name: item.name, organisationYear: year })
+        expect(row).toMatchObject({ name: null, organisationYear: year })
       }
     }
   })

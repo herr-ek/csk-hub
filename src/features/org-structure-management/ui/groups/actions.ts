@@ -10,7 +10,7 @@ import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"
 
 const createGroupSchema = z.object({
-  name: fields.name,
+  name: fields.name.optional(),
   type: fields.creatableGroupType,
   choirId: fields.id.optional(),
   organisationYear: z.coerce.number().int().min(1000).max(9998).optional()

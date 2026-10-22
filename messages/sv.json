@@ -698,20 +698,20 @@
       "Section": "Stämgrupp",
       "Board": "Styrelse",
       "GigGroup": "Giggrupp",
-      "Gigmästeri": "Gigmästeri",
-      "Sexmästeri": "Sexmästeri",
-      "Roddgrupp": "Roddgrupp",
-      "Festgrupp": "Festgrupp",
-      "Rephelg": "Rephelgsgrupp",
-      "Konsertmästeri": "Konsertmästeri",
-      "Rekryteringskommitté": "Rekryteringskommitté",
-      "Turnékommitté": "Turnékommitté",
-      "Valberedning": "Valberedning",
-      "Webmästeri": "Webmästeri",
-      "Föräldramötet": "Föräldramötet",
-      "Arkivarie": "Arkivariet",
-      "Utantillkommitté": "Utantillkommitté",
-      "Övrig": "Övrig"
+      "GigCommittee": "Gigmästeri",
+      "SocialCommittee": "Sexmästeri",
+      "EquipmentTeam": "Roddgrupp",
+      "PartyTeam": "Festgrupp",
+      "RehearsalWeekendTeam": "Rephelgsgrupp",
+      "ConcertCommittee": "Konsertmästeri",
+      "RecruitmentCommittee": "Rekryteringskommitté",
+      "TourCommittee": "Turnékommitté",
+      "NominationCommittee": "Valberedning",
+      "WebTeam": "Webmästeri",
+      "ParentsMeeting": "Föräldramötet",
+      "Archives": "Arkivariet",
+      "MemorisationCommittee": "Utantillkommitté",
+      "Other": "Övrig"
     },
     "errors": {
       "invalid-date": "Ange ett giltigt datum.",
@@ -753,7 +753,8 @@
       "membership-dependency": "En beroende posttillsättning eller ett medlemskap måste hanteras före ändringen.",
       "group-type-taken": "Det finns redan en aktiv grupp av denna typ för kören. Redigera eller arkivera den befintliga gruppen innan en ny skapas.",
       "annual-group-needs-year": "Denna årsgrupp saknar ett fastställt verksamhetsår. Förbered eller välj en grupp för rätt år, eller fastställ gruppens år innan deltagande läggs till eller korrigeras.",
-      "organisation-year-too-far-ahead": "Årsgrupper kan bara förberedas till och med nästa verksamhetsår."
+      "organisation-year-too-far-ahead": "Årsgrupper kan bara förberedas till och med nästa verksamhetsår.",
+      "group-name-derived": "Gruppens namn härleds från dess typ, verksamhetsår eller kör och kan inte ändras."
     },
     "management": {
       "prepare": "Förbered årsgrupper",
@@ -785,25 +786,30 @@
       "voice": "Stämma",
       "section": "Stämgrupp",
       "yearRequired": "Välj verksamhetsår för denna årsgrupp.",
-      "groupIdentity": "{type} · {year}"
+      "groupIdentity": "{type} · {year}",
+      "derivedName": "Namnet skapas utifrån gruppens typ, verksamhetsår och kör."
     },
     "positionLabels": {
-      "ordforande": "Ordförande",
-      "vice-ordforande": "Vice ordförande",
-      "kassor": "Kassör",
-      "sekreterare": "Sekreterare",
-      "pr-mastare": "PR-mästare",
-      "forsta-konsertmastare": "1:a konsertmästare",
-      "csk-gigmastare": "CSK-gigmästare",
-      "sexmastare": "Sexmästare",
-      "sexmastarinna": "Sexmästarinna",
-      "ekonomiskt-ansvarig": "Ekonomiskt ansvarig",
-      "dirigent": "Dirigent",
-      "notfiskal": "Notfiskal",
-      "choir-konsertmastare": "Körens konsertmästare",
-      "choir-gigmastare": "Körens gigmästare",
-      "stamforalder": "Stämförälder",
-      "gigledare": "Gigledare"
+      "Chair": "Ordförande",
+      "ViceChair": "Vice ordförande",
+      "Treasurer": "Kassör",
+      "Secretary": "Sekreterare",
+      "PublicRelationsOfficer": "PR-mästare",
+      "FirstConcertMaster": "1:a konsertmästare",
+      "OrganisationGigCoordinator": "CSK-gigmästare",
+      "SocialCoordinator": "Sexmästare",
+      "DeputySocialCoordinator": "Sexmästarinna",
+      "FinancialOfficer": "Ekonomiskt ansvarig",
+      "Conductor": "Dirigent",
+      "MusicLibrarian": "Notfiskal",
+      "ChoirConcertMaster": "Körens konsertmästare",
+      "ChoirGigCoordinator": "Körens gigmästare",
+      "SectionParent": "Stämförälder",
+      "GigLeader": "Gigledare"
+    },
+    "labels": {
+      "annual": "{type} {year}",
+      "choirTeam": "{choir} · {type}"
     }
   }
 }

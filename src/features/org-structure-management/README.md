@@ -103,8 +103,8 @@ participation.
 
 The catalogue contains Ordförande, Vice Ordförande, Kassör, Sekreterare, PR-mästare,
 1:a Konsertmästare, CSK Gigmästare, Sexmästare, Sexmästarinna, Ekonomiskt Ansvarig, Dirigent,
-Notfiskal, Choir Konsertmästare, Choir Gigmästare, Stämförälder, and Gigledare. Position labels
-and the rules that give them meaning are code-controlled. There is no runtime editor for creating
+Notfiskal, Choir Konsertmästare, Choir Gigmästare, Stämförälder, and Gigledare. Position identifiers and the rules that give them meaning are code-controlled; labels are
+translated using English intl keys. There is no runtime editor for creating
 another formal Position. Groups such as Valberedningen, Webmästeriet, Arkivet, and
 Utantillkommittén use direct Memberships where no formal Position was agreed.
 
@@ -114,3 +114,13 @@ The organisation tests use a freshly migrated disposable PostgreSQL database cre
 local `POSTGRES_URL`, then drop it. A skipped database test is not evidence that a migration or
 constraint works; run the relevant suite with local PostgreSQL available when changing this
 feature.
+
+
+## Group labels
+
+Annual Groups, Choir teams, and the parents meeting store no name. The core naming policy
+and database check enforce this; rename commands refuse derived names. Choirs, Sections,
+GigGroups, and Other Groups keep explicit names. Presentation reads use
+`listLocalizedGroupLabels` for a viewer-localized label, including context choices and member
+profiles. The formatter includes the annual year or owning Choir exactly once. Domain reads
+remain locale-independent and expose nullable explicit names alongside stable identities.

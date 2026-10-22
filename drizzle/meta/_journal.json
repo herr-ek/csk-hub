@@ -134,6 +134,13 @@
       "when": 1792606667787,
       "tag": "0018_retire-legacy-organisation-model",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792667033110,
+      "tag": "0019_derive-fixed-group-labels",
+      "breakpoints": true
     }
   ]
 }

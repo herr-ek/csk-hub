@@ -7,6 +7,7 @@ export type OrgStructureViolation =
   | "annual-group-needs-year"
   | "organisation-year-too-far-ahead"
   | "invalid-group-name"
+  | "group-name-derived"
   | "invalid-group-scope"
   | "group-has-participation"
   | "direct-membership-forbidden"

@@ -10,6 +10,7 @@ const revalidatePath = mock(() => undefined)
 mock.module("@/core/db", () => ({ db: database?.db }))
 mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
+mock.module("@/core/i18n/server", () => ({ getTranslations: async () => (key: string) => key }))
 
 const { createGroupAction, renameGroupAction, archiveGroupAction, prepareYearAction, editGroupAction } = await import(
   "./groups/actions"
@@ -100,9 +101,9 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   })
 
   test("creates, renames, archives, and passes typed policy failures through the action boundary", async () => {
-    expect(await createGroupAction(IDLE, form({ name: "", type: GroupType.GigGroup }))).toEqual({
+    expect(await createGroupAction(IDLE, form({ name: " ", type: GroupType.GigGroup }))).toEqual({
       status: "error",
-      error: "invalid-input"
+      error: "invalid-group-name"
     })
     expect(await createGroupAction(IDLE, form({ name: "Action gig", type: GroupType.GigGroup }))).toMatchObject({
       status: "success"
@@ -124,7 +125,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   test("prepares annual groups and applies inclusive dates to direct membership actions", async () => {
     expect(await prepareYearAction(IDLE, form({ organisationYear: "2050" }))).toMatchObject({ status: "success" })
     const archive = (await listOrganisationGroups(t.db, "2050-09-01")).find(
-      (row) => row.type === GroupType.Arkivarie && row.organisationYear === 2050
+      (row) => row.type === GroupType.Archives && row.organisationYear === 2050
     )
     if (!archive) throw new Error("Expected the prepared Arkivarie Group.")
     const userId = await t.user()
@@ -173,7 +174,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(
       await editGroupAction(
         IDLE,
-        form({ groupId: archive.id, name: "Bad year correction", type: GroupType.Arkivarie, organisationYear: "2051" })
+        form({ groupId: archive.id, name: "Bad year correction", type: GroupType.Archives, organisationYear: "2051" })
       )
     ).toEqual({ status: "error", error: "group-has-participation" })
     expect(
@@ -274,7 +275,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     const sectionId = await t.groupId("MKB1")
     const team = await createOrganisationGroup(
       t.db,
-      { name: "KK team", type: GroupType.Roddgrupp, choirId },
+      { name: "KK team", type: GroupType.EquipmentTeam, choirId },
       "4000-10-22"
     )
     expect(team.success).toBe(true)
@@ -322,7 +323,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(
       await appointPosition(t.db, {
         userId: second,
-        positionCode: PositionCode.Dirigent,
+        positionCode: PositionCode.Conductor,
         contextGroupId: choirId,
         startDate: "2024-08-01",
         endDate: null
@@ -351,7 +352,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     const first = await t.user(),
       next = await t.user()
     const input = {
-      positionCode: PositionCode.Ordforande,
+      positionCode: PositionCode.Chair,
       contextGroupId: board.id,
       organisationYear: "2054",
       startDate: "2054-08-01",
@@ -392,7 +393,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     })
     const future = await appointPosition(t.db, {
       userId: await t.user(),
-      positionCode: PositionCode.ViceOrdforande,
+      positionCode: PositionCode.ViceChair,
       contextGroupId: board.id,
       startDate: "2054-09-01"
     })
@@ -413,7 +414,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     const userId = await t.user()
     const appointment = await appointPosition(t.db, {
       userId,
-      positionCode: PositionCode.Ordforande,
+      positionCode: PositionCode.Chair,
       contextGroupId: board.id,
       startDate: "2024-09-01"
     })

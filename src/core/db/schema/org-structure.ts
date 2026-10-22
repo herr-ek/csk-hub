@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid
 } from "drizzle-orm/pg-core"
+import { EXPLICIT_GROUP_NAME_TYPES } from "@/core/org-structure/group-names"
 import { GroupType, type PositionCode } from "@/core/org-structure/identifiers"
 import { user } from "./auth"
 import { voice, voiceDivision } from "./voice"
@@ -35,7 +36,7 @@ export const group = pgTable(
   "group",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    name: text("name").notNull(),
+    name: text("name"),
     type: groupType("type").notNull(),
     // Null means CSK-wide. A Choir group itself is always CSK-wide, and a Section always belongs to one.
     choirId: uuid("choir_id").references((): AnyPgColumn => choir.groupId, { onDelete: "restrict" }),
@@ -46,22 +47,49 @@ export const group = pgTable(
     // Hand-written in drizzle/0011_groups.sql (2): the index is NULLS NOT DISTINCT, which Drizzle's
     // index builder cannot express, so two active CSK-wide groups (choir_id null) cannot share a
     // name while each Choir keeps its own namespace.
-    uniqueIndex("group_name_choir_active_unique").on(table.name, table.choirId).where(sql`${table.active}`),
+    uniqueIndex("group_name_choir_active_unique")
+      .on(table.name, table.choirId)
+      .where(sql`${table.active} AND ${table.name} IS NOT NULL`),
     uniqueIndex("group_annual_identity_unique")
       .on(table.type, table.organisationYear)
       .where(sql`${table.organisationYear} IS NOT NULL`),
-    uniqueIndex("group_continuing_singleton_unique").on(table.type).where(sql`${table.type} = 'Föräldramötet'`),
+    uniqueIndex("group_continuing_singleton_unique")
+      .on(table.type)
+      .where(sql`${table.type} = ${GroupType.ParentsMeeting}`.inlineParams()),
     uniqueIndex("group_choir_team_unique")
       .on(table.type, table.choirId)
-      .where(sql`${table.active} AND ${table.type} IN ('Roddgrupp', 'Festgrupp', 'Rephelg')`),
+      .where(
+        sql`${table.active} AND ${table.type} IN (${sql.join(
+          [GroupType.EquipmentTeam, GroupType.PartyTeam, GroupType.RehearsalWeekendTeam].map((type) =>
+            sql`${type}`.inlineParams()
+          ),
+          sql`, `
+        )})`
+      ),
     check(
       "group_organisation_year_check",
       sql`${table.organisationYear} IS NULL OR ${table.organisationYear} BETWEEN 1000 AND 9998`
     ),
     index("group_choirId_idx").on(table.choirId),
-    check("group_name_not_blank_check", sql`length(btrim(${table.name})) > 0`),
-    check("group_choir_csk_wide_check", sql`${table.type} <> 'Choir' OR ${table.choirId} IS NULL`),
-    check("group_section_in_choir_check", sql`${table.type} <> 'Section' OR ${table.choirId} IS NOT NULL`)
+    check(
+      "group_name_policy_check",
+      sql`
+      CASE WHEN ${table.type} IN (${sql.join(
+        EXPLICIT_GROUP_NAME_TYPES.map((type) => sql`${type}`.inlineParams()),
+        sql`, `
+      )})
+        THEN ${table.name} IS NOT NULL AND length(btrim(${table.name})) > 0
+        ELSE ${table.name} IS NULL END
+    `
+    ),
+    check(
+      "group_choir_csk_wide_check",
+      sql`${table.type} <> ${GroupType.Choir} OR ${table.choirId} IS NULL`.inlineParams()
+    ),
+    check(
+      "group_section_in_choir_check",
+      sql`${table.type} <> ${GroupType.Section} OR ${table.choirId} IS NOT NULL`.inlineParams()
+    )
   ]
 )
 

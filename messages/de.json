@@ -698,20 +698,20 @@
       "Section": "Stimmgruppe",
       "Board": "Vorstand",
       "GigGroup": "Auftrittsgruppe",
-      "Gigmästeri": "Auftrittsausschuss",
-      "Sexmästeri": "Festausschuss",
-      "Roddgrupp": "Probenaufbau-Team",
-      "Festgrupp": "Festgruppe",
-      "Rephelg": "Probenwochenendgruppe",
-      "Konsertmästeri": "Konzertausschuss",
-      "Rekryteringskommitté": "Rekrutierungsausschuss",
-      "Turnékommitté": "Tourneeausschuss",
-      "Valberedning": "Wahlausschuss",
-      "Webmästeri": "Webausschuss",
-      "Föräldramötet": "Stimmeltern",
-      "Arkivarie": "Archivare",
-      "Utantillkommitté": "Auswendiglern-Ausschuss",
-      "Övrig": "Sonstige"
+      "GigCommittee": "Auftrittsausschuss",
+      "SocialCommittee": "Festausschuss",
+      "EquipmentTeam": "Probenaufbau-Team",
+      "PartyTeam": "Festgruppe",
+      "RehearsalWeekendTeam": "Probenwochenendgruppe",
+      "ConcertCommittee": "Konzertausschuss",
+      "RecruitmentCommittee": "Rekrutierungsausschuss",
+      "TourCommittee": "Tourneeausschuss",
+      "NominationCommittee": "Wahlausschuss",
+      "WebTeam": "Webausschuss",
+      "ParentsMeeting": "Stimmeltern",
+      "Archives": "Archivare",
+      "MemorisationCommittee": "Auswendiglern-Ausschuss",
+      "Other": "Sonstige"
     },
     "errors": {
       "invalid-date": "Gib ein gültiges Datum ein.",
@@ -753,7 +753,8 @@
       "membership-dependency": "Eine abhängige Amtsbesetzung oder Mitgliedschaft muss vor dieser Änderung bearbeitet werden.",
       "group-type-taken": "Für diesen Chor besteht bereits eine aktive Gruppe dieses Typs. Bearbeite oder archiviere die bestehende Gruppe, bevor du eine weitere erstellst.",
       "annual-group-needs-year": "Diese Jahresgruppe hat noch kein festgelegtes Jahr. Bereite eine Gruppe für das gewünschte Jahr vor oder wähle sie aus, oder kläre zuerst das Jahr dieser Gruppe, bevor du die Teilnahme hinzufügst oder korrigierst.",
-      "organisation-year-too-far-ahead": "Jahresgruppen können nur bis zum nächsten Organisationsjahr vorbereitet werden."
+      "organisation-year-too-far-ahead": "Jahresgruppen können nur bis zum nächsten Organisationsjahr vorbereitet werden.",
+      "group-name-derived": "Die Bezeichnung dieser Gruppe wird aus Typ, Organisationsjahr oder Chor abgeleitet und kann nicht geändert werden."
     },
     "management": {
       "prepare": "Jahresgruppen vorbereiten",
@@ -785,25 +786,30 @@
       "voice": "Stimme",
       "section": "Stimmgruppe",
       "yearRequired": "Wähle ein Organisationsjahr für diese Jahresgruppe.",
-      "groupIdentity": "{type} · {year}"
+      "groupIdentity": "{type} · {year}",
+      "derivedName": "Die Bezeichnung wird aus Gruppentyp, Organisationsjahr und Chor abgeleitet."
     },
     "positionLabels": {
-      "ordforande": "Vorsitzende:r",
-      "vice-ordforande": "Stellvertretende:r Vorsitzende:r",
-      "kassor": "Schatzmeister:in",
-      "sekreterare": "Sekretär:in",
-      "pr-mastare": "PR-Beauftragte:r",
-      "forsta-konsertmastare": "1. Konzertmeister:in",
-      "csk-gigmastare": "CSK-Gigmeister:in",
-      "sexmastare": "Festbeauftragte:r",
-      "sexmastarinna": "Festkomitee-Beauftragte:r",
-      "ekonomiskt-ansvarig": "Finanzbeauftragte:r",
-      "dirigent": "Dirigent:in",
-      "notfiskal": "Notenwart:in",
-      "choir-konsertmastare": "Chor-Konzertmeister:in",
-      "choir-gigmastare": "Chor-Gigmeister:in",
-      "stamforalder": "Stimmgruppen-Elternteil",
-      "gigledare": "Gigleitung"
+      "Chair": "Vorsitzende:r",
+      "ViceChair": "Stellvertretende:r Vorsitzende:r",
+      "Treasurer": "Schatzmeister:in",
+      "Secretary": "Sekretär:in",
+      "PublicRelationsOfficer": "PR-Beauftragte:r",
+      "FirstConcertMaster": "1. Konzertmeister:in",
+      "OrganisationGigCoordinator": "CSK-Gigmeister:in",
+      "SocialCoordinator": "Festbeauftragte:r",
+      "DeputySocialCoordinator": "Festkomitee-Beauftragte:r",
+      "FinancialOfficer": "Finanzbeauftragte:r",
+      "Conductor": "Dirigent:in",
+      "MusicLibrarian": "Notenwart:in",
+      "ChoirConcertMaster": "Chor-Konzertmeister:in",
+      "ChoirGigCoordinator": "Chor-Gigmeister:in",
+      "SectionParent": "Stimmgruppen-Elternteil",
+      "GigLeader": "Gigleitung"
+    },
+    "labels": {
+      "annual": "{type} {year}",
+      "choirTeam": "{choir} · {type}"
     }
   }
 }

@@ -129,16 +129,16 @@ describe.skipIf(!database)("complete local demo seed", () => {
         annual.filter(({ type, organisationYear }) => type === GroupType.Board && organisationYear === year)
       ).toHaveLength(1)
     }
-    const sexmastarinna = appointments.find(({ positionCode }) => positionCode === PositionCode.Sexmastarinna)
-    const tourFinancial = appointments.find(({ positionCode }) => positionCode === PositionCode.EkonomisktAnsvarig)
+    const sexmastarinna = appointments.find(({ positionCode }) => positionCode === PositionCode.DeputySocialCoordinator)
+    const tourFinancial = appointments.find(({ positionCode }) => positionCode === PositionCode.FinancialOfficer)
     expect(sexmastarinna).toMatchObject({ organisationYear: 2026 })
     expect(groups.find(({ id }) => id === sexmastarinna?.contextGroupId)).toMatchObject({
-      type: GroupType.Sexmästeri,
+      type: GroupType.SocialCommittee,
       organisationYear: 2026
     })
     expect(tourFinancial).toMatchObject({ organisationYear: 2026 })
     expect(groups.find(({ id }) => id === tourFinancial?.contextGroupId)).toMatchObject({
-      type: GroupType.Turnékommitté,
+      type: GroupType.TourCommittee,
       organisationYear: 2026
     })
   })
@@ -151,25 +151,24 @@ describe.skipIf(!database)("complete local demo seed", () => {
     expect(board26).toBeDefined()
     expect(board27).toBeDefined()
     const handover = appointments.filter(
-      ({ positionCode, contextGroupId }) => positionCode === PositionCode.Ordforande && contextGroupId === board26?.id
+      ({ positionCode, contextGroupId }) => positionCode === PositionCode.Chair && contextGroupId === board26?.id
     )
     expect(handover.map(({ startDate, endDate }) => [startDate, endDate])).toEqual([
       ["2026-07-01", "2026-09-01"],
       ["2026-09-01", "2027-07-01"]
     ])
     const renewed = appointments.find(
-      ({ positionCode, contextGroupId }) => positionCode === PositionCode.Ordforande && contextGroupId === board27?.id
+      ({ positionCode, contextGroupId }) => positionCode === PositionCode.Chair && contextGroupId === board27?.id
     )
     expect(renewed?.userId).toBe(handover[1]?.userId)
     expect(
       appointments.some(
-        ({ positionCode, contextGroupId }) =>
-          positionCode === PositionCode.ViceOrdforande && contextGroupId === board26?.id
+        ({ positionCode, contextGroupId }) => positionCode === PositionCode.ViceChair && contextGroupId === board26?.id
       )
     ).toBe(false)
     const allAppointments = await db.select().from(positionAppointment)
     const choirAppointments = allAppointments.filter(({ positionCode }) =>
-      [PositionCode.ChoirKonsertmastare, PositionCode.ChoirGigmastare].includes(positionCode)
+      [PositionCode.ChoirConcertMaster, PositionCode.ChoirGigCoordinator].includes(positionCode)
     )
     for (const choir of ["MK", "DK", "KK"]) {
       const choirGroup = groups.find(({ name, type }) => name === choir && type === GroupType.Choir)
@@ -236,7 +235,7 @@ describe.skipIf(!database)("complete local demo seed", () => {
     await db.insert(positionAppointment).values({
       id: crypto.randomUUID(),
       userId: outsider,
-      positionCode: PositionCode.Ordforande,
+      positionCode: PositionCode.Chair,
       contextGroupId: board.id,
       organisationYear: 2026,
       startDate: "2026-09-01",

@@ -5,7 +5,7 @@ rule violations, and pure date/coverage rules. Import them from `@/core/org-stru
 server or client code. It contains no database operations, authorization, or management UI.
 
 `identifiers.ts` defines the `GroupType` and `PositionCode` string enums. Use named values
-such as `GroupType.Board` and `PositionCode.Sekreterare` instead of repeating storage strings.
+such as `GroupType.Board` and `PositionCode.Secretary` instead of repeating storage strings.
 The database enum, form validators, seeds, and catalogue all use these identifiers.
 
 `catalogue.ts` defines Group scope, lifetime, direct-Membership policy and cardinality,
@@ -25,3 +25,11 @@ Annual preparation is limited to the current organisational year and the immedia
 year. Individual Group creation and year edits reject years beyond that window on the server.
 Historical years remain available for explicit backfilling and correction. The window advances
 on 1 July in the organisation's calendar time zone.
+
+
+Enum member names and translation keys are English; existing stored values are retained.
+`group-names.ts` owns the enum-based list of explicitly named types, shared by command
+validation and the database constraint. `labels.ts` formats derived labels through a supplied
+intl translator: annual type + year, Choir team type + Choir name, and the parents meeting's
+type label. Only Choirs, Sections, GigGroups, and Other Groups store individual names.
+Position labels live exclusively in the locale catalogues.

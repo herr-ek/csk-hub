@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { group } from "@/core/db/schema/org-structure"
-import type { OrgStructureResult } from "@/core/org-structure"
+import type { GroupType, OrgStructureResult } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
 import { createChoir } from "./structure"
@@ -61,6 +61,16 @@ function fixture({ db, drop }: TestDatabase) {
       const id = crypto.randomUUID()
       await db.insert(user).values({ id, name, email: `${id}@example.com` })
       return id
+    },
+
+    /** A singleton Group identity, independent of its localized label. */
+    async groupIdOfType(type: GroupType) {
+      const [row] = await db
+        .select({ id: group.id })
+        .from(group)
+        .where(and(eq(group.type, type), eq(group.active, true)))
+      if (!row) throw new Error(`No active Group of type ${type}.`)
+      return row.id
     },
 
     /** The id of an active group by name, within a Choir when given. */

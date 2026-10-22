@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
 import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
-import { currentOrganisationYear, GroupType, POSITION_DEFINITIONS } from "@/core/org-structure"
+import { currentOrganisationYear, GroupType, groupTypeKey, POSITION_DEFINITIONS } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { AppointmentManagement } from "./AppointmentManagement"
@@ -46,8 +46,8 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {group.choir
-                ? t("detail.typeInChoir", { type: types(group.type), choir: group.choir.name })
-                : t("detail.typeCskWide", { type: types(group.type) })}
+                ? t("detail.typeInChoir", { type: types(groupTypeKey(group.type)), choir: group.choir.name })
+                : t("detail.typeCskWide", { type: types(groupTypeKey(group.type)) })}
             </p>
             {group.organisationYear !== null ? (
               <Badge variant="outline">

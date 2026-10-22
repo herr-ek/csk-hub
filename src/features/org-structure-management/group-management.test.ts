@@ -3,7 +3,7 @@ import { GroupType, PositionCode } from "@/core/org-structure"
 import { appointPosition, createOrganisationGroup, listAppointmentMembersAt } from "./appointments"
 import { addDirectMembership, listDirectMemberships } from "./direct-membership"
 import { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
-import { archiveGroup } from "./structure"
+import { archiveGroup, renameGroup } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -15,7 +15,7 @@ describe.skipIf(!database)("concrete Group management", () => {
     const first = expectSuccess(await prepareOrganisationYear(t.db, 2026, "4000-10-22"))
     expect(first).toHaveLength(10)
     expect(expectSuccess(await prepareOrganisationYear(t.db, 2026, "4000-10-22"))).toEqual(first)
-    const sexmasteri = first.find((row) => row.type === GroupType.Sexmästeri) as { id: string }
+    const sexmasteri = first.find((row) => row.type === GroupType.SocialCommittee) as { id: string }
     const board = first.find((row) => row.type === GroupType.Board) as { id: string }
     const helperId = await t.user()
     expectSuccess(
@@ -24,7 +24,7 @@ describe.skipIf(!database)("concrete Group management", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId: await t.user(),
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: "2026-09-01"
       })
@@ -45,11 +45,11 @@ describe.skipIf(!database)("concrete Group management", () => {
       "completed"
     )
   })
-  test("an occupied Group can be renamed but a structural correction refuses atomically", async () => {
+  test("derived names cannot be overridden and occupied structural corrections refuse atomically", async () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(
         t.db,
-        { name: "Editable web", type: GroupType.Webmästeri, organisationYear: 2031 },
+        { name: "Editable web", type: GroupType.WebTeam, organisationYear: 2031 },
         "4000-10-22"
       )
     ).id
@@ -60,12 +60,13 @@ describe.skipIf(!database)("concrete Group management", () => {
         {
           groupId,
           name: "Web 31/32",
-          type: GroupType.Webmästeri,
+          type: GroupType.WebTeam,
           organisationYear: 2031
         },
         "4000-10-22"
       )
     )
+    expect(await renameGroup(t.db, groupId, "Renamed web")).toEqual({ success: false, error: "group-name-derived" })
     const before = await listDirectMemberships(t.db, groupId)
     expect(
       await updateOrganisationGroup(
@@ -73,14 +74,14 @@ describe.skipIf(!database)("concrete Group management", () => {
         {
           groupId,
           name: "Wrong edit",
-          type: GroupType.Webmästeri,
+          type: GroupType.WebTeam,
           organisationYear: 2032
         },
         "4000-10-22"
       )
     ).toEqual({ success: false, error: "group-has-participation" })
     expect((await listOrganisationGroups(t.db, "2031-09-01")).find((row) => row.id === groupId)).toMatchObject({
-      name: "Web 31/32",
+      name: null,
       organisationYear: 2031
     })
     expect(await listDirectMemberships(t.db, groupId)).toEqual(before)
@@ -96,7 +97,7 @@ describe.skipIf(!database)("concrete Group management", () => {
         {
           groupId,
           name: "Future archive",
-          type: GroupType.Arkivarie,
+          type: GroupType.Archives,
           organisationYear: 2037
         },
         "4000-10-22"
@@ -108,7 +109,7 @@ describe.skipIf(!database)("concrete Group management", () => {
         {
           groupId,
           name: "Wrong scope",
-          type: GroupType.Arkivarie,
+          type: GroupType.Archives,
           organisationYear: 2037,
           choirId: await t.groupId("MK")
         },
@@ -127,10 +128,10 @@ describe.skipIf(!database)("concrete Group management", () => {
     })
     const choirId = await t.groupId("MK")
     expectSuccess(
-      await createOrganisationGroup(t.db, { name: "One rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+      await createOrganisationGroup(t.db, { name: "One rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
     )
     expect(
-      await createOrganisationGroup(t.db, { name: "Second rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+      await createOrganisationGroup(t.db, { name: "Second rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
     ).toMatchObject({
       success: false
     })
@@ -145,7 +146,7 @@ describe.skipIf(!database)("concrete Group management", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: groupId,
         startDate: "2030-02-01"
       })
@@ -153,17 +154,15 @@ describe.skipIf(!database)("concrete Group management", () => {
     expect(await archiveGroup(t.db, groupId)).toEqual({ success: false, error: "membership-dependency" })
     expect((await listOrganisationGroups(t.db, "2030-02-01")).find((row) => row.id === groupId)?.active).toBe(true)
   })
-  test("preparation rolls back its whole set on a conflicting name and concurrent retries reuse identities", async () => {
-    expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Sexmästeriet 42/43", type: GroupType.Övrig }, "4000-10-22")
+  test("preparation rolls back its whole set on an archived identity and concurrent retries reuse identities", async () => {
+    const archived = expectSuccess(
+      await createOrganisationGroup(t.db, { type: GroupType.SocialCommittee, organisationYear: 2042 }, "4000-10-22")
     )
-    expect(await prepareOrganisationYear(t.db, 2042, "4000-10-22")).toEqual({
-      success: false,
-      error: "group-name-taken"
-    })
-    expect((await listOrganisationGroups(t.db, "2042-09-01")).filter((row) => row.organisationYear === 2042)).toEqual(
-      []
-    )
+    expectSuccess(await archiveGroup(t.db, archived.id))
+    expect(await prepareOrganisationYear(t.db, 2042, "4000-10-22")).toEqual({ success: false, error: "group-archived" })
+    expect(
+      (await listOrganisationGroups(t.db, "2042-09-01")).filter((row) => row.organisationYear === 2042)
+    ).toMatchObject([{ id: archived.id, active: false }])
     const [first, second] = await Promise.all([
       prepareOrganisationYear(t.db, 2043, "4000-10-22"),
       prepareOrganisationYear(t.db, 2043, "4000-10-22")
@@ -173,10 +172,18 @@ describe.skipIf(!database)("concrete Group management", () => {
   test("Choir-team cardinality excludes archived Groups", async () => {
     const choirId = await t.groupId("DK")
     const existingId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "DK rephelg", type: GroupType.Rephelg, choirId }, "4000-10-22")
+      await createOrganisationGroup(
+        t.db,
+        { name: "DK rephelg", type: GroupType.RehearsalWeekendTeam, choirId },
+        "4000-10-22"
+      )
     ).id
     expect(
-      await createOrganisationGroup(t.db, { name: "New DK rephelg", type: GroupType.Rephelg, choirId }, "4000-10-22")
+      await createOrganisationGroup(
+        t.db,
+        { name: "New DK rephelg", type: GroupType.RehearsalWeekendTeam, choirId },
+        "4000-10-22"
+      )
     ).toEqual({
       success: false,
       error: "group-type-taken"
@@ -190,7 +197,7 @@ describe.skipIf(!database)("concrete Group management", () => {
         {
           groupId: editableId,
           name: "Edited DK rephelg",
-          type: GroupType.Rephelg,
+          type: GroupType.RehearsalWeekendTeam,
           choirId
         },
         "4000-10-22"
@@ -208,7 +215,7 @@ describe.skipIf(!database)("concrete Group management", () => {
         {
           groupId: editableId,
           name: "Edited DK rephelg",
-          type: GroupType.Rephelg,
+          type: GroupType.RehearsalWeekendTeam,
           choirId
         },
         "4000-10-22"
@@ -221,13 +228,17 @@ describe.skipIf(!database)("concrete Group management", () => {
       await createOrganisationGroup(t.db, { name: "Racing candidate gig", type: GroupType.GigGroup }, "4000-10-22")
     )
     const results = await Promise.all([
-      createOrganisationGroup(t.db, { name: "Racing rodd creation", type: GroupType.Roddgrupp, choirId }, "4000-10-22"),
+      createOrganisationGroup(
+        t.db,
+        { name: "Racing rodd creation", type: GroupType.EquipmentTeam, choirId },
+        "4000-10-22"
+      ),
       updateOrganisationGroup(
         t.db,
         {
           groupId: candidate.id,
           name: "Racing rodd edit",
-          type: GroupType.Roddgrupp,
+          type: GroupType.EquipmentTeam,
           choirId
         },
         "4000-10-22"
@@ -237,7 +248,7 @@ describe.skipIf(!database)("concrete Group management", () => {
     expect(results.find((result) => !result.success)).toEqual({ success: false, error: "group-type-taken" })
     expect(
       (await listOrganisationGroups(t.db, "2026-10-21")).filter(
-        (row) => row.active && row.type === GroupType.Roddgrupp && row.choirId === choirId
+        (row) => row.active && row.type === GroupType.EquipmentTeam && row.choirId === choirId
       )
     ).toHaveLength(1)
   })

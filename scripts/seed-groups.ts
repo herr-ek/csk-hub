@@ -5,7 +5,7 @@ import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { voiceCapability } from "@/core/db/schema/voice"
-import { GroupType } from "@/core/org-structure"
+import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { assertLocalDatabase } from "./ops/guards"
 import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./ops/seed-data"
 import { seedGroupActivity } from "./ops/seed-group-activity"
@@ -25,12 +25,12 @@ type Division = NonNullable<typeof directMembership.$inferInsert.voice>
 const CHOIRS = ["MK", "DK", "KK"] as const
 
 const EXAMPLE_GROUPS: { name: string; type: GroupType; choir?: string }[] = [
-  { name: "Jubileumskommittén", type: GroupType.Övrig },
+  { name: "Jubileumskommittén", type: GroupType.Other },
   { name: "Giggrupp vår", type: GroupType.GigGroup },
   ...CHOIRS.flatMap((choir) => [
-    { name: `${choir} roddgrupp`, type: GroupType.Roddgrupp as const, choir },
-    { name: `${choir} festgrupp`, type: GroupType.Festgrupp as const, choir },
-    { name: `${choir} rephelgsgrupp`, type: GroupType.Rephelg as const, choir }
+    { name: `${choir} roddgrupp`, type: GroupType.EquipmentTeam as const, choir },
+    { name: `${choir} festgrupp`, type: GroupType.PartyTeam as const, choir },
+    { name: `${choir} rephelgsgrupp`, type: GroupType.RehearsalWeekendTeam as const, choir }
   ])
 ]
 
@@ -53,8 +53,24 @@ async function seed(database: Database) {
     const id = seedId(`example-group:${example.type}:${example.name}:${choirId ?? "csk"}`)
     const [seeded] = await database.select({ id: group.id }).from(group).where(eq(group.id, id))
     if (seeded) continue
-    if (await activeGroupId(database, example.name, choirId)) continue
-    await database.insert(group).values({ id, name: example.name, type: example.type, choirId })
+    if (hasExplicitGroupName(example.type)) {
+      if (await activeGroupId(database, example.name, choirId)) continue
+    } else {
+      const [existing] = await database
+        .select({ id: group.id })
+        .from(group)
+        .where(
+          and(
+            eq(group.type, example.type),
+            choirId ? eq(group.choirId, choirId) : isNull(group.choirId),
+            eq(group.active, true)
+          )
+        )
+      if (existing) continue
+    }
+    await database
+      .insert(group)
+      .values({ id, name: hasExplicitGroupName(example.type) ? example.name : null, type: example.type, choirId })
     created.push(example.name)
   }
 

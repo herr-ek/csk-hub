@@ -21,7 +21,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(
         t.db,
-        { name: "Helpers 26/27", type: GroupType.Sexmästeri, organisationYear: 2026 },
+        { name: "Helpers 26/27", type: GroupType.SocialCommittee, organisationYear: 2026 },
         "4000-10-22"
       )
     ).id
@@ -51,7 +51,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
         t.db,
         {
           name: uniqueName(`Helper overlap Sex ${year}`),
-          type: GroupType.Sexmästeri,
+          type: GroupType.SocialCommittee,
           organisationYear: year
         },
         "4000-10-22"
@@ -68,7 +68,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Sexmastare,
+        positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
         startDate: `${year}-09-01`,
         endDate: `${year}-12-01`
@@ -148,7 +148,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(
         t.db,
-        { name: "Archive 27/28", type: GroupType.Arkivarie, organisationYear: 2027 },
+        { name: "Archive 27/28", type: GroupType.Archives, organisationYear: 2027 },
         "4000-10-22"
       )
     ).id
@@ -168,7 +168,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
   })
 
   test("fixed direct policies, Choir scope, and fluid lifetime apply to public additions", async () => {
-    for (const type of [GroupType.Board, GroupType.Föräldramötet] as const) {
+    for (const type of [GroupType.Board, GroupType.ParentsMeeting] as const) {
       const groupId = expectSuccess(
         await createOrganisationGroup(
           t.db,
@@ -188,13 +188,17 @@ describe.skipIf(!database)("dated direct Membership", () => {
     }
     const choirId = await t.groupId("KK")
     expect(
-      await createOrganisationGroup(t.db, { name: "Missing choir", type: GroupType.Roddgrupp }, "4000-10-22")
+      await createOrganisationGroup(t.db, { name: "Missing choir", type: GroupType.EquipmentTeam }, "4000-10-22")
     ).toEqual({
       success: false,
       error: "invalid-group-scope"
     })
     const groupId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "KK fluid rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+      await createOrganisationGroup(
+        t.db,
+        { name: "KK fluid rodd", type: GroupType.EquipmentTeam, choirId },
+        "4000-10-22"
+      )
     ).id
     const userId = await t.user()
     expect(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" })).toEqual({
@@ -246,7 +250,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
       await appointPosition(t.db, {
         userId,
         contextGroupId: groupId,
-        positionCode: PositionCode.Stamforalder,
+        positionCode: PositionCode.SectionParent,
         startDate: "2033-02-01"
       })
     )
@@ -305,7 +309,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
       })
     )
     const groupId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Departure fest", type: GroupType.Festgrupp, choirId }, "4000-10-22")
+      await createOrganisationGroup(t.db, { name: "Departure fest", type: GroupType.PartyTeam, choirId }, "4000-10-22")
     ).id
     expectSuccess(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" }))
     expectSuccess(await endMembership(t.db, { userId, groupId: choirId, endDate: "2027-01-01" }))
@@ -313,7 +317,11 @@ describe.skipIf(!database)("dated direct Membership", () => {
   })
   test("annual Groups cannot be created without their year", async () => {
     expect(
-      await createOrganisationGroup(t.db, { name: "Missing year committee", type: GroupType.Sexmästeri }, "4000-10-22")
+      await createOrganisationGroup(
+        t.db,
+        { name: "Missing year committee", type: GroupType.SocialCommittee },
+        "4000-10-22"
+      )
     ).toEqual({
       success: false,
       error: "period-conflict"

@@ -52,8 +52,8 @@ There is no deeper hierarchy. A Choir itself is CSK-wide; its Sections and choir
 reference its `choir.group_id`. A gig group is CSK-wide and may contain singers from
 several Choirs.
 
-Annual Groups have separate UUIDs for each year. The editable name is a display label;
-`type` and `organisation_year` identify the annual organisation. There is no continuing
+Annual Groups have separate UUIDs for each year. Their localized display labels are derived
+from `type` and `organisation_year`, which identify the annual organisation. There is no continuing
 parent Board above Board 26/27 and Board 27/28.
 
 | Stored Group type | Scope | Lifetime | Direct Membership | Cardinality |
@@ -103,6 +103,31 @@ identities; it never copies people or renews appointments.
 | MK roddgrupp | `Roddgrupp` | MK | null | — |
 | A particular gig ensemble | `GigGroup` | null | null | — |
 
+
+### Stored names and localized labels
+
+| Category | Stored `name` | Display label |
+| --- | --- | --- |
+| Annual Groups | Null | Localized Group type + organisational year |
+| Choir teams | Null | Owning Choir's explicit name + localized team type |
+| Parents meeting | Null | Localized Group type |
+| Choirs and Sections | Required nonblank name | Their explicit identity, such as MK or KKB |
+| Gig groups and Other Groups | Required nonblank name | Their editable individual name |
+
+`group-names.ts` defines `EXPLICIT_GROUP_NAME_TYPES` with enum values. Both application
+validation and the schema check use this list. Renaming a derived-label Group is refused;
+Group creation and edits store null for those types even if an old caller supplies a name.
+Derived names are not copied into storage or used as identity. Renaming a Choir changes its
+teams' displayed labels immediately, without updating team rows.
+
+The English enum member names (for example `GroupType.ConcertCommittee` and
+`PositionCode.FirstConcertMaster`) are independent of the retained storage strings.
+`groupTypeKey` and `positionCodeKey` provide English intl keys. All display text lives in
+the English, Swedish, and German message catalogues, not in `POSITION_DEFINITIONS`.
+`formatGroupLabel` uses ICU templates for annual and Choir-team labels so each locale owns
+word order. Domain reads return identities and nullable explicit names; presentation reads
+resolve localized labels for group lists, details, assignment context choices, and profiles.
+
 ## Tables and keys
 
 The following is a schema reference, not executable migration SQL. UUID primary keys default
@@ -111,7 +136,7 @@ to `gen_random_uuid()`. All references restrict Group deletion; User references 
 ```text
 group (
   id uuid PRIMARY KEY,
-  name text NOT NULL,
+  name text NULL,
   type group_type NOT NULL,
   choir_id uuid NULL REFERENCES choir(group_id) ON DELETE RESTRICT,
   active boolean NOT NULL DEFAULT true,
@@ -276,8 +301,8 @@ The database checks important local invariants; it is not a complete substitute 
 
 | Rule | Enforcement |
 | --- | --- |
-| Names are nonblank. | DB: `group_name_not_blank_check` |
-| Active names are unique within a Choir or the CSK-wide namespace, including null `choir_id`. | DB: `group_name_choir_active_unique`, hand-written `NULLS NOT DISTINCT` |
+| Explicitly named types require a nonblank name; all fixed types require null. | DB: `group_name_policy_check`, built from the shared enum-based `EXPLICIT_GROUP_NAME_TYPES` |
+| Active non-null names are unique within a Choir or the CSK-wide namespace, including null `choir_id`. | DB: `group_name_choir_active_unique`, hand-written `NULLS NOT DISTINCT` |
 | Year is null or an integer from 1000 through 9998. | DB: `group_organisation_year_check` |
 | A Choir is CSK-wide; a Section belongs to a Choir. | DB: `group_choir_csk_wide_check`, `group_section_in_choir_check` |
 | Fixed catalogue scope applies, and a year exists exactly for annual types. | Trigger: `organisation_group_policy_check` |
@@ -524,6 +549,7 @@ Groups alone does not renew him.
 
 ## ER diagram
 
+The `group.name` field below is nullable and present only for explicitly named types.
 The diagram shows storage relationships. Catalogue rules and derived effective Membership
 are described above rather than represented as additional tables.
 
@@ -534,7 +560,7 @@ erDiagram
     }
     group {
         uuid id PK
-        text name
+        text name "null for derived labels"
         group_type type
         uuid choir_id FK "null = CSK-wide"
         boolean active
@@ -591,6 +617,11 @@ The redesign retains committed migration history. Migration 0017 adds the appoin
 policy functions/triggers, and range exclusions alongside the legacy representation. Migration
 0018 removes the transitional `uses_appointment_model` flag and retires `group_member`,
 `position`, `group_type_position`, `position_group`, and `position_holder`.
+
+Migration 0019 makes Group names nullable, clears redundant names only on fixed Groups, and
+adds the enum-driven naming constraint. It preserves Group IDs, participation, and all explicit
+names. The active-name index retains `NULLS NOT DISTINCT` for Choir scope, but excludes null
+names so distinct fixed Groups cannot collide through their absent names.
 
 The configured local database was explicitly declared disposable for this branch. The agreed
 cutover is an empty-database migration followed by fresh reference/demo data, not conversion

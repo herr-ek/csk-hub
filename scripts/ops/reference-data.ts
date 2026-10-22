@@ -1,6 +1,6 @@
 import { Client, type ClientBase } from "pg"
 import { secureConnection } from "@/core/db/tls"
-import { GroupType } from "@/core/org-structure"
+import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { confirmProductionWrite } from "./guards"
 import { referenceChoirId, referenceContinuingGroupId, referenceSectionId } from "./seed-data"
 import { announce, type Database } from "./target"
@@ -10,8 +10,8 @@ import { announce, type Database } from "./target"
  */
 export const REFERENCE_DATA: {
   choirs: { name: string; sections: { name: string; voice: string }[] }[]
-  continuingGroups: { name: string; type: GroupType }[]
-  annualGroups(year: number): { name: string; type: GroupType; year: number }[]
+  continuingGroups: { type: GroupType }[]
+  annualGroups(year: number): { type: GroupType; year: number }[]
 } = {
   choirs: [
     {
@@ -42,24 +42,20 @@ export const REFERENCE_DATA: {
       ]
     }
   ],
-  continuingGroups: [{ name: "Föräldramötet", type: GroupType.Föräldramötet }],
-  annualGroups: (year) => {
-    const label = `${String(year).slice(-2)}/${String(year + 1).slice(-2)}`
-    return (
-      [
-        [GroupType.Board, `Styret ${label}`],
-        [GroupType.Gigmästeri, `Gigmästeriet ${label}`],
-        [GroupType.Sexmästeri, `Sexmästeriet ${label}`],
-        [GroupType.Konsertmästeri, `Konsertmästeriet ${label}`],
-        [GroupType.Rekryteringskommitté, `Rekryteringskommittén ${label}`],
-        [GroupType.Turnékommitté, `Turnékommittén ${label}`],
-        [GroupType.Valberedning, `Valberedningen ${label}`],
-        [GroupType.Webmästeri, `Webmästeriet ${label}`],
-        [GroupType.Arkivarie, `Arkivet ${label}`],
-        [GroupType.Utantillkommitté, `Utantillkommittén ${label}`]
-      ] as const
-    ).map(([type, name]) => ({ type, name, year }))
-  }
+  continuingGroups: [{ type: GroupType.ParentsMeeting }],
+  annualGroups: (year) =>
+    [
+      GroupType.Board,
+      GroupType.GigCommittee,
+      GroupType.SocialCommittee,
+      GroupType.ConcertCommittee,
+      GroupType.RecruitmentCommittee,
+      GroupType.TourCommittee,
+      GroupType.NominationCommittee,
+      GroupType.WebTeam,
+      GroupType.Archives,
+      GroupType.MemorisationCommittee
+    ].map((type) => ({ type, year }))
 }
 
 /**
@@ -123,15 +119,15 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
     for (const definition of REFERENCE_DATA.continuingGroups) {
       const id = referenceContinuingGroupId(definition.type)
       const existingId = await seededGroupId(client, id, definition.type, null)
-      if (existingId || (await activeGroupId(client, definition.name, definition.type, null))) continue
-      await insertGroup(client, definition.name, definition.type, null, null, id)
-      created.push(definition.name)
+      if (existingId || (await activeGroupId(client, null, definition.type, null))) continue
+      await insertGroup(client, null, definition.type, null, null, id)
+      created.push(definition.type)
     }
     for (const year of [currentYear, currentYear + 1]) {
       for (const definition of REFERENCE_DATA.annualGroups(year)) {
         if (await annualGroupId(client, definition.type, year)) continue
-        await insertGroup(client, definition.name, definition.type, null, year)
-        created.push(definition.name)
+        await insertGroup(client, null, definition.type, null, year)
+        created.push(definition.type)
       }
     }
 
@@ -143,11 +139,11 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
   }
 }
 
-async function activeGroupId(client: ClientBase, name: string, type: GroupType, choirId: string | null) {
+async function activeGroupId(client: ClientBase, name: string | null, type: GroupType, choirId: string | null) {
   const { rows } = await client.query<{ id: string }>(
     `select "id" from "group"
-     where "name" = $1 and "type" = $2 and "active" and "choir_id" is not distinct from $3::uuid`,
-    [name, type, choirId]
+     where ($1::text IS NULL OR "name" = $1) and "type" = $2 and "active" and "choir_id" is not distinct from $3::uuid`,
+    [hasExplicitGroupName(type) ? name : null, type, choirId]
   )
   return rows[0]?.id
 }
@@ -176,7 +172,7 @@ async function annualGroupId(client: ClientBase, type: GroupType, year: number) 
 
 async function insertGroup(
   client: ClientBase,
-  name: string,
+  name: string | null,
   type: GroupType,
   choirId: string | null,
   year: number | null = null,
@@ -185,11 +181,11 @@ async function insertGroup(
   const { rows } = id
     ? await client.query<{ id: string }>(
         `insert into "group" ("id", "name", "type", "choir_id", "organisation_year") values ($1, $2, $3, $4, $5) returning "id"`,
-        [id, name, type, choirId, year]
+        [id, hasExplicitGroupName(type) ? name : null, type, choirId, year]
       )
     : await client.query<{ id: string }>(
         `insert into "group" ("name", "type", "choir_id", "organisation_year") values ($1, $2, $3, $4) returning "id"`,
-        [name, type, choirId, year]
+        [hasExplicitGroupName(type) ? name : null, type, choirId, year]
       )
   const [row] = rows
   if (!row) throw new Error(`Creating the group ${name} did not return a record.`)

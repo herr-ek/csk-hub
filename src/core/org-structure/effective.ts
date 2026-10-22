@@ -10,7 +10,7 @@ export type EffectivePosition = {
   positionCode: PositionCode | null
   name: string
   contextGroupId: string
-  contextName: string
+  contextName: string | null
   contextType: GroupType
   contextChoirId: string | null
   contextChoirName: string | null
@@ -19,17 +19,23 @@ export type EffectivePosition = {
   endDate: IsoDate | null
   grantedGroups: {
     id: string
-    name: string
+    name: string | null
     type: GroupType
     choirId: string | null
     organisationYear: number | null
   }[]
-  affiliationGroups: { id: string; name: string; choirName: string | null; type: GroupType; choirId: string | null }[]
+  affiliationGroups: {
+    id: string
+    name: string | null
+    choirName: string | null
+    type: GroupType
+    choirId: string | null
+  }[]
 }
 
 export type EffectiveGroup = {
   groupId: string
-  name: string
+  name: string | null
   type: GroupType
   choirId: string | null
   choirName: string | null

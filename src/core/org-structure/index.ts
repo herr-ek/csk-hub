@@ -26,3 +26,5 @@ export function holdsElectedPosts(type: GroupType) {
 export type IsoDate = string
 
 export { GROUP_POLICIES, organisationYearPeriod, POSITION_DEFINITIONS } from "./catalogue"
+export { EXPLICIT_GROUP_NAME_TYPES, hasExplicitGroupName } from "./group-names"
+export { formatGroupLabel, groupTypeKey, positionCodeKey } from "./labels"

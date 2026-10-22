@@ -17,40 +17,69 @@ export const GROUP_POLICIES = {
     cardinality: "four-sections"
   },
   [GroupType.Board]: { scope: "csk", lifetime: "annual", directMembership: "no", cardinality: "singleton" },
-  [GroupType.Gigmästeri]: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
-  [GroupType.Sexmästeri]: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
-  [GroupType.Konsertmästeri]: {
+  [GroupType.GigCommittee]: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
+  [GroupType.SocialCommittee]: {
     scope: "csk",
     lifetime: "annual",
     directMembership: "helpers",
     cardinality: "singleton"
   },
-  [GroupType.Rekryteringskommitté]: {
+  [GroupType.ConcertCommittee]: {
     scope: "csk",
     lifetime: "annual",
     directMembership: "helpers",
     cardinality: "singleton"
   },
-  [GroupType.Turnékommitté]: {
+  [GroupType.RecruitmentCommittee]: {
     scope: "csk",
     lifetime: "annual",
     directMembership: "helpers",
     cardinality: "singleton"
   },
-  [GroupType.Valberedning]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  [GroupType.Webmästeri]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  [GroupType.Arkivarie]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  [GroupType.Utantillkommitté]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  [GroupType.Föräldramötet]: { scope: "csk", lifetime: "continuing", directMembership: "no", cardinality: "singleton" },
-  [GroupType.Roddgrupp]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
-  [GroupType.Festgrupp]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
-  [GroupType.Rephelg]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
+  [GroupType.TourCommittee]: {
+    scope: "csk",
+    lifetime: "annual",
+    directMembership: "helpers",
+    cardinality: "singleton"
+  },
+  [GroupType.NominationCommittee]: {
+    scope: "csk",
+    lifetime: "annual",
+    directMembership: "yes",
+    cardinality: "singleton"
+  },
+  [GroupType.WebTeam]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
+  [GroupType.Archives]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
+  [GroupType.MemorisationCommittee]: {
+    scope: "csk",
+    lifetime: "annual",
+    directMembership: "yes",
+    cardinality: "singleton"
+  },
+  [GroupType.ParentsMeeting]: {
+    scope: "csk",
+    lifetime: "continuing",
+    directMembership: "no",
+    cardinality: "singleton"
+  },
+  [GroupType.EquipmentTeam]: {
+    scope: "choir",
+    lifetime: "fluid",
+    directMembership: "yes",
+    cardinality: "choir-singleton"
+  },
+  [GroupType.PartyTeam]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
+  [GroupType.RehearsalWeekendTeam]: {
+    scope: "choir",
+    lifetime: "fluid",
+    directMembership: "yes",
+    cardinality: "choir-singleton"
+  },
   [GroupType.GigGroup]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" },
-  [GroupType.Övrig]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" }
+  [GroupType.Other]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" }
 } as const satisfies Record<GroupType, GroupPolicy>
 
 type PositionDefinition = {
-  label: string
   context: GroupType
   prerequisite: boolean
   grants: readonly GroupType[]
@@ -59,113 +88,97 @@ type PositionDefinition = {
 
 /** Stable appointment identities, independent of display labels. */
 export const POSITION_DEFINITIONS = {
-  [PositionCode.Ordforande]: {
-    label: "Ordförande",
+  [PositionCode.Chair]: {
     context: GroupType.Board,
     prerequisite: false,
     grants: [GroupType.Board],
     endPolicy: "annual"
   },
-  [PositionCode.ViceOrdforande]: {
-    label: "Vice Ordförande",
+  [PositionCode.ViceChair]: {
     context: GroupType.Board,
     prerequisite: false,
-    grants: [GroupType.Board, GroupType.Rekryteringskommitté],
+    grants: [GroupType.Board, GroupType.RecruitmentCommittee],
     endPolicy: "annual"
   },
-  [PositionCode.Kassor]: {
-    label: "Kassör",
-    context: GroupType.Board,
-    prerequisite: false,
-    grants: [GroupType.Board],
-    endPolicy: "annual"
-  },
-  [PositionCode.Sekreterare]: {
-    label: "Sekreterare",
-    context: GroupType.Board,
-    prerequisite: false,
-    grants: [GroupType.Board, GroupType.Föräldramötet],
-    endPolicy: "annual"
-  },
-  [PositionCode.PrMastare]: {
-    label: "PR-mästare",
+  [PositionCode.Treasurer]: {
     context: GroupType.Board,
     prerequisite: false,
     grants: [GroupType.Board],
     endPolicy: "annual"
   },
-  [PositionCode.ForstaKonsertmastare]: {
-    label: "1:a Konsertmästare",
+  [PositionCode.Secretary]: {
     context: GroupType.Board,
     prerequisite: false,
-    grants: [GroupType.Board, GroupType.Konsertmästeri],
+    grants: [GroupType.Board, GroupType.ParentsMeeting],
     endPolicy: "annual"
   },
-  [PositionCode.CskGigmastare]: {
-    label: "CSK Gigmästare",
+  [PositionCode.PublicRelationsOfficer]: {
     context: GroupType.Board,
     prerequisite: false,
-    grants: [GroupType.Board, GroupType.Gigmästeri],
+    grants: [GroupType.Board],
     endPolicy: "annual"
   },
-  [PositionCode.Sexmastare]: {
-    label: "Sexmästare",
+  [PositionCode.FirstConcertMaster]: {
     context: GroupType.Board,
     prerequisite: false,
-    grants: [GroupType.Board, GroupType.Sexmästeri],
+    grants: [GroupType.Board, GroupType.ConcertCommittee],
     endPolicy: "annual"
   },
-  [PositionCode.Sexmastarinna]: {
-    label: "Sexmästarinna",
-    context: GroupType.Sexmästeri,
+  [PositionCode.OrganisationGigCoordinator]: {
+    context: GroupType.Board,
     prerequisite: false,
-    grants: [GroupType.Sexmästeri],
+    grants: [GroupType.Board, GroupType.GigCommittee],
     endPolicy: "annual"
   },
-  [PositionCode.EkonomisktAnsvarig]: {
-    label: "Ekonomiskt Ansvarig",
-    context: GroupType.Turnékommitté,
+  [PositionCode.SocialCoordinator]: {
+    context: GroupType.Board,
     prerequisite: false,
-    grants: [GroupType.Turnékommitté],
+    grants: [GroupType.Board, GroupType.SocialCommittee],
     endPolicy: "annual"
   },
-  [PositionCode.Dirigent]: {
-    label: "Dirigent",
+  [PositionCode.DeputySocialCoordinator]: {
+    context: GroupType.SocialCommittee,
+    prerequisite: false,
+    grants: [GroupType.SocialCommittee],
+    endPolicy: "annual"
+  },
+  [PositionCode.FinancialOfficer]: {
+    context: GroupType.TourCommittee,
+    prerequisite: false,
+    grants: [GroupType.TourCommittee],
+    endPolicy: "annual"
+  },
+  [PositionCode.Conductor]: {
     context: GroupType.Choir,
     prerequisite: true,
     grants: [],
     endPolicy: "fluid"
   },
-  [PositionCode.Notfiskal]: {
-    label: "Notfiskal",
+  [PositionCode.MusicLibrarian]: {
     context: GroupType.Choir,
     prerequisite: true,
     grants: [],
     endPolicy: "fluid"
   },
-  [PositionCode.ChoirKonsertmastare]: {
-    label: "Choir Konsertmästare",
+  [PositionCode.ChoirConcertMaster]: {
     context: GroupType.Choir,
     prerequisite: true,
-    grants: [GroupType.Konsertmästeri],
+    grants: [GroupType.ConcertCommittee],
     endPolicy: "annual"
   },
-  [PositionCode.ChoirGigmastare]: {
-    label: "Choir Gigmästare",
+  [PositionCode.ChoirGigCoordinator]: {
     context: GroupType.Choir,
     prerequisite: true,
-    grants: [GroupType.Gigmästeri],
+    grants: [GroupType.GigCommittee],
     endPolicy: "annual"
   },
-  [PositionCode.Stamforalder]: {
-    label: "Stämförälder",
+  [PositionCode.SectionParent]: {
     context: GroupType.Section,
     prerequisite: true,
-    grants: [GroupType.Föräldramötet],
+    grants: [GroupType.ParentsMeeting],
     endPolicy: "fluid"
   },
-  [PositionCode.Gigledare]: {
-    label: "Gigledare",
+  [PositionCode.GigLeader]: {
     context: GroupType.GigGroup,
     prerequisite: true,
     grants: [],

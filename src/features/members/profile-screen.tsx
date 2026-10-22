@@ -3,7 +3,7 @@ import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
 import { conversationPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
-import { shiftDate } from "@/core/org-structure"
+import { positionCodeKey, shiftDate } from "@/core/org-structure"
 import { StartConversationDialog } from "@/features/messaging"
 import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
@@ -47,7 +47,7 @@ async function AdminParticipationHistory({ records }: { records: ProfileData["ma
   const entries = [
     ...records.appointments.map((item) => ({
       key: item.id,
-      label: `${positionLabel(item.positionCode)} · ${item.contextName}`,
+      label: `${positionLabel(positionCodeKey(item.positionCode))} · ${item.contextName}`,
       start: item.startDate,
       end: item.endDate ? shiftDate(item.endDate, -1) : null,
       groupId: item.contextGroupId,
@@ -175,18 +175,12 @@ async function ProfilePositions({ positions }: { positions: Profile["positions"]
           <Card key={position.id} size="sm">
             <CardContent>
               <h3 className="font-semibold">
-                {position.positionCode ? positionLabel(position.positionCode) : position.name}
+                {position.positionCode ? positionLabel(positionCodeKey(position.positionCode)) : position.name}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {[
-                  position.organisationYear
-                    ? `${position.contextName} ${String(position.organisationYear).slice(-2)}/${String(position.organisationYear + 1).slice(-2)}`
-                    : position.contextName,
-                  ...position.groups
-                    .filter((group) => group.id !== position.contextGroupId)
-                    .map((group) =>
-                      group.choirName ? t("groupContext", { group: group.name, choir: group.choirName }) : group.name
-                    )
+                  position.contextName,
+                  ...position.groups.filter((group) => group.id !== position.contextGroupId).map((group) => group.name)
                 ].join(", ")}
               </p>
             </CardContent>
@@ -236,7 +230,7 @@ async function ProfileGroups({ groups, otherGroups }: Pick<Profile, "groups" | "
           <h2 id="other-groups-title" className="mb-4 font-heading text-xl font-semibold">
             {t("otherGroups")}
           </h2>
-          <MemberGroupsCard groups={otherGroups} showContext />
+          <MemberGroupsCard groups={otherGroups} />
         </section>
       ) : null}
     </>

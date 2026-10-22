@@ -3,6 +3,7 @@ import * as permissions from "@/core/auth/permissions.server"
 import * as session from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import * as messaging from "@/features/messaging/reading"
+import * as organisation from "@/features/org-structure-management"
 import { getProfile } from "./query"
 import * as service from "./service"
 
@@ -28,9 +29,11 @@ const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> 
 const sessionRead = spyOn(session, "getRequestSession")
 const profileRead = spyOn(service, "getMemberProfile")
 const conversationRead = spyOn(messaging, "findDirectConversation")
+const labelsRead = spyOn(organisation, "listLocalizedGroupLabels")
 const adminRead = spyOn(permissions, "isUserAdmin")
 
 beforeEach(() => {
+  labelsRead.mockReset().mockResolvedValue(new Map())
   sessionRead.mockReset().mockResolvedValue(viewer)
   profileRead.mockReset().mockResolvedValue(member)
   conversationRead.mockReset().mockResolvedValue("conversation-1")
@@ -38,6 +41,7 @@ beforeEach(() => {
 })
 
 afterAll(() => {
+  labelsRead.mockRestore()
   sessionRead.mockRestore()
   profileRead.mockRestore()
   conversationRead.mockRestore()

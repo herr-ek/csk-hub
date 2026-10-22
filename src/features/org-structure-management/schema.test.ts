@@ -76,7 +76,7 @@ describe.skipIf(!database)("final organisation schema", () => {
         .insert(positionAppointment)
         .values({
           userId,
-          positionCode: PositionCode.Ordforande,
+          positionCode: PositionCode.Chair,
           contextGroupId: boardId,
           organisationYear: 2040,
           startDate: "2040-06-30",

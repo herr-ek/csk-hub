@@ -16,7 +16,7 @@ describe.skipIf(!database)("Choir and Section Membership commands", () => {
     const choirId = await t.groupId("MK")
     const team = expectSuccess(
       await import("./appointments").then(({ createOrganisationGroup }) =>
-        createOrganisationGroup(t.db, { name: "Membership rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+        createOrganisationGroup(t.db, { name: "Membership rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
       )
     ).id
     expect(await startMembership(t.db, { userId, groupId: team, startDate: "2026-09-01" })).toEqual({
@@ -86,7 +86,7 @@ describe.skipIf(!database)("Choir and Section Membership commands", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: PositionCode.Dirigent,
+        positionCode: PositionCode.Conductor,
         contextGroupId: choirId,
         startDate: "2025-01-01"
       })

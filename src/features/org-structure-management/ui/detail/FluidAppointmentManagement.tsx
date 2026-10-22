@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
-import { POSITION_DEFINITIONS, type PositionCode, shiftDate } from "@/core/org-structure"
+import { POSITION_DEFINITIONS, type PositionCode, positionCodeKey, shiftDate } from "@/core/org-structure"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -46,7 +46,10 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
               label={t("position")}
               name="positionCode"
               required
-              options={positions.map(([code]) => ({ value: code, label: labels(code as PositionCode) }))}
+              options={positions.map(([code]) => ({
+                value: code,
+                label: labels(positionCodeKey(code as PositionCode))
+              }))}
             />
             <SelectField
               label={t("holder")}
@@ -78,7 +81,7 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
                 return (
                   <TableRow key={appointment.id}>
                     <TableCell>
-                      {labels(appointment.positionCode as PositionCode)}
+                      {labels(positionCodeKey(appointment.positionCode as PositionCode))}
                       {appointment.contextGroupId !== detail.group.id ? ` · ${appointment.contextName}` : ""}
                     </TableCell>
                     <TableCell>{appointment.name}</TableCell>
@@ -109,7 +112,7 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
                               defaultValue={appointment.positionCode}
                               options={positions.map(([code]) => ({
                                 value: code,
-                                label: labels(code as PositionCode)
+                                label: labels(positionCodeKey(code as PositionCode))
                               }))}
                             />
                             <SelectField

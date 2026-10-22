@@ -37,7 +37,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     if (!singer) throw new Error(`At least ${index + 1} seeded singers are required.`)
     return singer
   }
-  const continuing = groups.find((row) => row.type === GroupType.Föräldramötet)
+  const continuing = groups.find((row) => row.type === GroupType.ParentsMeeting)
   if (!continuing) throw new Error("Föräldramötet is missing; run `bun run ops reference-data` first.")
 
   const addDirect = async (key: string, userId: string, groupId: string, startDate: string, endDate: string | null) => {
@@ -133,18 +133,18 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
 
   const board = annual(GroupType.Board, CURRENT_YEAR)
   const roleGroups = new Map<PositionCode, string[]>([
-    [PositionCode.Ordforande, [board.id]],
-    [PositionCode.Kassor, [board.id]],
-    [PositionCode.Sekreterare, [board.id, continuing.id]],
-    [PositionCode.PrMastare, [board.id]],
-    [PositionCode.ForstaKonsertmastare, [board.id, annual(GroupType.Konsertmästeri, CURRENT_YEAR).id]],
-    [PositionCode.CskGigmastare, [board.id, annual(GroupType.Gigmästeri, CURRENT_YEAR).id]],
-    [PositionCode.Sexmastare, [board.id, annual(GroupType.Sexmästeri, CURRENT_YEAR).id]]
+    [PositionCode.Chair, [board.id]],
+    [PositionCode.Treasurer, [board.id]],
+    [PositionCode.Secretary, [board.id, continuing.id]],
+    [PositionCode.PublicRelationsOfficer, [board.id]],
+    [PositionCode.FirstConcertMaster, [board.id, annual(GroupType.ConcertCommittee, CURRENT_YEAR).id]],
+    [PositionCode.OrganisationGigCoordinator, [board.id, annual(GroupType.GigCommittee, CURRENT_YEAR).id]],
+    [PositionCode.SocialCoordinator, [board.id, annual(GroupType.SocialCommittee, CURRENT_YEAR).id]]
   ])
   await appoint(
     "board-26-ordforande-handover-old",
     singerAt(15),
-    PositionCode.Ordforande,
+    PositionCode.Chair,
     board.id,
     CURRENT_YEAR,
     "2026-07-01",
@@ -153,8 +153,8 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
   )
   for (const [index, [code, grants]] of [...roleGroups].entries()) {
     const userId = singerAt(index + 1)
-    if (code === PositionCode.Sexmastare) {
-      const committee = annual(GroupType.Sexmästeri, CURRENT_YEAR)
+    if (code === PositionCode.SocialCoordinator) {
+      const committee = annual(GroupType.SocialCommittee, CURRENT_YEAR)
       await addDirect("sexmastere-helper-before", userId, committee.id, "2026-07-01", "2026-09-01")
       await appoint(`board-26-${code}`, userId, code, board.id, CURRENT_YEAR, "2026-09-01", "2027-01-01", grants)
       await addDirect("sexmastere-helper-after", userId, committee.id, "2027-01-01", "2027-07-01")
@@ -166,7 +166,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       code,
       board.id,
       CURRENT_YEAR,
-      code === PositionCode.Ordforande ? "2026-09-01" : "2026-07-01",
+      code === PositionCode.Chair ? "2026-09-01" : "2026-07-01",
       "2027-07-01",
       grants
     )
@@ -174,7 +174,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
   await appoint(
     "board-27-ordforande-renewal",
     singerAt(1),
-    PositionCode.Ordforande,
+    PositionCode.Chair,
     annual(GroupType.Board, CURRENT_YEAR + 1).id,
     CURRENT_YEAR + 1,
     "2027-07-01",
@@ -182,22 +182,22 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     [annual(GroupType.Board, CURRENT_YEAR + 1).id]
   )
 
-  const sexmästeri = annual(GroupType.Sexmästeri, CURRENT_YEAR)
+  const sexmästeri = annual(GroupType.SocialCommittee, CURRENT_YEAR)
   await appoint(
     "sexmastarinna-26",
     singerAt(10),
-    PositionCode.Sexmastarinna,
+    PositionCode.DeputySocialCoordinator,
     sexmästeri.id,
     CURRENT_YEAR,
     "2026-07-01",
     "2027-07-01",
     [sexmästeri.id]
   )
-  const turne = annual(GroupType.Turnékommitté, CURRENT_YEAR)
+  const turne = annual(GroupType.TourCommittee, CURRENT_YEAR)
   await appoint(
     "ekonomiskt-ansvarig-turne-26",
     singerAt(11),
-    PositionCode.EkonomisktAnsvarig,
+    PositionCode.FinancialOfficer,
     turne.id,
     CURRENT_YEAR,
     "2026-07-01",
@@ -213,28 +213,28 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     await appoint(
       `choir-konsert-${choir.name}-26`,
       choirMember,
-      PositionCode.ChoirKonsertmastare,
+      PositionCode.ChoirConcertMaster,
       choir.id,
       CURRENT_YEAR,
       "2026-07-01",
       "2027-07-01",
-      [annual(GroupType.Konsertmästeri, CURRENT_YEAR).id]
+      [annual(GroupType.ConcertCommittee, CURRENT_YEAR).id]
     )
     await appoint(
       `choir-gig-${choir.name}-26`,
       otherChoirMember,
-      PositionCode.ChoirGigmastare,
+      PositionCode.ChoirGigCoordinator,
       choir.id,
       CURRENT_YEAR,
       "2026-07-01",
       "2027-07-01",
-      [annual(GroupType.Gigmästeri, CURRENT_YEAR).id]
+      [annual(GroupType.GigCommittee, CURRENT_YEAR).id]
     )
     const formerDirigent = await memberOf(choir.id, "2025-09-01", index + 2)
     await appoint(
       `choir-dirigent-handover-${choir.name}-old`,
       formerDirigent,
-      PositionCode.Dirigent,
+      PositionCode.Conductor,
       choir.id,
       null,
       "2025-09-01",
@@ -244,7 +244,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     await appoint(
       `choir-dirigent-${choir.name}`,
       choirMember,
-      PositionCode.Dirigent,
+      PositionCode.Conductor,
       choir.id,
       null,
       "2026-07-01",
@@ -254,7 +254,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     await appoint(
       `choir-notfiskal-${choir.name}`,
       otherChoirMember,
-      PositionCode.Notfiskal,
+      PositionCode.MusicLibrarian,
       choir.id,
       null,
       "2026-07-01",
@@ -272,14 +272,14 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
 
   for (const [index, row] of sections.entries()) {
     const userId = await memberOf(row.id, "2026-07-01", index)
-    await appoint(`stamforalder-${row.id}`, userId, PositionCode.Stamforalder, row.id, null, "2026-07-01", null, [
+    await appoint(`stamforalder-${row.id}`, userId, PositionCode.SectionParent, row.id, null, "2026-07-01", null, [
       continuing.id
     ])
   }
 
   // Direct Helpers have explicit Memberships without fabricated Position titles.
   for (const [index, type] of (
-    [GroupType.Valberedning, GroupType.Webmästeri, GroupType.Arkivarie, GroupType.Utantillkommitté] as const
+    [GroupType.NominationCommittee, GroupType.WebTeam, GroupType.Archives, GroupType.MemorisationCommittee] as const
   ).entries()) {
     const target = annual(type, CURRENT_YEAR)
     for (const userId of singers.slice(40 + index * 2, 42 + index * 2))
@@ -296,7 +296,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     await appoint(
       `gigleader-${gigGroup.id}`,
       gigLeader,
-      PositionCode.Gigledare,
+      PositionCode.GigLeader,
       gigGroup.id,
       null,
       "2026-07-01",

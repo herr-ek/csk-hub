@@ -90,7 +90,7 @@ describe.skipIf(!database)("seedGroups", () => {
     const holderCorrection = await correctAnnualAppointment(t.db, {
       appointmentId,
       userId: SEED_USERS[99]?.id as string,
-      positionCode: PositionCode.Ordforande,
+      positionCode: PositionCode.Chair,
       contextGroupId: appointment.contextGroupId,
       organisationYear: 2026,
       startDate: "2026-09-01",
@@ -126,7 +126,7 @@ describe.skipIf(!database)("seedGroups", () => {
       await correctFluidAppointment(t.db, {
         appointmentId: gigAppointmentId,
         userId: gigAppointment.userId,
-        positionCode: PositionCode.Gigledare,
+        positionCode: PositionCode.GigLeader,
         contextGroupId: alternate.data.id,
         startDate: "2026-07-01",
         endDate: null
@@ -190,14 +190,17 @@ describe.skipIf(!database)("seedGroups", () => {
       .select()
       .from(group)
       .where(and(eq(group.name, "DKS1"), eq(group.type, GroupType.Section)))
-    const [continuing] = await t.db.select().from(group).where(eq(group.type, GroupType.Föräldramötet))
+    const [continuing] = await t.db.select().from(group).where(eq(group.type, GroupType.ParentsMeeting))
     if (!choir || !sectionRow || !continuing) throw new Error("Missing reference Groups")
     expect(choir.id).toBe(referenceChoirId("DK"))
     expect(sectionRow.id).toBe(referenceSectionId("DK", "DKS1"))
-    expect(continuing.id).toBe(referenceContinuingGroupId(GroupType.Föräldramötet))
+    expect(continuing.id).toBe(referenceContinuingGroupId(GroupType.ParentsMeeting))
     expect((await renameGroup(t.db, choir.id, "Edited DK")).success).toBe(true)
     expect((await renameGroup(t.db, sectionRow.id, "Edited DKS1")).success).toBe(true)
-    expect((await renameGroup(t.db, continuing.id, "Edited Parents Meeting")).success).toBe(true)
+    expect(await renameGroup(t.db, continuing.id, "Edited Parents Meeting")).toEqual({
+      success: false,
+      error: "group-name-derived"
+    })
 
     const groupsBefore = await t.db.select().from(group)
     const membershipsBefore = await t.db.select().from(directMembership)
@@ -225,7 +228,7 @@ describe.skipIf(!database)("seedGroups", () => {
       expect.objectContaining({ name: "Edited DKS1", type: GroupType.Section, choirId: choir.id })
     ])
     expect(await t.db.select().from(group).where(eq(group.id, continuing.id))).toMatchObject([
-      expect.objectContaining({ name: "Edited Parents Meeting", type: GroupType.Föräldramötet })
+      expect.objectContaining({ name: null, type: GroupType.ParentsMeeting })
     ])
   })
 })

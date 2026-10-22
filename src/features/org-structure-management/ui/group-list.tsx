@@ -4,6 +4,7 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import Link from "next/link"
 import { useId } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { positionCodeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { Label } from "@/shared/ui/base/label"
@@ -94,7 +95,7 @@ export function GroupFacts({ group }: { group: GroupSummary }) {
           {group.holders.map(({ id, positionCode, position, context, holder }) => (
             <div key={id} className="contents">
               <dt className="text-muted-foreground">
-                {positionCode ? positionLabel(positionCode) : position}
+                {positionCode ? positionLabel(positionCodeKey(positionCode)) : position}
                 {context ? ` (${context})` : ""}
               </dt>
               <dd>{holder}</dd>

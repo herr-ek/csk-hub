@@ -44,14 +44,14 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
       IDLE,
       form({
         userId,
-        positionCode: PositionCode.Dirigent,
+        positionCode: PositionCode.Conductor,
         contextGroupId: choir,
         startDate: "2055-06-15"
       })
     )
     expect(assigned).toMatchObject({ status: "success" })
     const [appointment] = await listAppointmentsForGroup(t.db, choir)
-    expect(appointment).toMatchObject({ positionCode: PositionCode.Dirigent, endDate: null })
+    expect(appointment).toMatchObject({ positionCode: PositionCode.Conductor, endDate: null })
     const appointmentId = appointment?.id ?? ""
 
     expect(
@@ -60,7 +60,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
         form({
           appointmentId,
           userId,
-          positionCode: PositionCode.Notfiskal,
+          positionCode: PositionCode.MusicLibrarian,
           contextGroupId: choir,
           startDate: "2055-07-01",
           lastDay: ""
@@ -68,7 +68,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
       )
     ).toMatchObject({ status: "success" })
     expect(await listAppointmentsForGroup(t.db, choir)).toMatchObject([
-      { userId, positionCode: PositionCode.Notfiskal, startDate: "2055-07-01", endDate: null }
+      { userId, positionCode: PositionCode.MusicLibrarian, startDate: "2055-07-01", endDate: null }
     ])
 
     revalidatePath.mockClear()
@@ -78,7 +78,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
         form({
           appointmentId,
           userId,
-          positionCode: PositionCode.Dirigent,
+          positionCode: PositionCode.Conductor,
           contextGroupId: otherChoir,
           startDate: "2055-07-01",
           lastDay: ""
@@ -86,7 +86,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
       )
     ).toEqual({ status: "error", error: "membership-dependency" })
     expect(await listAppointmentsForGroup(t.db, choir)).toMatchObject([
-      { userId, positionCode: PositionCode.Notfiskal }
+      { userId, positionCode: PositionCode.MusicLibrarian }
     ])
     expect(revalidatePath).not.toHaveBeenCalled()
 

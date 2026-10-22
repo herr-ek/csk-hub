@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { useTranslations } from "@/core/i18n/translations"
+import { positionCodeKey } from "@/core/org-structure"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import type { GroupDetail } from "./query"
 
@@ -29,7 +30,7 @@ export function EffectiveMembersSection({ detail }: { detail: GroupDetail }) {
                           href={`/admin/org-structure/${appointment.contextGroupId}`}
                         >
                           {t("positionWithContext", {
-                            position: positionLabel(appointment.positionCode),
+                            position: positionLabel(positionCodeKey(appointment.positionCode)),
                             context: appointment.contextName
                           })}
                         </Link>

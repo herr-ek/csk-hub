@@ -9,7 +9,6 @@ import {
   type EffectivePosition,
   GroupType,
   type IsoDate,
-  POSITION_DEFINITIONS,
   type PositionCode
 } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
@@ -148,7 +147,7 @@ export async function listEffectiveParticipationOfUserAt(
     positionsById.set(row.appointment.id, {
       id: row.appointment.id,
       positionCode: code,
-      name: POSITION_DEFINITIONS[code]?.label ?? code,
+      name: code,
       contextGroupId: row.context.id,
       contextName: row.context.name,
       contextType: row.context.type as GroupType,
@@ -177,7 +176,10 @@ export async function listEffectiveParticipationOfUserAt(
     if (contextMembership && !contextMembership.positions.some((position) => position.id === appointment.id))
       contextMembership.positions.push(appointment)
   }
-  return { groups: [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, "sv")), positions }
+  return {
+    groups: [...groups.values()].sort((a, b) => (a.name ?? a.type).localeCompare(b.name ?? b.type, "sv")),
+    positions
+  }
 }
 
 /** Batched current Choir/Section summary using direct placement and appointment grants. */

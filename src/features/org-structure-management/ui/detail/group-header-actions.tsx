@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
-import { GroupType } from "@/core/org-structure"
+import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { CommandDialog } from "../command-dialog"
@@ -40,19 +40,21 @@ export function GroupHeaderActions({
           <GroupFields currentYear={currentYear} choirs={choirs} initial={{ ...group, choirId: group.choir?.id }} />
         </CommandDialog>
       ) : null}
-      <CommandDialog
-        trigger={
-          <Button type="button" variant="outline">
-            {t("rename")}
-          </Button>
-        }
-        title={t("renameTitle", { name: group.name })}
-        action={renameGroupAction}
-        submitLabel={t("rename")}
-      >
-        <input type="hidden" name="groupId" value={group.id} />
-        <InputField label={t("name")} name="name" defaultValue={group.name} required maxLength={NAME_MAX_LENGTH} />
-      </CommandDialog>
+      {hasExplicitGroupName(group.type) ? (
+        <CommandDialog
+          trigger={
+            <Button type="button" variant="outline">
+              {t("rename")}
+            </Button>
+          }
+          title={t("renameTitle", { name: group.name })}
+          action={renameGroupAction}
+          submitLabel={t("rename")}
+        >
+          <input type="hidden" name="groupId" value={group.id} />
+          <InputField label={t("name")} name="name" defaultValue={group.name} required maxLength={NAME_MAX_LENGTH} />
+        </CommandDialog>
+      ) : null}
       {archivable && group.active ? (
         <CommandDialog
           trigger={

@@ -5,6 +5,7 @@ import { appointmentGrant, directMembership, group, positionAppointment } from "
 import {
   GROUP_POLICIES,
   GroupType,
+  hasExplicitGroupName,
   type IsoDate,
   isAllowedOrganisationYear,
   organisationYearPeriod
@@ -13,19 +14,6 @@ import { createOrganisationGroup } from "./appointments"
 import { cskToday } from "./effective-reads"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
-
-const ANNUAL_GROUP_NAMES: Partial<Record<GroupType, string>> = {
-  [GroupType.Board]: "Styret",
-  [GroupType.Gigmästeri]: "Gigmästeriet",
-  [GroupType.Sexmästeri]: "Sexmästeriet",
-  [GroupType.Konsertmästeri]: "Konsertmästeriet",
-  [GroupType.Rekryteringskommitté]: "Rekryteringskommittén",
-  [GroupType.Turnékommitté]: "Turnékommittén",
-  [GroupType.Valberedning]: "Valberedningen",
-  [GroupType.Webmästeri]: "Webmästeriet",
-  [GroupType.Arkivarie]: "Arkivariet",
-  [GroupType.Utantillkommitté]: "Utantillkommittén"
-}
 
 /** Prepares the required annual set, reusing concrete identities; never copies participation. */
 export function prepareOrganisationYear(database: OrgStructureDatabase, year: number, today: IsoDate = cskToday()) {
@@ -45,11 +33,9 @@ export function prepareOrganisationYear(database: OrgStructureDatabase, year: nu
         if (!existing.active) throw new RuleViolation("group-archived")
         prepared.push({ id: existing.id, type })
       } else {
-        const label = ANNUAL_GROUP_NAMES[type] ?? type
         const result = await createOrganisationGroup(
           tx,
           {
-            name: `${label} ${String(year).slice(-2)}/${String(year + 1).slice(-2)}`,
             type: type as Exclude<GroupType, GroupType.Choir | GroupType.Section>,
             organisationYear: year
           },
@@ -88,7 +74,7 @@ export function updateOrganisationGroup(
   database: OrgStructureDatabase,
   input: {
     groupId: string
-    name: string
+    name?: string
     type: GroupType
     choirId?: string | null
     organisationYear?: number | null
@@ -98,8 +84,8 @@ export function updateOrganisationGroup(
   return runOrgStructureCommand(database, async (tx) => {
     const [current] = await tx.select().from(group).where(eq(group.id, input.groupId)).for("update")
     if (!current) throw new RuleViolation("group-not-found")
-    const name = input.name.trim()
-    if (!name) throw new RuleViolation("invalid-group-name")
+    const name = hasExplicitGroupName(input.type) ? input.name?.trim() : null
+    if (hasExplicitGroupName(input.type) && !name) throw new RuleViolation("invalid-group-name")
     const choirId = input.choirId ?? null
     const organisationYear = input.organisationYear ?? null
     if (organisationYear !== null && !isAllowedOrganisationYear(organisationYear, requireDate(today)))

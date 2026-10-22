@@ -8,6 +8,7 @@ import {
   organisationYearPeriod,
   POSITION_DEFINITIONS,
   type PositionCode,
+  positionCodeKey,
   shiftDate
 } from "@/core/org-structure"
 import { InputField, SelectField } from "@/shared/forms/fields"
@@ -102,7 +103,7 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
               options={applicablePositions.map(([code]) => ({
                 value: code,
                 label: t("positionOption", {
-                  position: positionLabel(code as PositionCode),
+                  position: positionLabel(positionCodeKey(code as PositionCode)),
                   occupied: occupied.has(code as PositionCode) ? "true" : "false",
                   replace: t("replaceHolder")
                 })
@@ -164,7 +165,7 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
                 return (
                   <TableRow key={appointment.id}>
                     <TableCell>
-                      {positionLabel(appointment.positionCode as PositionCode)}
+                      {positionLabel(positionCodeKey(appointment.positionCode as PositionCode))}
                       {appointment.contextName ? ` · ${appointment.contextName}` : ""}
                     </TableCell>
                     <TableCell>{appointment.name}</TableCell>
@@ -332,7 +333,10 @@ function AppointmentCorrectionDialog({
         name="positionCode"
         required
         defaultValue={appointment.positionCode}
-        options={applicablePositions.map(([code]) => ({ value: code, label: positionLabel(code as PositionCode) }))}
+        options={applicablePositions.map(([code]) => ({
+          value: code,
+          label: positionLabel(positionCodeKey(code as PositionCode))
+        }))}
       />
       {choirContext ? (
         <SelectField
@@ -421,7 +425,7 @@ function AnnualContextSelect({
         }}
         items={contexts.map((context) => ({
           value: context.id,
-          label: `${context.name} (${context.organisationYear}/${(context.organisationYear ?? 0) + 1})`
+          label: context.name
         }))}
       >
         <SelectTrigger id={id} className="w-full">
@@ -430,7 +434,7 @@ function AnnualContextSelect({
         <SelectContent>
           {contexts.map((context) => (
             <SelectItem key={context.id} value={context.id}>
-              {`${context.name} (${context.organisationYear}/${(context.organisationYear ?? 0) + 1})`}
+              {context.name}
             </SelectItem>
           ))}
         </SelectContent>

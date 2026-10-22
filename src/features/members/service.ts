@@ -99,7 +99,7 @@ export async function listMemberDirectory(
         .filter((membership) => membership.userId === member.id && membership.type === GroupType.Choir)
         .map((choir) => ({
           id: choir.groupId,
-          name: choir.name,
+          name: choir.name ?? choir.groupId,
           section:
             memberships.find(
               (membership) =>

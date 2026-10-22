@@ -8,6 +8,7 @@ import { timeZone } from "@/core/i18n/time-zone"
 import {
   GROUP_POLICIES,
   GroupType,
+  hasExplicitGroupName,
   type IsoDate,
   isAllowedOrganisationYear,
   organisationYearPeriod,
@@ -113,12 +114,13 @@ async function requirePrerequisiteCoverage(
 /**
  * Creates an explicitly modelled Group. Annual types require an integer organisationYear
  * from 1000 through 9998; other types forbid it. Choir-scoped types require choirId;
- * CSK-wide types forbid it. Choirs/Sections still use createChoir.
+ * CSK-wide types forbid it. Choirs/Sections still use createChoir. Names are required only
+ * for explicitly named types; derived-label types ignore a supplied name and store null.
  */
 export function createOrganisationGroup(
   database: OrgStructureDatabase,
   input: {
-    name: string
+    name?: string
     type: Exclude<GroupType, GroupType.Choir | GroupType.Section>
     choirId?: string
     organisationYear?: number
@@ -130,7 +132,8 @@ export function createOrganisationGroup(
     if (!policy || (input.type as GroupType) === GroupType.Choir || (input.type as GroupType) === GroupType.Section)
       throw new RuleViolation("choir-created-with-sections")
     if ((policy.scope === "choir") !== Boolean(input.choirId)) throw new RuleViolation("invalid-group-scope")
-    if (!input.name.trim()) throw new RuleViolation("invalid-group-name")
+    const name = hasExplicitGroupName(input.type) ? input.name?.trim() : null
+    if (hasExplicitGroupName(input.type) && !name) throw new RuleViolation("invalid-group-name")
     if (input.choirId) await requireChoir(tx, input.choirId)
     if (
       (policy.lifetime === "annual") !== (input.organisationYear !== undefined) ||
@@ -143,7 +146,7 @@ export function createOrganisationGroup(
     await requireChoirTeamAvailable(tx, input)
     const [created] = await tx
       .insert(group)
-      .values({ ...input, name: input.name.trim() })
+      .values({ ...input, name })
       .returning({ id: group.id })
     if (!created) throw new Error("Group creation returned no record.")
     return created
@@ -449,7 +452,7 @@ export async function listEffectiveMembersForGroupsAt(
       id: string
       positionCode: PositionCode
       contextGroupId: string
-      contextName: string
+      contextName: string | null
       startDate: IsoDate
       endDate: IsoDate | null
     }[]
@@ -578,7 +581,7 @@ export async function listAppointmentsForGroups(
       positionCode: PositionCode
       position: string
       contextGroupId: string
-      contextName: string
+      contextName: string | null
       startDate: IsoDate
       endDate: IsoDate | null
       organisationYear: number | null
@@ -617,7 +620,7 @@ export async function listAppointmentsForGroups(
         userId: appointment.userId,
         name,
         positionCode: appointment.positionCode as PositionCode,
-        position: POSITION_DEFINITIONS[appointment.positionCode as PositionCode]?.label ?? appointment.positionCode,
+        position: appointment.positionCode,
         contextGroupId: appointment.contextGroupId,
         contextName,
         startDate: appointment.startDate as IsoDate,

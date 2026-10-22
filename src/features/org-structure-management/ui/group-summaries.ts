@@ -1,3 +1,4 @@
+import { listLocalizedGroupLabels } from "./group-labels"
 import "server-only"
 
 import { io } from "next/cache"
@@ -25,6 +26,7 @@ export type GroupSummary = {
 /** Every group, archived ones included, with what the admin overviews show of it, ordered by name. */
 export async function listGroupSummaries(): Promise<GroupSummary[]> {
   await io()
+  const labels = await listLocalizedGroupLabels()
   const date = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
   const [groups, sections] = await Promise.all([listOrganisationGroups(db, date), db.select().from(section)])
   const [effectiveMembers, appointmentsByGroup] = await Promise.all([
@@ -57,12 +59,12 @@ export async function listGroupSummaries(): Promise<GroupSummary[]> {
         id: appointment.id,
         positionCode: appointment.positionCode,
         position: appointment.position,
-        context: appointment.contextName,
+        context: labels.get(appointment.contextGroupId) ?? appointment.contextGroupId,
         holder: appointment.name
       }))
     return {
       id: row.id,
-      name: row.name,
+      name: labels.get(row.id) ?? row.id,
       type: row.type,
       choirId: row.choirId,
       active: row.active,
