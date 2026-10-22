@@ -2,14 +2,19 @@
 
 import { useId, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import {
+  annualAppointmentDefaults,
+  organisationYearPeriod,
+  POSITION_DEFINITIONS,
+  type PositionCode,
+  shiftDate
+} from "@/core/org-structure"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
-import { annualAppointmentDefaults, organisationYearPeriod, POSITION_DEFINITIONS, type PositionCode } from "../../model"
-import { shiftDate } from "../../model/dates"
 import { CommandDialog } from "../command-dialog"
 import {
   cancelAppointmentAction,

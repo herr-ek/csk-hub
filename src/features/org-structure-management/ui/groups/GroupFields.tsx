@@ -2,10 +2,10 @@
 
 import { useId, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { GROUP_POLICIES, type GroupType } from "@/core/org-structure"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
-import { GROUP_POLICIES, type GroupType } from "../../model"
 import { NAME_MAX_LENGTH } from "../limits"
 
 type EditableGroup = { name: string; type: GroupType; choirId?: string | null; organisationYear?: number | null }

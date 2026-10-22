@@ -1,4 +1,4 @@
-import type { EffectiveGroup, EffectivePosition } from "@/features/org-structure/model"
+import type { EffectiveGroup, EffectivePosition } from "@/core/org-structure"
 
 export type MemberGroup = EffectiveGroup
 

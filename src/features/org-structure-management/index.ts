@@ -34,7 +34,6 @@ export {
 } from "./effective-reads"
 export { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
 export { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
-export type { GroupType, IsoDate, OrgStructureResult, OrgStructureViolation } from "./model"
 export type { OrgStructureDatabase } from "./operation"
 export {
   getCurrentPositionHolder,

@@ -1,12 +1,11 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { POSITION_DEFINITIONS, type PositionCode, shiftDate } from "@/core/org-structure"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
-import { POSITION_DEFINITIONS, type PositionCode } from "../../model"
-import { shiftDate } from "../../model/dates"
 import { CommandDialog } from "../command-dialog"
 import { cancelAppointmentAction } from "./appointment-actions"
 import {

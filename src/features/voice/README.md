@@ -9,7 +9,7 @@ family of the second.
 
 `@/features/voice/model` is universal: the `Voice`, `VoiceFamily` and `VoiceDivision` types,
 `familyOf`, the only place a Voice's family is decided, `divisionsOf`, `isVoiceDivision`, and
-`contains`. The [`org-structure`](../org-structure/README.md) feature uses it for Sections and
+`contains`. The [`org-structure`](../org-structure-management/README.md) feature uses it for Sections and
 Section Memberships.
 
 `@/features/voice` is server-only: `setVoiceCapabilities` replaces what a user can sing, in

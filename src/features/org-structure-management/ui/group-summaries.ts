@@ -4,10 +4,10 @@ import { io } from "next/cache"
 import { db } from "@/core/db"
 import { section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
+import type { GroupType, PositionCode } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { listAppointmentsForGroups, listEffectiveMembersForGroupsAt } from "../appointments"
 import { listOrganisationGroups } from "../group-management"
-import type { GroupType, PositionCode } from "../model"
 
 export type GroupSummary = {
   id: string

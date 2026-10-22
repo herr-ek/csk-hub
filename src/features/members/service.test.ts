@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { count, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { conversation, directConversation } from "@/core/db/schema/messaging"
+import type { OrgStructureResult } from "@/core/org-structure"
 import { findDirectConversation } from "@/features/messaging/reading"
 import {
   addDirectMembership,
@@ -16,8 +17,7 @@ import {
   listCurrentGroupMembers,
   placeSinger,
   startMembership
-} from "@/features/org-structure"
-import type { OrgStructureResult } from "@/features/org-structure/model"
+} from "@/features/org-structure-management"
 import { setVoiceCapabilities } from "@/features/voice"
 import type { Voice } from "@/features/voice/model"
 import { createTestDatabase } from "../../../test/database"

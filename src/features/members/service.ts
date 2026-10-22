@@ -3,12 +3,12 @@ import "server-only"
 import { and, asc, count, eq, ilike, isNull, ne, or } from "drizzle-orm"
 import type { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
+import type { IsoDate } from "@/core/org-structure"
 import {
   cskToday,
   listEffectiveChoirAffiliationsOfUsersAt,
   listEffectiveParticipationOfUserAt
-} from "@/features/org-structure"
-import type { IsoDate } from "@/features/org-structure/model"
+} from "@/features/org-structure-management"
 import { listVoiceCapabilities } from "@/features/voice"
 import { buildAffiliations } from "./affiliations"
 

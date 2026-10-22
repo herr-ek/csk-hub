@@ -5,10 +5,6 @@ import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
-import { validateUserParticipation } from "./direct-membership"
-import { cskToday } from "./effective-reads"
-import { requireChoirTeamAvailable } from "./group-cardinality"
-import { requireActiveGroup, requireChoir, requireGroup } from "./lookup"
 import {
   GROUP_POLICIES,
   type GroupType,
@@ -17,7 +13,11 @@ import {
   POSITION_DEFINITIONS,
   type PositionCode,
   periodsCoverPeriod
-} from "./model"
+} from "@/core/org-structure"
+import { validateUserParticipation } from "./direct-membership"
+import { cskToday } from "./effective-reads"
+import { requireChoirTeamAvailable } from "./group-cardinality"
+import { requireActiveGroup, requireChoir, requireGroup } from "./lookup"
 import {
   lockUser,
   type OrgStructureDatabase,

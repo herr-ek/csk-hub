@@ -1,12 +1,7 @@
 import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import {
-  GROUP_POLICIES,
-  POSITION_DEFINITIONS,
-  type PositionCode,
-  periodsCoverPeriod
-} from "@/features/org-structure/model"
+import { GROUP_POLICIES, POSITION_DEFINITIONS, type PositionCode, periodsCoverPeriod } from "@/core/org-structure"
 import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./seed-data"
 
 const CURRENT_YEAR = 2026

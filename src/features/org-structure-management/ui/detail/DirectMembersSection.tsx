@@ -1,13 +1,12 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { GROUP_POLICIES, organisationYearPeriod, shiftDate } from "@/core/org-structure"
 import { VOICE_DIVISIONS } from "@/features/voice/model"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Badge } from "@/shared/ui/base/badge"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
-import { GROUP_POLICIES, organisationYearPeriod } from "../../model"
-import { shiftDate } from "../../model/dates"
 import { CommandDialog } from "../command-dialog"
 import {
   addDirectMemberAction,

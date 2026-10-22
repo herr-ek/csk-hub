@@ -2,9 +2,9 @@ import "server-only"
 
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
+import { GROUP_POLICIES, type IsoDate } from "@/core/org-structure"
 import { contains, familyOf, type VoiceDivision } from "@/features/voice/model"
 import { addDirectMembership, changeDirectMembership, validateUserParticipation } from "./direct-membership"
-import { GROUP_POLICIES, type IsoDate } from "./model"
 import type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 import { lockUser, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
@@ -185,7 +185,7 @@ async function sectionForVoice(tx: OrgStructureTransaction, choirId: string, voi
 }
 
 function expectSuccess<T>(
-  result: { success: true; data: T } | { success: false; error: import("./model").OrgStructureViolation }
+  result: { success: true; data: T } | { success: false; error: import("@/core/org-structure").OrgStructureViolation }
 ) {
   if (!result.success) throw new RuleViolation(result.error)
   return result.data

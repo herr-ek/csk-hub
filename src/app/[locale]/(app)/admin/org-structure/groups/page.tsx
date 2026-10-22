@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { requireAdmin } from "@/core/auth/permissions.server"
-import { GroupsScreen, GroupsScreenSkeleton } from "@/features/org-structure"
+import { GroupsScreen, GroupsScreenSkeleton } from "@/features/org-structure-management"
 
 async function AdminGroups() {
   await requireAdmin()

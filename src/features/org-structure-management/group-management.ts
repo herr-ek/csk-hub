@@ -2,9 +2,9 @@ import "server-only"
 
 import { and, eq, sql } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { GROUP_POLICIES, type GroupType, type IsoDate, organisationYearPeriod } from "@/core/org-structure"
 import { createOrganisationGroup } from "./appointments"
 import { requireChoirTeamAvailable } from "./group-cardinality"
-import { GROUP_POLICIES, type GroupType, type IsoDate, organisationYearPeriod } from "./model"
 import { type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
 const ANNUAL_GROUP_NAMES: Partial<Record<GroupType, string>> = {

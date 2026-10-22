@@ -4,7 +4,6 @@ import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
-import type { Voice } from "@/features/voice/model"
 import {
   type EffectiveGroup,
   type EffectivePosition,
@@ -12,7 +11,8 @@ import {
   type IsoDate,
   POSITION_DEFINITIONS,
   type PositionCode
-} from "./model"
+} from "@/core/org-structure"
+import type { Voice } from "@/features/voice/model"
 import type { OrgStructureDatabase } from "./operation"
 import { requireDate } from "./operation"
 

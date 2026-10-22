@@ -7,7 +7,7 @@ import { db } from "@/core/db"
 import { loginPath, memberProfilePath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { findDirectConversation } from "@/features/messaging/reading"
-import { listAppointmentsOfUser, listDirectMembershipsOfUser } from "@/features/org-structure"
+import { listAppointmentsOfUser, listDirectMembershipsOfUser } from "@/features/org-structure-management"
 import { getOwnVoiceCapabilities } from "./edit-profile/service"
 import { getMemberProfile, InactiveViewerError, listMemberDirectory } from "./service"
 

@@ -1,7 +1,9 @@
-# Organisation structure
+# Organisation structure management
 
-This feature owns Groups, Memberships, Positions, and appointments. Its domain language is in
-the [root glossary](../../../GLOSSARY.md#groups), and the final table layout is described in
+This feature owns the reads, commands, and management UI for Groups, Memberships, and
+appointments. The [core organisation module](../../core/org-structure/README.md) owns the
+fixed catalogues, policies, and universal domain types that these workflows apply. The domain
+language is in the [root glossary](../../../GLOSSARY.md#groups), and the final table layout is described in
 the [Groups database schema](../../../docs/schemas/Groups%20-%20DB%20Scheme.md). Voice families,
 divisions, and containment belong to the separate [Voice feature](../voice/README.md).
 
@@ -9,7 +11,7 @@ divisions, and containment belong to the separate [Voice feature](../voice/READM
 
 A Group is either CSK-wide or belongs directly to one Choir. A Choir is itself a CSK-wide Group;
 each Choir has four Sections. Group types and Position codes are fixed in the universal
-`@/features/org-structure/model` catalogue. Annual Groups are separate concrete identities for
+`@/core/org-structure` catalogue. Annual Groups are separate concrete identities for
 each Organisational year. Their dates run from 1 July through 30 June. Fluid Groups have no
 automatic annual renewal.
 
@@ -62,8 +64,8 @@ rules.
 
 ## Public interface
 
-Import commands and reads from `@/features/org-structure`; fixed definitions and universal types
-come from `@/features/org-structure/model`. The public interface is server-only.
+Import commands and reads from `@/features/org-structure-management`; fixed definitions and universal types
+come from `@/core/org-structure`. The public interface is server-only.
 
 Group workflows use `createOrganisationGroup`, `prepareOrganisationYear`,
 `listOrganisationGroups`, and `updateOrganisationGroup`. Preparing a year creates its concrete

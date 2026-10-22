@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 import { db } from "@/core/db"
+import { shiftDate } from "@/core/org-structure"
 import {
   addDirectMembership,
   changeDirectMembership,
@@ -9,7 +10,6 @@ import {
   endDirectMembership
 } from "../../direct-membership"
 import { endMembership } from "../../membership"
-import { shiftDate } from "../../model/dates"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"

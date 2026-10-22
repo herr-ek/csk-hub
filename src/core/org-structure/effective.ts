@@ -1,5 +1,9 @@
-import type { Voice, VoiceDivision } from "@/features/voice/model"
+import type { directMembership, section } from "@/core/db/schema/org-structure"
+
 import type { GroupType, IsoDate, PositionCode } from "./index"
+
+type Voice = (typeof section.$inferSelect)["voice"]
+type VoiceDivision = NonNullable<(typeof directMembership.$inferSelect)["voice"]>
 
 export type EffectivePosition = {
   id: string

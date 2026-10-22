@@ -6,10 +6,10 @@ import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
+import { type GroupType, type IsoDate, organisationYearPeriod } from "@/core/org-structure"
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
 import { listAppointmentsForGroup, listEffectiveMembersAt } from "../../appointments"
 import { listDirectMemberships } from "../../direct-membership"
-import { type GroupType, type IsoDate, organisationYearPeriod } from "../../model"
 
 const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) ? [voice] : divisionsOf(voice))
 

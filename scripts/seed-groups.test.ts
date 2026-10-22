@@ -7,9 +7,9 @@ import {
   correctAnnualAppointment,
   correctFluidAppointment,
   createOrganisationGroup
-} from "@/features/org-structure/appointments"
-import { addDirectMembership, correctDirectMembership } from "@/features/org-structure/direct-membership"
-import { renameGroup } from "@/features/org-structure/structure"
+} from "@/features/org-structure-management/appointments"
+import { addDirectMembership, correctDirectMembership } from "@/features/org-structure-management/direct-membership"
+import { renameGroup } from "@/features/org-structure-management/structure"
 import { createTestDatabase } from "../test/database"
 import { insertReferenceData } from "./ops/reference-data"
 import { referenceChoirId, referenceContinuingGroupId, referenceSectionId, SEED_USERS, seedId } from "./ops/seed-data"

@@ -35,7 +35,7 @@ Prefer feature-oriented modules for product behavior. A future feature should ke
 
 The source tree uses four top-level areas plus Next.js and tooling-owned exceptions:
 
-- `src/core`: app infrastructure, app shell wiring, and external adapters.
+- `src/core`: app infrastructure, app shell wiring, external adapters, and explicitly shared domain definitions.
 - `src/app`: Next.js route topology and framework route files.
 - `src/shared`: cross-feature presentation primitives and generic helpers.
 - `src/features/<feature-name>`: product and domain behavior.
@@ -52,10 +52,11 @@ Use `src/shared` only for genuinely cross-feature modules:
 - `src/shared/hooks`: cross-feature client hooks.
 - `src/shared/utils.ts`: stable generic utilities such as `cn`, used by generated UI components.
 
-Use `src/core` for infrastructure and app shell modules:
+Use `src/core` for infrastructure, app shell modules, and stable application-wide domain contracts:
 
 - `src/core/auth`: Better Auth setup, server/client auth objects, plugins, cookie integration, and auth infrastructure tests.
 - `src/core/db`: database client and schemas.
+- `src/core/org-structure`: fixed Group and Position catalogues, organisation policies, universal domain types, and pure date/coverage rules. Reads, commands, and management UI remain in `src/features/org-structure-management`.
 - `src/core/email`: email delivery adapters.
 - `src/core/i18n`: locale definitions, locale-cookie handling, next-intl routing/request configuration, and translation loading. See `src/core/i18n/README.md` before adding translated UI.
 - `src/core/preferences`: the application-wide user-preferences contract, including storage, runtime validation, backward-compatible defaults, and atomic partial updates used by app-shell and feature modules.
@@ -87,7 +88,7 @@ The subfolders are illustrative workflow boundaries, not a required template. Sh
 A feature may carry a `README.md` at its root for rules a reader cannot infer from the code around them — usually an obligation imposed from outside the feature, such as an ADR the feature has to keep satisfying. Keep it to what the code cannot say for itself; conventions that hold across the whole tree belong in this guide instead.
 
 - [`src/features/rich-text/README.md`](../src/features/rich-text/README.md): how a feature consumes the editor, and how to add a node or mark to it — three lists and a stylesheet, no consumer changes.
-- [`src/features/org-structure/README.md`](../src/features/org-structure/README.md): the rules the org-structure module enforces because the database cannot, and why application code writes its tables only through it.
+- [`src/features/org-structure-management/README.md`](../src/features/org-structure-management/README.md): the rules the org-structure module enforces because the database cannot, and why application code writes its tables only through it.
 
 ## Dependency Direction
 

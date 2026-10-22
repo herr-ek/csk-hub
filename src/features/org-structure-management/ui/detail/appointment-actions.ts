@@ -2,6 +2,8 @@
 
 import { z } from "zod"
 import { db } from "@/core/db"
+import type { PositionCode } from "@/core/org-structure"
+import { shiftDate } from "@/core/org-structure"
 import {
   appointPosition,
   cancelPreparedAppointment,
@@ -10,8 +12,6 @@ import {
   replaceAppointmentHolder
 } from "../../appointments"
 import { cskToday } from "../../effective-reads"
-import type { PositionCode } from "../../model"
-import { shiftDate } from "../../model/dates"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"

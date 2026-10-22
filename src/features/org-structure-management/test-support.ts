@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { group } from "@/core/db/schema/org-structure"
+import type { OrgStructureResult } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
-import type { OrgStructureResult } from "./model"
 import { createChoir } from "./structure"
 
 /**

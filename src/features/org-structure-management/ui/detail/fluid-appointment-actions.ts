@@ -2,9 +2,9 @@
 
 import { z } from "zod"
 import { db } from "@/core/db"
+import type { PositionCode } from "@/core/org-structure"
+import { shiftDate } from "@/core/org-structure"
 import { correctFluidAppointment, endAppointment, replaceAppointmentHolder } from "../../appointments"
-import type { PositionCode } from "../../model"
-import { shiftDate } from "../../model/dates"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"

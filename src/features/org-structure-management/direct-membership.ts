@@ -3,9 +3,6 @@ import "server-only"
 import { and, desc, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import { contains, type VoiceDivision } from "@/features/voice/model"
-import { cskToday } from "./effective-reads"
-import { requireActiveGroup, requireGroup } from "./lookup"
 import {
   GROUP_POLICIES,
   type IsoDate,
@@ -13,7 +10,10 @@ import {
   POSITION_DEFINITIONS,
   type PositionCode,
   periodsCoverPeriod
-} from "./model"
+} from "@/core/org-structure"
+import { contains, type VoiceDivision } from "@/features/voice/model"
+import { cskToday } from "./effective-reads"
+import { requireActiveGroup, requireGroup } from "./lookup"
 import {
   lockUser,
   type OrgStructureDatabase,

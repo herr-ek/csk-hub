@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq, ne, sql } from "drizzle-orm"
 import { group } from "@/core/db/schema/org-structure"
-import { GROUP_POLICIES, type GroupType } from "./model"
+import { GROUP_POLICIES, type GroupType } from "@/core/org-structure"
 import { type OrgStructureTransaction, RuleViolation } from "./operation"
 
 /** Serializes Choir-team creation/reclassification against the current concrete Group set. */
