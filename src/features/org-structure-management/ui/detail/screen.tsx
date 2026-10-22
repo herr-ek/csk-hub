@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
 import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
-import { GroupType, POSITION_DEFINITIONS } from "@/core/org-structure"
+import { currentOrganisationYear, GroupType, POSITION_DEFINITIONS } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { AppointmentManagement } from "./AppointmentManagement"
@@ -60,7 +60,7 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
               </div>
             ) : null}
           </div>
-          <GroupHeaderActions group={group} choirs={detail.choirs} />
+          <GroupHeaderActions currentYear={currentOrganisationYear(date)} group={group} choirs={detail.choirs} />
         </div>
         {group.active ? null : <p className="text-sm text-muted-foreground">{t("detail.archivedNotice")}</p>}
       </div>

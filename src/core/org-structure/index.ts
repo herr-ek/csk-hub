@@ -1,6 +1,12 @@
 import { GroupType } from "./identifiers"
 
-export { annualAppointmentDefaults, periodsCoverPeriod, shiftDate } from "./dates"
+export {
+  annualAppointmentDefaults,
+  currentOrganisationYear,
+  isAllowedOrganisationYear,
+  periodsCoverPeriod,
+  shiftDate
+} from "./dates"
 export type { EffectiveGroup, EffectivePosition } from "./effective"
 export { GroupType, PositionCode } from "./identifiers"
 export type { OrgStructureResult, OrgStructureViolation } from "./result"

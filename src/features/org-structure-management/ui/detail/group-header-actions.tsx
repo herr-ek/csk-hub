@@ -12,8 +12,10 @@ import type { GroupDetail } from "./query"
 
 export function GroupHeaderActions({
   group,
-  choirs
+  choirs,
+  currentYear
 }: {
+  currentYear: number
   group: GroupDetail["group"]
   choirs: { id: string; name: string }[]
 }) {
@@ -35,7 +37,7 @@ export function GroupHeaderActions({
           submitLabel={t("management.save")}
         >
           <input type="hidden" name="groupId" value={group.id} />
-          <GroupFields choirs={choirs} initial={{ ...group, choirId: group.choir?.id }} />
+          <GroupFields currentYear={currentYear} choirs={choirs} initial={{ ...group, choirId: group.choir?.id }} />
         </CommandDialog>
       ) : null}
       <CommandDialog

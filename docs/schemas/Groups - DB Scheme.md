@@ -620,3 +620,8 @@ be verified against a real disposable PostgreSQL database, including migration f
   A `GigGroup` here is the ensemble's organisational identity, not an event occurrence.
 - Appointments add no new permissions or delegated management. Existing Admin authorization
   applies to organisation editing; no choir-wide permission inheritance is introduced here.
+
+Annual preparation is limited to the current organisational year and the immediately following
+year. Individual Group creation and year edits reject years beyond that window on the server.
+Historical years remain available for explicit backfilling and correction. The window advances
+on 1 July in the organisation's calendar time zone.

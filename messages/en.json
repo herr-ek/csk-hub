@@ -752,7 +752,8 @@
       "direct-membership-forbidden": "This Group only accepts Membership through Position appointments.",
       "membership-dependency": "A dependent appointment or Membership must be handled before this change.",
       "group-type-taken": "An active Group of this type already exists for that Choir. Edit or archive the existing Group before creating another.",
-      "annual-group-needs-year": "This annual Group has no concrete year. Prepare or select a Group for the intended year, or reconcile this Group’s year before adding or correcting participation."
+      "annual-group-needs-year": "This annual Group has no concrete year. Prepare or select a Group for the intended year, or reconcile this Group’s year before adding or correcting participation.",
+      "organisation-year-too-far-ahead": "Annual groups can only be prepared up to the next organisational year."
     },
     "management": {
       "prepare": "Prepare annual Groups",

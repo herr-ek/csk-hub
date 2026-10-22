@@ -752,7 +752,8 @@
       "direct-membership-forbidden": "Die Mitgliedschaft in dieser Gruppe entsteht ausschließlich durch Amtsbesetzungen.",
       "membership-dependency": "Eine abhängige Amtsbesetzung oder Mitgliedschaft muss vor dieser Änderung bearbeitet werden.",
       "group-type-taken": "Für diesen Chor besteht bereits eine aktive Gruppe dieses Typs. Bearbeite oder archiviere die bestehende Gruppe, bevor du eine weitere erstellst.",
-      "annual-group-needs-year": "Diese Jahresgruppe hat noch kein festgelegtes Jahr. Bereite eine Gruppe für das gewünschte Jahr vor oder wähle sie aus, oder kläre zuerst das Jahr dieser Gruppe, bevor du die Teilnahme hinzufügst oder korrigierst."
+      "annual-group-needs-year": "Diese Jahresgruppe hat noch kein festgelegtes Jahr. Bereite eine Gruppe für das gewünschte Jahr vor oder wähle sie aus, oder kläre zuerst das Jahr dieser Gruppe, bevor du die Teilnahme hinzufügst oder korrigierst.",
+      "organisation-year-too-far-ahead": "Jahresgruppen können nur bis zum nächsten Organisationsjahr vorbereitet werden."
     },
     "management": {
       "prepare": "Jahresgruppen vorbereiten",

@@ -2,8 +2,15 @@ import "server-only"
 
 import { and, eq, sql } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
-import { GROUP_POLICIES, GroupType, type IsoDate, organisationYearPeriod } from "@/core/org-structure"
+import {
+  GROUP_POLICIES,
+  GroupType,
+  type IsoDate,
+  isAllowedOrganisationYear,
+  organisationYearPeriod
+} from "@/core/org-structure"
 import { createOrganisationGroup } from "./appointments"
+import { cskToday } from "./effective-reads"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
@@ -21,9 +28,10 @@ const ANNUAL_GROUP_NAMES: Partial<Record<GroupType, string>> = {
 }
 
 /** Prepares the required annual set, reusing concrete identities; never copies participation. */
-export function prepareOrganisationYear(database: OrgStructureDatabase, year: number) {
+export function prepareOrganisationYear(database: OrgStructureDatabase, year: number, today: IsoDate = cskToday()) {
   return runOrgStructureCommand(database, async (tx) => {
     if (!Number.isInteger(year) || year < 1000 || year > 9998) throw new RuleViolation("period-conflict")
+    if (!isAllowedOrganisationYear(year, requireDate(today))) throw new RuleViolation("organisation-year-too-far-ahead")
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:year:${year}`}))`)
     const prepared: { id: string; type: GroupType }[] = []
     for (const type of Object.keys(GROUP_POLICIES) as GroupType[]) {
@@ -38,11 +46,15 @@ export function prepareOrganisationYear(database: OrgStructureDatabase, year: nu
         prepared.push({ id: existing.id, type })
       } else {
         const label = ANNUAL_GROUP_NAMES[type] ?? type
-        const result = await createOrganisationGroup(tx, {
-          name: `${label} ${String(year).slice(-2)}/${String(year + 1).slice(-2)}`,
-          type: type as Exclude<GroupType, GroupType.Choir | GroupType.Section>,
-          organisationYear: year
-        })
+        const result = await createOrganisationGroup(
+          tx,
+          {
+            name: `${label} ${String(year).slice(-2)}/${String(year + 1).slice(-2)}`,
+            type: type as Exclude<GroupType, GroupType.Choir | GroupType.Section>,
+            organisationYear: year
+          },
+          today
+        )
         if (!result.success) throw new RuleViolation(result.error)
         prepared.push({ id: result.data.id, type })
       }
@@ -80,7 +92,8 @@ export function updateOrganisationGroup(
     type: GroupType
     choirId?: string | null
     organisationYear?: number | null
-  }
+  },
+  today: IsoDate = cskToday()
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     const [current] = await tx.select().from(group).where(eq(group.id, input.groupId)).for("update")
@@ -89,6 +102,8 @@ export function updateOrganisationGroup(
     if (!name) throw new RuleViolation("invalid-group-name")
     const choirId = input.choirId ?? null
     const organisationYear = input.organisationYear ?? null
+    if (organisationYear !== null && !isAllowedOrganisationYear(organisationYear, requireDate(today)))
+      throw new RuleViolation("organisation-year-too-far-ahead")
     const structural =
       current.type !== input.type || current.choirId !== choirId || current.organisationYear !== organisationYear
     if (!current.active && structural) throw new RuleViolation("group-archived")

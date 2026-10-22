@@ -26,7 +26,7 @@ export function periodsCoverPeriod(
 
 /** Current or next prepared year selected for an annual appointment form, with an in-year date range. */
 export function annualAppointmentDefaults(availableYears: readonly number[], today: IsoDate) {
-  const year = Number(today.slice(0, 4)) - (today.slice(5) < "07-01" ? 1 : 0)
+  const year = currentOrganisationYear(today)
   const nextPreparedYear = availableYears
     .filter((availableYear) => availableYear > year)
     .sort((left, right) => left - right)[0]
@@ -40,4 +40,14 @@ export function annualAppointmentDefaults(availableYears: readonly number[], tod
     min: period.startDate,
     max: shiftDate(period.endDate, -1)
   }
+}
+
+/** The organisational year containing an already validated calendar date (July–June). */
+export function currentOrganisationYear(today: IsoDate) {
+  return Number(today.slice(0, 4)) - (today.slice(5) < "07-01" ? 1 : 0)
+}
+
+/** Historical backfilling is allowed; future preparation stops at the following year. */
+export function isAllowedOrganisationYear(year: number, today: IsoDate) {
+  return Number.isInteger(year) && year >= 1000 && year <= Math.min(9998, currentOrganisationYear(today) + 1)
 }

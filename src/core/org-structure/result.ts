@@ -5,6 +5,7 @@
 export type OrgStructureViolation =
   | "invalid-date"
   | "annual-group-needs-year"
+  | "organisation-year-too-far-ahead"
   | "invalid-group-name"
   | "invalid-group-scope"
   | "group-has-participation"

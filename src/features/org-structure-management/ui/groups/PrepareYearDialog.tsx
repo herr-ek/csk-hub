@@ -1,12 +1,12 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
-import { InputField } from "@/shared/forms/fields"
+import { SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { CommandDialog } from "../command-dialog"
 import { prepareYearAction } from "./actions"
 
-export function PrepareYearDialog() {
+export function PrepareYearDialog({ currentYear }: { currentYear: number }) {
   const t = useTranslations("Groups.management")
   return (
     <CommandDialog
@@ -20,13 +20,14 @@ export function PrepareYearDialog() {
       action={prepareYearAction}
       submitLabel={t("prepare")}
     >
-      <InputField
+      <SelectField
         label={t("year")}
-        description={t("yearHelp")}
         name="organisationYear"
-        type="number"
-        min={1000}
-        max={9998}
+        defaultValue={String(currentYear + 1)}
+        options={[currentYear, currentYear + 1].map((year) => ({
+          value: String(year),
+          label: t("yearValue", { start: year, end: year + 1 })
+        }))}
         required
       />
     </CommandDialog>

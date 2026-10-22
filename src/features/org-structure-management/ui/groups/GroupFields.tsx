@@ -11,7 +11,15 @@ import { NAME_MAX_LENGTH } from "../limits"
 type EditableGroup = { name: string; type: GroupType; choirId?: string | null; organisationYear?: number | null }
 
 /** Fixed type policies decide which scope and year controls are meaningful. */
-export function GroupFields({ choirs, initial }: { choirs: { id: string; name: string }[]; initial?: EditableGroup }) {
+export function GroupFields({
+  choirs,
+  initial,
+  currentYear
+}: {
+  currentYear: number
+  choirs: { id: string; name: string }[]
+  initial?: EditableGroup
+}) {
   const t = useTranslations("Groups")
   const [type, setType] = useState<GroupType>(initial?.type ?? GroupType.GigGroup)
   const id = useId()
@@ -60,7 +68,7 @@ export function GroupFields({ choirs, initial }: { choirs: { id: string; name: s
           name="organisationYear"
           type="number"
           min={1000}
-          max={9998}
+          max={currentYear + 1}
           required
           defaultValue={initial?.organisationYear ?? undefined}
         />

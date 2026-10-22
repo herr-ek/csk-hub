@@ -88,7 +88,11 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     success(await placeSinger(db, { userId: singer, choirId: mk.choirId, voice: "T2", startDate: "2024-08-20" }))
     await setVoiceCapabilities(db, singer, ["B1", "B2", "T1"])
     const committee = success(
-      await createOrganisationGroup(db, { name: unique("Crew"), type: GroupType.Roddgrupp, choirId: kk.choirId })
+      await createOrganisationGroup(
+        db,
+        { name: unique("Crew"), type: GroupType.Roddgrupp, choirId: kk.choirId },
+        "4000-10-22"
+      )
     )
     success(await startMembership(db, { userId: singer, groupId: committee.id, startDate: "2025-01-01" }))
     const profile = await getMemberProfile(db, singer, singer)
@@ -120,14 +124,22 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
   test("one appointment grants both Group contexts and expires as a single responsibility", async () => {
     const holder = await member()
     const board = success(
-      await createOrganisationGroup(db, { name: unique("Styret 25/26"), type: GroupType.Board, organisationYear: 2025 })
+      await createOrganisationGroup(
+        db,
+        { name: unique("Styret 25/26"), type: GroupType.Board, organisationYear: 2025 },
+        "4000-10-22"
+      )
     )
     const sexmasteri = success(
-      await createOrganisationGroup(db, {
-        name: unique("Sexmästeriet 25/26"),
-        type: GroupType.Sexmästeri,
-        organisationYear: 2025
-      })
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique("Sexmästeriet 25/26"),
+          type: GroupType.Sexmästeri,
+          organisationYear: 2025
+        },
+        "4000-10-22"
+      )
     )
     const appointment = success(
       await appointPosition(db, {
@@ -151,15 +163,23 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const holder = await member("Appointed without Choir")
     const boardName = unique("Board 26/27")
     const board = success(
-      await createOrganisationGroup(db, { name: boardName, type: GroupType.Board, organisationYear: 2026 })
+      await createOrganisationGroup(
+        db,
+        { name: boardName, type: GroupType.Board, organisationYear: 2026 },
+        "4000-10-22"
+      )
     )
     const sexName = unique("Sexmästeri 26/27")
     const sex = success(
-      await createOrganisationGroup(db, {
-        name: sexName,
-        type: GroupType.Sexmästeri,
-        organisationYear: 2026
-      })
+      await createOrganisationGroup(
+        db,
+        {
+          name: sexName,
+          type: GroupType.Sexmästeri,
+          organisationYear: 2026
+        },
+        "4000-10-22"
+      )
     )
     const appointment = success(
       await appointPosition(db, {
@@ -200,11 +220,15 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const mk = await choir("MK representatives")
     const kk = await choir("KK representatives")
     const concert = success(
-      await createOrganisationGroup(db, {
-        name: unique("Konsertmästeri 26/27"),
-        type: GroupType.Konsertmästeri,
-        organisationYear: 2026
-      })
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique("Konsertmästeri 26/27"),
+          type: GroupType.Konsertmästeri,
+          organisationYear: 2026
+        },
+        "4000-10-22"
+      )
     )
     success(await placeSinger(db, { userId: singer, choirId: mk.choirId, voice: "B1", startDate: "2026-07-01" }))
     success(await placeSinger(db, { userId: singer, choirId: kk.choirId, voice: "S1", startDate: "2026-07-01" }))
@@ -252,32 +276,48 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const readDate = `${yearAfter}-08-01`
     const endDate = `${yearAfter + 1}-07-01`
     const board26 = success(
-      await createOrganisationGroup(db, {
-        name: unique(`Board ${year}/${yearAfter} correction`),
-        type: GroupType.Board,
-        organisationYear: year
-      })
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Board ${year}/${yearAfter} correction`),
+          type: GroupType.Board,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
     )
     const board27 = success(
-      await createOrganisationGroup(db, {
-        name: unique(`Board ${yearAfter}/${yearAfter + 1} correction`),
-        type: GroupType.Board,
-        organisationYear: yearAfter
-      })
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Board ${yearAfter}/${yearAfter + 1} correction`),
+          type: GroupType.Board,
+          organisationYear: yearAfter
+        },
+        "4000-10-22"
+      )
     )
     const sex26 = success(
-      await createOrganisationGroup(db, {
-        name: unique(`Sex ${year}/${yearAfter} correction`),
-        type: GroupType.Sexmästeri,
-        organisationYear: year
-      })
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Sex ${year}/${yearAfter} correction`),
+          type: GroupType.Sexmästeri,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
     )
     const sex27 = success(
-      await createOrganisationGroup(db, {
-        name: unique(`Sex ${yearAfter}/${yearAfter + 1} correction`),
-        type: GroupType.Sexmästeri,
-        organisationYear: yearAfter
-      })
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Sex ${yearAfter}/${yearAfter + 1} correction`),
+          type: GroupType.Sexmästeri,
+          organisationYear: yearAfter
+        },
+        "4000-10-22"
+      )
     )
     const appointment = success(
       await appointPosition(db, {
@@ -310,7 +350,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
   test("adjacent direct periods use one exclusive handover boundary", async () => {
     const singer = await member("Adjacent periods")
     const group = success(
-      await createOrganisationGroup(db, { name: unique("Fluid participation"), type: GroupType.Övrig })
+      await createOrganisationGroup(db, { name: unique("Fluid participation"), type: GroupType.Övrig }, "4000-10-22")
     )
     const predecessor = success(
       await addDirectMembership(db, { userId: singer, groupId: group.id, startDate: "2026-01-01" })

@@ -61,14 +61,20 @@ describe.skipIf(!database)("Choir and Group structure", () => {
     const choirId = await t.groupId("KK")
     const sectionId = await t.groupId("KKB")
     expect(
-      await createOrganisationGroup(t.db, { name: uniqueName("Bad scoped"), type: GroupType.GigGroup, choirId })
+      await createOrganisationGroup(
+        t.db,
+        { name: uniqueName("Bad scoped"), type: GroupType.GigGroup, choirId },
+        "4000-10-22"
+      )
     ).toEqual({
       success: false,
       error: "invalid-group-scope"
     })
     const existingName = `Unique ${crypto.randomUUID()}`
-    const first = expectSuccess(await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig }))
-    expect(await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig })).toEqual({
+    const first = expectSuccess(
+      await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig }, "4000-10-22")
+    )
+    expect(await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig }, "4000-10-22")).toEqual({
       success: false,
       error: "group-name-taken"
     })

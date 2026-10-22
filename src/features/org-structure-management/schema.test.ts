@@ -51,7 +51,11 @@ describe.skipIf(!database)("final organisation schema", () => {
 
   test("appointments reject unknown Position codes and annual dates outside their Group year", async () => {
     const boardId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Schema Board", type: GroupType.Board, organisationYear: 2040 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Schema Board", type: GroupType.Board, organisationYear: 2040 },
+        "4000-10-22"
+      )
     ).id
     const userId = await t.user()
     await expect(

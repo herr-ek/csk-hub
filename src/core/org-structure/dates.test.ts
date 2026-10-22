@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { annualAppointmentDefaults, periodsCoverPeriod } from "./dates"
+import {
+  annualAppointmentDefaults,
+  currentOrganisationYear,
+  isAllowedOrganisationYear,
+  periodsCoverPeriod
+} from "./dates"
 
 describe("organisation date helpers", () => {
   test("annual appointment defaults use an available current year and bound its final day", () => {
@@ -62,4 +67,12 @@ describe("organisation date helpers", () => {
       })
     ).toBe(true)
   })
+})
+
+test("annual preparation bounds follow the July boundary and allow historical backfilling", () => {
+  expect(currentOrganisationYear("2027-06-30")).toBe(2026)
+  expect(currentOrganisationYear("2027-07-01")).toBe(2027)
+  expect(isAllowedOrganisationYear(2028, "2027-06-30")).toBe(false)
+  expect(isAllowedOrganisationYear(2028, "2027-07-01")).toBe(true)
+  expect(isAllowedOrganisationYear(2025, "2027-07-01")).toBe(true)
 })

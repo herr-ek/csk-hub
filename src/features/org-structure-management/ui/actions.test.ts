@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test"
 import { eq } from "drizzle-orm"
 import { directMembership, group } from "@/core/db/schema/org-structure"
 import { GroupType, PositionCode } from "@/core/org-structure"
@@ -43,8 +43,12 @@ function form(values: Record<string, string | string[]>) {
 
 describe.skipIf(!database)("admin organisation Server Actions", () => {
   const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
+  afterAll(async () => {
+    setSystemTime()
+    await t.drop()
+  })
   beforeEach(() => {
+    setSystemTime(new Date("2053-10-22T12:00:00Z"))
     requireAdmin.mockClear()
     requireAdmin.mockImplementation(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
     revalidatePath.mockClear()
@@ -82,6 +86,17 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     for (const action of actions) await expect(action(IDLE, form({}))).rejects.toBe(denied)
     expect(requireAdmin).toHaveBeenCalledTimes(actions.length)
     expect(await t.db.select().from(group)).toHaveLength(15)
+  })
+
+  test("refuses forged annual years beyond the following year without revalidation", async () => {
+    expect(await prepareYearAction(IDLE, form({ organisationYear: "2055" }))).toEqual({
+      status: "error",
+      error: "organisation-year-too-far-ahead"
+    })
+    expect(
+      await createGroupAction(IDLE, form({ name: "Too early Board", type: GroupType.Board, organisationYear: "2055" }))
+    ).toEqual({ status: "error", error: "organisation-year-too-far-ahead" })
+    expect(revalidatePath).not.toHaveBeenCalled()
   })
 
   test("creates, renames, archives, and passes typed policy failures through the action boundary", async () => {
@@ -200,6 +215,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   })
 
   test("historical corrections offer archived sibling Sections but future corrections remain refused", async () => {
+    setSystemTime(new Date("2026-10-22T12:00:00Z"))
     const { addDirectMembership } = await import("../direct-membership")
     const choirId = await t.groupId("KK")
     const sourceSection = await t.groupId("KKS")
@@ -256,7 +272,11 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     const first = await t.user("Choir departure")
     const choirId = await t.groupId("MK")
     const sectionId = await t.groupId("MKB1")
-    const team = await createOrganisationGroup(t.db, { name: "KK team", type: GroupType.Roddgrupp, choirId })
+    const team = await createOrganisationGroup(
+      t.db,
+      { name: "KK team", type: GroupType.Roddgrupp, choirId },
+      "4000-10-22"
+    )
     expect(team.success).toBe(true)
     if (!team.success) return
     const choirMembership = await addDirectMembership(t.db, {

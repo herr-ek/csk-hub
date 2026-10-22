@@ -9,6 +9,7 @@ import {
   GROUP_POLICIES,
   GroupType,
   type IsoDate,
+  isAllowedOrganisationYear,
   organisationYearPeriod,
   POSITION_DEFINITIONS,
   type PositionCode,
@@ -121,7 +122,8 @@ export function createOrganisationGroup(
     type: Exclude<GroupType, GroupType.Choir | GroupType.Section>
     choirId?: string
     organisationYear?: number
-  }
+  },
+  today: IsoDate = cskToday()
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     const policy = GROUP_POLICIES[input.type]
@@ -136,6 +138,8 @@ export function createOrganisationGroup(
         (!Number.isInteger(input.organisationYear) || input.organisationYear < 1000 || input.organisationYear > 9998))
     )
       throw new RuleViolation("period-conflict")
+    if (input.organisationYear !== undefined && !isAllowedOrganisationYear(input.organisationYear, requireDate(today)))
+      throw new RuleViolation("organisation-year-too-far-ahead")
     await requireChoirTeamAvailable(tx, input)
     const [created] = await tx
       .insert(group)

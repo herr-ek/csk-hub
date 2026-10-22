@@ -106,10 +106,14 @@ describe.skipIf(!database)("seedGroups", () => {
       .from(positionAppointment)
       .where(eq(positionAppointment.id, gigAppointmentId))
     if (!gigAppointment) throw new Error("Missing seeded Gigledare appointment")
-    const alternate = await createOrganisationGroup(t.db, {
-      name: `Edited GigGroup ${crypto.randomUUID()}`,
-      type: GroupType.GigGroup
-    })
+    const alternate = await createOrganisationGroup(
+      t.db,
+      {
+        name: `Edited GigGroup ${crypto.randomUUID()}`,
+        type: GroupType.GigGroup
+      },
+      "4000-10-22"
+    )
     if (!alternate.success) throw new Error(`Could not create alternate GigGroup: ${alternate.error}`)
     expect(
       await addDirectMembership(t.db, {

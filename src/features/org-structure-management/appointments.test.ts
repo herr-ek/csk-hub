@@ -36,14 +36,22 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("one September Sexmästare appointment grants both annual Groups for its single tenure", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 26/27", type: GroupType.Board, organisationYear: 2026 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 26/27", type: GroupType.Board, organisationYear: 2026 },
+        "4000-10-22"
+      )
     )
     const committee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Sexmästeriet 26/27",
-        type: GroupType.Sexmästeri,
-        organisationYear: 2026
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Sexmästeriet 26/27",
+          type: GroupType.Sexmästeri,
+          organisationYear: 2026
+        },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     const appointment = expectSuccess(
@@ -64,18 +72,26 @@ describe.skipIf(!database)("appointment foundation", () => {
   test("the batched effective roster read preserves one appointment across all granted Groups", async () => {
     const year = 3000 + Math.floor(Math.random() * 500)
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: uniqueName("Batched Board"),
-        type: GroupType.Board,
-        organisationYear: year
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: uniqueName("Batched Board"),
+          type: GroupType.Board,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
     )
     const sex = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: uniqueName("Batched Sexmästeri"),
-        type: GroupType.Sexmästeri,
-        organisationYear: year
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: uniqueName("Batched Sexmästeri"),
+          type: GroupType.Sexmästeri,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     const appointment = expectSuccess(
@@ -94,18 +110,26 @@ describe.skipIf(!database)("appointment foundation", () => {
   test("completed annual appointments and archived Groups remain correctable and identifiable", async () => {
     const year = new Date().getUTCFullYear() - 3 - Math.floor(Math.random() * 5)
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: uniqueName(`Historical Board ${year}`),
-        type: GroupType.Board,
-        organisationYear: year
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: uniqueName(`Historical Board ${year}`),
+          type: GroupType.Board,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
     )
     const committee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: uniqueName(`Historical Sex ${year}`),
-        type: GroupType.Sexmästeri,
-        organisationYear: year
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: uniqueName(`Historical Sex ${year}`),
+          type: GroupType.Sexmästeri,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     const appointment = expectSuccess(
@@ -134,26 +158,38 @@ describe.skipIf(!database)("appointment foundation", () => {
       { id: appointment.id, contextGroupId: board.id, startDate: `${year}-10-01` }
     ])
     expect(
-      await updateOrganisationGroup(t.db, {
-        groupId: board.id,
-        name: uniqueName(`Renamed historical Board ${year}`),
-        type: GroupType.Board,
-        organisationYear: year
-      })
+      await updateOrganisationGroup(
+        t.db,
+        {
+          groupId: board.id,
+          name: uniqueName(`Renamed historical Board ${year}`),
+          type: GroupType.Board,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
     ).toEqual({ success: true, data: { id: board.id } })
     expect(
-      await updateOrganisationGroup(t.db, {
-        groupId: board.id,
-        name: uniqueName(`Moved historical Board ${year}`),
-        type: GroupType.Board,
-        organisationYear: year + 1
-      })
+      await updateOrganisationGroup(
+        t.db,
+        {
+          groupId: board.id,
+          name: uniqueName(`Moved historical Board ${year}`),
+          type: GroupType.Board,
+          organisationYear: year + 1
+        },
+        "4000-10-22"
+      )
     ).toEqual({ success: false, error: "group-archived" })
   })
 
   test("archived fluid Groups allow ended corrections but refuse current or future participation", async () => {
     const gigGroup = expectSuccess(
-      await createOrganisationGroup(t.db, { name: uniqueName("Historical GigGroup"), type: GroupType.GigGroup })
+      await createOrganisationGroup(
+        t.db,
+        { name: uniqueName("Historical GigGroup"), type: GroupType.GigGroup },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     expectSuccess(
@@ -199,14 +235,22 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("appointing a committee officer converts an overlapping Helper and preserves the earlier period", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 37/38 helper", type: GroupType.Board, organisationYear: 2037 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 37/38 helper", type: GroupType.Board, organisationYear: 2037 },
+        "4000-10-22"
+      )
     )
     const committee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Sexmästeriet 37/38 helper",
-        type: GroupType.Sexmästeri,
-        organisationYear: 2037
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Sexmästeriet 37/38 helper",
+          type: GroupType.Sexmästeri,
+          organisationYear: 2037
+        },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     await t.db.insert(directMembership).values({
@@ -230,11 +274,15 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("concurrent handovers preserve the started appointment and allow one successor", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Board 38/39 handover",
-        type: GroupType.Board,
-        organisationYear: 2038
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Board 38/39 handover",
+          type: GroupType.Board,
+          organisationYear: 2038
+        },
+        "4000-10-22"
+      )
     )
     const incumbent = await t.user()
     expectSuccess(
@@ -265,32 +313,48 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("correcting a Board appointment moves holder, year, and companion grant together", async () => {
     const boardA = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Board 39/40 correction",
-        type: GroupType.Board,
-        organisationYear: 2039
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Board 39/40 correction",
+          type: GroupType.Board,
+          organisationYear: 2039
+        },
+        "4000-10-22"
+      )
     )
     const sexA = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Sex 39/40 correction",
-        type: GroupType.Sexmästeri,
-        organisationYear: 2039
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Sex 39/40 correction",
+          type: GroupType.Sexmästeri,
+          organisationYear: 2039
+        },
+        "4000-10-22"
+      )
     )
     const boardB = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Board 40/41 correction",
-        type: GroupType.Board,
-        organisationYear: 2040
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Board 40/41 correction",
+          type: GroupType.Board,
+          organisationYear: 2040
+        },
+        "4000-10-22"
+      )
     )
     const sexB = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Sex 40/41 correction",
-        type: GroupType.Sexmästeri,
-        organisationYear: 2040
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Sex 40/41 correction",
+          type: GroupType.Sexmästeri,
+          organisationYear: 2040
+        },
+        "4000-10-22"
+      )
     )
     const first = await t.user()
     const corrected = await t.user()
@@ -321,7 +385,11 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("concurrent future assignments have one winner and return a typed occupancy refusal", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 27/28", type: GroupType.Board, organisationYear: 2027 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 27/28", type: GroupType.Board, organisationYear: 2027 },
+        "4000-10-22"
+      )
     )
     const results = await Promise.all(
       [await t.user(), await t.user()].map((userId) =>
@@ -341,7 +409,11 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("a refusal inside a caller transaction preserves its savepoint and leaves no partial appointment", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 28/29", type: GroupType.Board, organisationYear: 2028 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 28/29", type: GroupType.Board, organisationYear: 2028 },
+        "4000-10-22"
+      )
     )
     await t.db.transaction(async (tx) => {
       expect(
@@ -370,7 +442,11 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("future non-overlapping tenures allow a vacancy and exact-boundary succession", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 29/30", type: GroupType.Board, organisationYear: 2029 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 29/30", type: GroupType.Board, organisationYear: 2029 },
+        "4000-10-22"
+      )
     )
     const first = await t.user()
     const second = await t.user()
@@ -398,7 +474,11 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("racing different Board Positions for one person permits only one", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 30/31", type: GroupType.Board, organisationYear: 2030 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 30/31", type: GroupType.Board, organisationYear: 2030 },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     const results = await Promise.all(
@@ -412,14 +492,22 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("same-title representatives from independent Choir contexts share one committee", async () => {
     const committee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Konsertmästeriet 31/32",
-        type: GroupType.Konsertmästeri,
-        organisationYear: 2031
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Konsertmästeriet 31/32",
+          type: GroupType.Konsertmästeri,
+          organisationYear: 2031
+        },
+        "4000-10-22"
+      )
     )
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 31/32", type: GroupType.Board, organisationYear: 2031 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 31/32", type: GroupType.Board, organisationYear: 2031 },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     for (const choir of ["MK", "DK", "KK"]) {
@@ -456,18 +544,26 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("Choir representative corrections retain prerequisite eligibility and move every annual grant", async () => {
     const oldCommittee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Konsert 45/46 reps",
-        type: GroupType.Konsertmästeri,
-        organisationYear: 2045
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Konsert 45/46 reps",
+          type: GroupType.Konsertmästeri,
+          organisationYear: 2045
+        },
+        "4000-10-22"
+      )
     )
     const nextCommittee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Konsert 46/47 reps",
-        type: GroupType.Konsertmästeri,
-        organisationYear: 2046
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Konsert 46/47 reps",
+          type: GroupType.Konsertmästeri,
+          organisationYear: 2046
+        },
+        "4000-10-22"
+      )
     )
     const choir = await t.groupId("MK")
     const original = await t.user("Original")
@@ -532,14 +628,22 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("Choir Gigmästare share annual Gigmästeri with the separate CSK office", async () => {
     const gigCommittee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Gig 47/48 reps",
-        type: GroupType.Gigmästeri,
-        organisationYear: 2047
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Gig 47/48 reps",
+          type: GroupType.Gigmästeri,
+          organisationYear: 2047
+        },
+        "4000-10-22"
+      )
     )
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 47/48 gig", type: GroupType.Board, organisationYear: 2047 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 47/48 gig", type: GroupType.Board, organisationYear: 2047 },
+        "4000-10-22"
+      )
     )
     for (const choirName of ["MK", "DK", "KK"]) {
       const userId = await t.user(`${choirName} representative`)
@@ -579,7 +683,11 @@ describe.skipIf(!database)("appointment foundation", () => {
     const userId = await t.user("Legacy singer")
     expectSuccess(await addDirectMembership(t.db, { userId, groupId: choirId, startDate: "2048-07-01" }))
     const gigCommittee = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Gig 48/49", type: GroupType.Gigmästeri, organisationYear: 2048 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Gig 48/49", type: GroupType.Gigmästeri, organisationYear: 2048 },
+        "4000-10-22"
+      )
     )
     expectSuccess(
       await appointPosition(t.db, {
@@ -596,18 +704,26 @@ describe.skipIf(!database)("appointment foundation", () => {
   test("representative handover and explicit renewal preserve each dated annual roster", async () => {
     const choirId = await t.groupId("MK")
     const firstCommittee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Konsert 49/50 lifecycle",
-        type: GroupType.Konsertmästeri,
-        organisationYear: 2049
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Konsert 49/50 lifecycle",
+          type: GroupType.Konsertmästeri,
+          organisationYear: 2049
+        },
+        "4000-10-22"
+      )
     )
     const nextCommittee = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Konsert 50/51 lifecycle",
-        type: GroupType.Konsertmästeri,
-        organisationYear: 2050
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Konsert 50/51 lifecycle",
+          type: GroupType.Konsertmästeri,
+          organisationYear: 2050
+        },
+        "4000-10-22"
+      )
     )
     const incumbent = await t.user("Choir incumbent")
     const successor = await t.user("Choir successor")
@@ -648,30 +764,42 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("annual and scoped singleton identities are enforced independently of editable names", async () => {
     const results = await Promise.all(
-      ["A", "B"].map((name) => createOrganisationGroup(t.db, { name, type: GroupType.Board, organisationYear: 2032 }))
+      ["A", "B"].map((name) =>
+        createOrganisationGroup(t.db, { name, type: GroupType.Board, organisationYear: 2032 }, "4000-10-22")
+      )
     )
     expect(results.filter((result) => result.success)).toHaveLength(1)
     expect(results.find((result) => !result.success)).toEqual({ success: false, error: "group-name-taken" })
-    expectSuccess(await createOrganisationGroup(t.db, { name: "Parents", type: GroupType.Föräldramötet }))
-    expect(await createOrganisationGroup(t.db, { name: "Other parents", type: GroupType.Föräldramötet })).toEqual({
+    expectSuccess(await createOrganisationGroup(t.db, { name: "Parents", type: GroupType.Föräldramötet }, "4000-10-22"))
+    expect(
+      await createOrganisationGroup(t.db, { name: "Other parents", type: GroupType.Föräldramötet }, "4000-10-22")
+    ).toEqual({
       success: false,
       error: "group-name-taken"
     })
     const choirId = await t.groupId("MK")
-    expectSuccess(await createOrganisationGroup(t.db, { name: "MK rodd", type: GroupType.Roddgrupp, choirId }))
-    expect(await createOrganisationGroup(t.db, { name: "MK other rodd", type: GroupType.Roddgrupp, choirId })).toEqual({
+    expectSuccess(
+      await createOrganisationGroup(t.db, { name: "MK rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+    )
+    expect(
+      await createOrganisationGroup(t.db, { name: "MK other rodd", type: GroupType.Roddgrupp, choirId }, "4000-10-22")
+    ).toEqual({
       success: false,
       error: "group-type-taken"
     })
     expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "DK rodd",
-        type: GroupType.Roddgrupp,
-        choirId: await t.groupId("DK")
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "DK rodd",
+          type: GroupType.Roddgrupp,
+          choirId: await t.groupId("DK")
+        },
+        "4000-10-22"
+      )
     )
     for (const name of ["Gig A", "Gig B"])
-      expectSuccess(await createOrganisationGroup(t.db, { name, type: GroupType.GigGroup }))
+      expectSuccess(await createOrganisationGroup(t.db, { name, type: GroupType.GigGroup }, "4000-10-22"))
   })
 
   test("fluid responsibilities cross the year boundary and correction preserves the Section singer", async () => {
@@ -756,7 +884,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     })
 
     const gigGroup = expectSuccess(
-      await createOrganisationGroup(t.db, { name: uniqueName("Gig"), type: GroupType.GigGroup })
+      await createOrganisationGroup(t.db, { name: uniqueName("Gig"), type: GroupType.GigGroup }, "4000-10-22")
     )
     const gigSinger = await t.user()
     expectSuccess(await addDirectMembership(t.db, { userId: gigSinger, groupId: gigGroup.id, startDate: "2054-01-01" }))
@@ -793,18 +921,26 @@ describe.skipIf(!database)("appointment foundation", () => {
   test("correcting Sekreterare retains the continuing parents meeting grant and a missing companion rolls back", async () => {
     const parents = await t.groupId("Parents")
     const oldBoard = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Board 41/42 secretary",
-        type: GroupType.Board,
-        organisationYear: 2041
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Board 41/42 secretary",
+          type: GroupType.Board,
+          organisationYear: 2041
+        },
+        "4000-10-22"
+      )
     )
     const newBoard = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Board 42/43 secretary",
-        type: GroupType.Board,
-        organisationYear: 2042
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Board 42/43 secretary",
+          type: GroupType.Board,
+          organisationYear: 2042
+        },
+        "4000-10-22"
+      )
     )
     const first = await t.user()
     const replacement = await t.user()
@@ -831,11 +967,15 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(await listAppointmentMembersAt(t.db, parents, "2042-08-01")).toMatchObject([{ userId: replacement }])
 
     const thirdBoard = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: "Board 43/44 missing companion",
-        type: GroupType.Board,
-        organisationYear: 2043
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: "Board 43/44 missing companion",
+          type: GroupType.Board,
+          organisationYear: 2043
+        },
+        "4000-10-22"
+      )
     )
     const thirdUser = await t.user()
     const chair = expectSuccess(
@@ -868,7 +1008,11 @@ describe.skipIf(!database)("appointment foundation", () => {
         .execute()
     ).rejects.toMatchObject({ cause: { constraint: "group_organisation_policy_check" } })
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 33/34", type: GroupType.Board, organisationYear: 2033 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 33/34", type: GroupType.Board, organisationYear: 2033 },
+        "4000-10-22"
+      )
     )
     const userId = await t.user()
     await expect(
@@ -893,7 +1037,11 @@ describe.skipIf(!database)("appointment foundation", () => {
       })
     )
     const otherBoard = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 34/35", type: GroupType.Board, organisationYear: 2034 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 34/35", type: GroupType.Board, organisationYear: 2034 },
+        "4000-10-22"
+      )
     )
     await expect(
       t.db.insert(appointmentGrant).values({ appointmentId: appointment.id, groupId: otherBoard.id }).execute()
@@ -910,7 +1058,11 @@ describe.skipIf(!database)("appointment foundation", () => {
 
   test("direct participation is separately dated, Voice checked, and protected against overlaps", async () => {
     const groupId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Archive 35/36", type: GroupType.Arkivarie, organisationYear: 2035 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Archive 35/36", type: GroupType.Arkivarie, organisationYear: 2035 },
+        "4000-10-22"
+      )
     ).id
     const userId = await t.user()
     await t.db.insert(directMembership).values({ userId, groupId, startDate: "2035-09-01", endDate: "2036-07-01" })
@@ -936,7 +1088,11 @@ describe.skipIf(!database)("appointment foundation", () => {
       .insert(directMembership)
       .values({ userId, groupId: await t.groupId("KKB"), startDate: "2035-07-01", voice: "B2" })
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Board 35/36", type: GroupType.Board, organisationYear: 2035 })
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 35/36", type: GroupType.Board, organisationYear: 2035 },
+        "4000-10-22"
+      )
     )
     await expect(
       t.db
@@ -959,7 +1115,7 @@ describe.skipIf(!database)("appointment foundation", () => {
   })
   test("continuous prerequisite periods cover one fluid appointment, while a one-day gap is refused", async () => {
     const groupId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Continuous gig membership", type: GroupType.GigGroup })
+      await createOrganisationGroup(t.db, { name: "Continuous gig membership", type: GroupType.GigGroup }, "4000-10-22")
     ).id
     const userId = await t.user()
     await t.db.insert(directMembership).values([

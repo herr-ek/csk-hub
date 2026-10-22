@@ -752,7 +752,8 @@
       "direct-membership-forbidden": "Medlemskap i denna grupp ges bara genom posttillsättningar.",
       "membership-dependency": "En beroende posttillsättning eller ett medlemskap måste hanteras före ändringen.",
       "group-type-taken": "Det finns redan en aktiv grupp av denna typ för kören. Redigera eller arkivera den befintliga gruppen innan en ny skapas.",
-      "annual-group-needs-year": "Denna årsgrupp saknar ett fastställt verksamhetsår. Förbered eller välj en grupp för rätt år, eller fastställ gruppens år innan deltagande läggs till eller korrigeras."
+      "annual-group-needs-year": "Denna årsgrupp saknar ett fastställt verksamhetsår. Förbered eller välj en grupp för rätt år, eller fastställ gruppens år innan deltagande läggs till eller korrigeras.",
+      "organisation-year-too-far-ahead": "Årsgrupper kan bara förberedas till och med nästa verksamhetsår."
     },
     "management": {
       "prepare": "Förbered årsgrupper",

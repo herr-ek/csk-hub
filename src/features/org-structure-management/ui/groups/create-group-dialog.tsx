@@ -6,7 +6,13 @@ import { CommandDialog } from "../command-dialog"
 import { createGroupAction } from "./actions"
 import { GroupFields } from "./GroupFields"
 
-export function CreateGroupDialog({ choirs }: { choirs: { id: string; name: string }[] }) {
+export function CreateGroupDialog({
+  choirs,
+  currentYear
+}: {
+  currentYear: number
+  choirs: { id: string; name: string }[]
+}) {
   const t = useTranslations("Groups")
   return (
     <CommandDialog
@@ -16,7 +22,7 @@ export function CreateGroupDialog({ choirs }: { choirs: { id: string; name: stri
       action={createGroupAction}
       submitLabel={t("create")}
     >
-      <GroupFields choirs={choirs} />
+      <GroupFields choirs={choirs} currentYear={currentYear} />
     </CommandDialog>
   )
 }

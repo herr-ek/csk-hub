@@ -27,7 +27,11 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
   beforeAll(async () => {
     t = database as OrgStructureTestDatabase
     parents = expectSuccess(
-      await createOrganisationGroup(t.db, { name: uniqueName("Parents committee"), type: GroupType.Föräldramötet })
+      await createOrganisationGroup(
+        t.db,
+        { name: uniqueName("Parents committee"), type: GroupType.Föräldramötet },
+        "4000-10-22"
+      )
     ).id
   })
   afterAll(async () => {
@@ -36,11 +40,15 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
 
   test("two Sections and the annual Secretary share one parents roster across June 30 and July 1", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, {
-        name: uniqueName(GroupType.Board),
-        type: GroupType.Board,
-        organisationYear: 2055
-      })
+      await createOrganisationGroup(
+        t.db,
+        {
+          name: uniqueName(GroupType.Board),
+          type: GroupType.Board,
+          organisationYear: 2055
+        },
+        "4000-10-22"
+      )
     )
     const firstSection = await t.groupId("MKT1", "MK")
     const secondSection = await t.groupId("MKT2", "MK")
