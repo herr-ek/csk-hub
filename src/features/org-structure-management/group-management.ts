@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, eq, sql } from "drizzle-orm"
-import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import {
   GROUP_POLICIES,
   GroupType,
@@ -10,6 +10,7 @@ import {
   isAllowedOrganisationYear,
   organisationYearPeriod
 } from "@/core/org-structure"
+import { appointmentMemberships } from "./appointment-memberships"
 import { createOrganisationGroup } from "./appointments"
 import { cskToday } from "./effective-reads"
 import { requireChoirTeamAvailable } from "./group-cardinality"
@@ -101,11 +102,12 @@ export function updateOrganisationGroup(
     ) {
       if (structural) throw new RuleViolation("choir-created-with-sections")
     } else if (structural) {
+      const derivedMembership = appointmentMemberships(tx)
       const [dependencies] = await tx
         .execute(sql`
         SELECT 1 WHERE EXISTS (${tx.select({ id: directMembership.id }).from(directMembership).where(eq(directMembership.groupId, current.id))})
         OR EXISTS (${tx.select({ id: positionAppointment.id }).from(positionAppointment).where(eq(positionAppointment.contextGroupId, current.id))})
-        OR EXISTS (${tx.select({ id: appointmentGrant.appointmentId }).from(appointmentGrant).where(eq(appointmentGrant.groupId, current.id))})
+        OR EXISTS (${tx.select({ id: derivedMembership.appointmentId }).from(derivedMembership).where(eq(derivedMembership.groupId, current.id))})
       `)
         .then((result) => result.rows)
       if (dependencies && structural) throw new RuleViolation("group-has-participation")

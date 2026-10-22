@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, desc, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import {
   GROUP_POLICIES,
   GroupType,
@@ -13,6 +13,7 @@ import {
   periodsCoverPeriod
 } from "@/core/org-structure"
 import { contains, type VoiceDivision } from "@/features/voice/model"
+import { appointmentMemberships } from "./appointment-memberships"
 import { cskToday } from "./effective-reads"
 import { requireActiveGroup, requireGroup } from "./lookup"
 import {
@@ -227,10 +228,11 @@ export async function validateUserParticipation(tx: OrgStructureTransaction, use
     .innerJoin(group, eq(group.id, directMembership.groupId))
     .where(eq(directMembership.userId, userId))
   const appointments = await tx.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))
+  const derivedMembership = appointmentMemberships(tx)
   const grants = await tx
-    .select({ groupId: appointmentGrant.groupId, appointment: positionAppointment })
-    .from(appointmentGrant)
-    .innerJoin(positionAppointment, eq(positionAppointment.id, appointmentGrant.appointmentId))
+    .select({ groupId: derivedMembership.groupId, appointment: positionAppointment })
+    .from(derivedMembership)
+    .innerJoin(positionAppointment, eq(positionAppointment.id, derivedMembership.appointmentId))
     .where(eq(positionAppointment.userId, userId))
   const rows = direct
   for (const row of rows) {

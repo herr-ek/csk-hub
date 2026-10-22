@@ -33,7 +33,6 @@ const CONSTRAINT_VIOLATIONS: Record<string, OrgStructureViolation> = {
   position_appointment_year_check: "period-conflict",
   position_appointment_policy_check: "position-not-allowed",
   position_appointment_annual_check: "period-conflict",
-  appointment_grant_policy_check: "position-not-allowed",
   direct_membership_overlap_excl: "already-member",
   direct_membership_period_check: "period-conflict",
   direct_membership_annual_check: "period-conflict",

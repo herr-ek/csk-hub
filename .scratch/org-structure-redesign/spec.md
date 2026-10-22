@@ -18,7 +18,7 @@ Membership has several legitimate meanings: a Board member belongs through a Pos
 
 ## Solution
 
-Use fixed Group type and Position catalogues, explicit organisational years for annual Groups, direct Membership records, and one record per Position appointment. An appointment references its particular context and grants Membership in the concrete Groups required by its Position. Those grant connections share the appointment's dates and lifecycle.
+Use fixed Group type and Position catalogues, explicit organisational years for annual Groups, direct Membership records, and one record per Position appointment. An appointment references its particular context and grants Membership in the concrete Groups required by its Position. Those Memberships are derived from the fixed Position catalogue, context, and year, using the appointment's dates and lifecycle; no grant connections are stored.
 
 Choir, Section, and gig-group leadership appointments require existing Membership and preserve it. Annual appointments end on 30 June and renew only through explicit new appointments. Fluid appointments continue until explicitly changed. All member lists, profiles, and dated Membership reads use the same combination of direct Memberships and appointment-granted participation.
 
@@ -134,7 +134,7 @@ Use one Choir Gigmästare definition with a context Choir rather than separate d
 - Store direct Memberships independently, retaining Voice data only on Section Memberships and preserving existing Choir/Section placement constraints.
 - Store one Position appointment with a User, stable Position type, concrete context Group, and tenure.
 - Remove the old editable Position table at final cutover. The fixed catalogue lives in code; appointments persist its stable Position code rather than depending on a retained dynamic Position definition.
-- Associate the appointment with every concrete Group in which it grants Membership. Grant records have no independent User, Position, or tenure. They are maintained exclusively by the appointment command and fixed catalogue.
+- Derive every concrete Group in which an appointment grants Membership from the fixed catalogue, context, and explicit year. Store only the appointment. The current catalogue applies to historical, current, and future appointments; no grant rows or policy snapshots are maintained.
 - The context Group does not itself imply Membership. It may be an eligibility prerequisite or a granted Group according to the catalogue.
 - Evaluate effective Membership as the union of dated direct Membership and dated appointment grants, deduplicating people for roster reads while retaining every Position and context.
 - Expose current and dated reads through the same public interpretation. Consumers do not reconstruct grants or query organisation tables directly.
@@ -162,7 +162,7 @@ Use one Choir Gigmästare definition with a context Choir rather than separate d
 - Admins have full management and correction flows for concrete Groups, direct Memberships, and Position appointments through the application. Creation, initial assignment, and ending alone are insufficient: existing current, future, and historical records must also be discoverable and editable.
 - Admins can edit a Group's name and select its type, scope, and year from the fixed applicable rules. Changes affecting existing Memberships or appointments must either update the related records consistently in one transaction or return an actionable violation identifying what must be handled first.
 - Direct-member editing supports dates and applicable singer placement, as well as adding and ending participation. Distinguish ordinary changes, which retain prior periods, from explicit correction of erroneous records; neither requires manual SQL.
-- Appointment editing supports the holder, applicable fixed Position, concrete context, and dates, including historical corrections and prepared future appointments. An edit recalculates every grant and applicable Helper conversion atomically, without changing unrelated singer Memberships or leaving stale grants. Prepared appointments can also be explicitly cancelled.
+- Appointment editing supports the holder, applicable fixed Position, concrete context, and dates, including historical corrections and prepared future appointments. An edit validates every derived target and applies any Helper conversion atomically, without changing unrelated singer Memberships or leaving stale grants. Prepared appointments can also be explicitly cancelled.
 - Changing an annual appointment's year or context uses the correct concrete destination Groups and rechecks tenure, eligibility, occupancy, and Board exclusivity. Invalid edits fail without partial changes and identify the conflicting dependency.
 - All editing flows retain the agreed domain constraints. Admin management of organisation data does not introduce runtime editing of the hard-coded Position definitions or Group type rules, or allow independent mutation of mandatory appointment grants.
 - Group creation and lists distinguish annual Groups by year and continuing Groups by their actual identity. Known Group types determine which scope and year inputs are meaningful.

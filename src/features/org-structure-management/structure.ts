@@ -1,9 +1,10 @@
 import "server-only"
 
 import { and, eq, gt, inArray, isNull, or } from "drizzle-orm"
-import { appointmentGrant, choir, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { choir, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { contains, type Voice } from "@/features/voice/model"
+import { appointmentMemberships } from "./appointment-memberships"
 import { type OrgStructureDatabase, RuleViolation, runOrgStructureCommand } from "./operation"
 
 /** Every Choir has exactly this many Sections. */
@@ -79,13 +80,14 @@ export function archiveGroup(database: OrgStructureDatabase, groupId: string) {
       .for("update")
     const ids = affected.map(({ id }) => id)
     const date = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm" }).format(new Date())
+    const derivedMembership = appointmentMemberships(tx)
     const [dependent] = await tx
       .select({ id: positionAppointment.id })
       .from(positionAppointment)
-      .leftJoin(appointmentGrant, eq(appointmentGrant.appointmentId, positionAppointment.id))
+      .leftJoin(derivedMembership, eq(derivedMembership.appointmentId, positionAppointment.id))
       .where(
         and(
-          or(inArray(positionAppointment.contextGroupId, ids), inArray(appointmentGrant.groupId, ids)),
+          or(inArray(positionAppointment.contextGroupId, ids), inArray(derivedMembership.groupId, ids)),
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
         )
       )

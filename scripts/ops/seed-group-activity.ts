@@ -1,6 +1,6 @@
 import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { GROUP_POLICIES, GroupType, POSITION_DEFINITIONS, PositionCode, periodsCoverPeriod } from "@/core/org-structure"
 import {
   DEMO_ARCHIVED_GIG_GROUP,
@@ -142,8 +142,6 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       startDate,
       endDate
     })
-    if (grantIds.length)
-      await database.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: id, groupId })))
   }
 
   for (const year of DEMO_ARCHIVED_ORGANISATION_YEARS) {

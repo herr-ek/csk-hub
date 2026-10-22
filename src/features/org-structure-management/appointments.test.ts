@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { and, eq, sql } from "drizzle-orm"
-import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { GroupType, PositionCode } from "@/core/org-structure"
 import {
   appointPosition,
@@ -15,6 +15,7 @@ import {
   replaceAppointmentHolder
 } from "./appointments"
 import { addDirectMembership, endDirectMembership, listDirectMembersAt } from "./direct-membership"
+import { listEffectiveParticipationOfUserAt } from "./effective-reads"
 import { updateOrganisationGroup } from "./group-management"
 import { archiveGroup } from "./structure"
 import {
@@ -67,6 +68,42 @@ describe.skipIf(!database)("appointment foundation", () => {
       { userId, appointments: [{ id: appointment.id, contextGroupId: board.id, endDate: "2027-07-01" }] }
     ])
     expect(await listAppointmentMembersAt(t.db, board.id, "2027-07-01")).toEqual([])
+  })
+
+  test("a Board concert master stores one appointment and derives both memberships", async () => {
+    const [board] = await t.db
+      .select()
+      .from(group)
+      .where(and(eq(group.type, GroupType.Board), eq(group.organisationYear, 2026)))
+    if (!board) throw new Error("Missing Board fixture")
+    const committee = expectSuccess(
+      await createOrganisationGroup(t.db, { type: GroupType.ConcertCommittee, organisationYear: 2026 }, "4000-10-22")
+    )
+    const userId = await t.user()
+    const appointment = expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: PositionCode.FirstConcertMaster,
+        contextGroupId: board.id,
+        startDate: "2026-09-01"
+      })
+    )
+    expect(await t.db.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))).toHaveLength(1)
+    expect(await t.db.select().from(directMembership).where(eq(directMembership.userId, userId))).toEqual([])
+    const participation = await listEffectiveParticipationOfUserAt(t.db, userId, "2026-10-22")
+    expect(participation.groups.map(({ groupId }) => groupId).sort()).toEqual([board.id, committee.id].sort())
+    expect(participation.positions).toMatchObject([
+      {
+        id: appointment.id,
+        grantedGroups: expect.arrayContaining([
+          { id: board.id, name: null, type: GroupType.Board, choirId: null, organisationYear: 2026 },
+          { id: committee.id, name: null, type: GroupType.ConcertCommittee, choirId: null, organisationYear: 2026 }
+        ])
+      }
+    ])
+    await endAppointment(t.db, { appointmentId: appointment.id, endDate: "2026-11-01" })
+    expect((await listEffectiveParticipationOfUserAt(t.db, userId, "2026-11-01")).groups).toEqual([])
+    expect((await listEffectiveParticipationOfUserAt(t.db, userId, "2026-10-31")).groups).toHaveLength(2)
   })
 
   test("the batched effective roster read preserves one appointment across all granted Groups", async () => {
@@ -1006,7 +1043,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(await listAppointmentMembersAt(t.db, thirdBoard.id, "2043-08-01")).toMatchObject([{ userId: thirdUser }])
   })
 
-  test("storage refuses wrong scope, wrong annual bounds, and independent grant years", async () => {
+  test("storage refuses wrong scope and annual bounds; derived memberships cannot cross years", async () => {
     await expect(
       t.db
         .insert(group)
@@ -1049,9 +1086,10 @@ describe.skipIf(!database)("appointment foundation", () => {
         "4000-10-22"
       )
     )
-    await expect(
-      t.db.insert(appointmentGrant).values({ appointmentId: appointment.id, groupId: otherBoard.id }).execute()
-    ).rejects.toMatchObject({ cause: { constraint: "appointment_grant_policy_check" } })
+    expect(await listAppointmentMembersAt(t.db, otherBoard.id, "2034-08-01")).toEqual([])
+    expect(await listAppointmentMembersAt(t.db, board.id, "2033-08-01")).toMatchObject([
+      { userId, appointments: [{ id: appointment.id }] }
+    ])
     expect(
       await appointPosition(t.db, {
         userId,

@@ -2,8 +2,9 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq, isNull } from "drizzle-orm"
 import { Client } from "pg"
 import { user } from "@/core/db/schema/auth"
-import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { GroupType, PositionCode } from "@/core/org-structure"
+import { appointmentMemberships } from "@/features/org-structure-management/appointment-memberships"
 import {
   correctAnnualAppointment,
   correctFluidAppointment,
@@ -29,6 +30,7 @@ const database = await createTestDatabase()
 describe.skipIf(!database)("seedGroups", () => {
   if (!database) return
   const t = database as NonNullable<typeof database>
+  const derivedMembership = appointmentMemberships(t.db)
   afterAll(() => t.drop())
 
   async function newUser() {
@@ -212,7 +214,10 @@ describe.skipIf(!database)("seedGroups", () => {
     const groupsBefore = await t.db.select().from(group)
     const membershipsBefore = await t.db.select().from(directMembership)
     const appointmentsBefore = await t.db.select().from(positionAppointment)
-    const grantsBefore = await t.db.select().from(appointmentGrant)
+    const grantsBefore = await t.db
+      .select()
+      .from(derivedMembership)
+      .orderBy(derivedMembership.appointmentId, derivedMembership.groupId)
     const sectionsBefore = await t.db.select().from(section)
     const clientAgain = new Client({ connectionString: t.url })
     await clientAgain.connect()
@@ -226,7 +231,9 @@ describe.skipIf(!database)("seedGroups", () => {
     expect(await t.db.select().from(group)).toEqual(groupsBefore)
     expect(await t.db.select().from(directMembership)).toEqual(membershipsBefore)
     expect(await t.db.select().from(positionAppointment)).toEqual(appointmentsBefore)
-    expect(await t.db.select().from(appointmentGrant)).toEqual(grantsBefore)
+    expect(
+      await t.db.select().from(derivedMembership).orderBy(derivedMembership.appointmentId, derivedMembership.groupId)
+    ).toEqual(grantsBefore)
     expect(await t.db.select().from(section)).toEqual(sectionsBefore)
     expect(await t.db.select().from(group).where(eq(group.id, choir.id))).toMatchObject([
       expect.objectContaining({ name: "Edited DK", type: GroupType.Choir })

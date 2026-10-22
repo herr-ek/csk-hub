@@ -16,6 +16,8 @@ The implementation sources are:
 - [Expansion migration](../../drizzle/0017_expand-organisation-appointments.sql) and
   [final cutover migration](../../drizzle/0018_retire-legacy-organisation-model.sql) for
   hand-written constraints and triggers that Drizzle cannot represent.
+- [Derived-membership migration](../../drizzle/0020_derive-appointment-memberships.sql), which
+  removes stored grant connections while retaining appointments and direct Memberships.
 
 Identifiers below use actual PostgreSQL names. User IDs are `text`; Group, direct Membership,
 and appointment IDs are UUIDs. Choir and Section extensions reuse their Group's UUID.
@@ -36,7 +38,7 @@ Dates are PostgreSQL `date` values, without a time of day.
 | Position | A recognised organisational responsibility, Swedish *post*, with fixed rules. | Stable code in the code catalogue |
 | Appointment | One person's tenure in a Position and concrete context. | `position_appointment` |
 | Context | The Group that identifies which responsibility is held: a particular Board, Choir, Section, or gig group. | `context_group_id` |
-| Grant | A connection giving the appointee Membership in a concrete Group for the appointment's tenure. | `appointment_grant` |
+| Grant | Membership implied by the Position catalogue, context, and year for the appointment's tenure. | Derived by reads; no stored connection |
 | Effective Membership | Participation from direct Memberships and appointment grants, evaluated at a date. | Computed by public reads; no separate table |
 | Helper | A direct member of a Helper-enabled committee without an appointment granting participation there. | `direct_membership`; no invented Position |
 | News Post | An item in the news feed; separate from an organisational Position. | News model, outside this schema |
@@ -171,12 +173,6 @@ position_appointment (
   end_date date NULL
 )
 
-appointment_grant (
-  appointment_id uuid NOT NULL REFERENCES position_appointment(id) ON DELETE CASCADE,
-  group_id uuid NOT NULL REFERENCES group(id) ON DELETE RESTRICT,
-  PRIMARY KEY (appointment_id, group_id)
-)
-
 voice_capability (
   user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   voice voice_division NOT NULL,
@@ -194,9 +190,18 @@ An appointment owns its person, Position, context, year where applicable, and te
 `position_code` is text validated against the fixed catalogue by a trigger, not a foreign key
 to an editable Position table. Labels are translated separately from stable codes.
 
-A grant owns only the connection between an appointment and a Group. It cannot have its own
-person, title, year, Voice, or dates. Ending the appointment changes the effective end of all
-its grants without updating each grant row. A Position can have zero, one, or several grants.
+Grants have no stored records. The shared appointment-membership query derives each target
+from `POSITION_DEFINITIONS`, the appointment's context, and its explicit organisational year:
+
+- A grant of the context's type targets that exact context UUID.
+- Other annual targets match the required type and the appointment's year.
+- The continuing Föräldramötet target uses its unique continuing identity.
+- Positions with an empty grant list add no Membership; their prerequisite remains independent.
+
+Archived targets remain included for historical reads. The same catalogue applies to current,
+future, and historical appointments; policy changes deliberately reinterpret all years. There
+are no policy snapshots or versions. Creation and correction still validate that every required
+concrete target exists and is available, and perform any Helper conversion atomically.
 
 The context does not automatically grant Membership. For a Board Position it is a granted
 Group; for a choir responsibility it is an eligibility prerequisite. These meanings are
@@ -206,7 +211,7 @@ explicitly defined by the catalogue.
 
 The core `PositionCode` enum defines stable identifiers separately from their definitions.
 Catalogue entries use computed keys such as `[PositionCode.Sekreterare]`, with
-`context: GroupType.Board` and `grants: [GroupType.Board, GroupType.Föräldramötet]`.
+`context: GroupType.Board` and `grants: [GroupType.Board, GroupType.ParentsMeeting]`.
 Both catalogues are exhaustive typed records over their respective identifier enums.
 
 For every annual grant below, “year's” means the appointment's explicit Organisational year.
@@ -272,7 +277,7 @@ are adjacent without a gap or overlap. Historical predecessor rows remain availa
 For a Group and date, effective members are the union of:
 
 1. People whose direct Membership in that Group covers the date.
-2. People whose appointment covers the date and has a grant to that Group.
+2. People whose appointment covers the date and whose catalogue definition derives Membership in that Group.
 
 Roster reads deduplicate by person within each Group while retaining every contributing
 appointment and its context. Two appointments granting Föräldramötet produce one roster
@@ -339,9 +344,8 @@ The database checks important local invariants; it is not a complete substitute 
 | Annual appointments have a year, finite end, and dates within that year; context year agrees where present. Fluid appointments have no year. | Trigger: `position_appointment_annual_check` |
 | At most one holder per Position/context at any date. | DB: `position_appointment_occupancy_excl` |
 | One person holds at most one simultaneous Position on the same Board. | DB: `position_appointment_board_excl`, restricted to Board Position codes |
-| A grant connection is unique per appointment/Group. | DB: composite primary key |
-| Grant type is allowed, annual target year agrees, and a target of the context type is the exact context Group. | Trigger: `appointment_grant_policy_check` |
-| Every required grant exists and resolves to the correct concrete destination. | App: catalogue-driven grant resolution and transactional writes |
+| Grant type is allowed, annual target year agrees, and a target of the context type is the exact context Group. | App: one shared catalogue-derived membership query, using unique Group identities |
+| Every required target Group exists and is available at assignment/correction. | App: catalogue-driven target validation inside the command transaction |
 | Prerequisite direct Membership covers the whole tenure. | App: coverage checks on assignment/correction and Membership changes |
 | Overlapping Helper participation is converted when the appointment grants that committee. | App: same transaction as the appointment |
 | Ending an appointment never restores a Helper Membership. | App: explicit new direct addition required |
@@ -354,8 +358,9 @@ concurrent attempts to occupy the same Position.
 
 The policy triggers call `organisation_group_policy` and `organisation_position_policy`.
 They validate inserted/updated rows, rather than maintaining all dependent rows automatically.
-For example, the grant trigger checks each target but does not prove the grant set is complete;
-prerequisite coverage and dependency revalidation belong to the application commands.
+Required target resolution, prerequisite coverage, and dependency revalidation belong to the
+application commands. Grant connections are derived by the shared query rather than stored or
+validated by a grant-table trigger.
 
 ### Atomic writes, corrections, and deletion
 
@@ -363,13 +368,14 @@ Organisation commands run in a transaction, or a nested savepoint when given a t
 They use User/appointment/year advisory locks and row locks where appropriate to serialize
 conflicting operations. Known constraint errors become typed rule violations such as
 `position-taken`, `already-holding-elected-post`, and `period-conflict`. A refused command
-rolls back its writes, including grant changes and Helper conversion.
+rolls back its writes, including appointment changes and Helper conversion.
 
 Appointment corrections retain the appointment UUID, validate the proposed person, code,
-context, year, and period, then rebuild the grants atomically. Historical correction and
-prepared cancellation are explicit operations. Cancelling a prepared appointment deletes it;
-its grants cascade. Ending an existing appointment normally updates its tenure and retains
-its historical grants.
+context, year, and period, then update the single appointment atomically. Its derived
+Memberships immediately reflect that correction. Historical correction and prepared cancellation
+are explicit operations. Cancelling a prepared appointment deletes it and removes its derived
+Memberships. Ending an existing appointment updates its tenure; earlier dated reads still derive
+its historical Memberships from the retained appointment.
 
 When an appointment replaces a Helper period, the prior portion is retained by ending it at
 the appointment start. An overlapping Helper row beginning at or after that boundary is
@@ -378,7 +384,7 @@ removed. No later Helper period is implicitly restored when the appointment ends
 Groups are archived with `active = false` rather than deleted. A Choir archives its Sections
 with it; a Section cannot be archived independently. Group foreign keys use `ON DELETE
 RESTRICT` to preserve referenced identities. Deleting a User cascades their direct Memberships,
-appointments, and Voice capabilities; deleting an appointment cascades its grants.
+appointments, and Voice capabilities. Deleting an appointment leaves no stored grant connections.
 
 All application reads and writes of organisation data go through the organisation feature.
 Operational seed scripts are the deliberate write exception and validate fixture relationships
@@ -430,10 +436,10 @@ through its divisions; a `voice_capability` row with `voice = B` is rejected by 
 
 ## Worked examples
 
-The examples use readable aliases for UUIDs and User IDs. They show stored records, not SQL
+The examples use readable aliases for UUIDs and User IDs. They show stored records and explicitly marked derived Memberships, not SQL
 statements. All end dates shown are exclusive, and required concrete Groups already exist.
 
-### Board concert master: one appointment, two grants
+### Board concert master: one stored appointment, two derived Memberships
 
 ```text
 position_appointment
@@ -441,12 +447,12 @@ position_appointment
   context_group_id=Board26, organisation_year=2026,
   start_date=2026-07-01, end_date=2027-07-01
 
-appointment_grant
-  (A1, Board26)
-  (A1, Konsertmasteri26)
+Derived Memberships (not stored):
+  A1 -> Board26
+  A1 -> Konsertmasteri26
 ```
 
-This adds three rows. There are no direct Membership rows for either Group. One appointment
+This adds one row. There are no direct Membership rows for either Group. One appointment
 makes Anna a member of both throughout the same tenure. Ending A1 ends both contributions.
 The same shape applies to Sexmästare with Board26 and Sexmasteri26.
 
@@ -462,10 +468,10 @@ position_appointment
   A3: Nils, choir-konsertmastare, context=MK, year=2026, [2026-07-01, 2027-07-01)
   A4: Eva,  choir-konsertmastare, context=DK, year=2026, [2026-07-01, 2027-07-01)
 
-appointment_grant
-  (A2, Konsertmasteri26)
-  (A3, Konsertmasteri26)
-  (A4, Konsertmasteri26)
+Derived Memberships (not stored):
+  A2 -> Konsertmasteri26
+  A3 -> Konsertmasteri26
+  A4 -> Konsertmasteri26
 ```
 
 Nils and Eva also need covering direct Memberships in their context Choirs. Together with
@@ -484,10 +490,10 @@ position_appointment
   A5: Olof, stamforalder, context=KKB, year=null, [2025-09-01, null)
   A6: Erik, sekreterare,  context=Board26, year=2026, [2026-07-01, 2027-07-01)
 
-appointment_grant
-  (A5, Foraldramotet)
-  (A6, Board26)
-  (A6, Foraldramotet)
+Derived Memberships (not stored):
+  A5 -> Foraldramotet
+  A6 -> Board26
+  A6 -> Foraldramotet
 ```
 
 A5 continues across July; A6 expires with its Board year. If Olof changes from B2 to B1 within
@@ -504,8 +510,8 @@ direct_membership
 position_appointment
   A7: Erik, dirigent, context=KK, year=null, [2020-01-10, null)
 
-appointment_grant
-  No rows for A7.
+Derived Memberships:
+  None from A7; M5 remains independent.
 ```
 
 Erik can conduct without a singer Section placement. Starting or ending A7 preserves M5.
@@ -520,15 +526,15 @@ Before appointment:
 After appointing Cecilia as Sexmästare from September:
   direct_membership M6: Cecilia, Sexmasteri26, [2026-07-01, 2026-09-01)
   appointment A8: Cecilia, sexmastare, Board26, year=2026, [2026-09-01, 2027-07-01)
-  grants: (A8, Board26), (A8, Sexmasteri26)
+  derived Memberships (not stored): A8 -> Board26, Sexmasteri26
 
 After handover to David from January:
   appointment A8: Cecilia, sexmastare, Board26, year=2026, [2026-09-01, 2027-01-01)
   appointment A9: David,   sexmastare, Board26, year=2026, [2027-01-01, 2027-07-01)
-  grants: (A9, Board26), (A9, Sexmasteri26)
+  derived Memberships (not stored): A9 -> Board26, Sexmasteri26
 ```
 
-A8's existing grant connections remain for history. Cecilia has no Sexmästeri membership
+A8 remains stored and supplies its historical Memberships through the same catalogue. Cecilia has no Sexmästeri membership
 from January unless an Admin explicitly adds her as a Helper. David continuing next year
 requires another appointment in Board27, granting Board27 and Sexmasteri27. Preparing those
 Groups alone does not renew him.
@@ -590,10 +596,6 @@ erDiagram
         date start_date
         date end_date "exclusive; null = open"
     }
-    appointment_grant {
-        uuid appointment_id PK, FK
-        uuid group_id PK, FK
-    }
     voice_capability {
         text user_id PK, FK
         voice_division voice PK
@@ -606,8 +608,6 @@ erDiagram
     group ||--o{ direct_membership : "has direct periods"
     user ||--o{ position_appointment : "holds"
     group ||--o{ position_appointment : "is context for"
-    position_appointment ||--o{ appointment_grant : "grants through"
-    group ||--o{ appointment_grant : "receives participation"
     user ||--o{ voice_capability : "can sing"
 ```
 
@@ -622,6 +622,11 @@ Migration 0019 makes Group names nullable, clears redundant names only on fixed 
 adds the enum-driven naming constraint. It preserves Group IDs, participation, and all explicit
 names. The active-name index retains `NULLS NOT DISTINCT` for Choir scope, but excludes null
 names so distinct fixed Groups cannot collide through their absent names.
+
+Migration 0020 drops `appointment_grant` and its validation function. It preserves all Group,
+appointment, and direct Membership identities and dates. Memberships are derived from the
+current catalogue for every year; valid existing connections are reproduced without replacement
+rows or a database view.
 
 The configured local database was explicitly declared disposable for this branch. The agreed
 cutover is an empty-database migration followed by fresh reference/demo data, not conversion

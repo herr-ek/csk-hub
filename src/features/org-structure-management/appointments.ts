@@ -3,7 +3,7 @@ import "server-only"
 import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
-import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import {
   GROUP_POLICIES,
@@ -16,6 +16,7 @@ import {
   type PositionCode,
   periodsCoverPeriod
 } from "@/core/org-structure"
+import { appointmentMemberships } from "./appointment-memberships"
 import { validateUserParticipation } from "./direct-membership"
 import { cskToday } from "./effective-reads"
 import { requireChoirTeamAvailable } from "./group-cardinality"
@@ -206,8 +207,6 @@ export function appointPosition(
       })
       .returning({ id: positionAppointment.id })
     if (!created) throw new Error("Appointment creation returned no record.")
-    if (grantIds.length)
-      await tx.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: created.id, groupId })))
     // Helper membership is a separate, voluntary record. Convert only overlapping direct
     // membership in helper-enabled companion groups; preserve the earlier period.
     await convertHelpers(tx, input.userId, grantIds, startDate, endDate)
@@ -353,9 +352,6 @@ export function correctAnnualAppointment(
         endDate
       })
       .where(eq(positionAppointment.id, existing.id))
-    await tx.delete(appointmentGrant).where(eq(appointmentGrant.appointmentId, existing.id))
-    if (grantIds.length)
-      await tx.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: existing.id, groupId })))
     await convertHelpers(tx, input.userId, grantIds, startDate, endDate)
     return { id: existing.id }
   })
@@ -390,7 +386,7 @@ export function correctFluidAppointment(
     if (endDate !== null && endDate <= startDate) throw new RuleViolation("period-conflict")
     const historical = endDate !== null && endDate <= cskToday()
     if (!context.active && !historical) throw new RuleViolation("group-archived")
-    const grantIds = await resolveGrantGroups(tx, definition, context, undefined, historical)
+    await resolveGrantGroups(tx, definition, context, undefined, historical)
     await tx
       .update(positionAppointment)
       .set({
@@ -402,9 +398,6 @@ export function correctFluidAppointment(
         endDate
       })
       .where(eq(positionAppointment.id, existing.id))
-    await tx.delete(appointmentGrant).where(eq(appointmentGrant.appointmentId, existing.id))
-    if (grantIds.length)
-      await tx.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: existing.id, groupId })))
     await validateUserParticipation(tx, input.userId)
     return { id: existing.id }
   })
@@ -413,13 +406,14 @@ export function correctFluidAppointment(
 /** Dated appointment participation in groups where the fixed definitions grant membership. */
 export async function listAppointmentMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
   requireDate(date)
+  const derivedMembership = appointmentMemberships(database)
   const rows = await database
     .select({ appointment: positionAppointment })
-    .from(appointmentGrant)
-    .innerJoin(positionAppointment, eq(appointmentGrant.appointmentId, positionAppointment.id))
+    .from(derivedMembership)
+    .innerJoin(positionAppointment, eq(derivedMembership.appointmentId, positionAppointment.id))
     .where(
       and(
-        eq(appointmentGrant.groupId, groupId),
+        eq(derivedMembership.groupId, groupId),
         lte(positionAppointment.startDate, date),
         or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
       )
@@ -458,6 +452,7 @@ export async function listEffectiveMembersForGroupsAt(
     }[]
   }
   if (!ids.length) return new Map<string, RosterMember[]>()
+  const derivedMembership = appointmentMemberships(database)
   const contextGroup = alias(group, "appointment_context")
   const [direct, grants] = await Promise.all([
     database
@@ -474,23 +469,23 @@ export async function listEffectiveMembersForGroupsAt(
     database
       .select({
         appointment: positionAppointment,
-        groupId: appointmentGrant.groupId,
+        groupId: derivedMembership.groupId,
         name: user.name,
         email: user.email,
         contextName: contextGroup.name
       })
-      .from(appointmentGrant)
-      .innerJoin(positionAppointment, eq(appointmentGrant.appointmentId, positionAppointment.id))
+      .from(derivedMembership)
+      .innerJoin(positionAppointment, eq(derivedMembership.appointmentId, positionAppointment.id))
       .innerJoin(user, eq(user.id, positionAppointment.userId))
       .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
       .where(
         and(
-          inArray(appointmentGrant.groupId, ids),
+          inArray(derivedMembership.groupId, ids),
           lte(positionAppointment.startDate, date),
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
         )
       )
-      .orderBy(asc(appointmentGrant.groupId), asc(contextGroup.name), asc(positionAppointment.positionCode))
+      .orderBy(asc(derivedMembership.groupId), asc(contextGroup.name), asc(positionAppointment.positionCode))
   ])
   const rosters = new Map(ids.map((id) => [id, new Map<string, RosterMember>()]))
   const getMember = (groupId: string, userId: string, name: string, email: string, voice: string | null) => {
@@ -590,19 +585,20 @@ export async function listAppointmentsForGroups(
 > {
   const ids = [...new Set(groupIds)]
   if (!ids.length) return new Map<string, []>()
+  const derivedMembership = appointmentMemberships(database)
   const contextGroup = alias(group, "appointment_context")
   const rows = await database
     .selectDistinct({
       appointment: positionAppointment,
-      grantGroupId: appointmentGrant.groupId,
+      grantGroupId: derivedMembership.groupId,
       name: user.name,
       contextName: contextGroup.name
     })
     .from(positionAppointment)
-    .leftJoin(appointmentGrant, eq(appointmentGrant.appointmentId, positionAppointment.id))
+    .leftJoin(derivedMembership, eq(derivedMembership.appointmentId, positionAppointment.id))
     .innerJoin(user, eq(user.id, positionAppointment.userId))
     .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
-    .where(or(inArray(appointmentGrant.groupId, ids), inArray(positionAppointment.contextGroupId, ids)))
+    .where(or(inArray(derivedMembership.groupId, ids), inArray(positionAppointment.contextGroupId, ids)))
     .orderBy(desc(positionAppointment.startDate))
   const byGroup = new Map(ids.map((id) => [id, new Map<string, (typeof rows)[number]>()]))
   for (const row of rows) {

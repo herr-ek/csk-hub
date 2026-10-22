@@ -8,7 +8,6 @@ import {
   integer,
   pgEnum,
   pgTable,
-  primaryKey,
   text,
   uniqueIndex,
   uuid
@@ -172,24 +171,7 @@ export const positionAppointment = pgTable(
   ]
 )
 
-/** A connection only: User, Position, and dates belong exclusively to the appointment. */
-export const appointmentGrant = pgTable(
-  "appointment_grant",
-  {
-    appointmentId: uuid("appointment_id")
-      .notNull()
-      .references(() => positionAppointment.id, { onDelete: "cascade" }),
-    groupId: uuid("group_id")
-      .notNull()
-      .references(() => group.id, { onDelete: "restrict" })
-  },
-  (table) => [
-    primaryKey({ columns: [table.appointmentId, table.groupId] }),
-    index("appointment_grant_group_idx").on(table.groupId)
-  ]
-)
-
 // Hand-written in 0017_expand-organisation-appointments.sql: btree_gist range exclusions
 // on appointment occupancy, Board exclusivity and direct Membership overlap; fixed-policy
-// triggers on group, position_appointment, direct_membership and appointment_grant. Drizzle
+// triggers on group, position_appointment and direct_membership. Drizzle
 // does not diff these. Preserve them in later migrations; see docs/schemas/Groups - DB Scheme.md.

@@ -3,10 +3,11 @@ import { verifyPassword } from "better-auth/crypto"
 import { eq } from "drizzle-orm"
 import { Client } from "pg"
 import { account, user } from "@/core/db/schema/auth"
-import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { post } from "@/core/db/schema/posts"
 import { voiceCapability } from "@/core/db/schema/voice"
 import { GROUP_POLICIES, GroupType, POSITION_DEFINITIONS, PositionCode } from "@/core/org-structure"
+import { appointmentMemberships } from "@/features/org-structure-management/appointment-memberships"
 import { postDocument } from "@/features/posts/post-document"
 import { createTestDatabase } from "../test/database"
 import { insertReferenceData } from "./ops/reference-data"
@@ -25,6 +26,7 @@ const database = await createTestDatabase()
 describe.skipIf(!database)("complete local demo seed", () => {
   if (!database) return
   const { db, drop, url } = database
+  const derivedMembership = appointmentMemberships(db)
   afterAll(drop)
   beforeAll(async () => {
     const client = new Client({ connectionString: url })
@@ -87,7 +89,10 @@ describe.skipIf(!database)("complete local demo seed", () => {
     const groups = await db.select().from(group)
     const memberships = await db.select().from(directMembership)
     const appointments = await db.select().from(positionAppointment)
-    const grants = await db.select().from(appointmentGrant)
+    const grants = await db
+      .select()
+      .from(derivedMembership)
+      .orderBy(derivedMembership.appointmentId, derivedMembership.groupId)
     expect(memberships.filter(({ endDate }) => endDate).length).toBeGreaterThanOrEqual(15)
     expect(appointments.length).toBeGreaterThan(30)
     expect(grants.length).toBeGreaterThan(30)
@@ -262,7 +267,10 @@ describe.skipIf(!database)("complete local demo seed", () => {
     const before = {
       memberships: await db.select().from(directMembership),
       appointments: await db.select().from(positionAppointment),
-      grants: await db.select().from(appointmentGrant),
+      grants: await db
+        .select()
+        .from(derivedMembership)
+        .orderBy(derivedMembership.appointmentId, derivedMembership.groupId),
       credentials: await db.select().from(account)
     }
     expect(await seedDemo(db)).toEqual({
@@ -272,7 +280,9 @@ describe.skipIf(!database)("complete local demo seed", () => {
     })
     expect(await db.select().from(directMembership)).toEqual(before.memberships)
     expect(await db.select().from(positionAppointment)).toEqual(before.appointments)
-    expect(await db.select().from(appointmentGrant)).toEqual(before.grants)
+    expect(
+      await db.select().from(derivedMembership).orderBy(derivedMembership.appointmentId, derivedMembership.groupId)
+    ).toEqual(before.grants)
     expect(await db.select().from(account)).toEqual(before.credentials)
     expect(await db.select().from(post).where(eq(post.id, first.id))).toMatchObject([
       { title: "Locally edited announcement" }
@@ -311,11 +321,6 @@ describe.skipIf(!database)("complete local demo seed", () => {
       organisationYear: 2026,
       startDate: "2026-09-01",
       endDate: "2027-07-01"
-    })
-    await db.insert(appointmentGrant).values({
-      appointmentId: (await db.select().from(positionAppointment).where(eq(positionAppointment.userId, outsider)))[0]
-        ?.id as string,
-      groupId: board.id
     })
     const erased = SEED_USERS[99]?.id as string
     await db.delete(user).where(eq(user.id, erased))

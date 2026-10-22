@@ -21,7 +21,9 @@ tenure in a fixed Position and a specific context Group. Its catalogue definitio
 which Groups receive dated Membership through it; that set may include the context, other Groups,
 or both. For example, an Ordförande appointment grants its Board context, while Sexmästare in the
 Board grants both the Board and Sexmästeri. Three Choir Konsertmästare can each belong to the same
-year's Konsertmästeri while retaining their own Choir contexts.
+year's Konsertmästeri while retaining their own Choir contexts. These Memberships are derived
+from the catalogue, context, and year by one shared query; no grant rows are stored. The current
+catalogue applies to historical appointments too; there are no versioned policy snapshots.
 
 Annual periods use an exclusive 1 July end boundary in stored dates. Admin forms display and
 accept the inclusive last day, 30 June. An annual appointment ending on that boundary is not
@@ -57,8 +59,8 @@ The feature protects these relationships:
 - Groups are archived rather than deleted. Archival is refused while current or future
   appointments still depend on the Group.
 
-Appointment creation, correction, handover, and ending update all affected Memberships and
-grants atomically. A refusal leaves the affected participation unchanged. Commands serialize
+Appointment creation, correction, handover, and ending update the appointment and any
+affected direct Memberships atomically; derived participation follows those records. A refusal leaves the affected participation unchanged. Commands serialize
 conflicting changes so simultaneous appointments cannot bypass the same holder or prerequisite
 rules.
 
@@ -81,7 +83,7 @@ Position workflows use `appointPosition`, `replaceAppointmentHolder`, `endAppoin
 `cancelPreparedAppointment`, `correctAnnualAppointment`, and `correctFluidAppointment`. The
 catalogue fixes each appointment's context type, prerequisite, grants, and annual or fluid end
 policy. Each correction command validates the selected Position's policy and recomputes the
-appointment's grants.
+appointment's required target Groups. Effective reads derive participation from the updated appointment.
 
 Use effective reads whenever a caller needs Group participation, rather than adding the direct
 and appointed sides independently:

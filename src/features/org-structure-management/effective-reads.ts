@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
-import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import {
   type EffectiveGroup,
@@ -12,6 +12,7 @@ import {
   type PositionCode
 } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
+import { appointmentMemberships } from "./appointment-memberships"
 import type { OrgStructureDatabase } from "./operation"
 import { requireDate } from "./operation"
 
@@ -26,6 +27,7 @@ export async function listEffectiveParticipationOfUserAt(
   date: IsoDate
 ) {
   requireDate(date)
+  const derivedMembership = appointmentMemberships(database)
   const owningChoir = alias(group, "effective_owning_choir")
   const contextGroup = alias(group, "effective_appointment_context")
   const [directRows, grantRows, appointmentRows] = await Promise.all([
@@ -44,9 +46,9 @@ export async function listEffectiveParticipationOfUserAt(
       ),
     database
       .select({ appointment: positionAppointment, group, context: contextGroup })
-      .from(appointmentGrant)
-      .innerJoin(positionAppointment, eq(positionAppointment.id, appointmentGrant.appointmentId))
-      .innerJoin(group, eq(group.id, appointmentGrant.groupId))
+      .from(derivedMembership)
+      .innerJoin(positionAppointment, eq(positionAppointment.id, derivedMembership.appointmentId))
+      .innerJoin(group, eq(group.id, derivedMembership.groupId))
       .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
       .where(
         and(
@@ -190,6 +192,7 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
 ) {
   requireDate(date)
   if (!userIds.length) return []
+  const derivedMembership = appointmentMemberships(database)
   const [direct, grants] = await Promise.all([
     database
       .select({
@@ -218,9 +221,9 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
         type: group.type,
         choirId: group.choirId
       })
-      .from(appointmentGrant)
-      .innerJoin(positionAppointment, eq(positionAppointment.id, appointmentGrant.appointmentId))
-      .innerJoin(group, eq(group.id, appointmentGrant.groupId))
+      .from(derivedMembership)
+      .innerJoin(positionAppointment, eq(positionAppointment.id, derivedMembership.appointmentId))
+      .innerJoin(group, eq(group.id, derivedMembership.groupId))
       .where(
         and(
           inArray(positionAppointment.userId, userIds),

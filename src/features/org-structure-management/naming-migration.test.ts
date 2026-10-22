@@ -2,12 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import { user } from "@/core/db/schema/auth"
-import { appointmentGrant, choir, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { choir, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { GroupType, PositionCode } from "@/core/org-structure"
 import { createTestDatabase } from "../../../test/database"
+import { appointmentMemberships } from "./appointment-memberships"
 
 const folder = mkdtempSync(join(tmpdir(), "csk-before-derived-labels-"))
 cpSync("drizzle", folder, { recursive: true })
@@ -50,11 +51,13 @@ describe.skipIf(!database)("derived Group label migration", () => {
       })
       .returning()
     if (!appointment) throw new Error("Missing appointment fixture")
-    await db.insert(appointmentGrant).values({ appointmentId: appointment.id, groupId: board.id })
+    await db.execute(
+      sql`INSERT INTO appointment_grant (appointment_id, group_id) VALUES (${appointment.id}, ${board.id})`
+    )
     await db.insert(directMembership).values({ userId, groupId: gig.id, startDate: "2025-01-01" })
     const before = {
       appointments: await db.select().from(positionAppointment),
-      grants: await db.select().from(appointmentGrant),
+      grants: await db.select().from(appointmentMemberships(db)),
       memberships: await db.select().from(directMembership)
     }
     await migrate(db, { migrationsFolder: "drizzle" })
@@ -62,7 +65,7 @@ describe.skipIf(!database)("derived Group label migration", () => {
     expect(await db.select().from(group).where(eq(group.id, team.id))).toMatchObject([{ ...team, name: null }])
     expect(await db.select().from(group).where(eq(group.id, gig.id))).toEqual([gig])
     expect(await db.select().from(positionAppointment)).toEqual(before.appointments)
-    expect(await db.select().from(appointmentGrant)).toEqual(before.grants)
+    expect(await db.select().from(appointmentMemberships(db))).toEqual(before.grants)
     expect(await db.select().from(directMembership)).toEqual(before.memberships)
     await expect(
       db.insert(group).values({ name: "Forged name", type: GroupType.Board, organisationYear: 2026 }).execute()
