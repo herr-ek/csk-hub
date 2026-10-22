@@ -5,9 +5,20 @@ import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { voiceCapability } from "@/core/db/schema/voice"
-import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, groupTypeKey, hasExplicitGroupName } from "@/core/org-structure"
 import { assertLocalDatabase } from "./ops/guards"
-import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./ops/seed-data"
+import {
+  DEMO_ARCHIVED_GIG_GROUP,
+  DEMO_ARCHIVED_ORGANISATION_YEARS,
+  DEMO_AS_OF,
+  DEMO_GIG_GROUPS,
+  DEMO_PROJECT_GROUP,
+  demoChoirTeamId,
+  referenceChoirId,
+  SEED_USERS,
+  type SeedDatabase,
+  seedId
+} from "./ops/seed-data"
 import { seedGroupActivity } from "./ops/seed-group-activity"
 
 /**
@@ -24,13 +35,26 @@ type Division = NonNullable<typeof directMembership.$inferInsert.voice>
 
 const CHOIRS = ["MK", "DK", "KK"] as const
 
-const EXAMPLE_GROUPS: { name: string; type: GroupType; choir?: string }[] = [
-  { name: "Jubileumskommittén", type: GroupType.Other },
-  { name: "Giggrupp vår", type: GroupType.GigGroup },
+const EXAMPLE_GROUPS: {
+  id: string
+  type: GroupType
+  name?: string
+  choir?: (typeof CHOIRS)[number]
+  organisationYear?: number
+  active?: boolean
+}[] = [
+  { ...DEMO_PROJECT_GROUP, type: GroupType.Other, active: false },
+  ...DEMO_GIG_GROUPS.map((group) => ({ ...group, type: GroupType.GigGroup })),
+  { ...DEMO_ARCHIVED_GIG_GROUP, type: GroupType.GigGroup, active: false },
+  ...DEMO_ARCHIVED_ORGANISATION_YEARS.flatMap((organisationYear) =>
+    Object.values(GroupType)
+      .filter((type) => GROUP_POLICIES[type].lifetime === "annual")
+      .map((type) => ({ id: seedId(`example-group:annual:${type}:${organisationYear}`), type, organisationYear }))
+  ),
   ...CHOIRS.flatMap((choir) => [
-    { name: `${choir} roddgrupp`, type: GroupType.EquipmentTeam as const, choir },
-    { name: `${choir} festgrupp`, type: GroupType.PartyTeam as const, choir },
-    { name: `${choir} rephelgsgrupp`, type: GroupType.RehearsalWeekendTeam as const, choir }
+    { id: demoChoirTeamId(GroupType.EquipmentTeam, choir), type: GroupType.EquipmentTeam, choir },
+    { id: demoChoirTeamId(GroupType.PartyTeam, choir), type: GroupType.PartyTeam, choir },
+    { id: demoChoirTeamId(GroupType.RehearsalWeekendTeam, choir), type: GroupType.RehearsalWeekendTeam, choir }
   ])
 ]
 
@@ -50,11 +74,11 @@ async function seed(database: Database) {
 
   for (const example of EXAMPLE_GROUPS) {
     const choirId = example.choir ? await requireChoir(database, example.choir) : null
-    const id = seedId(`example-group:${example.type}:${example.name}:${choirId ?? "csk"}`)
+    const id = example.id
     const [seeded] = await database.select({ id: group.id }).from(group).where(eq(group.id, id))
     if (seeded) continue
     if (hasExplicitGroupName(example.type)) {
-      if (await activeGroupId(database, example.name, choirId)) continue
+      if (await activeGroupId(database, example.name as string, choirId)) continue
     } else {
       const [existing] = await database
         .select({ id: group.id })
@@ -62,16 +86,29 @@ async function seed(database: Database) {
         .where(
           and(
             eq(group.type, example.type),
+            example.organisationYear === undefined
+              ? isNull(group.organisationYear)
+              : eq(group.organisationYear, example.organisationYear),
             choirId ? eq(group.choirId, choirId) : isNull(group.choirId),
             eq(group.active, true)
           )
         )
       if (existing) continue
     }
-    await database
-      .insert(group)
-      .values({ id, name: hasExplicitGroupName(example.type) ? example.name : null, type: example.type, choirId })
-    created.push(example.name)
+    await database.insert(group).values({
+      id,
+      name: hasExplicitGroupName(example.type) ? example.name : null,
+      type: example.type,
+      choirId,
+      organisationYear: example.organisationYear,
+      active: example.active
+    })
+    created.push(
+      example.name ??
+        (example.choir
+          ? `${example.choir}:${groupTypeKey(example.type)}`
+          : `${groupTypeKey(example.type)}:${example.organisationYear}`)
+    )
   }
 
   const unplaced = await database
@@ -162,8 +199,8 @@ async function sectionSlots(database: Database) {
     .from(directMembership)
     .where(
       and(
-        lte(directMembership.startDate, "2026-10-01"),
-        or(isNull(directMembership.endDate), gt(directMembership.endDate, "2026-10-01"))
+        lte(directMembership.startDate, DEMO_AS_OF),
+        or(isNull(directMembership.endDate), gt(directMembership.endDate, DEMO_AS_OF))
       )
     )
     .groupBy(directMembership.groupId)

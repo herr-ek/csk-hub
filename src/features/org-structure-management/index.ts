@@ -50,5 +50,6 @@ export {
 } from "./structure"
 export { ChoirsScreen, ChoirsScreenSkeleton } from "./ui/choirs/screen"
 export { GroupDetailScreen, GroupDetailScreenSkeleton } from "./ui/detail/screen"
+export { GigGroupsScreen, GigGroupsScreenSkeleton } from "./ui/gig-groups/screen"
 export { listLocalizedGroupLabels } from "./ui/group-labels"
 export { GroupsScreen, GroupsScreenSkeleton } from "./ui/groups/screen"

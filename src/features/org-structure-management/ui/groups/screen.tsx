@@ -31,6 +31,12 @@ export async function GroupsScreen() {
           >
             {t("groupsPage.choirsLink")}
           </Link>
+          <Link
+            href={ROUTES.adminGigGroups}
+            className="mt-2 ml-4 inline-block text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {t("groupsPage.gigGroupsLink")}
+          </Link>
         </div>
         <div className="flex flex-wrap gap-2">
           <PrepareYearDialog currentYear={currentYear} />

@@ -1,6 +1,7 @@
 import { Client, type ClientBase } from "pg"
 import { secureConnection } from "@/core/db/tls"
-import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
+import { timeZone } from "@/core/i18n/time-zone"
+import { currentOrganisationYear, GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { confirmProductionWrite } from "./guards"
 import { referenceChoirId, referenceContinuingGroupId, referenceSectionId } from "./seed-data"
 import { announce, type Database } from "./target"
@@ -89,10 +90,14 @@ export async function createReferenceData(
 }
 
 /**
- * Insert missing fixed Groups in one transaction and return the names of what was created.
+ * Insert missing fixed Groups in one transaction and return explicit names or stable type identifiers.
+ * Defaults to the live organisational year and the following year; demos pass their snapshot year.
  * Existing active Choirs/Sections and annual identities are retained.
  */
-export async function insertReferenceData(client: ClientBase, currentYear = 2026): Promise<string[]> {
+export async function insertReferenceData(
+  client: ClientBase,
+  currentYear = currentOrganisationYear(new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date()))
+): Promise<string[]> {
   const created: string[] = []
   await client.query("BEGIN")
   try {

@@ -2,27 +2,12 @@
 
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import Link from "next/link"
-import { useId } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { positionCodeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
-import { Label } from "@/shared/ui/base/label"
-import { Switch } from "@/shared/ui/base/switch"
 import { groupDetailPath } from "./command-state"
 import type { GroupSummary } from "./group-summaries"
-
-/** The switch both overviews use to include archived groups. */
-export function ShowArchivedToggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
-  const t = useTranslations("Groups")
-  const toggleId = useId()
-  return (
-    <div className="flex items-center gap-2 self-end">
-      <Switch id={toggleId} checked={checked} onCheckedChange={onChange} />
-      <Label htmlFor={toggleId}>{t("showArchived")}</Label>
-    </div>
-  )
-}
 
 export function GroupList({ title, groups }: { title: string; groups: GroupSummary[] }) {
   return (
@@ -57,23 +42,13 @@ export function GroupItems({ groups }: { groups: GroupSummary[] }) {
 }
 
 export function GroupLink({ group }: { group: GroupSummary }) {
-  const t = useTranslations("Groups")
   return (
-    <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
-      <Link
-        href={groupDetailPath(group.id)}
-        className="min-w-0 break-words font-medium underline-offset-4 hover:underline"
-      >
-        {group.name}
-      </Link>
-      {group.organisationYear !== null ? (
-        <Badge variant="outline">
-          {t("management.yearValue", { start: group.organisationYear, end: group.organisationYear + 1 })}
-        </Badge>
-      ) : null}
-      {group.organisationYear !== null ? <Badge variant="secondary">{t(`management.${group.phase}`)}</Badge> : null}
-      {group.active ? null : <Badge variant="secondary">{t("archived")}</Badge>}
-    </span>
+    <Link
+      href={groupDetailPath(group.id)}
+      className="min-w-0 break-words font-medium underline-offset-4 hover:underline"
+    >
+      {group.name}
+    </Link>
   )
 }
 

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import type { db } from "@/core/db"
+import { GroupType } from "@/core/org-structure"
 
 export type SeedDatabase = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
 
@@ -34,6 +35,51 @@ export function referenceSectionId(choir: "MK" | "DK" | "KK", section: string) {
   return seedId(`reference:section:${choir}:${section}`)
 }
 
-export function referenceContinuingGroupId(type: string) {
+export function referenceContinuingGroupId(type: GroupType) {
   return seedId(`reference:continuing:${type}`)
 }
+
+/** The demo is a reproducible snapshot, separate from reference data's live year window. */
+export const DEMO_ORGANISATION_YEAR = 2026
+export const DEMO_AS_OF = "2026-10-22"
+
+/** Individually named demo Groups retain their original stable IDs when their names are edited. */
+export const DEMO_GIG_GROUP = {
+  id: seedId("example-group:GigGroup:Giggrupp vår:csk"),
+  name: "Giggrupp vår"
+}
+export const DEMO_PROJECT_GROUP = {
+  id: seedId("example-group:Övrig:Jubileumskommittén:csk"),
+  name: "Jubileumskommittén"
+}
+
+export type DemoChoir = "MK" | "DK" | "KK"
+export type DemoChoirTeam = GroupType.EquipmentTeam | GroupType.PartyTeam | GroupType.RehearsalWeekendTeam
+
+/** Immutable legacy seed tokens preserve existing UUIDs; these are never display names. */
+const TEAM_ID_TOKENS: Record<DemoChoirTeam, string> = {
+  [GroupType.EquipmentTeam]: "roddgrupp",
+  [GroupType.PartyTeam]: "festgrupp",
+  [GroupType.RehearsalWeekendTeam]: "rephelgsgrupp"
+}
+
+export function demoChoirTeamId(type: DemoChoirTeam, choir: DemoChoir) {
+  return seedId(`example-group:${type}:${choir} ${TEAM_ID_TOKENS[type]}:${referenceChoirId(choir)}`)
+}
+
+export const DEMO_ARCHIVED_ORGANISATION_YEARS = [DEMO_ORGANISATION_YEAR - 2, DEMO_ORGANISATION_YEAR - 1] as const
+export const DEMO_ARCHIVED_GIG_GROUP = {
+  id: seedId("example-group:archived-gig-2025"),
+  name: "Jubileumsensemblen"
+}
+
+/** Seven current ensembles plus one historical ensemble, each with fifteen singers. */
+export const DEMO_GIG_GROUPS = [
+  DEMO_GIG_GROUP,
+  { id: seedId("example-group:gig:lunch"), name: "Lunchensemblen" },
+  { id: seedId("example-group:gig:summer"), name: "Sommarensemblen" },
+  { id: seedId("example-group:gig:autumn"), name: "Höstensemblen" },
+  { id: seedId("example-group:gig:winter"), name: "Vinterensemblen" },
+  { id: seedId("example-group:gig:events"), name: "Evenemangsensemblen" },
+  { id: seedId("example-group:gig:chamber"), name: "Kammarensemblen" }
+] as const

@@ -16,7 +16,7 @@ export async function getGroupsOverview(): Promise<GroupsOverview> {
   const summaries = await listGroupSummaries()
   return {
     cskWide: summaries
-      .filter(({ choirId, type }) => choirId === null && type !== GroupType.Choir)
+      .filter(({ choirId, type }) => choirId === null && type !== GroupType.Choir && type !== GroupType.GigGroup)
       .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name, "sv")),
     choirs: summaries
       .filter(({ type }) => type === GroupType.Choir)

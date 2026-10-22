@@ -25,7 +25,7 @@ export function GroupHeaderActions({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {archivable ? (
+      {archivable && group.type !== GroupType.GigGroup ? (
         <CommandDialog
           trigger={
             <Button type="button" variant="outline">

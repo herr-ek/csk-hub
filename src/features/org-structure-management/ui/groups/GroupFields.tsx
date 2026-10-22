@@ -21,10 +21,10 @@ export function GroupFields({
   initial?: EditableGroup
 }) {
   const t = useTranslations("Groups")
-  const [type, setType] = useState<GroupType>(initial?.type ?? GroupType.GigGroup)
+  const [type, setType] = useState<GroupType>(initial?.type ?? GroupType.Other)
   const id = useId()
   const options = (Object.keys(GROUP_POLICIES) as GroupType[])
-    .filter((type) => type !== GroupType.Choir && type !== GroupType.Section)
+    .filter((type) => type !== GroupType.Choir && type !== GroupType.Section && type !== GroupType.GigGroup)
     .map((type) => ({ value: type, label: t(`types.${groupTypeKey(type)}`) }))
   const policy = GROUP_POLICIES[type]
   return (

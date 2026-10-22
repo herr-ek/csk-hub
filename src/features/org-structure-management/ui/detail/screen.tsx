@@ -35,7 +35,13 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
       <div className="flex flex-col gap-2">
         {/* Choirs and Sections are listed on the Choirs page, every other group on the groups page. */}
         <PageBreadcrumb
-          route={isChoirOrSection ? "adminOrgStructure" : "adminOrgStructureGroups"}
+          route={
+            isChoirOrSection
+              ? "adminOrgStructure"
+              : group.type === GroupType.GigGroup
+                ? "adminGigGroups"
+                : "adminOrgStructureGroups"
+          }
           current={group.name}
         />
         <div className="flex flex-wrap items-start justify-between gap-4">

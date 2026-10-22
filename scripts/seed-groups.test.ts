@@ -13,7 +13,14 @@ import { addDirectMembership, correctDirectMembership } from "@/features/org-str
 import { renameGroup } from "@/features/org-structure-management/structure"
 import { createTestDatabase } from "../test/database"
 import { insertReferenceData } from "./ops/reference-data"
-import { referenceChoirId, referenceContinuingGroupId, referenceSectionId, SEED_USERS, seedId } from "./ops/seed-data"
+import {
+  DEMO_ORGANISATION_YEAR,
+  referenceChoirId,
+  referenceContinuingGroupId,
+  referenceSectionId,
+  SEED_USERS,
+  seedId
+} from "./ops/seed-data"
 import { seedGroups } from "./seed-groups"
 import { seedUsers } from "./seed-users"
 
@@ -37,12 +44,12 @@ describe.skipIf(!database)("seedGroups", () => {
   test("adds the example groups and places every unplaced user in a Choir and a Section, once", async () => {
     const client = new Client({ connectionString: t.url })
     await client.connect()
-    await insertReferenceData(client)
+    await insertReferenceData(client, DEMO_ORGANISATION_YEAR)
     await client.end()
     const users = [await newUser(), await newUser()]
 
     const { created, placed } = await seedGroups(t.db)
-    expect(created).toContain("KK roddgrupp")
+    expect(created).toContain("KK:EquipmentTeam")
     expect(created).not.toContain("fixed annual Groups and stable appointment examples")
     expect(placed).toBe(2)
 
@@ -176,7 +183,7 @@ describe.skipIf(!database)("seedGroups", () => {
     const client = new Client({ connectionString: t.url })
     await client.connect()
     try {
-      await insertReferenceData(client)
+      await insertReferenceData(client, DEMO_ORGANISATION_YEAR)
     } finally {
       await client.end()
     }

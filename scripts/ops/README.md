@@ -83,7 +83,9 @@ TLS verification follows the shared policy in `src/core/db/tls.ts`; see
 
 After `bun run ops migrate`, run `bun run ops seed-demo`. It creates the shared reference
 data if needed, then seeds people, placements, group history and Posts in one transaction.
-It never resets the database. The individual seed commands remain available; run
+The demo is a reproducible snapshot dated 22 October 2026; ordinary reference-data
+seeding follows the current organisational year. It never resets the database.
+The individual seed commands remain available; run
 `reference-data`, `seed-users`, `seed-groups`, then `seed-posts` for the same dataset.
 
 On an empty database the demo contains:
@@ -96,8 +98,14 @@ On an empty database the demo contains:
   the seed balances around existing placements rather than moving anyone.
 - Varied Choir join dates from 2021–2025, Section and division changes, independent
   self-reported Voice capabilities, and some Users who have declared none.
-- CSK-wide and Choir-owned committees, gig groups, roddgrupper, festgrupper and rephelgsgrupper,
-  with direct Helpers and seed singer placements across all twelve Sections.
+- Complete annual group sets for archived years 24/25 and 25/26, current year 26/27,
+  and prepared year 27/28. Fixed group labels derive from type, year and owning Choir;
+  only explicitly named groups store names.
+- Seven current gig groups with fifteen singers each, and one retired gig group with
+  fifteen former members. Those singers remain active in Choirs and current gig groups;
+  their retired group's memberships and Gigledare appointment have ended.
+- Nine populated Choir teams (roddgrupper, festgrupper and rephelgsgrupper), direct
+  committee Helpers, and singer placements across all twelve Sections.
 - Fixed-code appointments for Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare,
   Stämföräldrar for all Sections, and Board roles including Sekreterare, 1:a Konsertmästare,
   CSK Gigmästare, Sexmästare, Sexmästarinna and Turnékommitté Ekonomiskt Ansvarig. The Board

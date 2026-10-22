@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, setSystemTime, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
 import { Client } from "pg"
 import { choir, group, section } from "@/core/db/schema/org-structure"
@@ -10,7 +10,11 @@ const database = await createTestDatabase()
 
 describe.skipIf(!database)("reference data", () => {
   const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
+  beforeAll(() => setSystemTime(new Date("2026-10-22T12:00:00Z")))
+  afterAll(async () => {
+    setSystemTime()
+    await t.drop()
+  })
 
   async function withClient<T>(work: (client: Client) => Promise<T>) {
     const client = new Client({ connectionString: t.url })
@@ -69,5 +73,15 @@ describe.skipIf(!database)("reference data", () => {
         REFERENCE_DATA.continuingGroups.length +
         20
     )
+  })
+
+  test("live reference data rolls forward at local July 1 while retaining history", async () => {
+    setSystemTime(new Date("2027-06-30T21:59:00Z"))
+    expect(await withClient(insertReferenceData)).toEqual([])
+    setSystemTime(new Date("2027-06-30T22:00:00Z"))
+    expect(await withClient(insertReferenceData)).toHaveLength(REFERENCE_DATA.annualGroups(2028).length)
+    const annual = (await t.db.select().from(group)).filter(({ organisationYear }) => organisationYear !== null)
+    expect([...new Set(annual.map(({ organisationYear }) => organisationYear))].sort()).toEqual([2026, 2027, 2028])
+    expect(await withClient(insertReferenceData)).toEqual([])
   })
 })

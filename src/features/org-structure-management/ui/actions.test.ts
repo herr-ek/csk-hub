@@ -15,6 +15,7 @@ mock.module("@/core/i18n/server", () => ({ getTranslations: async () => (key: st
 const { createGroupAction, renameGroupAction, archiveGroupAction, prepareYearAction, editGroupAction } = await import(
   "./groups/actions"
 )
+const { createGigGroupAction } = await import("./gig-groups/actions")
 const { addMemberAction, endMembershipAction, changeVoiceAction } = await import("./detail/actions")
 const { getGroupDetail } = await import("./detail/query")
 const {
@@ -62,6 +63,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   test("guards every exported mutation before parsing or changing state", async () => {
     const actions = [
       createGroupAction,
+      createGigGroupAction,
       renameGroupAction,
       archiveGroupAction,
       prepareYearAction,
@@ -98,6 +100,27 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
       await createGroupAction(IDLE, form({ name: "Too early Board", type: GroupType.Board, organisationYear: "2055" }))
     ).toEqual({ status: "error", error: "organisation-year-too-far-ahead" })
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  test("the dedicated gig workflow fixes type and scope despite forged form fields", async () => {
+    expect(
+      await createGigGroupAction(
+        IDLE,
+        form({
+          name: "Dedicated ensemble",
+          type: GroupType.Board,
+          choirId: await t.groupId("KK"),
+          organisationYear: "2099"
+        })
+      )
+    ).toMatchObject({ status: "success" })
+    expect(await named("Dedicated ensemble")).toMatchObject({
+      type: GroupType.GigGroup,
+      choirId: null,
+      organisationYear: null,
+      active: true
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/gig-groups", "page")
   })
 
   test("creates, renames, archives, and passes typed policy failures through the action boundary", async () => {

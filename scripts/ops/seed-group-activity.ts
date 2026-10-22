@@ -2,9 +2,21 @@ import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { GROUP_POLICIES, GroupType, POSITION_DEFINITIONS, PositionCode, periodsCoverPeriod } from "@/core/org-structure"
-import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./seed-data"
+import {
+  DEMO_ARCHIVED_GIG_GROUP,
+  DEMO_ARCHIVED_ORGANISATION_YEARS,
+  DEMO_AS_OF,
+  DEMO_GIG_GROUP,
+  DEMO_GIG_GROUPS,
+  DEMO_ORGANISATION_YEAR,
+  DEMO_PROJECT_GROUP,
+  referenceChoirId,
+  SEED_USERS,
+  type SeedDatabase,
+  seedId
+} from "./seed-data"
 
-const CURRENT_YEAR = 2026
+const CURRENT_YEAR = DEMO_ORGANISATION_YEAR
 
 /** Add only stable demo records. Deterministic IDs make reruns additive and preserve manual edits. */
 export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
@@ -21,6 +33,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
         SEED_USERS.map(({ id }) => id)
       )
     )
+    .orderBy(user.id)
     .then((rows) => rows.map(({ id }) => id))
   if (choirs.length !== 3 || singers.length < 24) return
 
@@ -64,7 +77,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     const rows = await database
       .select({ userId: directMembership.userId })
       .from(directMembership)
-      .where(eq(directMembership.groupId, groupId))
+      .where(and(eq(directMembership.groupId, groupId), inArray(directMembership.userId, singers)))
     const candidates = [...new Set(rows.map(({ userId }) => userId))].sort()
     for (let index = 0; index < candidates.length; index++) {
       const userId = candidates[(index + offset) % candidates.length]
@@ -87,7 +100,9 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     if (existing) return
     const definition = POSITION_DEFINITIONS[code]
     const context = byId.get(contextGroupId)
-    if (!context || context.type !== definition.context) throw new Error(`Invalid context for ${code}.`)
+    const historical = endDate !== null && endDate <= DEMO_AS_OF
+    if (!context || (!context.active && !historical) || context.type !== definition.context)
+      throw new Error(`Invalid context for ${code}.`)
     if (
       definition.endPolicy === "annual" &&
       GROUP_POLICIES[context.type].lifetime === "annual" &&
@@ -107,6 +122,17 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       )
         throw new Error(`The ${code} appointment must fit its explicit organisational year.`)
     } else if (year !== null) throw new Error(`Fluid ${code} appointments have no organisational year.`)
+    const expectedTypes = new Set(definition.grants)
+    const actualTypes = new Set(grantIds.map((groupId) => byId.get(groupId)?.type))
+    if (grantIds.length !== expectedTypes.size || [...expectedTypes].some((type) => !actualTypes.has(type)))
+      throw new Error(`Missing or duplicate grant Group for ${code}.`)
+    for (const groupId of grantIds) {
+      const target = byId.get(groupId)
+      if (!target || (!target.active && !historical)) throw new Error(`Missing or archived grant Group ${groupId}.`)
+      const policy = GROUP_POLICIES[target.type]
+      if (policy.lifetime === "annual" && target.organisationYear !== year)
+        throw new Error(`The ${code} grant must target the same organisational year.`)
+    }
     await database.insert(positionAppointment).values({
       id,
       userId,
@@ -116,19 +142,86 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       startDate,
       endDate
     })
-    const expectedTypes = new Set(definition.grants)
-    const actualTypes = new Set(grantIds.map((groupId) => byId.get(groupId)?.type))
-    if (grantIds.length !== expectedTypes.size || [...expectedTypes].some((type) => !actualTypes.has(type)))
-      throw new Error(`Missing or duplicate grant Group for ${code}.`)
-    for (const groupId of grantIds) {
-      const target = byId.get(groupId)
-      if (!target) throw new Error(`Unknown grant Group ${groupId}.`)
-      const policy = GROUP_POLICIES[target.type]
-      if (policy.lifetime === "annual" && target.organisationYear !== year)
-        throw new Error(`The ${code} grant must target the same organisational year.`)
-    }
     if (grantIds.length)
       await database.insert(appointmentGrant).values(grantIds.map((groupId) => ({ appointmentId: id, groupId })))
+  }
+
+  for (const year of DEMO_ARCHIVED_ORGANISATION_YEARS) {
+    const start = `${year}-07-01`,
+      end = `${year + 1}-07-01`
+    const board = annual(GroupType.Board, year)
+    const boardCodes = Object.values(PositionCode).filter(
+      (code) => POSITION_DEFINITIONS[code].context === GroupType.Board
+    )
+    for (const [index, code] of boardCodes.entries()) {
+      const grantIds = POSITION_DEFINITIONS[code].grants.map((type) =>
+        type === GroupType.Board ? board.id : type === GroupType.ParentsMeeting ? continuing.id : annual(type, year).id
+      )
+      await appoint(
+        `historical-board-${year}-${code}`,
+        singerAt(20 + index + (year - DEMO_ARCHIVED_ORGANISATION_YEARS[0]) * 8),
+        code,
+        board.id,
+        year,
+        start,
+        end,
+        grantIds
+      )
+    }
+    for (const [code, type, offset] of [
+      [PositionCode.DeputySocialCoordinator, GroupType.SocialCommittee, 38],
+      [PositionCode.FinancialOfficer, GroupType.TourCommittee, 39]
+    ] as const) {
+      const target = annual(type, year)
+      await appoint(`historical-${year}-${code}`, singerAt(offset), code, target.id, year, start, end, [target.id])
+    }
+    for (const choir of choirs) {
+      for (const [code, type, offset] of [
+        [PositionCode.ChoirConcertMaster, GroupType.ConcertCommittee, 0],
+        [PositionCode.ChoirGigCoordinator, GroupType.GigCommittee, 1]
+      ] as const) {
+        const holder = await memberOf(choir.id, start, offset)
+        await appoint(`historical-${year}-${code}-${choir.id}`, holder, code, choir.id, year, start, end, [
+          annual(type, year).id
+        ])
+      }
+    }
+    for (const [index, type] of [
+      GroupType.NominationCommittee,
+      GroupType.WebTeam,
+      GroupType.Archives,
+      GroupType.MemorisationCommittee
+    ].entries()) {
+      const target = annual(type, year)
+      for (let slot = 0; slot < 2; slot++)
+        await addDirect(
+          `historical-member-${target.id}-${slot}`,
+          singerAt(40 + index * 2 + slot),
+          target.id,
+          start,
+          end
+        )
+    }
+    for (const [index, type] of [
+      GroupType.ConcertCommittee,
+      GroupType.GigCommittee,
+      GroupType.SocialCommittee,
+      GroupType.RecruitmentCommittee,
+      GroupType.TourCommittee
+    ].entries()) {
+      const target = annual(type, year)
+      for (let slot = 0; slot < 2; slot++)
+        await addDirect(
+          `historical-helper-${target.id}-${slot}`,
+          singerAt(70 + index * 2 + slot),
+          target.id,
+          start,
+          end
+        )
+    }
+  }
+  if (byId.has(DEMO_PROJECT_GROUP.id)) {
+    await addDirect("completed-project-member", singerAt(17), DEMO_PROJECT_GROUP.id, "2025-07-01", "2026-04-01")
   }
 
   const board = annual(GroupType.Board, CURRENT_YEAR)
@@ -182,27 +275,27 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     [annual(GroupType.Board, CURRENT_YEAR + 1).id]
   )
 
-  const sexmästeri = annual(GroupType.SocialCommittee, CURRENT_YEAR)
+  const socialCommittee = annual(GroupType.SocialCommittee, CURRENT_YEAR)
   await appoint(
     "sexmastarinna-26",
     singerAt(10),
     PositionCode.DeputySocialCoordinator,
-    sexmästeri.id,
+    socialCommittee.id,
     CURRENT_YEAR,
     "2026-07-01",
     "2027-07-01",
-    [sexmästeri.id]
+    [socialCommittee.id]
   )
-  const turne = annual(GroupType.TourCommittee, CURRENT_YEAR)
+  const tourCommittee = annual(GroupType.TourCommittee, CURRENT_YEAR)
   await appoint(
     "ekonomiskt-ansvarig-turne-26",
     singerAt(11),
     PositionCode.FinancialOfficer,
-    turne.id,
+    tourCommittee.id,
     CURRENT_YEAR,
     "2026-07-01",
     "2027-07-01",
-    [turne.id]
+    [tourCommittee.id]
   )
 
   // Each Choir has independent representatives. They retain their Choir Membership and are
@@ -230,10 +323,10 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       "2027-07-01",
       [annual(GroupType.GigCommittee, CURRENT_YEAR).id]
     )
-    const formerDirigent = await memberOf(choir.id, "2025-09-01", index + 2)
+    const formerConductor = await memberOf(choir.id, "2025-09-01", index + 2)
     await appoint(
       `choir-dirigent-handover-${choir.name}-old`,
-      formerDirigent,
+      formerConductor,
       PositionCode.Conductor,
       choir.id,
       null,
@@ -263,12 +356,13 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     )
   }
 
-  // Three Section leaders demonstrate fluid responsibility while singer Membership and Voice stay intact.
+  // Every Section has a leader demonstrating fluid responsibility while singer Membership and Voice stay intact.
   const sections = await database
     .select({ id: group.id })
     .from(section)
     .innerJoin(group, eq(group.id, section.groupId))
     .where(eq(group.active, true))
+    .orderBy(group.choirId, group.name)
 
   for (const [index, row] of sections.entries()) {
     const userId = await memberOf(row.id, "2026-07-01", index)
@@ -277,7 +371,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     ])
   }
 
-  // Direct Helpers have explicit Memberships without fabricated Position titles.
+  // Direct-only annual Groups use explicit Memberships, without invented Position titles.
   for (const [index, type] of (
     [GroupType.NominationCommittee, GroupType.WebTeam, GroupType.Archives, GroupType.MemorisationCommittee] as const
   ).entries()) {
@@ -286,21 +380,74 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       await addDirect(`helper-${target.id}-${userId}`, userId, target.id, "2026-07-01", "2027-07-01")
   }
 
-  const seededGigGroupId = seedId("example-group:GigGroup:Giggrupp vår:csk")
-  const gigGroup =
-    groups.find((row) => row.id === seededGigGroupId) ??
-    groups.find((row) => row.type === GroupType.GigGroup && row.name === "Giggrupp vår" && row.active)
-  if (gigGroup) {
-    const gigLeader = singerAt(60)
-    await addDirect("gigleader-prerequisite", gigLeader, gigGroup.id, "2026-07-01", null)
+  for (const [index, type] of [
+    GroupType.ConcertCommittee,
+    GroupType.GigCommittee,
+    GroupType.SocialCommittee,
+    GroupType.RecruitmentCommittee,
+    GroupType.TourCommittee
+  ].entries()) {
+    const target = annual(type, CURRENT_YEAR)
+    for (let slot = 0; slot < 2; slot++) {
+      await addDirect(
+        `committee-helper-${target.id}-${slot}`,
+        singerAt(70 + index * 2 + slot),
+        target.id,
+        "2026-07-01",
+        "2027-07-01"
+      )
+    }
+  }
+  for (const team of groups.filter((row) => row.active && GROUP_POLICIES[row.type].cardinality === "choir-singleton")) {
+    if (!team.choirId) throw new Error("A seeded Choir team must belong to a Choir.")
+    for (let slot = 0; slot < 3; slot++) {
+      const member = await memberOf(team.choirId, "2026-07-01", 10 + slot)
+      await addDirect(`choir-team-${team.id}-${slot}`, member, team.id, "2026-07-01", null)
+    }
+  }
+
+  const activeGigSingers = new Set<string>()
+  for (const [index, definition] of [...DEMO_GIG_GROUPS, DEMO_ARCHIVED_GIG_GROUP].entries()) {
+    const gigGroup = byId.get(definition.id)
+    if (!gigGroup) throw new Error(`Missing demo gig Group ${definition.id}.`)
+    const archived = definition.id === DEMO_ARCHIVED_GIG_GROUP.id
+    if (!gigGroup.active && !archived) continue
+    const start = archived ? "2024-07-01" : "2026-07-01"
+    const end = archived ? "2025-07-01" : null
+    const selected = new Set<string>()
+    for (const choir of choirs) {
+      let offset = index * 5
+      const choirMembers = new Set<string>()
+      // Retain the original ensemble's leader and prerequisite row on upgraded demo databases.
+      if (definition.id === DEMO_GIG_GROUP.id && (await memberAt(singerAt(60), choir.id, start, end))) {
+        choirMembers.add(singerAt(60))
+      }
+      // The retired ensemble's former members still sing in today's ensembles.
+      for (let attempts = 0; choirMembers.size < 5 && attempts < singers.length; attempts++) {
+        const member = await memberOf(choir.id, start, offset++)
+        if (!archived || activeGigSingers.has(member)) choirMembers.add(member)
+      }
+      if (choirMembers.size < 5) throw new Error(`Not enough eligible demo singers in Choir ${choir.id}.`)
+      for (const [slot, member] of [...choirMembers].entries()) {
+        selected.add(member)
+        if (!archived) activeGigSingers.add(member)
+        const key =
+          definition.id === DEMO_GIG_GROUP.id && member === singerAt(60)
+            ? "gigleader-prerequisite"
+            : `gig-member-${gigGroup.id}-${choir.id}-${slot}`
+        await addDirect(key, member, gigGroup.id, start, end)
+      }
+    }
+    const leader = definition.id === DEMO_GIG_GROUP.id ? singerAt(60) : [...selected][0]
+    if (!leader) throw new Error("A demo gig group must have a member to lead it.")
     await appoint(
       `gigleader-${gigGroup.id}`,
-      gigLeader,
+      leader,
       PositionCode.GigLeader,
       gigGroup.id,
       null,
-      "2026-07-01",
-      null,
+      archived ? "2024-09-01" : start,
+      end,
       []
     )
   }
