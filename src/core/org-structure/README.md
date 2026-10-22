@@ -24,7 +24,8 @@ their Voice shapes from the core database schema without importing the Voice fea
 Annual preparation is limited to the current organisational year and the immediately following
 year. Individual Group creation and year edits reject years beyond that window on the server.
 Historical years remain available for explicit backfilling and correction. The window advances
-on 1 July in the organisation's calendar time zone.
+on 1 July in the organisation's calendar time zone. Annual Groups also become current and
+historical from that year automatically; manual archival is reserved for non-annual Groups.
 
 
 Enum member names and translation keys are English; existing stored values are retained.

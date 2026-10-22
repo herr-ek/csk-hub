@@ -141,7 +141,7 @@ group (
   name text NULL,
   type group_type NOT NULL,
   choir_id uuid NULL REFERENCES choir(group_id) ON DELETE RESTRICT,
-  active boolean NOT NULL DEFAULT true,
+  active boolean NOT NULL DEFAULT true, -- manual retirement for non-annual Groups only
   organisation_year integer NULL
 )
 
@@ -290,7 +290,7 @@ There is no stored effective-membership table or database view. Application cons
 `listEffectiveGroupsOfUserAt`. Current variants apply the same dated rules using the
 organisation's current calendar date. Direct-only management reads are deliberately separate.
 
-Group archival is separate from the participation period. Do not substitute `group.active`
+Manual archival applies only to non-annual Groups and is separate from the participation period. Do not substitute `group.active`
 or `end_date IS NULL` for the date predicate. Public reads expose the applicable Group
 metadata; active-only choices such as Choir affiliation summaries additionally filter
 archived Groups. Profiles and other consumers should use the appropriate public read rather
@@ -313,6 +313,7 @@ The database checks important local invariants; it is not a complete substitute 
 | Fixed catalogue scope applies, and a year exists exactly for annual types. | Trigger: `organisation_group_policy_check` |
 | Annual type/year identities are unique, including archived ones. | DB: `group_annual_identity_unique` |
 | Föräldramötet has one continuing identity, including archived Groups. | DB: `group_continuing_singleton_unique` |
+| Annual Groups cannot be manually archived; their lifecycle follows their organisational year. | DB: `group_annual_active_check` |
 | At most one active Roddgrupp, Festgrupp, or Rephelg per Choir and type. | DB: `group_choir_team_unique` |
 | Choir/Section extensions match their Group types; four Sections per Choir with non-overlapping Voices. | App: Choir creation and structure commands |
 | Turnékommitté participation belongs to one committee per year, with no overlap across years. | DB annual identity plus triggers bounding participation to its year |
@@ -349,7 +350,7 @@ The database checks important local invariants; it is not a complete substitute 
 | Prerequisite direct Membership covers the whole tenure. | App: coverage checks on assignment/correction and Membership changes |
 | Overlapping Helper participation is converted when the appointment grants that committee. | App: same transaction as the appointment |
 | Ending an appointment never restores a Helper Membership. | App: explicit new direct addition required |
-| Archival cannot strand current or future appointments using a context or grant Group. | App: archival dependency checks; Choir archival also covers its Sections |
+| Archival preserves Membership and appointment periods, including current and future participation. | App: archival changes Group visibility only; Choir archival also covers its Sections |
 
 Range exclusions use PostgreSQL `btree_gist` and
 `daterange(start_date, end_date, '[)')`. Null ends act as unbounded upper limits. Adjacent
@@ -381,7 +382,17 @@ When an appointment replaces a Helper period, the prior portion is retained by e
 the appointment start. An overlapping Helper row beginning at or after that boundary is
 removed. No later Helper period is implicitly restored when the appointment ends.
 
-Groups are archived with `active = false` rather than deleted. A Choir archives its Sections
+Annual Groups become current on 1 July of their `organisation_year` and historical on the
+following 1 July. They cannot be manually archived: `group_annual_active_check` requires
+`active = true` whenever `organisation_year` is non-null. That value does not make a past or
+prepared Board current. Current representation requires an appointment covering today in
+the current organisational year; the year and tenure dates are the authority.
+
+Non-annual Groups are retired with `active = false` rather than deleted. Retirement excludes
+them from current summaries and prevents new ongoing or future participation, while allowing
+historical corrections. It is not a mass departure or end of responsibility: direct Memberships and appointments retain
+their dates, including null ends and future starts. Current profiles exclude archived Groups;
+the archived detail page retains its roster and responsibilities. A Choir archives its Sections
 with it; a Section cannot be archived independently. Group foreign keys use `ON DELETE
 RESTRICT` to preserve referenced identities. Deleting a User cascades their direct Memberships,
 appointments, and Voice capabilities. Deleting an appointment leaves no stored grant connections.

@@ -1,9 +1,9 @@
 import { ArrowLeft, Award, MessageCircle, Music2, PencilLine, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
-import { conversationPath } from "@/core/navigation/navigation-utils"
+import { conversationPath, memberCareerPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
-import { positionCodeKey, shiftDate } from "@/core/org-structure"
+import { positionCodeKey } from "@/core/org-structure"
 import { StartConversationDialog } from "@/features/messaging"
 import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
@@ -30,71 +30,10 @@ export async function MemberProfileScreen({ memberId }: { memberId?: string }) {
       </Link>
       <ProfileHeader data={data} />
       <ProfilePositions positions={profile.positions} />
-      {data.canManageOrganisation ? <AdminParticipationHistory records={data.managementRecords} /> : null}
       <ProfileChoirs choirs={profile.choirs} />
       <ProfileGroups groups={profile.groups} otherGroups={profile.otherGroups} />
       <ProfileVoices capabilities={profile.capabilities} />
     </main>
-  )
-}
-
-async function AdminParticipationHistory({ records }: { records: ProfileData["managementRecords"] }) {
-  const [t, positionLabel] = await Promise.all([
-    getTranslations("MemberProfiles"),
-    getTranslations("Groups.positionLabels")
-  ])
-  if (!records) return null
-  const entries = [
-    ...records.appointments.map((item) => ({
-      key: item.id,
-      label: `${positionLabel(positionCodeKey(item.positionCode))} · ${item.contextName}`,
-      start: item.startDate,
-      end: item.endDate ? shiftDate(item.endDate, -1) : null,
-      groupId: item.contextGroupId,
-      kind: t("appointmentRecord")
-    })),
-    ...records.memberships.map((item) => ({
-      key: item.id,
-      label: item.groupName,
-      start: item.startDate,
-      end: item.endDate ? shiftDate(item.endDate, -1) : null,
-      groupId: item.groupId,
-      kind: t("membershipRecord")
-    }))
-  ]
-  return (
-    <section aria-labelledby="admin-participation-title">
-      <h2 id="admin-participation-title" className="mb-3 font-heading text-xl font-semibold">
-        {t("adminParticipation")}
-      </h2>
-      {entries.length ? (
-        <ul className="space-y-2">
-          {entries.map((entry) => (
-            <li
-              key={entry.key}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm"
-            >
-              <span>
-                {t("participationRecord", {
-                  kind: entry.kind,
-                  label: entry.label,
-                  start: entry.start,
-                  end: entry.end ?? t("ongoing")
-                })}
-              </span>
-              <Link className="underline underline-offset-4" href={`${ROUTES.adminOrgStructure}/${entry.groupId}`}>
-                {t("manageRecord")}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">{t("noAdminParticipation")}</p>
-      )}
-      <Link className="mt-3 inline-block text-sm underline underline-offset-4" href={ROUTES.adminOrgStructureGroups}>
-        {t("manageAllGroups")}
-      </Link>
-    </section>
   )
 }
 
@@ -131,6 +70,13 @@ async function ProfileActions({ data }: { data: ProfileData }) {
   const t = await getTranslations("MemberProfiles")
   return (
     <div className="flex flex-wrap gap-2">
+      <Link
+        href={profile.isOwn ? ROUTES.accountCareer : memberCareerPath(profile.id)}
+        className={buttonVariants({ variant: "outline" })}
+      >
+        <Award className="size-4" aria-hidden="true" />
+        {t(profile.isOwn ? "myCareer" : "career")}
+      </Link>
       {canEditProfile ? (
         <Link href={ROUTES.accountEditProfile} className={buttonVariants()}>
           <PencilLine className="size-4" aria-hidden="true" />

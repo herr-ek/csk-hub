@@ -93,7 +93,8 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     year: number | null,
     startDate: string,
     endDate: string | null,
-    grantIds: string[]
+    grantIds: string[],
+    retainedInArchive = false
   ) => {
     const id = seedId(`appointment:${key}`)
     const [existing] = await database.select().from(positionAppointment).where(eq(positionAppointment.id, id))
@@ -101,7 +102,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     const definition = POSITION_DEFINITIONS[code]
     const context = byId.get(contextGroupId)
     const historical = endDate !== null && endDate <= DEMO_AS_OF
-    if (!context || (!context.active && !historical) || context.type !== definition.context)
+    if (!context || (!context.active && !historical && !retainedInArchive) || context.type !== definition.context)
       throw new Error(`Invalid context for ${code}.`)
     if (
       definition.endPolicy === "annual" &&
@@ -411,7 +412,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
     const archived = definition.id === DEMO_ARCHIVED_GIG_GROUP.id
     if (!gigGroup.active && !archived) continue
     const start = archived ? "2024-07-01" : "2026-07-01"
-    const end = archived ? "2025-07-01" : null
+    const end = null
     const selected = new Set<string>()
     for (const choir of choirs) {
       let offset = index * 5
@@ -420,7 +421,7 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       if (definition.id === DEMO_GIG_GROUP.id && (await memberAt(singerAt(60), choir.id, start, end))) {
         choirMembers.add(singerAt(60))
       }
-      // The retired ensemble's former members still sing in today's ensembles.
+      // The archived ensemble retains its roster; its singers also sing in today's ensembles.
       for (let attempts = 0; choirMembers.size < 5 && attempts < singers.length; attempts++) {
         const member = await memberOf(choir.id, start, offset++)
         if (!archived || activeGigSingers.has(member)) choirMembers.add(member)
@@ -446,7 +447,8 @@ export async function seedGroupActivity(database: SeedDatabase): Promise<void> {
       null,
       archived ? "2024-09-01" : start,
       end,
-      []
+      [],
+      archived
     )
   }
 }

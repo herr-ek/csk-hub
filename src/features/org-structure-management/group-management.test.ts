@@ -1,6 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { GroupType, PositionCode } from "@/core/org-structure"
-import { appointPosition, createOrganisationGroup, listAppointmentMembersAt } from "./appointments"
+import {
+  appointPosition,
+  createOrganisationGroup,
+  listAppointmentMembersAt,
+  listAppointmentsForGroup
+} from "./appointments"
 import { addDirectMembership, listDirectMemberships } from "./direct-membership"
 import { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
 import { archiveGroup, renameGroup } from "./structure"
@@ -137,7 +142,7 @@ describe.skipIf(!database)("concrete Group management", () => {
     })
   })
 
-  test("archival cannot strand a future appointment prerequisite", async () => {
+  test("archival preserves a future appointment and its prerequisite membership", async () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(t.db, { name: "Protected gig", type: GroupType.GigGroup }, "4000-10-22")
     ).id
@@ -151,18 +156,31 @@ describe.skipIf(!database)("concrete Group management", () => {
         startDate: "2030-02-01"
       })
     )
-    expect(await archiveGroup(t.db, groupId)).toEqual({ success: false, error: "membership-dependency" })
-    expect((await listOrganisationGroups(t.db, "2030-02-01")).find((row) => row.id === groupId)?.active).toBe(true)
+    const before = await listDirectMemberships(t.db, groupId)
+    expectSuccess(await archiveGroup(t.db, groupId))
+    expect((await listOrganisationGroups(t.db, "2030-02-01")).find((row) => row.id === groupId)?.active).toBe(false)
+    expect(await listDirectMemberships(t.db, groupId)).toEqual(before)
+    expect(await listAppointmentsForGroup(t.db, groupId)).toMatchObject([
+      { userId, startDate: "2030-02-01", endDate: null }
+    ])
   })
-  test("preparation rolls back its whole set on an archived identity and concurrent retries reuse identities", async () => {
-    const archived = expectSuccess(
+  test("annual identities cannot be manually archived and concurrent preparations reuse them", async () => {
+    const existing = expectSuccess(
       await createOrganisationGroup(t.db, { type: GroupType.SocialCommittee, organisationYear: 2042 }, "4000-10-22")
     )
-    expectSuccess(await archiveGroup(t.db, archived.id))
-    expect(await prepareOrganisationYear(t.db, 2042, "4000-10-22")).toEqual({ success: false, error: "group-archived" })
-    expect(
-      (await listOrganisationGroups(t.db, "2042-09-01")).filter((row) => row.organisationYear === 2042)
-    ).toMatchObject([{ id: archived.id, active: false }])
+    expect(await archiveGroup(t.db, existing.id)).toEqual({ success: false, error: "annual-group-lifecycle-derived" })
+    const prepared = expectSuccess(await prepareOrganisationYear(t.db, 2042, "4000-10-22"))
+    expect(prepared.find(({ type }) => type === GroupType.SocialCommittee)?.id).toBe(existing.id)
+    for (const [date, phase] of [
+      ["2042-06-30", "future"],
+      ["2042-07-01", "current"],
+      ["2043-07-01", "completed"]
+    ] as const) {
+      expect((await listOrganisationGroups(t.db, date)).find(({ id }) => id === existing.id)).toMatchObject({
+        active: true,
+        phase
+      })
+    }
     const [first, second] = await Promise.all([
       prepareOrganisationYear(t.db, 2043, "4000-10-22"),
       prepareOrganisationYear(t.db, 2043, "4000-10-22")

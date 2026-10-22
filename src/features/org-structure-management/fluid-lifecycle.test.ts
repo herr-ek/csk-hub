@@ -168,7 +168,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     ).toMatchObject([{ userId: singer, appointments: [{ id: appointment.id, contextGroupId: section }] }])
   })
 
-  test("membership shortening and Choir archive cannot strand a prepared future prerequisite", async () => {
+  test("membership shortening is refused, while Choir archival preserves a prepared appointment", async () => {
     const choir = await t.groupId("DK")
     const singer = await t.user("Future Dirigent")
     const membership = expectSuccess(
@@ -188,8 +188,11 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
       error: "membership-dependency"
     })
     expect(await listDirectMemberships(t.db, choir)).toMatchObject([{ id: membership.id, endDate: null }])
-    expect(await archiveGroup(t.db, choir)).toEqual({ success: false, error: "membership-dependency" })
-    expect((await listOrganisationGroups(t.db, "2059-01-01")).find(({ id }) => id === choir)?.active).toBe(true)
+    const before = await listAppointmentsForGroup(t.db, choir)
+    expectSuccess(await archiveGroup(t.db, choir))
+    expect((await listOrganisationGroups(t.db, "2059-01-01")).find(({ id }) => id === choir)?.active).toBe(false)
+    expect(await listAppointmentsForGroup(t.db, choir)).toEqual(before)
+    expect(await listDirectMemberships(t.db, choir)).toMatchObject([{ id: membership.id, endDate: null }])
     expect(await listAppointmentsForGroup(t.db, choir)).toMatchObject([
       { id: appointment.id, userId: singer, positionCode: PositionCode.Conductor, startDate: "2059-01-01" }
     ])

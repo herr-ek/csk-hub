@@ -135,8 +135,9 @@
       "adminUsers": "Medlemmar",
       "adminNotifications": "Notiser",
       "adminOrgStructure": "Körer och stämmor",
-      "adminOrgStructureGroups": "Grupper och poster",
-      "adminGigGroups": "Giggrupper"
+      "adminOrgStructureGroups": "Grupper",
+      "adminGigGroups": "Giggrupper",
+      "adminPositions": "Poster"
     },
     "members": "Medlemmar"
   },
@@ -198,10 +199,30 @@
     "notificationsDescription": "Skicka pushnotiser till medlemmar.",
     "choirs": "Körer och stämmor",
     "choirsDescription": "Placera sångare i körer och stämgrupper, och byt stämma.",
-    "groups": "Grupper och poster",
-    "groupsDescription": "Styrelsen, kommittéer och andra grupper, med medlemmar och poster.",
+    "groups": "Grupper",
+    "groupsDescription": "Styrelsen, kommittéer och andra grupper, med alla sina medlemmar.",
     "gigGroups": "Giggrupper",
-    "gigGroupsDescription": "Hantera namngivna ensembler, deras medlemmar och gigledare."
+    "gigGroupsDescription": "Hantera namngivna ensembler, deras medlemmar och gigledare.",
+    "positions": "Poster",
+    "positionsDescription": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår."
+  },
+  "PositionsPage": {
+    "title": "Poster",
+    "description": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår.",
+    "period": "Period för poster",
+    "current": "Nuvarande",
+    "history": "Historik",
+    "year": "Verksamhetsår",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Poster som innehas idag i aktiva grupper.",
+    "historyHelp": "Alla som innehaft en post under valt verksamhetsår, inklusive överlämningar och löpande ansvarsuppgifter. Pågående år visas fram till idag.",
+    "empty": "Inga postinnehavare under denna period.",
+    "csk": "CSK-gemensamma poster",
+    "choirs": "Körer",
+    "sections": "Stämföräldrar",
+    "gigs": "Giggrupper",
+    "tenure": "{start} – {end}",
+    "ongoing": "Löpande"
   },
   "Members": {
     "title": "Medlemmar",
@@ -527,6 +548,25 @@
     "savingGroup": "Sparar…",
     "groupUpdateFailed": "Det gick inte att uppdatera konversationen. Försök igen."
   },
+  "MemberCareer": {
+    "title": "Karriär i CSK",
+    "myTitle": "Min karriär i CSK",
+    "backToProfile": "Tillbaka till profilen",
+    "range": "{start} till idag",
+    "years": "Verksamhetsår",
+    "yearValue": "{start}/{end}",
+    "organisationalYear": "Verksamhetsår",
+    "show": "Visa",
+    "allScopes": "Alla sammanhang",
+    "csk": "CSK-gemensamt",
+    "position": "Post",
+    "ongoing": "Löpande",
+    "period": "{start} – {end}",
+    "throughPosition": "Genom posten {position} i {context}",
+    "archivedGroup": "Arkiverad grupp",
+    "empty": "Inga körmedlemskap, grupper eller poster har registrerats för den här personen ännu.",
+    "emptyYear": "Ingen aktivitet registrerad i detta sammanhang under året."
+  },
   "MemberProfiles": {
     "directoryTitle": "Medlemmar",
     "directoryDescription": "Möt människorna som utgör CSK.",
@@ -558,13 +598,8 @@
     "association": "CSK",
     "username": "@{username}",
     "otherGroups": "Övriga grupper",
-    "adminParticipation": "Hantera medlemmens organisationshistorik",
-    "appointmentRecord": "Utnämning",
-    "membershipRecord": "Direkt medlemskap",
-    "manageRecord": "Öppna gruppens poster",
-    "manageAllGroups": "Visa alla grupper",
-    "noAdminParticipation": "Inga utnämningar eller direkta medlemskap.",
-    "participationRecord": "{kind}: {label} ({start} – {end})",
+    "career": "Karriär i CSK",
+    "myCareer": "Min karriär i CSK",
     "ongoing": "pågår",
     "sectionVoice": "Stämgruppens stämma: {voice}",
     "searching": "Söker…",
@@ -588,15 +623,19 @@
     "choirsPage": {
       "title": "Körer och stämmor",
       "description": "Varje kör och dess stämgrupper. Öppna en stämgrupp för att placera sångare eller byta stämma.",
-      "groupsLink": "Grupper och poster",
+      "groupsLink": "Grupper",
       "noChoirs": "Inga körer än."
     },
     "groupsPage": {
-      "title": "Grupper och poster",
-      "description": "Styrelsen, kommittéer och alla andra grupper, och posterna de kan ha.",
+      "title": "Grupper",
+      "description": "Styrelsen, kommittéer och andra grupper, med alla sina medlemmar.",
       "choirsLink": "Körer och stämmor",
       "viewLabel": "Gruppperiod",
-      "gigGroupsLink": "Giggrupper"
+      "gigGroupsLink": "Giggrupper",
+      "previousYear": "Föregående verksamhetsår",
+      "nextYear": "Nästa verksamhetsår",
+      "undatedArchives": "Övriga arkiverade grupper",
+      "undatedArchivesDescription": "Dessa grupper saknar verksamhetsår och visas separat."
     },
     "saved": "Sparat",
     "saving": "Sparar…",
@@ -650,6 +689,7 @@
       "positionWithContext": "{position} ({context})",
       "actions": "Åtgärder",
       "historyToggle": "Tidigare medlemskap ({count})",
+      "futureMemberships": "Förberedda medlemskap ({count})",
       "holderHistoryToggle": "Tidigare innehavare ({count})",
       "noHistory": "Ingen historik än.",
       "period": "Period",
@@ -721,6 +761,7 @@
     "errors": {
       "invalid-date": "Ange ett giltigt datum.",
       "group-not-found": "Gruppen kunde inte hittas.",
+      "annual-group-lifecycle-derived": "Årsgrupper följer sitt verksamhetsår och kan inte arkiveras manuellt.",
       "group-archived": "Gruppen är arkiverad och kan inte längre ändras.",
       "group-name-taken": "Det finns redan en aktiv grupp med det namnet här.",
       "choir-not-found": "Kören kunde inte hittas.",

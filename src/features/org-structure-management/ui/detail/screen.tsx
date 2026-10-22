@@ -6,10 +6,9 @@ import { currentOrganisationYear, GroupType, groupTypeKey, POSITION_DEFINITIONS 
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { AppointmentManagement } from "./AppointmentManagement"
-import { DirectMembersSection } from "./DirectMembersSection"
-import { EffectiveMembersSection } from "./EffectiveMembersSection"
 import { FluidAppointmentManagement } from "./FluidAppointmentManagement"
 import { GroupHeaderActions } from "./group-header-actions"
+import { MembersSection } from "./MembersSection"
 import { getGroupDetail } from "./query"
 
 /** Today in CSK's time zone, as the default date for new Memberships and holdings. */
@@ -71,9 +70,10 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
         {group.active ? null : <p className="text-sm text-muted-foreground">{t("detail.archivedNotice")}</p>}
       </div>
 
-      <DirectMembersSection detail={detail} today={date} />
-      <EffectiveMembersSection detail={detail} />
-      {Object.values(POSITION_DEFINITIONS).some(({ context }) => context === group.type) ? (
+      <MembersSection detail={detail} today={date} />
+      {Object.values(POSITION_DEFINITIONS).some(
+        ({ context, endPolicy }) => context === group.type && endPolicy === "annual"
+      ) ? (
         <AppointmentManagement detail={detail} today={date} />
       ) : null}
       {fluidAppointmentContext &&

@@ -10,7 +10,7 @@ import { GroupsOverview } from "./overview"
 import { PrepareYearDialog } from "./PrepareYearDialog"
 import { getGroupsOverview } from "./query"
 
-/** The groups beside the Choirs' Sections, and the Positions they can have. */
+/** The groups beside the Choirs' Sections, with their complete member rosters. */
 export async function GroupsScreen() {
   const [overview, t] = await Promise.all([getGroupsOverview(), getTranslations("Groups")])
   const currentYear = currentOrganisationYear(cskToday())

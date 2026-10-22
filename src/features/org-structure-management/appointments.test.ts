@@ -144,7 +144,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(batched.get(sex.id)).toMatchObject([{ userId, positions: [{ id: appointment.id }] }])
   })
 
-  test("completed annual appointments and archived Groups remain correctable and identifiable", async () => {
+  test("completed annual Groups remain correctable and identifiable without manual archival", async () => {
     const year = new Date().getUTCFullYear() - 3 - Math.floor(Math.random() * 5)
     const board = expectSuccess(
       await createOrganisationGroup(
@@ -157,7 +157,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         "4000-10-22"
       )
     )
-    const committee = expectSuccess(
+    expectSuccess(
       await createOrganisationGroup(
         t.db,
         {
@@ -177,8 +177,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         startDate: `${year}-09-01`
       })
     )
-    expectSuccess(await archiveGroup(t.db, board.id))
-    expectSuccess(await archiveGroup(t.db, committee.id))
+    expect(await archiveGroup(t.db, board.id)).toEqual({ success: false, error: "annual-group-lifecycle-derived" })
 
     expect(
       await correctAnnualAppointment(t.db, {
@@ -217,7 +216,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         },
         "4000-10-22"
       )
-    ).toEqual({ success: false, error: "group-archived" })
+    ).toEqual({ success: false, error: "group-has-participation" })
   })
 
   test("archived fluid Groups allow ended corrections but refuse current or future participation", async () => {

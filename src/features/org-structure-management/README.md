@@ -56,8 +56,13 @@ The feature protects these relationships:
   Admin must explicitly add the person again.
 - Board and Föräldramötet do not accept direct Membership. Section Voice is required and valid on
   Section Membership; other Groups have no singer Voice field.
-- Groups are archived rather than deleted. Archival is refused while current or future
-  appointments still depend on the Group.
+- Annual Groups follow their organisational year automatically: future before 1 July, current
+  during that year, historical afterwards. They cannot be manually archived; the shared `active`
+  column stays true under a database constraint and does not determine their currentness.
+- Non-annual Groups are manually archived rather than deleted. Archival removes them from current
+  summaries and prevents new ongoing or future participation, while allowing historical corrections.
+  It preserves every direct Membership and appointment, including open-ended and prepared
+  participation; it does not imply that members left or that a Position ended.
 
 Appointment creation, correction, handover, and ending update the appointment and any
 affected direct Memberships atomically; derived participation follows those records. A refusal leaves the affected participation unchanged. Commands serialize
@@ -126,3 +131,24 @@ GigGroups, and Other Groups keep explicit names. Presentation reads use
 `listLocalizedGroupLabels` for a viewer-localized label, including context choices and member
 profiles. The formatter includes the annual year or owning Choir exactly once. Domain reads
 remain locale-independent and expose nullable explicit names alongside stable identities.
+
+## Admin overviews
+
+The Groups overview lists complete effective rosters, including explicitly added members and
+Helpers. Position labels annotate members where applicable; the existing group-detail commands
+remain the place to manage participation. Archived annual Groups are browsed one organisational
+year at a time, newest first, with previous/next controls. Archived Groups without a year remain
+in a separate undated section rather than being assigned an invented year.
+
+The separate Positions page groups holders by their actual responsibility context, not by every
+Group to which a Position grants Membership. Current holders belong to active contexts and have
+a tenure covering today. Year history includes every tenure overlapping the July–June year,
+including archived contexts and fluid responsibilities. The current year's history stops at today,
+so prepared future holders are excluded. A handover lists both people under the same Position;
+a returning holder is listed once with each of their periods.
+
+Member careers use `listParticipationHistoryOfUser` through the Members feature's signed-in
+viewer boundary. The read includes started direct participation, responsibility contexts, and
+inferred companion memberships, including archived Groups. It excludes prepared appointments
+and does not duplicate an appointment's own context as another membership record. The public
+career view is read-only; organisation corrections remain on the Admin group screens.

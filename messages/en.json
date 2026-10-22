@@ -135,8 +135,9 @@
       "adminUsers": "Members",
       "adminNotifications": "Notifications",
       "adminOrgStructure": "Choirs and voices",
-      "adminOrgStructureGroups": "Groups and positions",
-      "adminGigGroups": "Gig groups"
+      "adminOrgStructureGroups": "Groups",
+      "adminGigGroups": "Gig groups",
+      "adminPositions": "Positions"
     },
     "members": "Members"
   },
@@ -198,10 +199,30 @@
     "notificationsDescription": "Send push notifications to members.",
     "choirs": "Choirs and voices",
     "choirsDescription": "Place singers in Choirs and Sections, and change their Voice.",
-    "groups": "Groups and positions",
-    "groupsDescription": "The Board, committees and other groups, with their members and Positions.",
+    "groups": "Groups",
+    "groupsDescription": "The Board, committees and other groups, with all their members.",
     "gigGroups": "Gig groups",
-    "gigGroupsDescription": "Manage named ensembles, their members, and gig leaders."
+    "gigGroupsDescription": "Manage named ensembles, their members, and gig leaders.",
+    "positions": "Positions",
+    "positionsDescription": "Current position holders across CSK, with history by organisational year."
+  },
+  "PositionsPage": {
+    "title": "Positions",
+    "description": "Current position holders across CSK, with history by organisational year.",
+    "period": "Position period",
+    "current": "Current",
+    "history": "History",
+    "year": "Organisational year",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Positions held today in active groups.",
+    "historyHelp": "Everyone who held a position during the selected year, including handovers and ongoing responsibilities. The current year is shown up to today.",
+    "empty": "No position holders in this period.",
+    "csk": "CSK-wide positions",
+    "choirs": "Choirs",
+    "sections": "Section parents",
+    "gigs": "Gig groups",
+    "tenure": "{start} – {end}",
+    "ongoing": "Ongoing"
   },
   "Members": {
     "title": "Members",
@@ -527,6 +548,25 @@
     "savingGroup": "Saving…",
     "groupUpdateFailed": "Unable to update the conversation. Please try again."
   },
+  "MemberCareer": {
+    "title": "Career in CSK",
+    "myTitle": "My career in CSK",
+    "backToProfile": "Back to profile",
+    "range": "{start} to today",
+    "years": "Organisational years",
+    "yearValue": "{start}/{end}",
+    "organisationalYear": "Organisational year",
+    "show": "Show",
+    "allScopes": "All of CSK",
+    "csk": "CSK-wide",
+    "position": "Position",
+    "ongoing": "Ongoing",
+    "period": "{start} – {end}",
+    "throughPosition": "Through {position} in {context}",
+    "archivedGroup": "Archived group",
+    "empty": "No Choir memberships, groups or positions have been recorded for this person yet.",
+    "emptyYear": "No activity recorded in this context for this year."
+  },
   "MemberProfiles": {
     "directoryTitle": "Members",
     "directoryDescription": "Meet the people who make up CSK.",
@@ -558,13 +598,8 @@
     "association": "CSK",
     "username": "@{username}",
     "otherGroups": "Other groups",
-    "adminParticipation": "Manage this member’s organisation history",
-    "appointmentRecord": "Appointment",
-    "membershipRecord": "Direct Membership",
-    "manageRecord": "Open group records",
-    "manageAllGroups": "Browse all groups",
-    "noAdminParticipation": "No appointments or direct Membership records.",
-    "participationRecord": "{kind}: {label} ({start} – {end})",
+    "career": "Career in CSK",
+    "myCareer": "My career in CSK",
     "ongoing": "ongoing",
     "sectionVoice": "Section Voice: {voice}",
     "searching": "Searching…",
@@ -588,15 +623,19 @@
     "choirsPage": {
       "title": "Choirs and voices",
       "description": "Each Choir and its Sections. Open a Section to place singers or change their Voice.",
-      "groupsLink": "Groups and positions",
+      "groupsLink": "Groups",
       "noChoirs": "No Choirs yet."
     },
     "groupsPage": {
-      "title": "Groups and positions",
-      "description": "The Board, committees and every other group, and the Positions they can have.",
+      "title": "Groups",
+      "description": "The Board, committees and other groups, with all their members.",
       "choirsLink": "Choirs and voices",
       "viewLabel": "Group period",
-      "gigGroupsLink": "Gig groups"
+      "gigGroupsLink": "Gig groups",
+      "previousYear": "Previous organisational year",
+      "nextYear": "Next organisational year",
+      "undatedArchives": "Other archived groups",
+      "undatedArchivesDescription": "These groups have no organisational year and are listed separately."
     },
     "saved": "Saved",
     "saving": "Saving…",
@@ -650,6 +689,7 @@
       "positionWithContext": "{position} ({context})",
       "actions": "Actions",
       "historyToggle": "Past Memberships ({count})",
+      "futureMemberships": "Prepared Memberships ({count})",
       "holderHistoryToggle": "Past holders ({count})",
       "noHistory": "No history yet.",
       "period": "Period",
@@ -721,6 +761,7 @@
     "errors": {
       "invalid-date": "Enter a valid date.",
       "group-not-found": "That group could not be found.",
+      "annual-group-lifecycle-derived": "Annual groups follow their organisational year and cannot be manually archived.",
       "group-archived": "This group is archived and can no longer be changed.",
       "group-name-taken": "An active group with this name already exists here.",
       "choir-not-found": "That Choir could not be found.",

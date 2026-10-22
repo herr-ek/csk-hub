@@ -102,8 +102,8 @@ On an empty database the demo contains:
   and prepared year 27/28. Fixed group labels derive from type, year and owning Choir;
   only explicitly named groups store names.
 - Seven current gig groups with fifteen singers each, and one retired gig group with
-  fifteen former members. Those singers remain active in Choirs and current gig groups;
-  their retired group's memberships and Gigledare appointment have ended.
+  fifteen retained members. Those singers also belong to Choirs and current gig groups;
+  the archived group keeps open-ended memberships and its Gigledare appointment.
 - Nine populated Choir teams (roddgrupper, festgrupper and rephelgsgrupper), direct
   committee Helpers, and singer placements across all twelve Sections.
 - Fixed-code appointments for Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare,

@@ -15,7 +15,9 @@ import {
   createOrganisationGroup,
   endAppointment,
   endDirectMembership,
+  listAppointmentsForGroup,
   listCurrentGroupMembers,
+  listDirectMemberships,
   placeSinger,
   startMembership
 } from "@/features/org-structure-management"
@@ -153,8 +155,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     expect(before?.positions).toMatchObject([{ id: appointment.id, positionCode: PositionCode.SocialCoordinator }])
     expect(before?.positions[0].groups.map((group) => group.id).sort()).toEqual([board.id, sexmasteri.id].sort())
     success(await endAppointment(db, { appointmentId: appointment.id, endDate: "2026-07-01" }))
-    success(await archiveGroup(db, sexmasteri.id))
-    const after = await getMemberProfile(db, holder, holder)
+    const after = await getMemberProfile(db, holder, holder, "2026-07-01")
     expect(after?.groups).toEqual([])
     expect(after?.positions).toEqual([])
   })
@@ -346,6 +347,33 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     ])
     expect(corrected?.groups.map((item) => item.groupId).sort()).toEqual([board27.id, sex27.id].sort())
     expect(corrected?.groups.map((item) => item.groupId)).not.toContain(sex26.id)
+  })
+
+  test("archiving an ensemble hides its affiliations without ending memberships or leadership", async () => {
+    const singer = await member("Archived ensemble leader")
+    const ensemble = success(
+      await createOrganisationGroup(db, { name: unique("Retired ensemble"), type: GroupType.GigGroup })
+    )
+    success(await addDirectMembership(db, { userId: singer, groupId: ensemble.id, startDate: "2020-01-01" }))
+    success(
+      await appointPosition(db, {
+        userId: singer,
+        positionCode: PositionCode.GigLeader,
+        contextGroupId: ensemble.id,
+        startDate: "2020-02-01"
+      })
+    )
+    const memberships = await listDirectMemberships(db, ensemble.id)
+    const appointments = await listAppointmentsForGroup(db, ensemble.id)
+    expect((await getMemberProfile(db, singer, singer))?.groups).toHaveLength(1)
+    success(await archiveGroup(db, ensemble.id))
+    expect(await listDirectMemberships(db, ensemble.id)).toEqual(memberships)
+    expect(await listAppointmentsForGroup(db, ensemble.id)).toEqual(appointments)
+    expect(await listCurrentGroupMembers(db, ensemble.id)).toMatchObject([{ userId: singer }])
+    expect(await getMemberProfile(db, singer, singer)).toMatchObject({ groups: [], positions: [] })
+    expect(
+      await addDirectMembership(db, { userId: await member(), groupId: ensemble.id, startDate: "2026-10-22" })
+    ).toEqual({ success: false, error: "group-archived" })
   })
 
   test("adjacent direct periods use one exclusive handover boundary", async () => {

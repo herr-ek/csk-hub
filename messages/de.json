@@ -135,8 +135,9 @@
       "adminUsers": "Mitglieder",
       "adminNotifications": "Benachrichtigungen",
       "adminOrgStructure": "Chöre und Stimmen",
-      "adminOrgStructureGroups": "Gruppen und Ämter",
-      "adminGigGroups": "Gig-Ensembles"
+      "adminOrgStructureGroups": "Gruppen",
+      "adminGigGroups": "Gig-Ensembles",
+      "adminPositions": "Ämter"
     },
     "members": "Mitglieder"
   },
@@ -198,10 +199,30 @@
     "notificationsDescription": "Push-Benachrichtigungen an Mitglieder senden.",
     "choirs": "Chöre und Stimmen",
     "choirsDescription": "Sänger in Chöre und Stimmgruppen einteilen und ihre Stimme ändern.",
-    "groups": "Gruppen und Ämter",
-    "groupsDescription": "Vorstand, Ausschüsse und andere Gruppen mit ihren Mitgliedern und Ämtern.",
+    "groups": "Gruppen",
+    "groupsDescription": "Vorstand, Ausschüsse und andere Gruppen mit allen ihren Mitgliedern.",
     "gigGroups": "Gig-Ensembles",
-    "gigGroupsDescription": "Benannte Ensembles, ihre Mitglieder und die Ensembleleitung verwalten."
+    "gigGroupsDescription": "Benannte Ensembles, ihre Mitglieder und die Ensembleleitung verwalten.",
+    "positions": "Ämter",
+    "positionsDescription": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr."
+  },
+  "PositionsPage": {
+    "title": "Ämter",
+    "description": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr.",
+    "period": "Zeitraum der Ämter",
+    "current": "Aktuell",
+    "history": "Verlauf",
+    "year": "Organisationsjahr",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Heute besetzte Ämter in aktiven Gruppen.",
+    "historyHelp": "Alle Personen, die im gewählten Organisationsjahr ein Amt innehatten, einschließlich Übergaben und laufender Aufgaben. Das aktuelle Jahr wird bis heute angezeigt.",
+    "empty": "Keine Amtsinhaber in diesem Zeitraum.",
+    "csk": "CSK-weite Ämter",
+    "choirs": "Chöre",
+    "sections": "Stimmgruppenbetreuung",
+    "gigs": "Gig-Ensembles",
+    "tenure": "{start} – {end}",
+    "ongoing": "Laufend"
   },
   "Members": {
     "title": "Mitglieder",
@@ -527,6 +548,25 @@
     "savingGroup": "Wird gespeichert…",
     "groupUpdateFailed": "Die Unterhaltung konnte nicht aktualisiert werden. Bitte versuche es erneut."
   },
+  "MemberCareer": {
+    "title": "Werdegang bei CSK",
+    "myTitle": "Mein Werdegang bei CSK",
+    "backToProfile": "Zurück zum Profil",
+    "range": "{start} bis heute",
+    "years": "Organisationsjahre",
+    "yearValue": "{start}/{end}",
+    "organisationalYear": "Organisationsjahr",
+    "show": "Anzeigen",
+    "allScopes": "Alle Bereiche",
+    "csk": "CSK-weit",
+    "position": "Amt",
+    "ongoing": "Laufend",
+    "period": "{start} – {end}",
+    "throughPosition": "Durch das Amt {position} in {context}",
+    "archivedGroup": "Archivierte Gruppe",
+    "empty": "Für diese Person sind noch keine Chormitgliedschaften, Gruppen oder Ämter erfasst.",
+    "emptyYear": "Für diesen Bereich ist in diesem Jahr keine Aktivität erfasst."
+  },
   "MemberProfiles": {
     "directoryTitle": "Mitglieder",
     "directoryDescription": "Lerne die Menschen kennen, die CSK ausmachen.",
@@ -558,13 +598,8 @@
     "association": "CSK",
     "username": "@{username}",
     "otherGroups": "Weitere Gruppen",
-    "adminParticipation": "Organisationsverlauf dieses Mitglieds verwalten",
-    "appointmentRecord": "Ernennung",
-    "membershipRecord": "Direkte Mitgliedschaft",
-    "manageRecord": "Gruppeneinträge öffnen",
-    "manageAllGroups": "Alle Gruppen ansehen",
-    "noAdminParticipation": "Keine Ernennungen oder direkten Mitgliedschaften.",
-    "participationRecord": "{kind}: {label} ({start} – {end})",
+    "career": "Werdegang bei CSK",
+    "myCareer": "Mein Werdegang bei CSK",
     "ongoing": "laufend",
     "sectionVoice": "Stimme der Stimmgruppe: {voice}",
     "searching": "Suche läuft…",
@@ -588,15 +623,19 @@
     "choirsPage": {
       "title": "Chöre und Stimmen",
       "description": "Jeder Chor mit seinen Stimmgruppen. Öffne eine Stimmgruppe, um Sänger einzuteilen oder ihre Stimme zu ändern.",
-      "groupsLink": "Gruppen und Ämter",
+      "groupsLink": "Gruppen",
       "noChoirs": "Noch keine Chöre."
     },
     "groupsPage": {
-      "title": "Gruppen und Ämter",
-      "description": "Vorstand, Ausschüsse und alle anderen Gruppen sowie die Ämter, die sie haben können.",
+      "title": "Gruppen",
+      "description": "Vorstand, Ausschüsse und andere Gruppen mit allen ihren Mitgliedern.",
       "choirsLink": "Chöre und Stimmen",
       "viewLabel": "Gruppenzeitraum",
-      "gigGroupsLink": "Gig-Ensembles"
+      "gigGroupsLink": "Gig-Ensembles",
+      "previousYear": "Vorheriges Organisationsjahr",
+      "nextYear": "Nächstes Organisationsjahr",
+      "undatedArchives": "Weitere archivierte Gruppen",
+      "undatedArchivesDescription": "Diese Gruppen haben kein Organisationsjahr und werden separat aufgeführt."
     },
     "saved": "Gespeichert",
     "saving": "Speichern…",
@@ -650,6 +689,7 @@
       "positionWithContext": "{position} ({context})",
       "actions": "Aktionen",
       "historyToggle": "Frühere Mitgliedschaften ({count})",
+      "futureMemberships": "Vorbereitete Mitgliedschaften ({count})",
       "holderHistoryToggle": "Frühere Amtsinhaber ({count})",
       "noHistory": "Noch kein Verlauf.",
       "period": "Zeitraum",
@@ -721,6 +761,7 @@
     "errors": {
       "invalid-date": "Gib ein gültiges Datum ein.",
       "group-not-found": "Die Gruppe wurde nicht gefunden.",
+      "annual-group-lifecycle-derived": "Jahresgruppen folgen ihrem Organisationsjahr und können nicht manuell archiviert werden.",
       "group-archived": "Diese Gruppe ist archiviert und kann nicht mehr geändert werden.",
       "group-name-taken": "Hier gibt es bereits eine aktive Gruppe mit diesem Namen.",
       "choir-not-found": "Der Chor wurde nicht gefunden.",

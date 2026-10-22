@@ -31,7 +31,6 @@ export function prepareOrganisationYear(database: OrgStructureDatabase, year: nu
         .where(and(eq(group.type, type), eq(group.organisationYear, year)))
         .for("share")
       if (existing) {
-        if (!existing.active) throw new RuleViolation("group-archived")
         prepared.push({ id: existing.id, type })
       } else {
         const result = await createOrganisationGroup(

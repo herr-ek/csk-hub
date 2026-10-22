@@ -161,7 +161,7 @@ describe.skipIf(!database)("complete local demo seed", () => {
     })
   })
 
-  test("seven current gig ensembles have fifteen singers each; the retired ensemble's singers moved on", async () => {
+  test("seven current gig ensembles and one archived ensemble retain fifteen active singers each", async () => {
     const groups = await db.select().from(group)
     const memberships = await db.select().from(directMembership)
     const appointments = await db.select().from(positionAppointment)
@@ -183,11 +183,15 @@ describe.skipIf(!database)("complete local demo seed", () => {
       expect(leaders).toHaveLength(1)
       expect(roster.some(({ userId }) => userId === leaders[0]?.userId)).toBe(true)
     }
+    expect(appointments.filter(({ contextGroupId }) => contextGroupId === DEMO_ARCHIVED_GIG_GROUP.id)).toMatchObject([
+      { positionCode: PositionCode.GigLeader, endDate: null }
+    ])
     const retired = memberships.filter(({ groupId }) => groupId === DEMO_ARCHIVED_GIG_GROUP.id)
     expect(retired).toHaveLength(15)
     for (const row of retired) {
       expect(activeAt(row, "2024-10-22")).toBe(true)
-      expect(activeAt(row, DEMO_AS_OF)).toBe(false)
+      expect(row.endDate).toBeNull()
+      expect(activeAt(row, DEMO_AS_OF)).toBe(true)
       expect(currentSingerIds.has(row.userId)).toBe(true)
       expect(users.find(({ id }) => id === row.userId)?.banned).toBe(false)
       expect(

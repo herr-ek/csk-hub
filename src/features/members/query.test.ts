@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
-import * as permissions from "@/core/auth/permissions.server"
 import * as session from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import * as messaging from "@/features/messaging/reading"
 import * as organisation from "@/features/org-structure-management"
-import { getProfile } from "./query"
+import * as careerService from "./career/service"
+import { getCareer, getProfile } from "./query"
 import * as service from "./service"
 
 const viewer = {
@@ -30,14 +30,19 @@ const sessionRead = spyOn(session, "getRequestSession")
 const profileRead = spyOn(service, "getMemberProfile")
 const conversationRead = spyOn(messaging, "findDirectConversation")
 const labelsRead = spyOn(organisation, "listLocalizedGroupLabels")
-const adminRead = spyOn(permissions, "isUserAdmin")
+const careerRead = spyOn(careerService, "getMemberCareer")
 
 beforeEach(() => {
   labelsRead.mockReset().mockResolvedValue(new Map())
   sessionRead.mockReset().mockResolvedValue(viewer)
   profileRead.mockReset().mockResolvedValue(member)
   conversationRead.mockReset().mockResolvedValue("conversation-1")
-  adminRead.mockReset().mockResolvedValue(false)
+  careerRead.mockReset().mockResolvedValue({
+    person: { id: "member", name: "Member", image: null },
+    isOwn: false,
+    through: "2026-10-22",
+    records: []
+  })
 })
 
 afterAll(() => {
@@ -45,7 +50,7 @@ afterAll(() => {
   sessionRead.mockRestore()
   profileRead.mockRestore()
   conversationRead.mockRestore()
-  adminRead.mockRestore()
+  careerRead.mockRestore()
 })
 
 describe("profile conversation visibility", () => {
@@ -73,10 +78,24 @@ describe("profile conversation visibility", () => {
     expect(conversationRead).not.toHaveBeenCalled()
   })
 
-  test("keeps organisation correction history behind the Admin check", async () => {
+  test("profiles no longer load or expose Admin organisation management records", async () => {
     const result = await getProfile("member")
-    expect(result.canManageOrganisation).toBe(false)
-    expect(result.managementRecords).toBeNull()
-    expect(adminRead).toHaveBeenCalledWith(viewer)
+    expect(result).not.toHaveProperty("canManageOrganisation")
+    expect(result).not.toHaveProperty("managementRecords")
+  })
+
+  test("a regular signed-in viewer can read another member's career", async () => {
+    expect(await getCareer("member")).toMatchObject({ person: { id: "member" }, records: [] })
+    expect(careerRead).toHaveBeenCalledWith(db, "viewer", "member")
+  })
+
+  test("career access redirects anonymous visitors and hides missing or inactive profiles", async () => {
+    sessionRead.mockResolvedValueOnce(null)
+    await expect(getCareer("member")).rejects.toMatchObject({ digest: expect.stringContaining("NEXT_REDIRECT") })
+    expect(careerRead).not.toHaveBeenCalled()
+    careerRead.mockResolvedValueOnce(null)
+    await expect(getCareer("member")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" })
+    careerRead.mockRejectedValueOnce(new service.InactiveViewerError())
+    await expect(getCareer("member")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" })
   })
 })

@@ -20,7 +20,11 @@ export type GroupSummary = {
   active: boolean
   memberCount: number
   voices: Voice[]
-  holders: { id: string; positionCode: PositionCode | null; position: string; context: string | null; holder: string }[]
+  members: {
+    userId: string
+    name: string
+    positions: { id: string; positionCode: PositionCode; contextGroupId: string; context: string }[]
+  }[]
 }
 
 /** Every group, archived ones included, with what the admin overviews show of it, ordered by name. */
@@ -58,9 +62,9 @@ export async function listGroupSummaries(): Promise<GroupSummary[]> {
       .map((appointment) => ({
         id: appointment.id,
         positionCode: appointment.positionCode,
-        position: appointment.position,
-        context: labels.get(appointment.contextGroupId) ?? appointment.contextGroupId,
-        holder: appointment.name
+        userId: appointment.userId,
+        contextGroupId: appointment.contextGroupId,
+        context: labels.get(appointment.contextGroupId) ?? appointment.contextGroupId
       }))
     return {
       id: row.id,
@@ -72,7 +76,13 @@ export async function listGroupSummaries(): Promise<GroupSummary[]> {
       phase: row.phase,
       memberCount: members.length,
       voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
-      holders
+      members: members.map((member) => ({
+        userId: member.userId,
+        name: member.name,
+        positions: holders
+          .filter((holder) => holder.userId === member.userId)
+          .map(({ userId: _userId, ...position }) => position)
+      }))
     }
   })
 }

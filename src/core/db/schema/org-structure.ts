@@ -39,6 +39,7 @@ export const group = pgTable(
     type: groupType("type").notNull(),
     // Null means CSK-wide. A Choir group itself is always CSK-wide, and a Section always belongs to one.
     choirId: uuid("choir_id").references((): AnyPgColumn => choir.groupId, { onDelete: "restrict" }),
+    // Manual retirement applies only to non-annual Groups. Annual lifecycle comes from the year.
     active: boolean("active").default(true).notNull(),
     organisationYear: integer("organisation_year")
   },
@@ -69,6 +70,7 @@ export const group = pgTable(
       "group_organisation_year_check",
       sql`${table.organisationYear} IS NULL OR ${table.organisationYear} BETWEEN 1000 AND 9998`
     ),
+    check("group_annual_active_check", sql`${table.organisationYear} IS NULL OR ${table.active}`),
     index("group_choirId_idx").on(table.choirId),
     check(
       "group_name_policy_check",

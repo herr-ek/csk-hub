@@ -18,7 +18,7 @@ export function GroupList({ title, groups }: { title: string; groups: GroupSumma
   )
 }
 
-/** The groups of a list, each with its Voices, member count and Position holders. */
+/** The groups of a list, each with its Voices, member count and complete roster. */
 export function GroupItems({ groups }: { groups: GroupSummary[] }) {
   const t = useTranslations("Groups")
   if (groups.length === 0) return <p className="text-sm text-muted-foreground">{t("noGroups")}</p>
@@ -52,31 +52,42 @@ export function GroupLink({ group }: { group: GroupSummary }) {
   )
 }
 
-/** The member count, with the current Position holders one per line behind it. */
+/** The member count, expanding to every current member with any relevant Positions. */
 export function GroupFacts({ group }: { group: GroupSummary }) {
   const t = useTranslations("Groups")
   const positionLabel = useTranslations("Groups.positionLabels")
   const members = t("memberCount", { count: group.memberCount })
-  if (group.holders.length === 0) return <p className="text-xs text-muted-foreground">{members}</p>
+  if (group.members.length === 0) return <p className="text-xs text-muted-foreground">{members}</p>
 
   return (
     <Collapsible>
       <CollapsibleTrigger className={`${EXPAND_TRIGGER} text-xs`}>
-        {t("groupFacts", { members, positions: t("positionCount", { count: group.holders.length }) })}
+        {members}
         <ExpandChevron />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-          {group.holders.map(({ id, positionCode, position, context, holder }) => (
-            <div key={id} className="contents">
-              <dt className="text-muted-foreground">
-                {positionCode ? positionLabel(positionCodeKey(positionCode)) : position}
-                {context ? ` (${context})` : ""}
-              </dt>
-              <dd>{holder}</dd>
-            </div>
+        <ul className="mt-2 flex flex-col gap-2 text-xs">
+          {group.members.map((member) => (
+            <li key={member.userId} className="flex flex-col gap-1">
+              <Link
+                href={`/members/${encodeURIComponent(member.userId)}`}
+                className="font-medium underline-offset-4 hover:underline"
+              >
+                {member.name}
+              </Link>
+              {member.positions.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {member.positions.map((position) => (
+                    <Badge key={position.id} variant="secondary" className="h-auto max-w-full whitespace-normal py-0.5">
+                      {positionLabel(positionCodeKey(position.positionCode))}
+                      {position.contextGroupId !== group.id ? ` (${position.context})` : ""}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+            </li>
           ))}
-        </dl>
+        </ul>
       </CollapsibleContent>
     </Collapsible>
   )
