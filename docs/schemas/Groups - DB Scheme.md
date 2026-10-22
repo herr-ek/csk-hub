@@ -77,7 +77,9 @@ parent Board above Board 26/27 and Board 27/28.
 | `GigGroup` | CSK-wide | Fluid | Yes | Multiple |
 | `Övrig` | CSK-wide | Fluid | Yes; no Positions | Multiple |
 
-These are the values of the native PostgreSQL `group_type` enum. `Arkivarie` is the retained
+These are the values of the native PostgreSQL `group_type` enum, defined from the core
+`GroupType` string enum in [`identifiers.ts`](../../src/core/org-structure/identifiers.ts).
+Use named identifiers such as `GroupType.Board` in application code. `Arkivarie` is the retained
 storage identifier for Arkivariet. `Övrig` is a compatibility type for explicit participation,
 not a way to bypass the rules of a known formal Group type.
 
@@ -176,6 +178,11 @@ Group; for a choir responsibility it is an eligibility prerequisite. These meani
 explicitly defined by the catalogue.
 
 ## Fixed Position catalogue
+
+The core `PositionCode` enum defines stable identifiers separately from their definitions.
+Catalogue entries use computed keys such as `[PositionCode.Sekreterare]`, with
+`context: GroupType.Board` and `grants: [GroupType.Board, GroupType.Föräldramötet]`.
+Both catalogues are exhaustive typed records over their respective identifier enums.
 
 For every annual grant below, “year's” means the appointment's explicit Organisational year.
 Board contexts already carry that year; annual choir appointments store it separately because

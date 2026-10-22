@@ -2,7 +2,6 @@
 
 import { z } from "zod"
 import { db } from "@/core/db"
-import type { PositionCode } from "@/core/org-structure"
 import { shiftDate } from "@/core/org-structure"
 import { correctFluidAppointment, endAppointment, replaceAppointmentHolder } from "../../appointments"
 import type { GroupCommandState } from "../command-state"
@@ -11,7 +10,7 @@ import { runGroupCommand } from "../run-command"
 
 const schema = z.object({
   userId: fields.userId,
-  positionCode: z.string().min(1),
+  positionCode: fields.positionCode,
   contextGroupId: fields.id,
   startDate: fields.date,
   lastDay: fields.date.optional()
@@ -31,7 +30,6 @@ export async function assignFluidAppointmentAction(_state: GroupCommandState, fo
   return runGroupCommand("assign-appointment", schema, inputFrom(formData), ({ lastDay, ...input }) =>
     replaceAppointmentHolder(db, {
       ...input,
-      positionCode: input.positionCode as PositionCode,
       endDate: lastDay ? shiftDate(lastDay, 1) : undefined
     })
   )
@@ -46,7 +44,6 @@ export async function correctFluidAppointmentAction(_state: GroupCommandState, f
     ({ lastDay, ...input }) =>
       correctFluidAppointment(db, {
         ...input,
-        positionCode: input.positionCode as PositionCode,
         endDate: lastDay ? shiftDate(lastDay, 1) : null
       })
   )

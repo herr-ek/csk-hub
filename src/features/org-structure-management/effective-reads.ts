@@ -7,7 +7,7 @@ import { timeZone } from "@/core/i18n/time-zone"
 import {
   type EffectiveGroup,
   type EffectivePosition,
-  type GroupType,
+  GroupType,
   type IsoDate,
   POSITION_DEFINITIONS,
   type PositionCode
@@ -202,7 +202,7 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
       .where(
         and(
           inArray(directMembership.userId, userIds),
-          inArray(group.type, ["Choir", "Section"]),
+          inArray(group.type, [GroupType.Choir, GroupType.Section]),
           eq(group.active, true),
           lte(directMembership.startDate, date),
           or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
@@ -222,7 +222,7 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
       .where(
         and(
           inArray(positionAppointment.userId, userIds),
-          inArray(group.type, ["Choir", "Section"]),
+          inArray(group.type, [GroupType.Choir, GroupType.Section]),
           eq(group.active, true),
           lte(positionAppointment.startDate, date),
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))

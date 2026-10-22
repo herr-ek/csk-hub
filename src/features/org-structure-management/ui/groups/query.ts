@@ -1,5 +1,7 @@
 import "server-only"
 
+import { GroupType } from "@/core/org-structure"
+
 import { type GroupSummary, listGroupSummaries } from "../group-summaries"
 
 export type GroupsOverview = {
@@ -14,13 +16,13 @@ export async function getGroupsOverview(): Promise<GroupsOverview> {
   const summaries = await listGroupSummaries()
   return {
     cskWide: summaries
-      .filter(({ choirId, type }) => choirId === null && type !== "Choir")
+      .filter(({ choirId, type }) => choirId === null && type !== GroupType.Choir)
       .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name, "sv")),
     choirs: summaries
-      .filter(({ type }) => type === "Choir")
+      .filter(({ type }) => type === GroupType.Choir)
       .map((choir) => ({
         choir,
-        groups: summaries.filter(({ choirId, type }) => choirId === choir.id && type !== "Section")
+        groups: summaries.filter(({ choirId, type }) => choirId === choir.id && type !== GroupType.Section)
       }))
   }
 }

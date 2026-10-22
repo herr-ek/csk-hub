@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid
 } from "drizzle-orm/pg-core"
+import { GroupType, type PositionCode } from "@/core/org-structure/identifiers"
 import { user } from "./auth"
 import { voice, voiceDivision } from "./voice"
 
@@ -28,26 +29,7 @@ import { voice, voiceDivision } from "./voice"
 // drizzle-kit neither generates nor diffs them. A regenerated migration loses them unless they are
 // copied back, and changing one later takes a hand-written migration.
 
-export const groupType = pgEnum("group_type", [
-  "Choir",
-  "Section",
-  "Board",
-  "GigGroup",
-  "Gigmästeri",
-  "Sexmästeri",
-  "Roddgrupp",
-  "Festgrupp",
-  "Rephelg",
-  "Konsertmästeri",
-  "Rekryteringskommitté",
-  "Turnékommitté",
-  "Valberedning",
-  "Webmästeri",
-  "Föräldramötet",
-  "Arkivarie",
-  "Utantillkommitté",
-  "Övrig"
-])
+export const groupType = pgEnum("group_type", GroupType)
 
 export const group = pgTable(
   "group",
@@ -144,7 +126,7 @@ export const positionAppointment = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    positionCode: text("position_code").notNull(),
+    positionCode: text("position_code").$type<PositionCode>().notNull(),
     contextGroupId: uuid("context_group_id")
       .notNull()
       .references(() => group.id, { onDelete: "restrict" }),

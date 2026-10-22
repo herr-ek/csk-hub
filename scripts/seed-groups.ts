@@ -1,9 +1,11 @@
 #!/usr/bin/env bun
+
 import { and, asc, count, eq, gt, inArray, isNull, lte, notExists, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { voiceCapability } from "@/core/db/schema/voice"
+import { GroupType } from "@/core/org-structure"
 import { assertLocalDatabase } from "./ops/guards"
 import { referenceChoirId, SEED_USERS, type SeedDatabase, seedId } from "./ops/seed-data"
 import { seedGroupActivity } from "./ops/seed-group-activity"
@@ -22,13 +24,13 @@ type Division = NonNullable<typeof directMembership.$inferInsert.voice>
 
 const CHOIRS = ["MK", "DK", "KK"] as const
 
-const EXAMPLE_GROUPS: { name: string; type: (typeof group.type.enumValues)[number]; choir?: string }[] = [
-  { name: "Jubileumskommittén", type: "Övrig" },
-  { name: "Giggrupp vår", type: "GigGroup" },
+const EXAMPLE_GROUPS: { name: string; type: GroupType; choir?: string }[] = [
+  { name: "Jubileumskommittén", type: GroupType.Övrig },
+  { name: "Giggrupp vår", type: GroupType.GigGroup },
   ...CHOIRS.flatMap((choir) => [
-    { name: `${choir} roddgrupp`, type: "Roddgrupp" as const, choir },
-    { name: `${choir} festgrupp`, type: "Festgrupp" as const, choir },
-    { name: `${choir} rephelgsgrupp`, type: "Rephelg" as const, choir }
+    { name: `${choir} roddgrupp`, type: GroupType.Roddgrupp as const, choir },
+    { name: `${choir} festgrupp`, type: GroupType.Festgrupp as const, choir },
+    { name: `${choir} rephelgsgrupp`, type: GroupType.Rephelg as const, choir }
   ])
 ]
 
@@ -163,7 +165,7 @@ async function requireChoir(database: Database, name: string) {
     .select({ id: group.id, type: group.type, active: group.active })
     .from(group)
     .where(eq(group.id, id))
-  if (row?.type !== "Choir" || !row.active)
+  if (row?.type !== GroupType.Choir || !row.active)
     throw new Error(`Choir ${name} is missing or archived; run \`bun run ops reference-data\` first.`)
   return row.id
 }

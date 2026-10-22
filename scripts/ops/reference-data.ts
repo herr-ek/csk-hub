@@ -1,5 +1,6 @@
 import { Client, type ClientBase } from "pg"
 import { secureConnection } from "@/core/db/tls"
+import { GroupType } from "@/core/org-structure"
 import { confirmProductionWrite } from "./guards"
 import { referenceChoirId, referenceContinuingGroupId, referenceSectionId } from "./seed-data"
 import { announce, type Database } from "./target"
@@ -9,8 +10,8 @@ import { announce, type Database } from "./target"
  */
 export const REFERENCE_DATA: {
   choirs: { name: string; sections: { name: string; voice: string }[] }[]
-  continuingGroups: { name: string; type: string }[]
-  annualGroups(year: number): { name: string; type: string; year: number }[]
+  continuingGroups: { name: string; type: GroupType }[]
+  annualGroups(year: number): { name: string; type: GroupType; year: number }[]
 } = {
   choirs: [
     {
@@ -41,21 +42,23 @@ export const REFERENCE_DATA: {
       ]
     }
   ],
-  continuingGroups: [{ name: "Föräldramötet", type: "Föräldramötet" }],
+  continuingGroups: [{ name: "Föräldramötet", type: GroupType.Föräldramötet }],
   annualGroups: (year) => {
     const label = `${String(year).slice(-2)}/${String(year + 1).slice(-2)}`
-    return [
-      ["Board", `Styret ${label}`],
-      ["Gigmästeri", `Gigmästeriet ${label}`],
-      ["Sexmästeri", `Sexmästeriet ${label}`],
-      ["Konsertmästeri", `Konsertmästeriet ${label}`],
-      ["Rekryteringskommitté", `Rekryteringskommittén ${label}`],
-      ["Turnékommitté", `Turnékommittén ${label}`],
-      ["Valberedning", `Valberedningen ${label}`],
-      ["Webmästeri", `Webmästeriet ${label}`],
-      ["Arkivarie", `Arkivet ${label}`],
-      ["Utantillkommitté", `Utantillkommittén ${label}`]
-    ].map(([type, name]) => ({ type: type as string, name: name as string, year }))
+    return (
+      [
+        [GroupType.Board, `Styret ${label}`],
+        [GroupType.Gigmästeri, `Gigmästeriet ${label}`],
+        [GroupType.Sexmästeri, `Sexmästeriet ${label}`],
+        [GroupType.Konsertmästeri, `Konsertmästeriet ${label}`],
+        [GroupType.Rekryteringskommitté, `Rekryteringskommittén ${label}`],
+        [GroupType.Turnékommitté, `Turnékommittén ${label}`],
+        [GroupType.Valberedning, `Valberedningen ${label}`],
+        [GroupType.Webmästeri, `Webmästeriet ${label}`],
+        [GroupType.Arkivarie, `Arkivet ${label}`],
+        [GroupType.Utantillkommitté, `Utantillkommittén ${label}`]
+      ] as const
+    ).map(([type, name]) => ({ type, name, year }))
   }
 }
 
@@ -99,19 +102,19 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
   try {
     for (const choir of REFERENCE_DATA.choirs) {
       const choirSeedId = referenceChoirId(choir.name as "MK" | "DK" | "KK")
-      let choirId = await seededGroupId(client, choirSeedId, "Choir", null)
-      choirId ??= await activeGroupId(client, choir.name, "Choir", null)
+      let choirId = await seededGroupId(client, choirSeedId, GroupType.Choir, null)
+      choirId ??= await activeGroupId(client, choir.name, GroupType.Choir, null)
       if (!choirId) {
-        choirId = await insertGroup(client, choir.name, "Choir", null, null, choirSeedId)
+        choirId = await insertGroup(client, choir.name, GroupType.Choir, null, null, choirSeedId)
         await client.query(`insert into "choir" ("group_id") values ($1)`, [choirId])
         created.push(choir.name)
       }
       for (const section of choir.sections) {
         const sectionSeedId = referenceSectionId(choir.name as "MK" | "DK" | "KK", section.name)
-        let sectionId = await seededGroupId(client, sectionSeedId, "Section", choirId)
-        sectionId ??= await activeGroupId(client, section.name, "Section", choirId)
+        let sectionId = await seededGroupId(client, sectionSeedId, GroupType.Section, choirId)
+        sectionId ??= await activeGroupId(client, section.name, GroupType.Section, choirId)
         if (sectionId) continue
-        sectionId = await insertGroup(client, section.name, "Section", choirId, null, sectionSeedId)
+        sectionId = await insertGroup(client, section.name, GroupType.Section, choirId, null, sectionSeedId)
         await client.query(`insert into "section" ("group_id", "voice") values ($1, $2)`, [sectionId, section.voice])
         created.push(section.name)
       }
@@ -140,7 +143,7 @@ export async function insertReferenceData(client: ClientBase, currentYear = 2026
   }
 }
 
-async function activeGroupId(client: ClientBase, name: string, type: string, choirId: string | null) {
+async function activeGroupId(client: ClientBase, name: string, type: GroupType, choirId: string | null) {
   const { rows } = await client.query<{ id: string }>(
     `select "id" from "group"
      where "name" = $1 and "type" = $2 and "active" and "choir_id" is not distinct from $3::uuid`,
@@ -149,8 +152,8 @@ async function activeGroupId(client: ClientBase, name: string, type: string, cho
   return rows[0]?.id
 }
 
-async function seededGroupId(client: ClientBase, id: string, type: string, choirId: string | null) {
-  const { rows } = await client.query<{ id: string; type: string; choir_id: string | null; active: boolean }>(
+async function seededGroupId(client: ClientBase, id: string, type: GroupType, choirId: string | null) {
+  const { rows } = await client.query<{ id: string; type: GroupType; choir_id: string | null; active: boolean }>(
     `select "id", "type", "choir_id", "active" from "group" where "id" = $1`,
     [id]
   )
@@ -162,7 +165,7 @@ async function seededGroupId(client: ClientBase, id: string, type: string, choir
   return row.id
 }
 
-async function annualGroupId(client: ClientBase, type: string, year: number) {
+async function annualGroupId(client: ClientBase, type: GroupType, year: number) {
   const { rows } = await client.query<{ id: string }>(
     `select "id" from "group" where "type" = $1 and "organisation_year" = $2`,
     [type, year]
@@ -174,7 +177,7 @@ async function annualGroupId(client: ClientBase, type: string, year: number) {
 async function insertGroup(
   client: ClientBase,
   name: string,
-  type: string,
+  type: GroupType,
   choirId: string | null,
   year: number | null = null,
   id?: string

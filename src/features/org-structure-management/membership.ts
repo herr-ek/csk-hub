@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
-import { GROUP_POLICIES, type IsoDate } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, type IsoDate } from "@/core/org-structure"
 import { contains, familyOf, type VoiceDivision } from "@/features/voice/model"
 import { addDirectMembership, changeDirectMembership, validateUserParticipation } from "./direct-membership"
 import type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
@@ -16,7 +16,7 @@ export function startMembership(database: OrgStructureDatabase, input: StartMemb
     await lockUser(tx, input.userId)
     const [target] = await tx.select().from(group).where(eq(group.id, input.groupId)).for("share")
     if (!target) throw new RuleViolation("group-not-found")
-    if (target.type === "Section") throw new RuleViolation("section-requires-placement")
+    if (target.type === GroupType.Section) throw new RuleViolation("section-requires-placement")
     if (GROUP_POLICIES[target.type].directMembership === "no") throw new RuleViolation("direct-membership-forbidden")
     expectSuccess(await addDirectMembership(tx, input))
   })
@@ -55,7 +55,7 @@ export function placeSingerInSection(database: OrgStructureDatabase, input: Plac
       .where(eq(group.id, input.sectionId))
       .for("share")
     const [sung] = await tx.select({ voice: section.voice }).from(section).where(eq(section.groupId, input.sectionId))
-    if (target?.type !== "Section" || !target.choirId) throw new RuleViolation("group-not-found")
+    if (target?.type !== GroupType.Section || !target.choirId) throw new RuleViolation("group-not-found")
     if (!target.active) throw new RuleViolation("group-archived")
     if (!sung || !contains(sung.voice, input.voice)) throw new RuleViolation("voice-not-sung-in-section")
     expectSuccess(
@@ -91,7 +91,7 @@ export function changeVoice(database: OrgStructureDatabase, input: ChangeVoiceIn
         and(
           eq(directMembership.userId, input.userId),
           eq(group.choirId, input.choirId),
-          eq(group.type, "Section"),
+          eq(group.type, GroupType.Section),
           lte(directMembership.startDate, date),
           or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
         )
@@ -148,7 +148,7 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
       .where(
         and(
           eq(directMembership.userId, input.userId),
-          target.type === "Choir"
+          target.type === GroupType.Choir
             ? or(eq(group.id, input.groupId), eq(group.choirId, input.groupId))
             : eq(group.id, input.groupId),
           lte(directMembership.startDate, endDate),
@@ -175,7 +175,7 @@ async function sectionForVoice(tx: OrgStructureTransaction, choirId: string, voi
     .where(
       and(
         eq(group.choirId, choirId),
-        eq(group.type, "Section"),
+        eq(group.type, GroupType.Section),
         eq(group.active, true),
         inArray(section.voice, [voice, familyOf(voice)])
       )

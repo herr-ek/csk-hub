@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
 import { directMembership } from "@/core/db/schema/org-structure"
+import { GroupType, PositionCode } from "@/core/org-structure"
 import { addDirectMembership, listDirectMembersAt } from "./direct-membership"
 import { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
@@ -15,7 +16,7 @@ describe.skipIf(!database)("Choir and Section Membership commands", () => {
     const choirId = await t.groupId("MK")
     const team = expectSuccess(
       await import("./appointments").then(({ createOrganisationGroup }) =>
-        createOrganisationGroup(t.db, { name: "Membership rodd", type: "Roddgrupp", choirId })
+        createOrganisationGroup(t.db, { name: "Membership rodd", type: GroupType.Roddgrupp, choirId })
       )
     ).id
     expect(await startMembership(t.db, { userId, groupId: team, startDate: "2026-09-01" })).toEqual({
@@ -85,7 +86,7 @@ describe.skipIf(!database)("Choir and Section Membership commands", () => {
     expectSuccess(
       await appointPosition(t.db, {
         userId,
-        positionCode: "dirigent",
+        positionCode: PositionCode.Dirigent,
         contextGroupId: choirId,
         startDate: "2025-01-01"
       })

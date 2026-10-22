@@ -4,6 +4,7 @@ import { useId, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import {
   annualAppointmentDefaults,
+  GroupType,
   organisationYearPeriod,
   POSITION_DEFINITIONS,
   type PositionCode,
@@ -28,7 +29,7 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
   const t = useTranslations("Groups.detail")
   const positionLabel = useTranslations("Groups.positionLabels")
   const year = detail.group.organisationYear
-  const choirContext = detail.group.type === "Choir"
+  const choirContext = detail.group.type === GroupType.Choir
   const availableYears = choirContext
     ? [
         ...new Set(

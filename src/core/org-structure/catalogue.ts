@@ -1,4 +1,4 @@
-import type { GroupType } from "./index"
+import { GroupType, PositionCode } from "./identifiers"
 
 type GroupPolicy = {
   scope: "csk" | "choir"
@@ -9,24 +9,44 @@ type GroupPolicy = {
 
 /** Fixed organisation policy; Arkivarie retains its existing database identifier. */
 export const GROUP_POLICIES = {
-  Choir: { scope: "csk", lifetime: "continuing", directMembership: "yes", cardinality: "existing-choirs" },
-  Section: { scope: "choir", lifetime: "continuing", directMembership: "placement", cardinality: "four-sections" },
-  Board: { scope: "csk", lifetime: "annual", directMembership: "no", cardinality: "singleton" },
-  Gigmästeri: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
-  Sexmästeri: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
-  Konsertmästeri: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
-  Rekryteringskommitté: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
-  Turnékommitté: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
-  Valberedning: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  Webmästeri: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  Arkivarie: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  Utantillkommitté: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
-  Föräldramötet: { scope: "csk", lifetime: "continuing", directMembership: "no", cardinality: "singleton" },
-  Roddgrupp: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
-  Festgrupp: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
-  Rephelg: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
-  GigGroup: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" },
-  Övrig: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" }
+  [GroupType.Choir]: { scope: "csk", lifetime: "continuing", directMembership: "yes", cardinality: "existing-choirs" },
+  [GroupType.Section]: {
+    scope: "choir",
+    lifetime: "continuing",
+    directMembership: "placement",
+    cardinality: "four-sections"
+  },
+  [GroupType.Board]: { scope: "csk", lifetime: "annual", directMembership: "no", cardinality: "singleton" },
+  [GroupType.Gigmästeri]: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
+  [GroupType.Sexmästeri]: { scope: "csk", lifetime: "annual", directMembership: "helpers", cardinality: "singleton" },
+  [GroupType.Konsertmästeri]: {
+    scope: "csk",
+    lifetime: "annual",
+    directMembership: "helpers",
+    cardinality: "singleton"
+  },
+  [GroupType.Rekryteringskommitté]: {
+    scope: "csk",
+    lifetime: "annual",
+    directMembership: "helpers",
+    cardinality: "singleton"
+  },
+  [GroupType.Turnékommitté]: {
+    scope: "csk",
+    lifetime: "annual",
+    directMembership: "helpers",
+    cardinality: "singleton"
+  },
+  [GroupType.Valberedning]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
+  [GroupType.Webmästeri]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
+  [GroupType.Arkivarie]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
+  [GroupType.Utantillkommitté]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
+  [GroupType.Föräldramötet]: { scope: "csk", lifetime: "continuing", directMembership: "no", cardinality: "singleton" },
+  [GroupType.Roddgrupp]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
+  [GroupType.Festgrupp]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
+  [GroupType.Rephelg]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
+  [GroupType.GigGroup]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" },
+  [GroupType.Övrig]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" }
 } as const satisfies Record<GroupType, GroupPolicy>
 
 type PositionDefinition = {
@@ -39,85 +59,119 @@ type PositionDefinition = {
 
 /** Stable appointment identities, independent of display labels. */
 export const POSITION_DEFINITIONS = {
-  ordforande: { label: "Ordförande", context: "Board", prerequisite: false, grants: ["Board"], endPolicy: "annual" },
-  "vice-ordforande": {
+  [PositionCode.Ordforande]: {
+    label: "Ordförande",
+    context: GroupType.Board,
+    prerequisite: false,
+    grants: [GroupType.Board],
+    endPolicy: "annual"
+  },
+  [PositionCode.ViceOrdforande]: {
     label: "Vice Ordförande",
-    context: "Board",
+    context: GroupType.Board,
     prerequisite: false,
-    grants: ["Board", "Rekryteringskommitté"],
+    grants: [GroupType.Board, GroupType.Rekryteringskommitté],
     endPolicy: "annual"
   },
-  kassor: { label: "Kassör", context: "Board", prerequisite: false, grants: ["Board"], endPolicy: "annual" },
-  sekreterare: {
+  [PositionCode.Kassor]: {
+    label: "Kassör",
+    context: GroupType.Board,
+    prerequisite: false,
+    grants: [GroupType.Board],
+    endPolicy: "annual"
+  },
+  [PositionCode.Sekreterare]: {
     label: "Sekreterare",
-    context: "Board",
+    context: GroupType.Board,
     prerequisite: false,
-    grants: ["Board", "Föräldramötet"],
+    grants: [GroupType.Board, GroupType.Föräldramötet],
     endPolicy: "annual"
   },
-  "pr-mastare": { label: "PR-mästare", context: "Board", prerequisite: false, grants: ["Board"], endPolicy: "annual" },
-  "forsta-konsertmastare": {
+  [PositionCode.PrMastare]: {
+    label: "PR-mästare",
+    context: GroupType.Board,
+    prerequisite: false,
+    grants: [GroupType.Board],
+    endPolicy: "annual"
+  },
+  [PositionCode.ForstaKonsertmastare]: {
     label: "1:a Konsertmästare",
-    context: "Board",
+    context: GroupType.Board,
     prerequisite: false,
-    grants: ["Board", "Konsertmästeri"],
+    grants: [GroupType.Board, GroupType.Konsertmästeri],
     endPolicy: "annual"
   },
-  "csk-gigmastare": {
+  [PositionCode.CskGigmastare]: {
     label: "CSK Gigmästare",
-    context: "Board",
+    context: GroupType.Board,
     prerequisite: false,
-    grants: ["Board", "Gigmästeri"],
+    grants: [GroupType.Board, GroupType.Gigmästeri],
     endPolicy: "annual"
   },
-  sexmastare: {
+  [PositionCode.Sexmastare]: {
     label: "Sexmästare",
-    context: "Board",
+    context: GroupType.Board,
     prerequisite: false,
-    grants: ["Board", "Sexmästeri"],
+    grants: [GroupType.Board, GroupType.Sexmästeri],
     endPolicy: "annual"
   },
-  sexmastarinna: {
+  [PositionCode.Sexmastarinna]: {
     label: "Sexmästarinna",
-    context: "Sexmästeri",
+    context: GroupType.Sexmästeri,
     prerequisite: false,
-    grants: ["Sexmästeri"],
+    grants: [GroupType.Sexmästeri],
     endPolicy: "annual"
   },
-  "ekonomiskt-ansvarig": {
+  [PositionCode.EkonomisktAnsvarig]: {
     label: "Ekonomiskt Ansvarig",
-    context: "Turnékommitté",
+    context: GroupType.Turnékommitté,
     prerequisite: false,
-    grants: ["Turnékommitté"],
+    grants: [GroupType.Turnékommitté],
     endPolicy: "annual"
   },
-  dirigent: { label: "Dirigent", context: "Choir", prerequisite: true, grants: [], endPolicy: "fluid" },
-  notfiskal: { label: "Notfiskal", context: "Choir", prerequisite: true, grants: [], endPolicy: "fluid" },
-  "choir-konsertmastare": {
-    label: "Choir Konsertmästare",
-    context: "Choir",
+  [PositionCode.Dirigent]: {
+    label: "Dirigent",
+    context: GroupType.Choir,
     prerequisite: true,
-    grants: ["Konsertmästeri"],
-    endPolicy: "annual"
-  },
-  "choir-gigmastare": {
-    label: "Choir Gigmästare",
-    context: "Choir",
-    prerequisite: true,
-    grants: ["Gigmästeri"],
-    endPolicy: "annual"
-  },
-  stamforalder: {
-    label: "Stämförälder",
-    context: "Section",
-    prerequisite: true,
-    grants: ["Föräldramötet"],
+    grants: [],
     endPolicy: "fluid"
   },
-  gigledare: { label: "Gigledare", context: "GigGroup", prerequisite: true, grants: [], endPolicy: "fluid" }
-} as const satisfies Record<string, PositionDefinition>
-
-export type PositionCode = keyof typeof POSITION_DEFINITIONS
+  [PositionCode.Notfiskal]: {
+    label: "Notfiskal",
+    context: GroupType.Choir,
+    prerequisite: true,
+    grants: [],
+    endPolicy: "fluid"
+  },
+  [PositionCode.ChoirKonsertmastare]: {
+    label: "Choir Konsertmästare",
+    context: GroupType.Choir,
+    prerequisite: true,
+    grants: [GroupType.Konsertmästeri],
+    endPolicy: "annual"
+  },
+  [PositionCode.ChoirGigmastare]: {
+    label: "Choir Gigmästare",
+    context: GroupType.Choir,
+    prerequisite: true,
+    grants: [GroupType.Gigmästeri],
+    endPolicy: "annual"
+  },
+  [PositionCode.Stamforalder]: {
+    label: "Stämförälder",
+    context: GroupType.Section,
+    prerequisite: true,
+    grants: [GroupType.Föräldramötet],
+    endPolicy: "fluid"
+  },
+  [PositionCode.Gigledare]: {
+    label: "Gigledare",
+    context: GroupType.GigGroup,
+    prerequisite: true,
+    grants: [],
+    endPolicy: "fluid"
+  }
+} as const satisfies Record<PositionCode, PositionDefinition>
 
 /**
  * Exclusive calendar-date bounds; 26/27 is [2026-07-01, 2027-07-01).

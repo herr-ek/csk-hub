@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
 import { group, section } from "@/core/db/schema/org-structure"
+import { GroupType } from "@/core/org-structure"
 import { createOrganisationGroup } from "./appointments"
 import { archiveGroup, createChoir, renameGroup } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
@@ -27,7 +28,7 @@ describe.skipIf(!database)("Choir and Group structure", () => {
       data: { sections: [{ voice: "S" }, { voice: "A" }, { voice: "T" }, { voice: "B" }] }
     })
     const [choir] = await t.db.select().from(group).where(eq(group.name, name))
-    expect(choir?.type).toBe("Choir")
+    expect(choir?.type).toBe(GroupType.Choir)
     if (!choir) throw new Error("Expected the Choir to exist.")
     const sectionRows = await t.db.select({ id: group.id }).from(group).where(eq(group.choirId, choir.id))
     expect(sectionRows).toHaveLength(4)
@@ -59,13 +60,15 @@ describe.skipIf(!database)("Choir and Group structure", () => {
   test("scope, names and archival rules protect the Choir tree", async () => {
     const choirId = await t.groupId("KK")
     const sectionId = await t.groupId("KKB")
-    expect(await createOrganisationGroup(t.db, { name: uniqueName("Bad scoped"), type: "GigGroup", choirId })).toEqual({
+    expect(
+      await createOrganisationGroup(t.db, { name: uniqueName("Bad scoped"), type: GroupType.GigGroup, choirId })
+    ).toEqual({
       success: false,
       error: "invalid-group-scope"
     })
     const existingName = `Unique ${crypto.randomUUID()}`
-    const first = expectSuccess(await createOrganisationGroup(t.db, { name: existingName, type: "Övrig" }))
-    expect(await createOrganisationGroup(t.db, { name: existingName, type: "Övrig" })).toEqual({
+    const first = expectSuccess(await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig }))
+    expect(await createOrganisationGroup(t.db, { name: existingName, type: GroupType.Övrig })).toEqual({
       success: false,
       error: "group-name-taken"
     })

@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { sql } from "drizzle-orm"
 import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { GroupType, PositionCode } from "@/core/org-structure"
 import { createOrganisationGroup } from "./appointments"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
@@ -50,7 +51,7 @@ describe.skipIf(!database)("final organisation schema", () => {
 
   test("appointments reject unknown Position codes and annual dates outside their Group year", async () => {
     const boardId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Schema Board", type: "Board", organisationYear: 2040 })
+      await createOrganisationGroup(t.db, { name: "Schema Board", type: GroupType.Board, organisationYear: 2040 })
     ).id
     const userId = await t.user()
     await expect(
@@ -58,7 +59,7 @@ describe.skipIf(!database)("final organisation schema", () => {
         .insert(positionAppointment)
         .values({
           userId,
-          positionCode: "invented-post",
+          positionCode: "invented-post" as PositionCode,
           contextGroupId: boardId,
           organisationYear: 2040,
           startDate: "2040-07-01",
@@ -71,7 +72,7 @@ describe.skipIf(!database)("final organisation schema", () => {
         .insert(positionAppointment)
         .values({
           userId,
-          positionCode: "ordforande",
+          positionCode: PositionCode.Ordforande,
           contextGroupId: boardId,
           organisationYear: 2040,
           startDate: "2040-06-30",
@@ -82,13 +83,20 @@ describe.skipIf(!database)("final organisation schema", () => {
   })
 
   test("known Group types require their fixed scope and annual identity", async () => {
-    await expect(t.db.insert(group).values({ name: "Missing year", type: "Board" }).execute()).rejects.toMatchObject({
+    await expect(
+      t.db.insert(group).values({ name: "Missing year", type: GroupType.Board }).execute()
+    ).rejects.toMatchObject({
       cause: { constraint: "group_organisation_policy_check" }
     })
     await expect(
       t.db
         .insert(group)
-        .values({ name: "Choir-owned Board", type: "Board", choirId: await t.groupId("MK"), organisationYear: 2042 })
+        .values({
+          name: "Choir-owned Board",
+          type: GroupType.Board,
+          choirId: await t.groupId("MK"),
+          organisationYear: 2042
+        })
         .execute()
     ).rejects.toMatchObject({ cause: { constraint: "group_organisation_policy_check" } })
   })

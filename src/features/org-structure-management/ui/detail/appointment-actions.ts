@@ -2,7 +2,6 @@
 
 import { z } from "zod"
 import { db } from "@/core/db"
-import type { PositionCode } from "@/core/org-structure"
 import { shiftDate } from "@/core/org-structure"
 import {
   appointPosition,
@@ -18,7 +17,7 @@ import { runGroupCommand } from "../run-command"
 
 const assignSchema = z.object({
   userId: fields.userId,
-  positionCode: z.string().min(1),
+  positionCode: fields.positionCode,
   contextGroupId: fields.id,
   organisationYear: z.coerce.number().int().min(1000).max(9998),
   startDate: fields.date,
@@ -40,7 +39,6 @@ export async function assignAppointmentAction(_state: GroupCommandState, formDat
     ({ lastDay, ...input }) =>
       appointPosition(db, {
         ...input,
-        positionCode: input.positionCode as PositionCode,
         endDate: lastDay ? shiftDate(lastDay, 1) : undefined
       })
   )
@@ -61,7 +59,6 @@ export async function replaceAppointmentAction(_state: GroupCommandState, formDa
     ({ lastDay, ...input }) =>
       replaceAppointmentHolder(db, {
         ...input,
-        positionCode: input.positionCode as PositionCode,
         endDate: lastDay ? shiftDate(lastDay, 1) : undefined
       })
   )
@@ -83,7 +80,7 @@ export async function endAppointmentAction(_state: GroupCommandState, formData: 
 const correctionSchema = z.object({
   appointmentId: fields.id,
   userId: fields.userId,
-  positionCode: z.string().min(1),
+  positionCode: fields.positionCode,
   contextGroupId: fields.id,
   organisationYear: z.coerce.number().int().min(1000).max(9998),
   startDate: fields.date,
@@ -105,7 +102,6 @@ export async function correctAppointmentAction(_state: GroupCommandState, formDa
     ({ lastDay, ...input }) =>
       correctAnnualAppointment(db, {
         ...input,
-        positionCode: input.positionCode as PositionCode,
         endDate: shiftDate(lastDay, 1)
       })
   )

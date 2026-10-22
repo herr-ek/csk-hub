@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
+import { GroupType, PositionCode } from "@/core/org-structure"
 import {
   appointPosition,
   createOrganisationGroup,
@@ -26,7 +27,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
   beforeAll(async () => {
     t = database as OrgStructureTestDatabase
     parents = expectSuccess(
-      await createOrganisationGroup(t.db, { name: uniqueName("Parents committee"), type: "Föräldramötet" })
+      await createOrganisationGroup(t.db, { name: uniqueName("Parents committee"), type: GroupType.Föräldramötet })
     ).id
   })
   afterAll(async () => {
@@ -35,7 +36,11 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
 
   test("two Sections and the annual Secretary share one parents roster across June 30 and July 1", async () => {
     const board = expectSuccess(
-      await createOrganisationGroup(t.db, { name: uniqueName("Board"), type: "Board", organisationYear: 2055 })
+      await createOrganisationGroup(t.db, {
+        name: uniqueName(GroupType.Board),
+        type: GroupType.Board,
+        organisationYear: 2055
+      })
     )
     const firstSection = await t.groupId("MKT1", "MK")
     const secondSection = await t.groupId("MKT2", "MK")
@@ -61,7 +66,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     const secretaryAppointment = expectSuccess(
       await appointPosition(t.db, {
         userId: secretary,
-        positionCode: "sekreterare",
+        positionCode: PositionCode.Sekreterare,
         contextGroupId: board.id,
         startDate: "2055-09-01"
       })
@@ -69,7 +74,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     const firstAppointment = expectSuccess(
       await appointPosition(t.db, {
         userId: secretary,
-        positionCode: "stamforalder",
+        positionCode: PositionCode.Stamforalder,
         contextGroupId: firstSection,
         startDate: "2056-01-01"
       })
@@ -77,7 +82,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     const secondAppointment = expectSuccess(
       await appointPosition(t.db, {
         userId: secondParent,
-        positionCode: "stamforalder",
+        positionCode: PositionCode.Stamforalder,
         contextGroupId: secondSection,
         startDate: "2056-01-01"
       })
@@ -85,15 +90,15 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
 
     const beforeFluidStart = await listAppointmentMembersAt(t.db, parents, "2055-09-01")
     expect(beforeFluidStart).toMatchObject([
-      { userId: secretary, appointments: [{ id: secretaryAppointment.id, positionCode: "sekreterare" }] }
+      { userId: secretary, appointments: [{ id: secretaryAppointment.id, positionCode: PositionCode.Sekreterare }] }
     ])
 
     const beforeEnd = await listAppointmentMembersAt(t.db, parents, "2056-06-29")
     expect(beforeEnd).toHaveLength(2)
     expect(beforeEnd.find(({ userId }) => userId === secretary)).toMatchObject({
       appointments: [
-        { id: secretaryAppointment.id, positionCode: "sekreterare" },
-        { id: firstAppointment.id, positionCode: "stamforalder", contextGroupId: firstSection }
+        { id: secretaryAppointment.id, positionCode: PositionCode.Sekreterare },
+        { id: firstAppointment.id, positionCode: PositionCode.Stamforalder, contextGroupId: firstSection }
       ]
     })
     const contexts = await listAppointmentsForGroup(t.db, parents)
@@ -105,7 +110,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     expect(juneRoster).toHaveLength(2)
     expect(juneRoster.find(({ userId }) => userId === secretary)).toMatchObject({
       appointments: [
-        { id: secretaryAppointment.id, positionCode: "sekreterare" },
+        { id: secretaryAppointment.id, positionCode: PositionCode.Sekreterare },
         { id: firstAppointment.id, contextGroupId: firstSection }
       ]
     })
@@ -116,8 +121,8 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     const julyRoster = await listAppointmentMembersAt(t.db, parents, "2056-07-01")
     expect(julyRoster).toHaveLength(2)
     expect(julyRoster.flatMap(({ appointments }) => appointments.map(({ positionCode }) => positionCode))).toEqual([
-      "stamforalder",
-      "stamforalder"
+      PositionCode.Stamforalder,
+      PositionCode.Stamforalder
     ])
   })
 
@@ -129,7 +134,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId: singer,
-        positionCode: "stamforalder",
+        positionCode: PositionCode.Stamforalder,
         contextGroupId: section,
         startDate: "2024-02-01"
       })
@@ -164,7 +169,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     const appointment = expectSuccess(
       await appointPosition(t.db, {
         userId: singer,
-        positionCode: "dirigent",
+        positionCode: PositionCode.Dirigent,
         contextGroupId: choir,
         startDate: "2059-01-01"
       })
@@ -178,7 +183,7 @@ describe.skipIf(!database)("fluid responsibility lifecycle", () => {
     expect(await archiveGroup(t.db, choir)).toEqual({ success: false, error: "membership-dependency" })
     expect((await listOrganisationGroups(t.db, "2059-01-01")).find(({ id }) => id === choir)?.active).toBe(true)
     expect(await listAppointmentsForGroup(t.db, choir)).toMatchObject([
-      { id: appointment.id, userId: singer, positionCode: "dirigent", startDate: "2059-01-01" }
+      { id: appointment.id, userId: singer, positionCode: PositionCode.Dirigent, startDate: "2059-01-01" }
     ])
   })
 })

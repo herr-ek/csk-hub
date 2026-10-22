@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
-import { GROUP_POLICIES, organisationYearPeriod, shiftDate } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, organisationYearPeriod, shiftDate } from "@/core/org-structure"
 import { VOICE_DIVISIONS } from "@/features/voice/model"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Badge } from "@/shared/ui/base/badge"
@@ -91,10 +91,10 @@ export function DirectMembersSection({ detail, today }: { detail: GroupDetail; t
                   </Button>
                 }
                 title={t("management.end")}
-                action={detail.group.type === "Choir" ? endChoirMemberAction : endDirectMemberAction}
+                action={detail.group.type === GroupType.Choir ? endChoirMemberAction : endDirectMemberAction}
                 submitLabel={t("management.end")}
               >
-                {detail.group.type === "Choir" ? (
+                {detail.group.type === GroupType.Choir ? (
                   <>
                     <input type="hidden" name="membershipId" value={member.id} />
                     <input type="hidden" name="groupId" value={detail.group.id} />
@@ -173,7 +173,7 @@ function MembershipFields({
     : bounds
       ? shiftDate(bounds.endDate, -1)
       : ""
-  const isSection = detail.group.type === "Section"
+  const isSection = detail.group.type === GroupType.Section
   return (
     <>
       {isSection ? (

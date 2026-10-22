@@ -7,7 +7,7 @@ import { appointmentGrant, directMembership, group, positionAppointment } from "
 import { timeZone } from "@/core/i18n/time-zone"
 import {
   GROUP_POLICIES,
-  type GroupType,
+  GroupType,
   type IsoDate,
   organisationYearPeriod,
   POSITION_DEFINITIONS,
@@ -118,14 +118,14 @@ export function createOrganisationGroup(
   database: OrgStructureDatabase,
   input: {
     name: string
-    type: Exclude<GroupType, "Choir" | "Section">
+    type: Exclude<GroupType, GroupType.Choir | GroupType.Section>
     choirId?: string
     organisationYear?: number
   }
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     const policy = GROUP_POLICIES[input.type]
-    if (!policy || (input.type as GroupType) === "Choir" || (input.type as GroupType) === "Section")
+    if (!policy || (input.type as GroupType) === GroupType.Choir || (input.type as GroupType) === GroupType.Section)
       throw new RuleViolation("choir-created-with-sections")
     if ((policy.scope === "choir") !== Boolean(input.choirId)) throw new RuleViolation("invalid-group-scope")
     if (!input.name.trim()) throw new RuleViolation("invalid-group-name")
@@ -323,7 +323,7 @@ export function correctAnnualAppointment(
     const context = await requireGroup(tx, input.contextGroupId)
     if (definition.endPolicy !== "annual" || context.type !== definition.context)
       throw new RuleViolation("position-not-allowed")
-    const choirScopedAnnual = context.type === "Choir" && definition.prerequisite
+    const choirScopedAnnual = context.type === GroupType.Choir && definition.prerequisite
     if (!choirScopedAnnual && context.organisationYear !== input.organisationYear)
       throw new RuleViolation("period-conflict")
     const bounds = organisationYearPeriod(input.organisationYear)

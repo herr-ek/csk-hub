@@ -4,6 +4,7 @@ import { and, asc, count, eq, ilike, isNull, ne, or } from "drizzle-orm"
 import type { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import type { IsoDate } from "@/core/org-structure"
+import { GroupType } from "@/core/org-structure"
 import {
   cskToday,
   listEffectiveChoirAffiliationsOfUsersAt,
@@ -95,14 +96,16 @@ export async function listMemberDirectory(
     members: members.map((member) => ({
       ...member,
       choirs: memberships
-        .filter((membership) => membership.userId === member.id && membership.type === "Choir")
+        .filter((membership) => membership.userId === member.id && membership.type === GroupType.Choir)
         .map((choir) => ({
           id: choir.groupId,
           name: choir.name,
           section:
             memberships.find(
               (membership) =>
-                membership.userId === member.id && membership.type === "Section" && membership.choirId === choir.groupId
+                membership.userId === member.id &&
+                membership.type === GroupType.Section &&
+                membership.choirId === choir.groupId
             )?.name ?? null
         }))
     }))

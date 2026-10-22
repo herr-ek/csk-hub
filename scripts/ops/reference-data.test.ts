@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
 import { Client } from "pg"
 import { choir, group, section } from "@/core/db/schema/org-structure"
+import { GroupType } from "@/core/org-structure"
 import { createTestDatabase } from "../../test/database"
 import { createReferenceData, insertReferenceData, REFERENCE_DATA } from "./reference-data"
 
@@ -24,13 +25,13 @@ describe.skipIf(!database)("reference data", () => {
   test("creates Choirs, Sections, continuing parents and explicit current and future Groups", async () => {
     const created = await withClient(insertReferenceData)
     expect(created).toContain("KKB")
-    expect(created).toContain("Föräldramötet")
+    expect(created).toContain(GroupType.Föräldramötet)
 
     for (const definition of REFERENCE_DATA.choirs) {
       const [choirRow] = await t.db
         .select({ id: group.id })
         .from(group)
-        .where(and(eq(group.name, definition.name), eq(group.type, "Choir")))
+        .where(and(eq(group.name, definition.name), eq(group.type, GroupType.Choir)))
       const sections = await t.db
         .select({ name: group.name, voice: section.voice })
         .from(section)

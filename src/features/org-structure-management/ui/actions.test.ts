@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { eq } from "drizzle-orm"
 import { directMembership, group } from "@/core/db/schema/org-structure"
+import { GroupType, PositionCode } from "@/core/org-structure"
 import { createOrgStructureTestDatabase } from "../test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -84,11 +85,11 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   })
 
   test("creates, renames, archives, and passes typed policy failures through the action boundary", async () => {
-    expect(await createGroupAction(IDLE, form({ name: "", type: "GigGroup" }))).toEqual({
+    expect(await createGroupAction(IDLE, form({ name: "", type: GroupType.GigGroup }))).toEqual({
       status: "error",
       error: "invalid-input"
     })
-    expect(await createGroupAction(IDLE, form({ name: "Action gig", type: "GigGroup" }))).toMatchObject({
+    expect(await createGroupAction(IDLE, form({ name: "Action gig", type: GroupType.GigGroup }))).toMatchObject({
       status: "success"
     })
     const row = await named("Action gig")
@@ -108,7 +109,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   test("prepares annual groups and applies inclusive dates to direct membership actions", async () => {
     expect(await prepareYearAction(IDLE, form({ organisationYear: "2050" }))).toMatchObject({ status: "success" })
     const archive = (await listOrganisationGroups(t.db, "2050-09-01")).find(
-      (row) => row.type === "Arkivarie" && row.organisationYear === 2050
+      (row) => row.type === GroupType.Arkivarie && row.organisationYear === 2050
     )
     if (!archive) throw new Error("Expected the prepared Arkivarie Group.")
     const userId = await t.user()
@@ -157,7 +158,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(
       await editGroupAction(
         IDLE,
-        form({ groupId: archive.id, name: "Bad year correction", type: "Arkivarie", organisationYear: "2051" })
+        form({ groupId: archive.id, name: "Bad year correction", type: GroupType.Arkivarie, organisationYear: "2051" })
       )
     ).toEqual({ status: "error", error: "group-has-participation" })
     expect(
@@ -255,7 +256,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     const first = await t.user("Choir departure")
     const choirId = await t.groupId("MK")
     const sectionId = await t.groupId("MKB1")
-    const team = await createOrganisationGroup(t.db, { name: "KK team", type: "Roddgrupp", choirId })
+    const team = await createOrganisationGroup(t.db, { name: "KK team", type: GroupType.Roddgrupp, choirId })
     expect(team.success).toBe(true)
     if (!team.success) return
     const choirMembership = await addDirectMembership(t.db, {
@@ -301,7 +302,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(
       await appointPosition(t.db, {
         userId: second,
-        positionCode: "dirigent",
+        positionCode: PositionCode.Dirigent,
         contextGroupId: choirId,
         startDate: "2024-08-01",
         endDate: null
@@ -324,13 +325,13 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   test("replaces, corrects, ends, and cancels appointments through typed server actions", async () => {
     expect(await prepareYearAction(IDLE, form({ organisationYear: "2054" }))).toMatchObject({ status: "success" })
     const board = (await listOrganisationGroups(t.db, "2054-08-01")).find(
-      (row) => row.type === "Board" && row.organisationYear === 2054
+      (row) => row.type === GroupType.Board && row.organisationYear === 2054
     )
     if (!board) throw new Error("Expected the prepared Board.")
     const first = await t.user(),
       next = await t.user()
     const input = {
-      positionCode: "ordforande",
+      positionCode: PositionCode.Ordforande,
       contextGroupId: board.id,
       organisationYear: "2054",
       startDate: "2054-08-01",
@@ -371,7 +372,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     })
     const future = await appointPosition(t.db, {
       userId: await t.user(),
-      positionCode: "vice-ordforande",
+      positionCode: PositionCode.ViceOrdforande,
       contextGroupId: board.id,
       startDate: "2054-09-01"
     })
@@ -386,13 +387,13 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   test("the cancel action trusts server time and refuses a forged date after an appointment started", async () => {
     expect(await prepareYearAction(IDLE, form({ organisationYear: "2024" }))).toMatchObject({ status: "success" })
     const board = (await listOrganisationGroups(t.db, "2024-09-01")).find(
-      (row) => row.type === "Board" && row.organisationYear === 2024
+      (row) => row.type === GroupType.Board && row.organisationYear === 2024
     )
     if (!board) throw new Error("Expected the prepared Board.")
     const userId = await t.user()
     const appointment = await appointPosition(t.db, {
       userId,
-      positionCode: "ordforande",
+      positionCode: PositionCode.Ordforande,
       contextGroupId: board.id,
       startDate: "2024-09-01"
     })

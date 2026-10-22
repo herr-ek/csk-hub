@@ -5,6 +5,7 @@ import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import {
   GROUP_POLICIES,
+  GroupType,
   type IsoDate,
   organisationYearPeriod,
   POSITION_DEFINITIONS,
@@ -171,7 +172,7 @@ async function requireAllowedMembershipTransfer(
   const target = await requireGroup(tx, targetGroupId)
   if (
     originalGroupId !== targetGroupId &&
-    (original.type !== "Section" || target.type !== "Section" || original.choirId !== target.choirId)
+    (original.type !== GroupType.Section || target.type !== GroupType.Section || original.choirId !== target.choirId)
   )
     throw new RuleViolation("section-requires-placement")
 }
@@ -192,7 +193,7 @@ async function membershipValues(tx: OrgStructureTransaction, input: MembershipIn
   )
     throw new RuleViolation("period-conflict")
   const voice = input.voice ?? null
-  if (target.type === "Section") {
+  if (target.type === GroupType.Section) {
     const [sung] = await tx.select().from(section).where(eq(section.groupId, target.id))
     if (!voice || !sung || !contains(sung.voice, voice)) throw new RuleViolation("voice-not-sung-in-section")
   } else if (voice !== null) throw new RuleViolation("voice-not-sung-in-section")
@@ -201,7 +202,7 @@ async function membershipValues(tx: OrgStructureTransaction, input: MembershipIn
 
 async function ensurePlacementChoir(tx: OrgStructureTransaction, input: typeof directMembership.$inferInsert) {
   const target = await requireGroup(tx, input.groupId)
-  if (target.type !== "Section" || !target.choirId) return
+  if (target.type !== GroupType.Section || !target.choirId) return
   await requireActiveGroup(tx, target.choirId)
   const direct = await tx
     .select()
@@ -247,11 +248,11 @@ export async function validateUserParticipation(tx: OrgStructureTransaction, use
     )
       throw new RuleViolation("not-a-choir-member")
     if (
-      row.group.type === "Section" &&
+      row.group.type === GroupType.Section &&
       rows.some(
         (other) =>
           other.membership !== row.membership &&
-          other.group.type === "Section" &&
+          other.group.type === GroupType.Section &&
           other.group.choirId === row.group.choirId &&
           overlaps(other.membership, row.membership)
       )

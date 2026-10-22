@@ -6,7 +6,7 @@ import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
-import { type GroupType, type IsoDate, organisationYearPeriod } from "@/core/org-structure"
+import { GroupType, type IsoDate, organisationYearPeriod } from "@/core/org-structure"
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
 import { listAppointmentsForGroup, listEffectiveMembersAt } from "../../appointments"
 import { listDirectMemberships } from "../../direct-membership"
@@ -58,20 +58,24 @@ export async function getGroupDetail(
         .from(user)
         .where(or(isNull(user.banned), eq(user.banned, false)))
         .orderBy(asc(user.name)),
-      db.select({ id: group.id, name: group.name }).from(group).where(eq(group.type, "Choir")).orderBy(asc(group.name))
+      db
+        .select({ id: group.id, name: group.name })
+        .from(group)
+        .where(eq(group.type, GroupType.Choir))
+        .orderBy(asc(group.name))
     ])
 
   const choirVoices =
-    row.type === "Choir" || row.type === "Section"
-      ? await choirVoicesOf(row.type === "Choir" ? row.id : (row.choirId ?? ""))
+    row.type === GroupType.Choir || row.type === GroupType.Section
+      ? await choirVoicesOf(row.type === GroupType.Choir ? row.id : (row.choirId ?? ""))
       : []
   const sectionVoice = sectionRows[0]?.voice ?? null
   const placementSections =
-    row.type === "Section" && row.choirId
+    row.type === GroupType.Section && row.choirId
       ? await db
           .select({ id: group.id, name: group.name, active: group.active })
           .from(group)
-          .where(and(eq(group.type, "Section"), eq(group.choirId, row.choirId)))
+          .where(and(eq(group.type, GroupType.Section), eq(group.choirId, row.choirId)))
           .orderBy(asc(group.name))
       : []
   const effectiveMembers = await listEffectiveMembersAt(db, groupId, date)
@@ -92,7 +96,9 @@ export async function getGroupDetail(
       organisationYear: group.organisationYear
     })
     .from(group)
-    .where(and(inArray(group.type, ["Konsertmästeri", "Gigmästeri"]), isNotNull(group.organisationYear)))
+    .where(
+      and(inArray(group.type, [GroupType.Konsertmästeri, GroupType.Gigmästeri]), isNotNull(group.organisationYear))
+    )
     .orderBy(desc(group.organisationYear))
   const historicalYear = (active: boolean, year: number | null) =>
     active || (year !== null && organisationYearPeriod(year).endDate <= date)
@@ -131,7 +137,7 @@ async function choirVoicesOf(choirId: string): Promise<VoiceDivision[]> {
     .select({ voice: section.voice })
     .from(section)
     .innerJoin(group, eq(group.id, section.groupId))
-    .where(and(eq(group.choirId, choirId), eq(group.type, "Section"), eq(group.active, true)))
+    .where(and(eq(group.choirId, choirId), eq(group.type, GroupType.Section), eq(group.active, true)))
   return rows.flatMap(({ voice }) => voicesWithin(voice)).sort(compareVoices)
 }
 

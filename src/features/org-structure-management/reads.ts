@@ -2,6 +2,7 @@ import "server-only"
 
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { GroupType, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
 import { listEffectiveMembersAt } from "./appointments"
 import {
@@ -66,7 +67,7 @@ export async function listCurrentChoirAffiliationsOfUsers(
 export async function getCurrentPositionHolder(
   database: OrgStructureDatabase,
   groupId: string,
-  positionCode: string,
+  positionCode: PositionCode,
   date = cskToday()
 ) {
   const [holder] = await database
@@ -102,7 +103,7 @@ export async function listChoirMembersByVoiceFamily(
     .where(
       and(
         eq(group.choirId, choirId),
-        eq(group.type, "Section"),
+        eq(group.type, GroupType.Section),
         eq(group.active, true),
         inArray(section.voice, voices),
         lte(directMembership.startDate, date),

@@ -2,22 +2,22 @@ import "server-only"
 
 import { and, eq, sql } from "drizzle-orm"
 import { appointmentGrant, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
-import { GROUP_POLICIES, type GroupType, type IsoDate, organisationYearPeriod } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, type IsoDate, organisationYearPeriod } from "@/core/org-structure"
 import { createOrganisationGroup } from "./appointments"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
 const ANNUAL_GROUP_NAMES: Partial<Record<GroupType, string>> = {
-  Board: "Styret",
-  Gigmästeri: "Gigmästeriet",
-  Sexmästeri: "Sexmästeriet",
-  Konsertmästeri: "Konsertmästeriet",
-  Rekryteringskommitté: "Rekryteringskommittén",
-  Turnékommitté: "Turnékommittén",
-  Valberedning: "Valberedningen",
-  Webmästeri: "Webmästeriet",
-  Arkivarie: "Arkivariet",
-  Utantillkommitté: "Utantillkommittén"
+  [GroupType.Board]: "Styret",
+  [GroupType.Gigmästeri]: "Gigmästeriet",
+  [GroupType.Sexmästeri]: "Sexmästeriet",
+  [GroupType.Konsertmästeri]: "Konsertmästeriet",
+  [GroupType.Rekryteringskommitté]: "Rekryteringskommittén",
+  [GroupType.Turnékommitté]: "Turnékommittén",
+  [GroupType.Valberedning]: "Valberedningen",
+  [GroupType.Webmästeri]: "Webmästeriet",
+  [GroupType.Arkivarie]: "Arkivariet",
+  [GroupType.Utantillkommitté]: "Utantillkommittén"
 }
 
 /** Prepares the required annual set, reusing concrete identities; never copies participation. */
@@ -40,7 +40,7 @@ export function prepareOrganisationYear(database: OrgStructureDatabase, year: nu
         const label = ANNUAL_GROUP_NAMES[type] ?? type
         const result = await createOrganisationGroup(tx, {
           name: `${label} ${String(year).slice(-2)}/${String(year + 1).slice(-2)}`,
-          type: type as Exclude<GroupType, "Choir" | "Section">,
+          type: type as Exclude<GroupType, GroupType.Choir | GroupType.Section>,
           organisationYear: year
         })
         if (!result.success) throw new RuleViolation(result.error)
@@ -92,7 +92,12 @@ export function updateOrganisationGroup(
     const structural =
       current.type !== input.type || current.choirId !== choirId || current.organisationYear !== organisationYear
     if (!current.active && structural) throw new RuleViolation("group-archived")
-    if (current.type === "Choir" || current.type === "Section" || input.type === "Choir" || input.type === "Section") {
+    if (
+      current.type === GroupType.Choir ||
+      current.type === GroupType.Section ||
+      input.type === GroupType.Choir ||
+      input.type === GroupType.Section
+    ) {
       if (structural) throw new RuleViolation("choir-created-with-sections")
     } else if (structural) {
       const [dependencies] = await tx
@@ -115,12 +120,12 @@ export function updateOrganisationGroup(
         const [choir] = await tx
           .select()
           .from(group)
-          .where(and(eq(group.id, choirId), eq(group.type, "Choir"), eq(group.active, true)))
+          .where(and(eq(group.id, choirId), eq(group.type, GroupType.Choir), eq(group.active, true)))
           .for("share")
         if (!choir) throw new RuleViolation("choir-not-found")
       }
     }
-    if (current.active && current.type !== "Choir" && current.type !== "Section")
+    if (current.active && current.type !== GroupType.Choir && current.type !== GroupType.Section)
       await requireChoirTeamAvailable(tx, { type: input.type, choirId, exceptGroupId: current.id })
     await tx
       .update(group)

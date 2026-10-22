@@ -2,6 +2,7 @@ import "server-only"
 
 import { and, eq, gt, inArray, isNull, or } from "drizzle-orm"
 import { appointmentGrant, choir, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { GroupType } from "@/core/org-structure"
 import { contains, type Voice } from "@/features/voice/model"
 import { type OrgStructureDatabase, RuleViolation, runOrgStructureCommand } from "./operation"
 
@@ -39,7 +40,7 @@ export function createChoir(database: OrgStructureDatabase, input: CreateChoirIn
 
     const [choirGroup] = await tx
       .insert(group)
-      .values({ name: input.name.trim(), type: "Choir", choirId: null })
+      .values({ name: input.name.trim(), type: GroupType.Choir, choirId: null })
       .returning({ id: group.id })
     if (!choirGroup) throw new Error("Choir creation did not return a record.")
     await tx.insert(choir).values({ groupId: choirGroup.id })
@@ -48,7 +49,7 @@ export function createChoir(database: OrgStructureDatabase, input: CreateChoirIn
     for (const definition of input.sections) {
       const [created] = await tx
         .insert(group)
-        .values({ name: definition.name.trim(), type: "Section", choirId: choirGroup.id })
+        .values({ name: definition.name.trim(), type: GroupType.Section, choirId: choirGroup.id })
         .returning({ id: group.id })
       if (!created) throw new Error("Section creation did not return a record.")
       await tx.insert(section).values({ groupId: created.id, voice: definition.voice })
@@ -68,12 +69,12 @@ export function archiveGroup(database: OrgStructureDatabase, groupId: string) {
     const [row] = await tx.select().from(group).where(eq(group.id, groupId)).for("update")
     if (!row) throw new RuleViolation("group-not-found")
     if (!row.active) throw new RuleViolation("group-archived")
-    if (row.type === "Section") throw new RuleViolation("section-archived-with-choir")
+    if (row.type === GroupType.Section) throw new RuleViolation("section-archived-with-choir")
 
     const affected = await tx
       .select({ id: group.id })
       .from(group)
-      .where(or(eq(group.id, groupId), row.type === "Choir" ? eq(group.choirId, groupId) : undefined))
+      .where(or(eq(group.id, groupId), row.type === GroupType.Choir ? eq(group.choirId, groupId) : undefined))
       .for("update")
     const ids = affected.map(({ id }) => id)
     const date = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm" }).format(new Date())
@@ -90,11 +91,11 @@ export function archiveGroup(database: OrgStructureDatabase, groupId: string) {
       .limit(1)
     if (dependent) throw new RuleViolation("membership-dependency")
     await tx.update(group).set({ active: false }).where(eq(group.id, groupId))
-    if (row.type === "Choir") {
+    if (row.type === GroupType.Choir) {
       await tx
         .update(group)
         .set({ active: false })
-        .where(and(eq(group.choirId, groupId), eq(group.type, "Section")))
+        .where(and(eq(group.choirId, groupId), eq(group.type, GroupType.Section)))
     }
   })
 }

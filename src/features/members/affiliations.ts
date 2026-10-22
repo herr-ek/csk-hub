@@ -1,4 +1,5 @@
 import type { EffectiveGroup, EffectivePosition } from "@/core/org-structure"
+import { GroupType } from "@/core/org-structure"
 
 export type MemberGroup = EffectiveGroup
 
@@ -14,22 +15,23 @@ export function buildAffiliations(memberships: MemberGroup[], holdings: MemberPo
     positions.filter((holding) => holding.affiliationGroups.some((context) => context.id === groupId))
   const withPositions = (group: MemberGroup) => ({ ...group, positions: groupPositions(group.groupId) })
   const choirs = activeGroups
-    .filter((group) => group.type === "Choir")
+    .filter((group) => group.type === GroupType.Choir)
     .map((choir) => ({
       ...withPositions(choir),
       section:
         activeGroups
-          .filter((group) => group.type === "Section" && group.choirId === choir.groupId)
+          .filter((group) => group.type === GroupType.Section && group.choirId === choir.groupId)
           .map(withPositions)[0] ?? null,
       groups: activeGroups
-        .filter((group) => group.choirId === choir.groupId && group.type !== "Section")
+        .filter((group) => group.choirId === choir.groupId && group.type !== GroupType.Section)
         .map(withPositions)
     }))
-  const groups = activeGroups.filter((group) => !group.choirId && group.type !== "Choir").map(withPositions)
+  const groups = activeGroups.filter((group) => !group.choirId && group.type !== GroupType.Choir).map(withPositions)
   // Archiving a Choir does not archive its other Groups. Keep those active Memberships visible.
   const otherGroups = activeGroups
     .filter(
-      (group) => group.choirId && group.type !== "Section" && !choirs.some((choir) => choir.groupId === group.choirId)
+      (group) =>
+        group.choirId && group.type !== GroupType.Section && !choirs.some((choir) => choir.groupId === group.choirId)
     )
     .map(withPositions)
   const summary = positions.map((holding) => ({

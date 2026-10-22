@@ -3,6 +3,7 @@ import { and, eq, isNull } from "drizzle-orm"
 import { Client } from "pg"
 import { user } from "@/core/db/schema/auth"
 import { appointmentGrant, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { GroupType, PositionCode } from "@/core/org-structure"
 import {
   correctAnnualAppointment,
   correctFluidAppointment,
@@ -51,9 +52,9 @@ describe.skipIf(!database)("seedGroups", () => {
         .from(directMembership)
         .innerJoin(group, eq(group.id, directMembership.groupId))
         .where(and(eq(directMembership.userId, userId), isNull(directMembership.endDate)))
-      expect(rows.map(({ type }) => type).sort()).toEqual(["Choir", "Section"])
+      expect(rows.map(({ type }) => type).sort()).toEqual([GroupType.Choir, GroupType.Section])
       // Every seeded singer gets a division, even in a Section that sings a whole family.
-      expect(rows.find(({ type }) => type === "Section")?.voice).toMatch(/^[SATB][12]$/)
+      expect(rows.find(({ type }) => type === GroupType.Section)?.voice).toMatch(/^[SATB][12]$/)
     }
 
     expect(await seedGroups(t.db)).toEqual({ created: [], placed: 0 })
@@ -70,7 +71,7 @@ describe.skipIf(!database)("seedGroups", () => {
       .from(directMembership)
       .innerJoin(group, eq(group.id, directMembership.groupId))
       .innerJoin(section, eq(section.groupId, group.id))
-      .where(and(eq(directMembership.userId, seededUserId), eq(group.type, "Section")))
+      .where(and(eq(directMembership.userId, seededUserId), eq(group.type, GroupType.Section)))
     if (!placement) throw new Error("Missing seeded Section Membership")
     const correctedStart = "2021-09-01"
     const correctedVoice = placement.voice.length === 1 ? `${placement.voice}2` : placement.voice
@@ -89,7 +90,7 @@ describe.skipIf(!database)("seedGroups", () => {
     const holderCorrection = await correctAnnualAppointment(t.db, {
       appointmentId,
       userId: SEED_USERS[99]?.id as string,
-      positionCode: "ordforande",
+      positionCode: PositionCode.Ordforande,
       contextGroupId: appointment.contextGroupId,
       organisationYear: 2026,
       startDate: "2026-09-01",
@@ -107,7 +108,7 @@ describe.skipIf(!database)("seedGroups", () => {
     if (!gigAppointment) throw new Error("Missing seeded Gigledare appointment")
     const alternate = await createOrganisationGroup(t.db, {
       name: `Edited GigGroup ${crypto.randomUUID()}`,
-      type: "GigGroup"
+      type: GroupType.GigGroup
     })
     if (!alternate.success) throw new Error(`Could not create alternate GigGroup: ${alternate.error}`)
     expect(
@@ -121,7 +122,7 @@ describe.skipIf(!database)("seedGroups", () => {
       await correctFluidAppointment(t.db, {
         appointmentId: gigAppointmentId,
         userId: gigAppointment.userId,
-        positionCode: "gigledare",
+        positionCode: PositionCode.Gigledare,
         contextGroupId: alternate.data.id,
         startDate: "2026-07-01",
         endDate: null
@@ -180,16 +181,16 @@ describe.skipIf(!database)("seedGroups", () => {
     const [choir] = await t.db
       .select()
       .from(group)
-      .where(and(eq(group.name, "DK"), eq(group.type, "Choir")))
+      .where(and(eq(group.name, "DK"), eq(group.type, GroupType.Choir)))
     const [sectionRow] = await t.db
       .select()
       .from(group)
-      .where(and(eq(group.name, "DKS1"), eq(group.type, "Section")))
-    const [continuing] = await t.db.select().from(group).where(eq(group.type, "Föräldramötet"))
+      .where(and(eq(group.name, "DKS1"), eq(group.type, GroupType.Section)))
+    const [continuing] = await t.db.select().from(group).where(eq(group.type, GroupType.Föräldramötet))
     if (!choir || !sectionRow || !continuing) throw new Error("Missing reference Groups")
     expect(choir.id).toBe(referenceChoirId("DK"))
     expect(sectionRow.id).toBe(referenceSectionId("DK", "DKS1"))
-    expect(continuing.id).toBe(referenceContinuingGroupId("Föräldramötet"))
+    expect(continuing.id).toBe(referenceContinuingGroupId(GroupType.Föräldramötet))
     expect((await renameGroup(t.db, choir.id, "Edited DK")).success).toBe(true)
     expect((await renameGroup(t.db, sectionRow.id, "Edited DKS1")).success).toBe(true)
     expect((await renameGroup(t.db, continuing.id, "Edited Parents Meeting")).success).toBe(true)
@@ -214,13 +215,13 @@ describe.skipIf(!database)("seedGroups", () => {
     expect(await t.db.select().from(appointmentGrant)).toEqual(grantsBefore)
     expect(await t.db.select().from(section)).toEqual(sectionsBefore)
     expect(await t.db.select().from(group).where(eq(group.id, choir.id))).toMatchObject([
-      expect.objectContaining({ name: "Edited DK", type: "Choir" })
+      expect.objectContaining({ name: "Edited DK", type: GroupType.Choir })
     ])
     expect(await t.db.select().from(group).where(eq(group.id, sectionRow.id))).toMatchObject([
-      expect.objectContaining({ name: "Edited DKS1", type: "Section", choirId: choir.id })
+      expect.objectContaining({ name: "Edited DKS1", type: GroupType.Section, choirId: choir.id })
     ])
     expect(await t.db.select().from(group).where(eq(group.id, continuing.id))).toMatchObject([
-      expect.objectContaining({ name: "Edited Parents Meeting", type: "Föräldramötet" })
+      expect.objectContaining({ name: "Edited Parents Meeting", type: GroupType.Föräldramötet })
     ])
   })
 })

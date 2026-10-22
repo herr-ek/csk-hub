@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
 import { directMembership } from "@/core/db/schema/org-structure"
+import { PositionCode } from "@/core/org-structure"
 import { createOrgStructureTestDatabase } from "../test-support"
 
 const database = await createOrgStructureTestDatabase()
@@ -43,14 +44,14 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
       IDLE,
       form({
         userId,
-        positionCode: "dirigent",
+        positionCode: PositionCode.Dirigent,
         contextGroupId: choir,
         startDate: "2055-06-15"
       })
     )
     expect(assigned).toMatchObject({ status: "success" })
     const [appointment] = await listAppointmentsForGroup(t.db, choir)
-    expect(appointment).toMatchObject({ positionCode: "dirigent", endDate: null })
+    expect(appointment).toMatchObject({ positionCode: PositionCode.Dirigent, endDate: null })
     const appointmentId = appointment?.id ?? ""
 
     expect(
@@ -59,7 +60,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
         form({
           appointmentId,
           userId,
-          positionCode: "notfiskal",
+          positionCode: PositionCode.Notfiskal,
           contextGroupId: choir,
           startDate: "2055-07-01",
           lastDay: ""
@@ -67,7 +68,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
       )
     ).toMatchObject({ status: "success" })
     expect(await listAppointmentsForGroup(t.db, choir)).toMatchObject([
-      { userId, positionCode: "notfiskal", startDate: "2055-07-01", endDate: null }
+      { userId, positionCode: PositionCode.Notfiskal, startDate: "2055-07-01", endDate: null }
     ])
 
     revalidatePath.mockClear()
@@ -77,14 +78,16 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
         form({
           appointmentId,
           userId,
-          positionCode: "dirigent",
+          positionCode: PositionCode.Dirigent,
           contextGroupId: otherChoir,
           startDate: "2055-07-01",
           lastDay: ""
         })
       )
     ).toEqual({ status: "error", error: "membership-dependency" })
-    expect(await listAppointmentsForGroup(t.db, choir)).toMatchObject([{ userId, positionCode: "notfiskal" }])
+    expect(await listAppointmentsForGroup(t.db, choir)).toMatchObject([
+      { userId, positionCode: PositionCode.Notfiskal }
+    ])
     expect(revalidatePath).not.toHaveBeenCalled()
 
     const [member] = await t.db
