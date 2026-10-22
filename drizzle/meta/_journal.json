@@ -120,6 +120,41 @@
       "when": 1791997747561,
       "tag": "0016_post-drafts-edits",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792531280222,
+      "tag": "0017_expand-organisation-appointments",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792606667787,
+      "tag": "0018_retire-legacy-organisation-model",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792667033110,
+      "tag": "0019_derive-fixed-group-labels",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792680716174,
+      "tag": "0020_derive-appointment-memberships",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792689644536,
+      "tag": "0021_derive-annual-group-lifecycle",
+      "breakpoints": true
     }
   ]
 }

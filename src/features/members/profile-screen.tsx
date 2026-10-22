@@ -1,8 +1,9 @@
 import { ArrowLeft, Award, MessageCircle, Music2, PencilLine, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
-import { conversationPath } from "@/core/navigation/navigation-utils"
+import { conversationPath, memberCareerPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { positionCodeKey } from "@/core/org-structure"
 import { StartConversationDialog } from "@/features/messaging"
 import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
@@ -69,6 +70,13 @@ async function ProfileActions({ data }: { data: ProfileData }) {
   const t = await getTranslations("MemberProfiles")
   return (
     <div className="flex flex-wrap gap-2">
+      <Link
+        href={profile.isOwn ? ROUTES.accountCareer : memberCareerPath(profile.id)}
+        className={buttonVariants({ variant: "outline" })}
+      >
+        <Award className="size-4" aria-hidden="true" />
+        {t(profile.isOwn ? "myCareer" : "career")}
+      </Link>
       {canEditProfile ? (
         <Link href={ROUTES.accountEditProfile} className={buttonVariants()}>
           <PencilLine className="size-4" aria-hidden="true" />
@@ -98,7 +106,10 @@ async function ProfileActions({ data }: { data: ProfileData }) {
 
 async function ProfilePositions({ positions }: { positions: Profile["positions"] }) {
   if (positions.length === 0) return null
-  const t = await getTranslations("MemberProfiles")
+  const [t, positionLabel] = await Promise.all([
+    getTranslations("MemberProfiles"),
+    getTranslations("Groups.positionLabels")
+  ])
   return (
     <section aria-labelledby="positions-title">
       <h2 id="positions-title" className="mb-4 flex items-center gap-2 font-heading text-xl font-semibold">
@@ -109,13 +120,14 @@ async function ProfilePositions({ positions }: { positions: Profile["positions"]
         {positions.map((position) => (
           <Card key={position.id} size="sm">
             <CardContent>
-              <h3 className="font-semibold">{position.name}</h3>
+              <h3 className="font-semibold">
+                {position.positionCode ? positionLabel(positionCodeKey(position.positionCode)) : position.name}
+              </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {position.groups
-                  .map((group) =>
-                    group.choirName ? t("groupContext", { group: group.name, choir: group.choirName }) : group.name
-                  )
-                  .join(", ")}
+                {[
+                  position.contextName,
+                  ...position.groups.filter((group) => group.id !== position.contextGroupId).map((group) => group.name)
+                ].join(", ")}
               </p>
             </CardContent>
           </Card>
@@ -164,7 +176,7 @@ async function ProfileGroups({ groups, otherGroups }: Pick<Profile, "groups" | "
           <h2 id="other-groups-title" className="mb-4 font-heading text-xl font-semibold">
             {t("otherGroups")}
           </h2>
-          <MemberGroupsCard groups={otherGroups} showContext />
+          <MemberGroupsCard groups={otherGroups} />
         </section>
       ) : null}
     </>

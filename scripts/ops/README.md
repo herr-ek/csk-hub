@@ -11,11 +11,11 @@ bun run ops status               # local and production migration status side by
 bun run ops migrate              # apply pending migrations locally
 bun run ops studio               # Drizzle Studio against the local database
 bun run ops grant-admin <email>  # make an existing user an admin
-bun run ops reference-data       # Choirs, Sections, Styret and Positions; also with --prod
+bun run ops reference-data       # Choirs, Sections and fixed concrete Groups; also with --prod
 bun run ops reset                # erase the local database, migrate it and add the reference data
 bun run ops seed-admin           # local admin account
 bun run ops seed-users           # 100 verified local example accounts, including three Admins
-bun run ops seed-groups          # balanced placements, groups, Positions and their history
+bun run ops seed-groups          # balanced placements, direct Memberships, appointments and history
 bun run ops seed-posts           # 24 published example Posts, after seed-users
 bun run ops seed-demo            # reference data + all of the above, after migrating
 
@@ -47,10 +47,9 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
   regain admin access, and it is allowed in production because it creates no account
   and no credentials. The user must already exist; their existing roles are kept, and
   a deactivated user stays deactivated.
-- `reference-data` against production also requires typing `prod`. It is allowed there
-  because every environment needs the same org structure (the Choirs, their Sections,
-  Styret, the Gigmästeri and the Position catalogue), and it fabricates no people. It only creates what
-  is missing, matching existing groups and Positions by name, in one transaction.
+- `reference-data` against production also requires typing `prod`. It creates only the shared
+  organisation structure, matching existing Groups by Choir, type, and annual identity. Formal
+  Positions are fixed in code; reference data does not create or edit a Position catalogue.
 - `reset` refuses outright with `--prod`, and refuses any `POSTGRES_URL` that is not a
   local database. Locally it asks before erasing; `--yes` skips the question, and without a
   terminal it refuses instead of waiting. It drops the `public` and `drizzle` schemas, runs
@@ -84,7 +83,9 @@ TLS verification follows the shared policy in `src/core/db/tls.ts`; see
 
 After `bun run ops migrate`, run `bun run ops seed-demo`. It creates the shared reference
 data if needed, then seeds people, placements, group history and Posts in one transaction.
-It never resets the database. The individual seed commands remain available; run
+The demo is a reproducible snapshot dated 22 October 2026; ordinary reference-data
+seeding follows the current organisational year. It never resets the database.
+The individual seed commands remain available; run
 `reference-data`, `seed-users`, `seed-groups`, then `seed-posts` for the same dataset.
 
 On an empty database the demo contains:
@@ -97,13 +98,22 @@ On an empty database the demo contains:
   the seed balances around existing placements rather than moving anyone.
 - Varied Choir join dates from 2021–2025, Section and division changes, independent
   self-reported Voice capabilities, and some Users who have declared none.
-- CSK-wide and Choir-owned committees, gig groups, roddgrupper, festgrupper and rephelgsgrupper,
-  with helpers, former members, rejoins and Position handovers. Six additional groups are
-  archived, including an old Board and completed concert/rephelg projects.
-- Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare; a Stämförälder for each
-  Section; a current Board with one elected Position per member. Board offices are linked
-  to their responsibility groups, and each Choir's Gigmästare also serves in the Gigmästeri,
-  respecting the Position catalogue's Group limits. Some singers hold multiple non-Board Positions.
+- Complete annual group sets for archived years 24/25 and 25/26, current year 26/27,
+  and prepared year 27/28. Fixed group labels derive from type, year and owning Choir;
+  only explicitly named groups store names.
+- Seven current gig groups with fifteen singers each, and one retired gig group with
+  fifteen retained members. Those singers also belong to Choirs and current gig groups;
+  the archived group keeps open-ended memberships and its Gigledare appointment.
+- Nine populated Choir teams (roddgrupper, festgrupper and rephelgsgrupper), direct
+  committee Helpers, and singer placements across all twelve Sections.
+- Fixed-code appointments for Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare,
+  Stämföräldrar for all Sections, and Board roles including Sekreterare, 1:a Konsertmästare,
+  CSK Gigmästare, Sexmästare, Sexmästarinna and Turnékommitté Ekonomiskt Ansvarig. The Board
+  includes a vacancy, a presidential handover and a same-person renewal. Choir representatives
+  stay in their own Choir contexts while receiving the corresponding annual committee grants.
+- Fluid Gigledare, Choir appointment handovers, and Helpers before and after a Sexmästare
+  appointment. Seeded appointments and direct Memberships use stable identities so reruns
+  preserve later administrator corrections.
 - 24 fictional Swedish Posts with paragraphs, headings, lists, emphasis and blockquotes,
   published by the example Admins between August 2025 and October 2026. They use the editor's
   document format and appear in the shared News feed. Their event details are demo content.
@@ -111,5 +121,12 @@ On an empty database the demo contains:
 Stable identities make these seeds repeatable: they insert missing fixtures and keep existing
 passwords, profile edits and Post edits. A conflicting existing Position assignment fails the
 demo transaction rather than displacing its holder. Direct scripts also enforce the local-only
-database guard. To return to the original demo after editing it, deliberately run
-`bun run ops reset`, then `bun run ops seed-demo`.
+database guard.
+
+## Fresh local organisation
+
+Ticket 08 resets the explicitly disposable configured local database after the final schema is
+ready, then seeds the redesigned examples. No existing-data conversion or audit step is part of
+this workflow. To intentionally recreate a local demo later, run `bun run ops reset`, then
+`bun run ops seed-demo`. Reset refuses a production target and refuses non-local `POSTGRES_URL`
+values; seed commands never reset data.
