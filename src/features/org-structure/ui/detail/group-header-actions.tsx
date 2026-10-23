@@ -3,7 +3,7 @@
 import { useTranslations } from "@/core/i18n/translations"
 import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
-import { CommandDialog } from "../command-dialog"
+import { GroupCommandDialog } from "../group-command-dialog"
 import { archiveGroupAction, renameGroupAction } from "../groups/actions"
 import { NAME_MAX_LENGTH } from "../limits"
 import type { GroupDetail } from "./query"
@@ -15,7 +15,7 @@ export function GroupHeaderActions({ group }: { group: GroupDetail["group"] }) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <CommandDialog
+      <GroupCommandDialog
         trigger={
           <Button type="button" variant="outline">
             {t("rename")}
@@ -27,9 +27,9 @@ export function GroupHeaderActions({ group }: { group: GroupDetail["group"] }) {
       >
         <input type="hidden" name="groupId" value={group.id} />
         <InputField label={t("name")} name="name" defaultValue={group.name} required maxLength={NAME_MAX_LENGTH} />
-      </CommandDialog>
+      </GroupCommandDialog>
       {archivable ? (
-        <CommandDialog
+        <GroupCommandDialog
           trigger={
             <Button type="button" variant="destructive">
               {t("archive")}
@@ -42,7 +42,7 @@ export function GroupHeaderActions({ group }: { group: GroupDetail["group"] }) {
           destructive
         >
           <input type="hidden" name="groupId" value={group.id} />
-        </CommandDialog>
+        </GroupCommandDialog>
       ) : null}
     </div>
   )

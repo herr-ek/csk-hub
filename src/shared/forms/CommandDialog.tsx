@@ -10,7 +10,6 @@ import {
   useRef,
   useState
 } from "react"
-import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import {
   Dialog,
@@ -23,24 +22,37 @@ import {
 } from "@/shared/ui/base/dialog"
 import { FieldError, FieldGroup } from "@/shared/ui/base/field"
 import { toast } from "@/shared/ui/base/toast"
-import { type GroupCommandError, type GroupCommandState, IDLE } from "./command-state"
+import { type CommandState, IDLE } from "./command-state"
 
-type GroupAction = (state: GroupCommandState, formData: FormData) => Promise<GroupCommandState>
-
-type CommandDialogProps = {
+export type CommandDialogProps<Error extends string> = {
   /** The button that opens the dialog. */
   trigger: ReactElement
   title: string
   description?: ReactNode
-  action: GroupAction
+  action: (state: CommandState<Error>, formData: FormData) => Promise<CommandState<Error>>
   submitLabel: string
+  /** Shown on the submit button while the command runs. */
+  pendingLabel: string
+  cancelLabel: string
+  /** The toast shown when the command succeeds. */
+  successMessage: string
+  /** The message shown for each way the command can fail. */
+  errorMessage: (error: Error) => string
   destructive?: boolean
   /** Hidden identifiers and the form's fields. */
   children: ReactNode
 }
 
-/** A dialog holding one admin groups command: it shows the command's violation, or closes on success. */
-export function CommandDialog({ trigger, title, description, ...form }: CommandDialogProps) {
+/**
+ * A dialog holding one command: it shows the command's failure, or closes on success. Features
+ * wrap it to fill in their own copy.
+ */
+export function CommandDialog<Error extends string>({
+  trigger,
+  title,
+  description,
+  ...form
+}: CommandDialogProps<Error>) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -58,16 +70,17 @@ export function CommandDialog({ trigger, title, description, ...form }: CommandD
   )
 }
 
-function CommandForm({
+function CommandForm<Error extends string>({
   action,
   submitLabel,
+  pendingLabel,
+  cancelLabel,
+  successMessage,
+  errorMessage,
   destructive,
   children,
   onSuccess
-}: Omit<CommandDialogProps, "trigger" | "title" | "description"> & { onSuccess: () => void }) {
-  const t = useTranslations("Groups")
-  const common = useTranslations("Common")
-  const errorMessage = useCommandErrorMessage()
+}: Omit<CommandDialogProps<Error>, "trigger" | "title" | "description"> & { onSuccess: () => void }) {
   const [state, formAction, pending] = useActionState(action, IDLE)
   const handled = useRef<number | null>(null)
 
@@ -75,12 +88,12 @@ function CommandForm({
     // The dialog stays mounted while it animates closed, so each success is handled once.
     if (state.status !== "success" || handled.current === state.completedAt) return
     handled.current = state.completedAt
-    toast.add({ type: "success", title: t("saved") })
+    toast.add({ type: "success", title: successMessage })
     onSuccess()
-  }, [state, onSuccess, t])
+  }, [state, onSuccess, successMessage])
 
   // Submitted by hand rather than through `action`: React resets an action form's fields when the
-  // action settles, which would silently revert a choice the Admin is about to correct after an error.
+  // action settles, which would silently revert a choice the user is about to correct after an error.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
@@ -95,16 +108,10 @@ function CommandForm({
       </FieldGroup>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" variant={destructive ? "destructive" : "default"} disabled={pending}>
-          {pending ? t("saving") : submitLabel}
+          {pending ? pendingLabel : submitLabel}
         </Button>
-        <DialogClose render={<Button type="button" variant="ghost" />}>{common("cancel")}</DialogClose>
+        <DialogClose render={<Button type="button" variant="ghost" />}>{cancelLabel}</DialogClose>
       </div>
     </form>
   )
-}
-
-/** A translated message for every way an admin groups command can fail. */
-export function useCommandErrorMessage() {
-  const t = useTranslations("Groups.errors")
-  return (error: GroupCommandError) => t(error)
 }

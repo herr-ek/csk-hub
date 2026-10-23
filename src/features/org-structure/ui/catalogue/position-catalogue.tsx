@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Field, FieldDescription, FieldLegend, FieldSet } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
 import type { GroupType } from "../../model"
-import { CommandDialog } from "../command-dialog"
+import { GroupCommandDialog } from "../group-command-dialog"
 import { NAME_MAX_LENGTH } from "../limits"
 import { createPositionAction, updatePositionAction } from "./actions"
 import type { CataloguePosition, LimitGroup, PositionCatalogueData } from "./query"
@@ -49,7 +49,7 @@ export function PositionCatalogue({ catalogue }: { catalogue: PositionCatalogueD
           <CardTitle>{t("title")}</CardTitle>
           <CardDescription>{t("description")}</CardDescription>
         </div>
-        <CommandDialog
+        <GroupCommandDialog
           trigger={
             <Button type="button" variant="outline">
               {t("create")}
@@ -60,7 +60,7 @@ export function PositionCatalogue({ catalogue }: { catalogue: PositionCatalogueD
           submitLabel={t("create")}
         >
           <PositionFields groups={groups} />
-        </CommandDialog>
+        </GroupCommandDialog>
       </CardHeader>
       <CardContent>
         <Table>
@@ -94,7 +94,7 @@ export function PositionCatalogue({ catalogue }: { catalogue: PositionCatalogueD
                   ) : null}
                 </TableCell>
                 <TableCell className="text-right">
-                  <CommandDialog
+                  <GroupCommandDialog
                     trigger={
                       <Button type="button" variant="ghost" size="sm">
                         {t("edit")}
@@ -107,7 +107,7 @@ export function PositionCatalogue({ catalogue }: { catalogue: PositionCatalogueD
                   >
                     <input type="hidden" name="positionId" value={position.id} />
                     <PositionFields position={position} groups={groups} />
-                  </CommandDialog>
+                  </GroupCommandDialog>
                 </TableCell>
               </TableRow>
             ))}

@@ -3,16 +3,18 @@ import { Client } from "pg"
 import { assertLocalDatabase } from "./ops/guards"
 import { insertReferenceData } from "./ops/reference-data"
 import { SEED_PASSWORD, type SeedDatabase } from "./ops/seed-data"
+import { seedEvents } from "./seed-events"
 import { seedGroups } from "./seed-groups"
 import { seedPosts } from "./seed-posts"
 import { seedUsers } from "./seed-users"
 
-/** Seeds people, placements, group history and Posts together; any fixture conflict rolls back this demo transaction. */
+/** Seeds people, placements, group history, Posts and Events together; any fixture conflict rolls back this demo transaction. */
 export async function seedDemo(database: SeedDatabase) {
   return database.transaction(async (tx) => ({
     users: await seedUsers(tx),
     groups: await seedGroups(tx),
-    posts: await seedPosts(tx)
+    posts: await seedPosts(tx),
+    events: await seedEvents(tx)
   }))
 }
 
@@ -25,7 +27,7 @@ if (import.meta.main) {
     await insertReferenceData(client)
     const result = await seedDemo(db)
     console.log(
-      `Created ${result.users.created} users, ${result.groups.created.length} groups and ${result.posts.created} Posts; placed ${result.groups.placed} singers.`
+      `Created ${result.users.created} users, ${result.groups.created.length} groups, ${result.posts.created} Posts and ${result.events.created.length} Events; placed ${result.groups.placed} singers.`
     )
     console.log(
       `Login: singer-001@example.com … singer-100@example.com. Password: ${SEED_PASSWORD}. First three: Admins.`

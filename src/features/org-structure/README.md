@@ -91,7 +91,7 @@ ui/
   detail/      one group's Members and Position holders, with their history
   catalogue/   the Positions, the group types each is allowed in, and any limit to groups
   group-summaries.ts, group-list.tsx   what both overviews show of a group
-  command-dialog.tsx, run-command.ts   the shared shape of every admin command
+  group-command-dialog.tsx, run-command.ts   the shared shape of every admin command
 ```
 
 Every Server Action goes through `runGroupCommand`: `requireAdmin`, validate the form, run one

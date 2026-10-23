@@ -49,7 +49,8 @@ _Avoid_: Article, news item, blog post, announcement email
 A Post that is not published, visible only to its author — whether it was never
 published or has been Unpublished. Drafts are never shared; joint writing happens outside
 the Hub. An author who no longer wants a Draft discards it: it is gone from every view, but,
-like every Post, never deleted.
+like every Post, never deleted. An Event not yet published is an Event Draft, which is a
+different thing.
 _Avoid_: Unpublished post, hidden post, shared draft, deleted draft
 
 **Unpublish**:
@@ -123,6 +124,59 @@ A member holding a Position in a Group over a period of their own, independent o
 Membership. Each Position has one holder per Group at a time, while one person may hold
 several. Only a current member can hold a Position, and leaving the Group ends it.
 _Avoid_: Officer, role owner
+
+## Events
+
+**Event**:
+A dated entry in the CSK calendar: anything the choirs could put in their calendar, from a
+rehearsal or gig to a körmöte or a room Booking. Events are flat, with no nesting. An Event's
+own page in the Hub is its Event page.
+_Avoid_: Activity, appointment, Event detail (for the page)
+
+**Event type**:
+The fixed kind of an Event: Rehearsal, Gig, Concert, Social, Rephelg, Körmöte, Booking,
+Meeting or Other. A Körmöte is its own type; Meeting covers other meetings, such as the Board's.
+Rehearsal, Gig and Social carry fields of their own.
+_Avoid_: Category, tag
+
+**Event Draft**:
+An Event that is not yet published, visible only to those who may edit it. Publishing makes it
+visible to its Audience, and a published Event never becomes a Draft again; it is cancelled
+instead, and stays visible, struck through. Distinct from a Post's Draft.
+_Avoid_: Unpublished event, hidden event
+
+**Organiser group**:
+The Group responsible for an Event, such as the Gigmästeri for a gig or the Sexmästeri for a
+sittning. It decides who may edit the Event, never who it is for.
+_Avoid_: Host, owner, Audience
+
+**Target**:
+One rule for who an Event is for: a Group, a Voice family, or both together, as in "B in KK".
+Several Targets add up; an Event with none is for everyone in CSK.
+_Avoid_: Invitee, recipient, filter
+
+**Audience**:
+The Users an Event is for, worked out from its Targets and the Memberships on the Event's
+date, never stored. Without Targets it is every User with a Choir Membership on that date.
+_Avoid_: Invitees, guest list, attendees
+
+**Participation mode**:
+What an Event collects from its Audience in advance: nothing, a Response (Yes, No or Maybe,
+or strictly Yes or No with attendance expected), or a Registration from whoever wants to come.
+Each Event type has a default the organiser may override.
+_Avoid_: RSVP type, invitation type
+
+**Event detail**:
+A labelled value an organiser shows on an Event, such as "Dress code: Kavaj" or "Bring: Music
+folder". Information to the Audience, in the organiser's order; never something the Hub
+interprets, such as a time or a place.
+_Avoid_: Field, property, Event page
+
+**Location**:
+A reusable venue an Event is held at, such as Repsalen, with an address and a map link. An
+Event may name a Location, describe its place in free text, or both. Locations are archived,
+never deleted.
+_Avoid_: Venue, room, address
 
 ## Messaging
 

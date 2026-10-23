@@ -88,6 +88,7 @@ A feature may carry a `README.md` at its root for rules a reader cannot infer fr
 
 - [`src/features/rich-text/README.md`](../src/features/rich-text/README.md): how a feature consumes the editor, and how to add a node or mark to it — three lists and a stylesheet, no consumer changes.
 - [`src/features/org-structure/README.md`](../src/features/org-structure/README.md): the rules the org-structure module enforces because the database cannot, and why application code writes its tables only through it.
+- [`src/features/events/README.md`](../src/features/events/README.md): the rules the events module enforces because the database cannot, and why its commands check no permissions.
 
 ## Dependency Direction
 

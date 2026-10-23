@@ -17,6 +17,7 @@ bun run ops seed-admin           # local admin account
 bun run ops seed-users           # 100 verified local example accounts, including three Admins
 bun run ops seed-groups          # balanced placements, groups, Positions and their history
 bun run ops seed-posts           # 24 published example Posts, after seed-users
+bun run ops seed-events          # example Events, Locations and a gig group, after seed-groups
 bun run ops seed-demo            # reference data + all of the above, after migrating
 
 bun run ops --prod               # the menu, targeting production
@@ -83,9 +84,9 @@ TLS verification follows the shared policy in `src/core/db/tls.ts`; see
 ## Local demo data
 
 After `bun run ops migrate`, run `bun run ops seed-demo`. It creates the shared reference
-data if needed, then seeds people, placements, group history and Posts in one transaction.
+data if needed, then seeds people, placements, group history, Posts and Events in one transaction.
 It never resets the database. The individual seed commands remain available; run
-`reference-data`, `seed-users`, `seed-groups`, then `seed-posts` for the same dataset.
+`reference-data`, `seed-users`, `seed-groups`, `seed-posts`, then `seed-events` for the same dataset.
 
 On an empty database the demo contains:
 
@@ -107,6 +108,10 @@ On an empty database the demo contains:
 - 24 fictional Swedish Posts with paragraphs, headings, lists, emphasis and blockquotes,
   published by the example Admins between August 2025 and October 2026. They use the editor's
   document format and appear in the shared News feed. Their event details are demo content.
+- Example Events from the coming Monday on. Each Choir has a weekly rehearsal series on its own
+  weekday, a sectional (KKB, MKT1, DKS1), a Draft julkonsert and a Cancelled extra rehearsal.
+  For all of CSK: the Alumnikväll gig with its gig group and Event details, the Höstsittning,
+  the Januarimöte Körmöte for everyone and a room Booking, at the Locations Scania and Kårhuset.
 
 Stable identities make these seeds repeatable: they insert missing fixtures and keep existing
 passwords, profile edits and Post edits. A conflicting existing Position assignment fails the
