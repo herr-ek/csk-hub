@@ -57,5 +57,5 @@ export async function unsubscribeUserFromPush(endpoint: string) {
  * impersonation, and propagates subscription lookup failures.
  */
 export async function sendPushNotificationTest(message: string) {
-  return sendToUser(await requireUserId(), message)
+  return sendToUser(await requireUserId(), { body: message })
 }
