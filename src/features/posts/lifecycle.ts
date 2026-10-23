@@ -93,19 +93,23 @@ export async function editPublishedPost(
 
 /**
  * Recalls a published Post: it leaves the feed and its permalink and is its author's
- * draft again, so republishing dates it afresh and it carries no edited mark. False when
- * the Post is not published.
+ * draft again, so republishing dates it afresh and it carries no edited mark. Resolves whose
+ * drafts it went back to — null as `authorId` after the author's Erasure — or null when the
+ * Post is not published.
  */
-export async function unpublishPost(postId: string, database: PostsDatabase = db): Promise<boolean> {
-  if (!isPostId(postId)) return false
+export async function unpublishPost(
+  postId: string,
+  database: PostsDatabase = db
+): Promise<{ authorId: string | null } | null> {
+  if (!isPostId(postId)) return null
 
-  const recalled = await database
+  const [recalled] = await database
     .update(post)
     .set({ publishedAt: null, editedAt: null })
     .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
-    .returning({ id: post.id })
+    .returning({ authorId: post.authorId })
 
-  return recalled.length > 0
+  return recalled ?? null
 }
 
 /**
