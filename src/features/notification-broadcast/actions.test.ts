@@ -91,8 +91,27 @@ describe("notification actions without a translation context", () => {
   })
 
   test("delivery returns noRecipients without querying subscriptions", async () => {
-    expect(await delivery.sendToUsers([], "Hello")).toEqual({ success: false, error: "noRecipients" })
+    expect(await delivery.sendToUsers([], { body: "Hello" })).toEqual({ success: false, error: "noRecipients" })
     expect(select).not.toHaveBeenCalled()
+  })
+
+  test("delivery carries the link and tag a feature sets", async () => {
+    subscriptions = [activeSubscription]
+    expect(await delivery.sendToUser("user-1", { body: "Hello", url: "/news/post-1", tag: "posts:post-1" })).toEqual({
+      success: true
+    })
+    expect(sendNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      JSON.stringify({ title: "CSK Hub", body: "Hello", url: "/news/post-1", tag: "posts:post-1" })
+    )
+  })
+
+  test("delivery refuses a link that leaves the app", async () => {
+    subscriptions = [activeSubscription]
+    for (const url of ["https://example.test", "//example.test/news", "news"]) {
+      await expect(delivery.sendToUser("user-1", { body: "Hello", url })).rejects.toThrow("same-origin path")
+    }
+    expect(sendNotification).not.toHaveBeenCalled()
   })
 
   test("all failed deliveries return a code and record the provider failure", async () => {

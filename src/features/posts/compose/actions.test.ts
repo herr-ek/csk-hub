@@ -10,7 +10,7 @@ const redirect = mock((location: string) => {
 const createPost = mock(async (): Promise<{ id: string }> => ({ id: POST_ID }))
 const saveDraft = mock(async (): Promise<{ id: string } | null> => ({ id: POST_ID }))
 const editPublishedPost = mock(async (): Promise<{ id: string } | null> => ({ id: POST_ID }))
-const unpublishPost = mock(async () => true)
+const unpublishPost = mock(async (): Promise<{ authorId: string | null } | null> => ({ authorId: "admin-1" }))
 const discardDraft = mock(async () => true)
 const loggerError = mock(() => undefined)
 
@@ -58,7 +58,7 @@ beforeEach(() => {
   editPublishedPost.mockReset()
   editPublishedPost.mockResolvedValue({ id: POST_ID })
   unpublishPost.mockReset()
-  unpublishPost.mockResolvedValue(true)
+  unpublishPost.mockResolvedValue({ authorId: "admin-1" })
   discardDraft.mockReset()
   discardDraft.mockResolvedValue(true)
 })
@@ -244,12 +244,20 @@ describe("editing a published Post", () => {
 })
 
 describe("unpublishing a Post", () => {
-  test("needs post:update, recalls the Post and returns to the feed", async () => {
-    await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news")
+  test("needs post:update, recalls the Post and returns to the feed, which confirms it", async () => {
+    await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=own")
 
     expect(requireCurrentUserPermission).toHaveBeenCalledWith({ resource: "post", action: "update" })
     expect(unpublishPost).toHaveBeenCalledWith(POST_ID)
     expect(revalidatePath).toHaveBeenCalledWith(`/news/${POST_ID}`)
+  })
+
+  test("tells the feed when the Post went back to another author's drafts", async () => {
+    unpublishPost.mockResolvedValue({ authorId: "author-2" })
+    await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=author")
+
+    unpublishPost.mockResolvedValue({ authorId: null })
+    await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=author")
   })
 
   test("refuses a User without post:update", async () => {
@@ -260,7 +268,7 @@ describe("unpublishing a Post", () => {
   })
 
   test("says the Post is gone when it is not published", async () => {
-    unpublishPost.mockResolvedValue(false)
+    unpublishPost.mockResolvedValue(null)
 
     await expect(actions.unpublishPost(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "postUnavailable" })
     expect(redirect).not.toHaveBeenCalled()

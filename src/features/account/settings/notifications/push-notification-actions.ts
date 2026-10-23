@@ -22,5 +22,5 @@ export async function unsubscribeUserFromPush(endpoint: string) {
 }
 
 export async function sendPushNotificationTest(message: string) {
-  return sendToUser(await requireUserId(), message)
+  return sendToUser(await requireUserId(), { body: message })
 }

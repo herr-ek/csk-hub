@@ -47,7 +47,8 @@ function NavLinkList({
               aria-current={active ? "page" : undefined}
               onClick={onNavigate}
               className={cn(
-                buttonVariants({ variant: "ghost", size: vertical ? "default" : "sm" }),
+                buttonVariants({ variant: "ghost", size: vertical ? "lg" : "sm" }),
+                "rounded-xl px-5 py-4",
                 vertical && "w-full justify-start text-base",
                 active && "bg-muted text-foreground"
               )}

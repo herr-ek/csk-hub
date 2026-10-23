@@ -9,6 +9,7 @@ import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import * as lifecycle from "../lifecycle"
 import { postFormSchema } from "./schemas"
+import { UNPUBLISHED_NOTICE_PARAM, type UnpublishedTo } from "./unpublished-notice"
 
 /**
  * What the Admin typed, echoed back so a rejected submission does not lose the post.
@@ -139,40 +140,51 @@ export async function editPublishedPost(
 }
 
 /**
- * The shared shape of a confirmed command: authorize, run it, and send the Admin back to
- * the feed. A command that finds the Post in another state reports it unavailable.
+ * The shared shape of a confirmed command: authorize, run it, and send the User where the
+ * command resolves — the feed. A command that finds the Post in another state resolves null
+ * and reports it unavailable.
  */
 async function runCommand(
   postId: string,
   command: PostCommand,
   action: PostWrite,
-  run: (actorId: string) => Promise<boolean>
+  run: (actorId: string) => Promise<string | null>
 ): Promise<PostCommandState> {
   const failed = command === "unpublish" ? "unpublishFailed" : "discardFailed"
 
   const actor = await authorize(action)
   if ("error" in actor) return { status: "error", error: actor.error === "failed" ? failed : actor.error }
 
-  let done: boolean
+  let destination: string | null
   try {
-    done = await run(actor.userId)
+    destination = await run(actor.userId)
   } catch (error) {
     logFailure(`news.post.${command}-failed`, error)
     return { status: "error", error: failed }
   }
 
-  if (!done) return { status: "error", error: "postUnavailable" }
+  if (!destination) return { status: "error", error: "postUnavailable" }
 
   revalidatePost(postId)
-  redirect(ROUTES.news)
+  redirect(destination)
 }
 
-/** Recalls a published Post from the feed and its permalink, back to its author's drafts. */
+/**
+ * Recalls a published Post from the feed and its permalink, back to its author's drafts. The
+ * feed then confirms where the Post went: to the User's own drafts when they wrote it.
+ */
 export async function unpublishPost(postId: string, _state: PostCommandState): Promise<PostCommandState> {
-  return runCommand(postId, "unpublish", "update", () => lifecycle.unpublishPost(postId))
+  return runCommand(postId, "unpublish", "update", async (actorId) => {
+    const recalled = await lifecycle.unpublishPost(postId)
+    if (!recalled) return null
+    const to: UnpublishedTo = recalled.authorId === actorId ? "own" : "author"
+    return `${ROUTES.news}?${UNPUBLISHED_NOTICE_PARAM}=${to}`
+  })
 }
 
 /** Throws away the acting Admin's own draft. It is hidden for good, never deleted. */
 export async function discardDraft(postId: string, _state: PostCommandState): Promise<PostCommandState> {
-  return runCommand(postId, "discard", "create", (authorId) => lifecycle.discardDraft({ postId, authorId }))
+  return runCommand(postId, "discard", "create", async (authorId) =>
+    (await lifecycle.discardDraft({ postId, authorId })) ? ROUTES.news : null
+  )
 }
