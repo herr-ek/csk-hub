@@ -6,14 +6,23 @@ import { app } from "@/core/config/app"
 import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { pushSubscription } from "@/core/db/schema/notifications"
-import type { NotificationDeliveryResult } from "./types"
+import type { NotificationDeliveryResult, PushNotification } from "./types"
 
 webpush.setVapidDetails(`mailto:${env.CONTACT_EMAIL}`, env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
 
+/** A notification may only lead into this app; a protocol-relative `//host` path would leave it. */
+function toPayload({ body, url, tag }: PushNotification) {
+  if (url !== undefined && (!url.startsWith("/") || url.startsWith("//"))) {
+    throw new Error(`A push notification url must be a same-origin path, not ${url}`)
+  }
+  return JSON.stringify({ title: app.name, body, url, tag })
+}
+
 async function sendToSubscriptions(
   subscriptions: (typeof pushSubscription.$inferSelect)[],
-  message: string
+  notification: PushNotification
 ): Promise<NotificationDeliveryResult> {
+  const payload = toPayload(notification)
   if (subscriptions.length === 0) {
     return { success: false, error: "noActiveSubscriptions" }
   }
@@ -23,7 +32,7 @@ async function sendToSubscriptions(
       try {
         await webpush.sendNotification(
           { endpoint: stored.endpoint, keys: { p256dh: stored.p256dh, auth: stored.auth } },
-          JSON.stringify({ title: app.name, body: message })
+          payload
         )
         const now = new Date()
         await db
@@ -55,16 +64,19 @@ async function sendToSubscriptions(
     : { success: false, error: "deliveryFailed" }
 }
 
-/** Delivers a message to every active push subscription belonging to one User. */
-export async function sendToUser(userId: string, message: string) {
-  return sendToUsers([userId], message)
+/** Delivers a notification to every active push subscription belonging to one User. */
+export async function sendToUser(userId: string, notification: PushNotification) {
+  return sendToUsers([userId], notification)
 }
 
 /**
- * Delivers a message to active subscriptions for the selected Users.
+ * Delivers a notification to active subscriptions for the selected Users.
  * A successful result means at least one subscription accepted the delivery.
  */
-export async function sendToUsers(userIds: string[], message: string): Promise<NotificationDeliveryResult> {
+export async function sendToUsers(
+  userIds: string[],
+  notification: PushNotification
+): Promise<NotificationDeliveryResult> {
   if (userIds.length === 0) {
     return { success: false, error: "noRecipients" }
   }
@@ -73,11 +85,11 @@ export async function sendToUsers(userIds: string[], message: string): Promise<N
     .from(pushSubscription)
     .where(and(inArray(pushSubscription.userId, userIds), eq(pushSubscription.status, "active")))
 
-  return sendToSubscriptions(subscriptions, message)
+  return sendToSubscriptions(subscriptions, notification)
 }
 
-/** Delivers a message to every active push subscription, succeeding when at least one accepts it. */
-export async function sendToAll(message: string) {
+/** Delivers a notification to every active push subscription, succeeding when at least one accepts it. */
+export async function sendToAll(notification: PushNotification) {
   const subscriptions = await db.select().from(pushSubscription).where(eq(pushSubscription.status, "active"))
-  return sendToSubscriptions(subscriptions, message)
+  return sendToSubscriptions(subscriptions, notification)
 }
