@@ -124,6 +124,8 @@
     "messages": "Messages",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
+    "unreadCount": "{count} unread",
+    "unreadIndicator": "Something unread",
     "breadcrumb": "Breadcrumb",
     "routes": {
       "news": "News",
@@ -148,7 +150,6 @@
     "formerMember": "Former member",
     "bylineSeparator": "·",
     "unread": "Unread",
-    "unreadCount": "{count, plural, one {# unread post} other {# unread posts}}",
     "titleLabel": "Title",
     "bodyLabel": "Post",
     "bodyPlaceholder": "Write the post. Type ## for a heading, - for a list.",

@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, lt } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { conversation, conversationReadState, directConversation, groupMembership } from "@/core/db/schema/messaging"
@@ -9,13 +9,14 @@ import { getDirectCounterpartId } from "../../model/direct-conversation"
 import { MessagingAccessError } from "../../model/messaging-error"
 import { verifiesReadToken } from "./read-token"
 
-export async function markConversationRead(conversationId: string, sequence: number, token: string) {
+/** Advances the signed-in User's read cursor; resolves whether it moved. */
+export async function markConversationRead(conversationId: string, sequence: number, token: string): Promise<boolean> {
   const userId = await requireAuthenticatedUser()
 
   if (!Number.isInteger(sequence) || sequence < 1 || !verifiesReadToken(token, conversationId, userId, sequence))
     throw new MessagingAccessError("read-position-invalid")
 
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     // Conversation kind is immutable; resolving it must not contend with sends.
     const [target] = await tx
       .select({ kind: conversation.kind })
@@ -40,9 +41,17 @@ export async function markConversationRead(conversationId: string, sequence: num
         .limit(1)
       if (!pair || !getDirectCounterpartId(pair, userId)) throw new MessagingAccessError("conversation-view-forbidden")
     }
-    await tx
+    const moved = await tx
       .update(conversationReadState)
-      .set({ lastReadSequence: sql`GREATEST(${conversationReadState.lastReadSequence}, ${sequence})` })
-      .where(and(eq(conversationReadState.conversationId, conversationId), eq(conversationReadState.userId, userId)))
+      .set({ lastReadSequence: sequence })
+      .where(
+        and(
+          eq(conversationReadState.conversationId, conversationId),
+          eq(conversationReadState.userId, userId),
+          lt(conversationReadState.lastReadSequence, sequence)
+        )
+      )
+      .returning({ lastReadSequence: conversationReadState.lastReadSequence })
+    return moved.length > 0
   })
 }

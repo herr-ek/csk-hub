@@ -124,6 +124,8 @@
     "messages": "Meddelanden",
     "openMenu": "Öppna menyn",
     "closeMenu": "Stäng menyn",
+    "unreadCount": "{count, plural, one {# oläst} other {# olästa}}",
+    "unreadIndicator": "Något oläst",
     "breadcrumb": "Brödsmulor",
     "routes": {
       "news": "Nyheter",
@@ -148,7 +150,6 @@
     "formerMember": "Tidigare medlem",
     "bylineSeparator": "·",
     "unread": "Oläst",
-    "unreadCount": "{count, plural, one {# oläst inlägg} other {# olästa inlägg}}",
     "titleLabel": "Titel",
     "bodyLabel": "Inlägg",
     "bodyPlaceholder": "Skriv inlägget. Skriv ## för en rubrik, - för en lista.",

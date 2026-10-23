@@ -1,5 +1,5 @@
+import "./unread-sources"
 import { AppNavigation } from "@/core/navigation/app-navigation"
-import { UnreadPostsBadge } from "@/features/posts"
 
 export default function AuthenticatedAppLayout({
   children
@@ -8,7 +8,7 @@ export default function AuthenticatedAppLayout({
 }>) {
   return (
     <>
-      <AppNavigation badges={{ news: <UnreadPostsBadge /> }} />
+      <AppNavigation />
       {children}
     </>
   )
