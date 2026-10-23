@@ -9,8 +9,11 @@ Voices and what each user can sing are the separate [`voice`](../voice/README.md
 ## The write path
 
 Application code writes the tables in `src/core/db/schema/org-structure.ts` only through this
-module, and reads them through its read helpers rather than querying the tables. This is a
-convention, not a test. The ops scripts are the deliberate exception: `bun run ops
+module, and reads them through its read helpers rather than querying the tables. The
+`core/authz` module is an exception for minimal authorization-specific fact reads; its
+definition of current Memberships and Position holdings must match this module. See
+[`docs/authorization.md`](../../../docs/authorization.md) for the adoption contract.
+This is a convention, not a test. The ops scripts are another deliberate exception: `bun run ops
 reference-data` and `bun run ops seed-groups` write the tables directly, so that scripts never
 depend on a feature, and they keep these rules by hand.
 

@@ -41,26 +41,32 @@ from retained Messages while preserving shared Conversation history.
 _Avoid_: Delete, purge, GDPR-delete
 
 **Post**:
-A written announcement an Admin publishes to every User. A Post has no audience of its
-own.
+A written announcement a User publishes as themselves or on behalf of a Group. A Post
+may target an audience, which restricts who may read it.
 _Avoid_: Article, news item, blog post, announcement email
 
 **Draft**:
-A Post that is not published, visible only to its author — whether it was never
-published or has been Unpublished. Drafts are never shared; joint writing happens outside
-the Hub. An author who no longer wants a Draft discards it: it is gone from every view, but,
-like every Post, never deleted.
+A Post visible only to its author, either never published or recalled after personal
+publication. Drafts are never shared; recalling a Post published on behalf of a Group
+produces a Recalled Group Post instead. An author may discard a Draft, removing it from
+every view while preserving its record.
 _Avoid_: Unpublished post, hidden post, shared draft, deleted draft
 
 **Unpublish**:
-To recall a published Post: it leaves the News feed and its permalink and becomes its
-author's Draft again. Nothing was sent, so nothing else needs undoing. Not a delete;
-Posts are never deleted.
+To recall a published Post from its audience: a personal Post becomes its author's Draft,
+while a Post published on behalf of a Group becomes a Recalled Group Post. Posts are never
+deleted.
 _Avoid_: Delete, archive, hide, retract
 
+**Recalled Group Post**:
+A previously published Group Post withdrawn from its audience but retained for the Group
+to revise and republish. Access follows current authority to manage the Group's content,
+rather than authorship.
+_Avoid_: Draft, shared draft, deleted Post
+
 **News feed**:
-The shared, reverse-chronological list of published Posts, identical for every User. It
-holds information published in the Hub; the monthly email remains separate.
+The reverse-chronological list of published Posts a User may read. It holds information
+published in the Hub; the monthly email remains separate.
 _Avoid_: Timeline, wall, dashboard, newsletter
 
 ## Groups
@@ -104,9 +110,9 @@ in, and their Voice is a Voice division contained by that Section's Voice: B1 or
 _Avoid_: Voice, part, stämma
 
 **Membership**:
-Being in a Group for a period of time, from a start date until an end date; without an end date
-it is current. Membership history is kept, and membership in a Group belonging to a Choir
-implies membership in that Choir.
+Being in a Group for a period of time, from a start date until an end date; a current
+Membership has no end date. Membership history is kept, and membership in a Group belonging
+to a Choir implies membership in that Choir.
 _Avoid_: Enrolment, role
 
 **Position**:

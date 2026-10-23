@@ -31,9 +31,10 @@ const accessControl = createAccessControl(statements)
 // ROLES
 
 /**
- * What each role may do. This table is where authorization decisions live: widening who
- * may publish a Post — to the board, to a gig group — is a change to the grants here,
- * never a role check bolted onto a feature.
+ * Legacy global grants, retained while existing Post callers are migrated. New resource-aware
+ * policies live in core/authz; do not add Group/Position grants here. A migrating feature must
+ * replace its legacy read/write/UI checks together, not use these grants as an OR fallback.
+ * Better Auth's native User/Session permissions remain owned by this table.
  */
 export const accessRoles = {
   [USER_ROLE]: accessControl.newRole({
