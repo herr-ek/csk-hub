@@ -13,6 +13,7 @@ import { unpublishPost } from "./compose/actions"
 import { ConfirmPostCommand } from "./compose/ConfirmPostCommand"
 import { PostByline } from "./post-byline"
 import { getPublishedPost } from "./service"
+import { PostReadMarker } from "./unread"
 
 /** Changing a published Post, offered only to whoever may make the change. */
 async function PostControls({ postId }: { postId: string }) {
@@ -42,6 +43,7 @@ export async function PostScreen({ postId }: { postId: string }) {
 
   return (
     <ContentPage>
+      <PostReadMarker postId={post.id} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Lets a long title truncate instead of pushing the controls off the row. */}
         <div className="min-w-0">

@@ -147,6 +147,8 @@
     "emptyDescription": "Inlägg från styrelsen visas här.",
     "formerMember": "Tidigare medlem",
     "bylineSeparator": "·",
+    "unread": "Oläst",
+    "unreadCount": "{count, plural, one {# oläst inlägg} other {# olästa inlägg}}",
     "titleLabel": "Titel",
     "bodyLabel": "Inlägg",
     "bodyPlaceholder": "Skriv inlägget. Skriv ## för en rubrik, - för en lista.",

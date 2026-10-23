@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
+import { UnreadPostsBadge } from "@/features/posts"
 import { buttonVariants } from "@/shared/ui/base/button"
 
 export default async function Home() {
@@ -12,6 +13,7 @@ export default async function Home() {
       <p className="text-sm text-muted-foreground">{t("description")}</p>
       <Link href={ROUTES.news} className={buttonVariants()}>
         {t("readNews")}
+        <UnreadPostsBadge variant="secondary" />
       </Link>
     </main>
   )

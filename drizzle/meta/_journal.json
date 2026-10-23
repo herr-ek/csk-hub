@@ -120,6 +120,13 @@
       "when": 1791997747561,
       "tag": "0016_post-drafts-edits",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792348356636,
+      "tag": "0017_post-read",
+      "breakpoints": true
     }
   ]
 }
