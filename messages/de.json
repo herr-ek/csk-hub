@@ -157,6 +157,8 @@
     "messages": "Nachrichten",
     "openMenu": "Menü öffnen",
     "closeMenu": "Menü schließen",
+    "unreadCount": "{count} ungelesen",
+    "unreadIndicator": "Etwas Ungelesenes",
     "breadcrumb": "Brotkrümelnavigation",
     "routes": {
       "news": "Neuigkeiten",
@@ -184,7 +186,6 @@
     "formerMember": "Ehemaliges Mitglied",
     "bylineSeparator": "·",
     "unread": "Ungelesen",
-    "unreadCount": "{count, plural, one {# ungelesener Beitrag} other {# ungelesene Beiträge}}",
     "titleLabel": "Titel",
     "bodyLabel": "Beitrag",
     "bodyPlaceholder": "Schreibe den Beitrag. Tippe ## für eine Überschrift, - für eine Liste.",

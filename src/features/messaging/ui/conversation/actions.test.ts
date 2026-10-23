@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
-const markConversationRead = mock(async () => undefined)
+const markConversationRead = mock(async () => true)
 const getSession = mock(async () => null as null | { session: { impersonatedBy: string | null } })
 const revalidatePath = mock()
+const refresh = mock()
 const sendMessage = mock(async () => ({ conversationId: "conversation-1" }))
 
 mock.module("./read", () => ({ markConversationRead }))
@@ -13,7 +14,7 @@ mock.module("@/core/auth/session.server", () => ({
 }))
 mock.module("../../sending", () => ({ sendMessage }))
 
-mock.module("next/cache", () => ({ revalidatePath }))
+mock.module("next/cache", () => ({ refresh, revalidatePath }))
 
 const { markConversationReadAction, sendMessageAction } = await import("./actions")
 
@@ -21,6 +22,7 @@ beforeEach(() => {
   getSession.mockClear()
   getSession.mockResolvedValue(null)
   revalidatePath.mockClear()
+  refresh.mockClear()
   sendMessage.mockClear()
 })
 
@@ -94,5 +96,15 @@ describe("message Server Actions", () => {
     await markConversationReadAction("conversation-1", 4, "verified-token")
 
     expect(markConversationRead).toHaveBeenCalledWith("conversation-1", 4, "verified-token")
+  })
+
+  test("refreshes the unread badge only when the cursor moved", async () => {
+    await markConversationReadAction("conversation-1", 4, "verified-token")
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(revalidatePath).toHaveBeenCalledWith("/[locale]/(app)/messages", "page")
+
+    markConversationRead.mockResolvedValueOnce(false)
+    await markConversationReadAction("conversation-1", 4, "verified-token")
+    expect(refresh).toHaveBeenCalledTimes(1)
   })
 })

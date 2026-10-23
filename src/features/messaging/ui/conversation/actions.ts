@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { refresh, revalidatePath } from "next/cache"
 import { sendMessage } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { requireMessageSendingAvailable } from "../message-command-access"
@@ -29,5 +29,10 @@ export async function sendMessageAction(_state: MessageCommandState, formData: F
 }
 
 export async function markConversationReadAction(conversationId: string, sequence: number, token: string) {
-  await markConversationRead(conversationId, sequence, token)
+  if (!(await markConversationRead(conversationId, sequence, token))) return
+
+  // The navigation's unread badge lives in the layout, which only a refresh re-renders; the
+  // inbox the User came from is cached by the router and would still show this one unread.
+  revalidatePath("/[locale]/(app)/messages", "page")
+  refresh()
 }

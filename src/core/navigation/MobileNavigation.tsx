@@ -19,17 +19,21 @@ import { type NavLinkItem, NavLinks } from "./NavLinks"
 
 export interface MobileNavigationProps {
   items: NavLinkItem[]
+  /** Shown on the menu button, since the links and their badges are hidden until it opens. */
+  indicator?: React.ReactNode
 }
 
 /** The signed-in menu on small screens: a menu button that opens the nav links and theme in a side sheet. */
-export function MobileNavigation({ items }: MobileNavigationProps) {
+export function MobileNavigation({ items, indicator }: MobileNavigationProps) {
   const t = useTranslations("Navigation")
   const [open, setOpen] = useState(false)
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button variant="ghost" size="icon" aria-label={t("openMenu")} />}>
-        <MenuIcon />
+      <SheetTrigger render={<Button variant="ghost" size="icon" className="relative" />}>
+        <MenuIcon aria-hidden />
+        <span className="sr-only">{t("openMenu")}</span>
+        {indicator}
       </SheetTrigger>
       <SheetContent side="right" showCloseButton={false}>
         <SheetHeader className="flex-row items-center justify-between gap-2 px-4 py-3">
