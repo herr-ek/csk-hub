@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { canCurrentUser } from "@/core/auth/permissions.server"
 import { getRequestSession, requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
@@ -13,6 +14,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
+import { UnpublishedNotice } from "./compose/UnpublishedNotice"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
 import { listDraftsByAuthor, listNewsFeed } from "./service"
@@ -87,6 +89,11 @@ export async function NewsScreen() {
       </NewsHeader>
 
       {canPublish ? <OwnDrafts /> : null}
+      {canPublish ? (
+        <Suspense fallback={null}>
+          <UnpublishedNotice />
+        </Suspense>
+      ) : null}
 
       {entries.length === 0 ? (
         <Empty>
