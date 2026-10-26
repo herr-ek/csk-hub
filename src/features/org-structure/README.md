@@ -10,8 +10,9 @@ Voices and what each user can sing are the separate [`voice`](../voice/README.md
 
 Application code writes the tables in `src/core/db/schema/org-structure.ts` only through this
 module, and reads them through its read helpers rather than querying the tables. The
-`core/authz` module is an exception for minimal authorization-specific fact reads; its
-definition of current Memberships and Position holdings must match this module. See
+`core/authz` module evaluates trusted attributes supplied by features; its definition of current
+Memberships and Position holdings must match this module. Administration UI may project minimal
+Group attributes for policy checks before invoking this module's commands. See
 [`docs/authorization.md`](../../../docs/authorization.md) for the adoption contract.
 This is a convention, not a test. The ops scripts are another deliberate exception: `bun run ops
 reference-data` and `bun run ops seed-groups` write the tables directly, so that scripts never
@@ -105,8 +106,13 @@ ui/
   command-dialog.tsx, run-command.ts   the shared shape of every admin command
 ```
 
-Every Server Action goes through `runGroupCommand`: `requireAdmin`, validate the form, run one
-module command, and return its violation as `{ status: "error", error }`. The client translates
+Every Server Action goes through `runGroupCommand`: require `org.manage`, validate the form,
+then check the exact Group administration policy and run the module command in one transaction.
+Structure/catalogue operations use `org.manage`; Membership/Voice and holder operations use
+`group.manageMemberships` and `group.managePositions`. All remain Admin-only; an ordinary Position
+holder cannot appoint holders or administer Memberships. Screen queries establish their own
+`org.manage` boundary. Domain commands retain their savepoints, locks and period semantics.
+Return domain violations as `{ status: "error", error }`. The client translates
 the kind from `Groups.errors`, so adding an `OrgStructureViolation` means adding its message to
 every catalogue; the typed translation keys fail the typecheck until you do. Reads for a screen
 live beside it (`query.ts`) and are shaped for that screen.

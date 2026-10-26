@@ -3,7 +3,7 @@
 import { inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { ROUTES } from "@/core/navigation/site"
@@ -25,7 +25,7 @@ const importRowsSchema = z
   .max(MAX_IMPORT_USERS)
 
 export async function findExistingUserEmails(emails: string[]): Promise<string[]> {
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   const normalizedEmails = [...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean))]
   if (normalizedEmails.length === 0) return []
 
@@ -54,7 +54,7 @@ export type ImportUsersState =
     }
 
 export async function importUsers(_state: ImportUsersState, formData: FormData): Promise<ImportUsersState> {
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   const submittedRows = formData.get("users")
   let rows: ImportUserRow[]
   let skipped: ImportUserSkipped[]

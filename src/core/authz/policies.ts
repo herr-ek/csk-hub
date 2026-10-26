@@ -11,6 +11,8 @@ import type {
 import { postPolicies } from "./post-policies"
 
 const policies: AuthorizationPolicies = {
+  "app.access": () => true,
+  "messaging.access": (actor) => actor.impersonatedBy === null,
   ...postPolicies,
   ...groupPolicies,
   ...memberPolicies,

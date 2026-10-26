@@ -18,9 +18,9 @@ not a blanket privacy bypass. The agreed resource rules are recorded in the
 
 ## Consequences
 
-`core/authz` reads minimal authorization facts directly from database schemas and never imports
-features. This deliberately extends the org-structure read-helper convention; organisational
-writes and their invariants remain owned by that feature.
+`core/authz` evaluates typed resource attributes supplied by trusted feature reads and never
+imports features. Features own resource loading, locks and persistence; authorization owns the
+decisions. Organisational writes and their invariants remain owned by org-structure.
 
 Org-structure and authorization must agree on current Memberships and holdings. Stage one retains
 `endDate IS NULL`, including its existing future-date behavior. Contract tests compare both
@@ -28,7 +28,8 @@ interfaces; no shared period helper or organisational source changes are introdu
 move to Stockholm `[startDate, endDate)` periods must change organisational commands, constraints,
 reads and authorization together after auditing existing periods.
 
-Stage one adds the module and adoption guide without migrating production feature flows or
-implementing Group Post attribution, audience targeting or recall. Existing global Post guards
-remain until their read/write/UI callers migrate together; they must not become an OR fallback
-for resource policies. This draft records the design discussion, not team approval.
+Stage one introduced the module and adoption guide. Stages two and three adopt its policies
+across personal Posts and existing protected feature entrypoints, with matching UI gates.
+Application Post statements and the legacy application guards are removed; native Better Auth
+User/Session permissions remain. Group Post attribution, audience targeting, recall and Event
+instance policies are deferred. This draft records the design discussion, not team approval.

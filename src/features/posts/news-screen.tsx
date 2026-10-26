@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { isUserAdmin } from "@/core/auth/permissions.server"
-import { getRequestSession, requireAuthenticatedUser } from "@/core/auth/session.server"
+import { getRequestSession } from "@/core/auth/session.server"
+import { can } from "@/core/authz"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
@@ -15,7 +15,7 @@ import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
-import { listDraftsByAuthor, listNewsFeed } from "./service"
+import { listNewsFeed, listOwnDrafts } from "./service"
 import { listUnreadPostIds } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
@@ -33,10 +33,7 @@ function NewsHeader({ children }: { children?: React.ReactNode }) {
 
 /** The reader's own unpublished Posts. Nobody else's drafts are ever shown here. */
 async function OwnDrafts() {
-  const [drafts, t] = await Promise.all([
-    requireAuthenticatedUser().then((authorId) => listDraftsByAuthor(authorId)),
-    getTranslations("Posts")
-  ])
+  const [drafts, t] = await Promise.all([listOwnDrafts(), getTranslations("Posts")])
   if (drafts.length === 0) return null
 
   return (
@@ -72,7 +69,7 @@ export async function NewsScreen() {
   const [entries, unread, canPublish, t] = await Promise.all([
     listNewsFeed(),
     listUnreadForCurrentUser(),
-    isUserAdmin(),
+    can({ action: "post.create" }),
     getTranslations("Posts")
   ])
 

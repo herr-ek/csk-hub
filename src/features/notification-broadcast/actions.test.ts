@@ -26,14 +26,21 @@ const subscribe = mock(async () => undefined)
 const unsubscribe = mock(async () => false)
 const hasActiveSubscription = mock(async () => true)
 
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
+mock.module("@/core/authz", () => ({
+  requirePermission: async (request: { action: string }) => {
+    if (request.action === "notification.broadcast") return requireAdmin()
+    const session = await getSession()
+    if (!session) throw new Error("Unauthorized")
+    return { userId: session.user.id, impersonatedBy: session.session.impersonatedBy ?? null }
+  }
+}))
 mock.module("@/core/i18n/server", () => ({ getTranslations }))
 mock.module("@/core/auth/session.server", () => ({
-  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
-  getRequestSession: getSession,
-  requireAuthenticatedUser: mock(async () => "user-1")
+  getRequestSession: getSession
 }))
-mock.module("@/core/db", () => ({ db: { select, update } }))
+mock.module("@/core/db", () => ({
+  db: { select, update, transaction: async (run: (tx: unknown) => Promise<unknown>) => run({}) }
+}))
 mock.module("web-push", () => ({
   default: { setVapidDetails: () => undefined, sendNotification, WebPushError: Error }
 }))

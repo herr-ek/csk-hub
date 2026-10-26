@@ -1,7 +1,6 @@
 "use server"
 
 import { z } from "zod"
-import { db } from "@/core/db"
 import { createPosition, updatePosition } from "../../structure"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
@@ -17,7 +16,7 @@ export async function createPositionAction(_state: GroupCommandState, formData: 
     "create-position",
     createPositionSchema,
     { name: value(formData, "name"), groupTypes: formData.getAll("groupTypes"), groupIds: formData.getAll("groupIds") },
-    (input) => createPosition(db, input)
+    (input, tx) => createPosition(tx, input)
   )
 }
 
@@ -34,6 +33,6 @@ export async function updatePositionAction(_state: GroupCommandState, formData: 
       groupTypes: formData.getAll("groupTypes"),
       groupIds: formData.getAll("groupIds")
     },
-    (input) => updatePosition(db, input)
+    (input, tx) => updatePosition(tx, input)
   )
 }

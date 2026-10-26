@@ -5,9 +5,10 @@ and relationship attributes. Features supply facts from trusted server reads; au
 owns the decisions. Better Auth retains authentication and its native account permissions.
 The module never imports features and does not load their resources itself.
 
-This module is not yet adopted by production features. Feature guards, routes and UI behavior
-are unchanged. Feature migration and reconciliation of the broader authorization design/adoption
-documents are separate work; this README describes the current module interface.
+Stages one through three are implemented: personal Posts, Members, Messaging, account settings,
+administrative workflows, routes and navigation use these policies. Better Auth no longer carries
+application Post grants; the legacy application permission guards have been removed. Group-authored
+Posts, audience targets, Recalled Group Posts and Event instance policies remain unimplemented.
 
 ## Calling the module
 
@@ -44,6 +45,8 @@ returns `{ userId, isAdmin, impersonatedBy }` or throws `AuthorizationDeniedErro
 database failures propagate. Unknown runtime action names deny access. Error diagnostics contain
 the actor and supplied context: keep them on the server and map denials to the feature's existing
 localized errors or 404 behavior without serializing these details.
+`requireMessagingUserId(tx?)` derives fresh active identity and denies support impersonation;
+Conversation access remains feature-owned.
 
 ## One server operation with multiple checks
 
@@ -98,6 +101,8 @@ grants do not authorize arbitrary Post or Event instances.
 `policies.test.ts` exercises the pure evaluator with attribute fixtures and needs no database.
 `test/authz.test.ts` uses a migrated disposable local PostgreSQL database for trusted actor
 resolution, transaction visibility, attribution, errors and organisational period compatibility.
+`test/authz-adoption.test.ts` covers protected Post reads, feature-owned Post locks and fresh
+checks after deactivation or session revocation.
 `test/authz.typecheck.ts` checks invalid action/context combinations and policy registration
 through `bun run typecheck`.
 

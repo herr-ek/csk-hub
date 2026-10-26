@@ -1,4 +1,5 @@
 import { beforeEach, expect, mock, test } from "bun:test"
+import { requestAuthorization } from "@test/request-authorization"
 
 const direct = mock(async () => ({ conversationId: "direct-1" }))
 const group = mock(async () => ({ conversationId: "group-1" }))
@@ -12,11 +13,10 @@ mock.module("../../group-conversations", () => ({
   requireActiveGroupMember: mock()
 }))
 mock.module("./member-search", () => ({ searchMembers: mock() }))
-mock.module("@/core/auth/session.server", () => ({
-  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
-  getRequestSession: getSession
-}))
+
 mock.module("next/cache", () => ({ revalidatePath: mock() }))
+mock.module("@/core/authz", () => requestAuthorization(getSession))
+
 const { startConversationAction } = await import("./actions")
 beforeEach(() => {
   direct.mockClear()

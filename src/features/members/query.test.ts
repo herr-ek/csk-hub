@@ -1,17 +1,17 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
-import * as session from "@/core/auth/session.server"
+import * as session from "@/core/authz"
 import { db } from "@/core/db"
 import * as messaging from "@/features/messaging/reading"
 import { getProfile } from "./query"
 import * as service from "./service"
 
-const viewer = {
-  user: { id: "viewer" },
-  session: { impersonatedBy: null }
-} as NonNullable<Awaited<ReturnType<typeof session.getRequestSession>>>
+const viewer = { userId: "viewer", isAdmin: false, impersonatedBy: null } as Awaited<
+  ReturnType<typeof session.requirePermission>
+>
 
 const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> = {
   id: "member",
+  banned: false,
   name: "Member",
   username: null,
   image: null,
@@ -24,17 +24,20 @@ const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> 
   positions: []
 }
 
-const sessionRead = spyOn(session, "getRequestSession")
+const capability = spyOn(session, "can")
+const sessionRead = spyOn(session, "requirePermission")
 const profileRead = spyOn(service, "getMemberProfile")
 const conversationRead = spyOn(messaging, "findDirectConversation")
 
 beforeEach(() => {
+  capability.mockReset().mockResolvedValue(false)
   sessionRead.mockReset().mockResolvedValue(viewer)
   profileRead.mockReset().mockResolvedValue(member)
   conversationRead.mockReset().mockResolvedValue("conversation-1")
 })
 
 afterAll(() => {
+  capability.mockRestore()
   sessionRead.mockRestore()
   profileRead.mockRestore()
   conversationRead.mockRestore()
@@ -60,7 +63,7 @@ describe("profile conversation visibility", () => {
   })
 
   test("does not look up Conversations while impersonating", async () => {
-    sessionRead.mockResolvedValueOnce({ ...viewer, session: { ...viewer.session, impersonatedBy: "admin" } })
+    sessionRead.mockResolvedValueOnce({ ...viewer, impersonatedBy: "admin" })
     expect(await getProfile("member")).toMatchObject({ canMessage: false, messageConversationId: null })
     expect(conversationRead).not.toHaveBeenCalled()
   })
