@@ -33,7 +33,7 @@ export function PasswordResetForm({
     const result = await resetPassword(token, value.email, value.password)
 
     if (!result.success) {
-      setFormError(result.error)
+      setFormError(t(`errors.${result.kind}`))
       return
     }
 

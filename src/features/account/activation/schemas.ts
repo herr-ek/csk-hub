@@ -1,12 +1,12 @@
 import { z } from "zod"
-import { passwordField } from "@/shared/schemas"
+import { passwordSchema, validationMessageIds } from "@/shared/schemas"
 
 export const activationSchema = z
   .object({
-    password: passwordField("Password"),
-    confirmPassword: passwordField("Confirm password")
+    password: passwordSchema,
+    confirmPassword: passwordSchema
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
+    message: validationMessageIds.passwordsMismatch,
     path: ["confirmPassword"]
   })

@@ -56,7 +56,7 @@ describe("user import", () => {
 
     await expect(importUsers({ status: "idle" }, formData)).resolves.toEqual({
       status: "error",
-      error: "The CSV must be 1 MB or smaller."
+      error: { kind: "file-too-large" }
     })
 
     expect(createUser).not.toHaveBeenCalled()

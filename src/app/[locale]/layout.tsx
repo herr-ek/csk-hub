@@ -5,12 +5,14 @@ import { notFound } from "next/navigation"
 import "@/app/globals.css"
 import { app } from "@/core/config/app"
 import { NextIntlClientProvider } from "@/core/i18n/client"
+import { LocalizedFormProvider } from "@/core/i18n/LocalizedFormProvider"
 import { isLocale } from "@/core/i18n/locales"
 import { getMessages } from "@/core/i18n/messages"
 import { routing } from "@/core/i18n/routing"
 import { getLocale, getTranslations } from "@/core/i18n/server"
 import { timeZone } from "@/core/i18n/time-zone"
 import { Toaster } from "@/shared/ui/base/toast"
+import { UiLabelsProvider } from "@/shared/ui/UiLabelsProvider"
 import { cn } from "@/shared/utils"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -81,6 +83,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     notFound()
   }
 
+  // TODO: Split up per feature if performance gets bad
+  const messages = getMessages(locale)
+
   return (
     <html
       lang={locale}
@@ -90,17 +95,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       {/* A definite height, not a minimum: it lets a screen give its overflow to a pane of
           its own instead of to the window (see `ContentPage`'s `fill`). */}
       <body className="h-full flex flex-col">
-        <NextIntlClientProvider
-          locale={locale}
-          // TODO: Split up per feature if performance gets bad
-          messages={getMessages(locale)}
-          formats={{}}
-          timeZone={timeZone}
-        >
-          <ThemeProvider>
-            {children}
-            <Toaster />
-          </ThemeProvider>
+        <NextIntlClientProvider locale={locale} messages={messages} formats={{}} timeZone={timeZone}>
+          <UiLabelsProvider labels={messages.Ui}>
+            <LocalizedFormProvider>
+              <ThemeProvider>
+                {children}
+                <Toaster />
+              </ThemeProvider>
+            </LocalizedFormProvider>
+          </UiLabelsProvider>
         </NextIntlClientProvider>
       </body>
     </html>

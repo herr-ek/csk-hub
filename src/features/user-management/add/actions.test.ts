@@ -54,7 +54,7 @@ describe("add user", () => {
 
     await expect(addUser({ status: "idle" }, userFormData())).resolves.toEqual({
       status: "error",
-      error: "A user with that email already exists."
+      kind: "email-exists"
     })
 
     expect(signInMagicLink).not.toHaveBeenCalled()

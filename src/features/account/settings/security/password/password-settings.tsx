@@ -43,7 +43,7 @@ export function PasswordSettings() {
     }
 
     if (result.error) {
-      toast.add({ type: "error", title: result.error.message ?? t("passwordChangeFailed") })
+      toast.add({ type: "error", title: t("passwordChangeFailed") })
       return
     }
 

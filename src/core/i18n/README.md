@@ -10,6 +10,8 @@ Only this module imports `next-intl`. Async Server Components, pages, layouts, a
 
 Keep server and client imports separate. `translations.ts` is intentionally universal because next-intl supports `useTranslations` in synchronous Server Components. Do not add a broad barrel that combines the server-only and client-only modules.
 
+Keep shared UI base components independent of this module. Shared controls read built-in labels from [`UiLabelsProvider`](../../shared/ui/UiLabelsProvider.tsx), which defaults to English. The shared `UiLabels` type defines the required labels independently of the catalogs. The locale root supplies `messages.Ui` directly, so app code can use shared controls without a localization wrapper or per-label mapping. Keep the `Ui` namespace's keys aligned with that contract in every catalog. These labels are plain text, consumed without ICU formatting; messages with parameters or plural/select logic need formatting before display. Keep application copy in the feature that owns it; the shared label context is only for built-in control text such as close buttons. [`validation-errors.tsx`](./validation-errors.tsx) translates stable validation issue IDs for display.
+
 `next-intl.d.ts` registers the English catalogue as the canonical message shape. Translation namespaces and keys used through the façade are checked by TypeScript; catalogue parity remains responsible for checking that every locale supplies that shape.
 
 ## Catalogs and keys
@@ -75,6 +77,10 @@ For a synchronous Server Component, `useTranslations` is supported by next-intl.
 ## Server Actions
 
 Avoid i18n in Server Actions and the helpers they call. Return typed outcomes or stable error codes and translate them in the UI. Keep low-level services independent of translation APIs and message catalogs.
+
+Keep Zod schemas as static, locale-neutral constants. Validation issues should carry stable IDs (and machine-readable parameters such as a minimum length), not translated text. Pass issues directly to shared `InputField` or `SelectField` through `errors`; the locale root's [`LocalizedFormProvider`](./LocalizedFormProvider.tsx) supplies the formatter directly through shared forms' [`ValidationMessagesContext`](../../shared/forms/validation-messages.ts). The context, issue types, and consumer hook live in shared; the locale-aware provider lives in core. Validation messages stand on their own beneath the field, without interpolating its label. Labels remain `ReactNode` presentation content and never enter validation formatting. No localized field wrapper or per-field localization configuration is needed. The `error` prop remains already-formatted content and takes precedence over `errors`. Fields without validator errors can render without the forms provider; formatting validator errors requires one. Use `useValidationMessage` when displaying validation errors elsewhere. This keeps schemas reusable in server and client code and avoids rebuilding them for each locale.
+
+Register new validation IDs in `validationMessageIds` in `src/shared/schemas.ts` and add matching keys under `Common.validation` in every catalog. [`useValidationMessage`](./validation-errors.tsx) accepts only the issue, maps Zod's numeric `minimum` to `count`, and passes custom refinement `params` through. New IDs need no translation switch case. Keep parameter values in the validation issue rather than supplying fallback limits in the UI.
 
 Only translate on the server when it must produce final text, such as an email. Choose the intended recipient's locale explicitly. `next/root-params` is unavailable in Server Actions and Route Handlers; server translation APIs need an explicit locale and request configuration that honors the override before reading root params.
 

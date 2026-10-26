@@ -4,6 +4,7 @@ import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, XIcon } from "lucide-react"
 import type * as React from "react"
 import { Button } from "@/shared/ui/base/button"
+import { useUiLabels } from "@/shared/ui/UiLabelsProvider"
 import { cn } from "@/shared/utils"
 
 const toast = ToastPrimitive.createToastManager()
@@ -99,10 +100,12 @@ function ToastClose({
   render = <Button variant="ghost" size="icon-sm" />,
   ...props
 }: ToastPrimitive.Close.Props) {
+  const labels = useUiLabels()
+
   return (
     <ToastPrimitive.Close
       data-slot="toast-close"
-      aria-label="Close toast"
+      aria-label={labels.closeToast}
       render={render}
       className={cn(
         "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",

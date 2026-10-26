@@ -20,7 +20,15 @@
       "completeDescription": "Taking you to CSK Hub…",
       "continue": "Continue to CSK Hub",
       "invalidLink": "This activation link is invalid or has expired.",
-      "requestFreshLink": "Request a fresh password link"
+      "requestFreshLink": "Request a fresh password link",
+      "errors": {
+        "password-required": "Password is required.",
+        "password-too-short": "Use a password with at least {count} characters.",
+        "confirm-password-required": "Confirm your password.",
+        "passwords-mismatch": "Passwords do not match.",
+        "invalid-link": "This activation link is invalid or has expired.",
+        "unavailable": "Unable to activate your account right now. Please try again."
+      }
     },
     "activationFailed": {
       "pageTitle": "Activation link expired",
@@ -40,7 +48,13 @@
       "or": "or",
       "passkeyPending": "Waiting for passkey…",
       "passkey": "Sign in with a passkey",
-      "forgotPassword": "Forgot your password?"
+      "forgotPassword": "Forgot your password?",
+      "errors": {
+        "invalidCredentials": "Unable to sign in. Check your email or username and password and try again.",
+        "unavailable": "Unable to sign in right now. Check your connection and try again.",
+        "passkeyFailed": "Unable to sign in with your passkey. Try again or use your email and password.",
+        "passkeyUnavailable": "Unable to sign in with a passkey right now. Check your connection and try again."
+      }
     },
     "passwordReset": {
       "requestPageTitle": "Reset your password",
@@ -63,7 +77,15 @@
       "sendLink": "Send reset link",
       "updating": "Updating…",
       "updatePassword": "Update password",
-      "returnToSignIn": "Return to sign in"
+      "returnToSignIn": "Return to sign in",
+      "errors": {
+        "request-failed": "Unable to send a password reset email right now. Please try again.",
+        "request-network": "Unable to send a password reset email right now. Check your connection and try again.",
+        "invalid-reset-token": "That reset link is invalid or has expired.",
+        "network": "Unable to complete the password reset right now. Please check your connection and try again.",
+        "unknown": "Unable to reset your password right now. Please try again.",
+        "password-updated-sign-in-failed": "Your password was updated, but we could not sign you in. Please sign in with your new password."
+      }
     },
     "twoFactor": {
       "pageTitle": "Two-factor verification",
@@ -83,12 +105,15 @@
       "verifying": "Verifying…",
       "verify": "Verify",
       "emailCodeSent": "A security code was sent to your email.",
-      "requestFailed": "We couldn't complete the verification request. Please try again."
+      "requestFailed": "We couldn't complete the verification request. Please try again.",
+      "errors": {
+        "sendFailed": "Unable to send the verification code.",
+        "verifyFailed": "Unable to verify the code."
+      }
     }
   },
   "Common": {
     "cancel": "Cancel",
-    "close": "Close",
     "save": "Save",
     "delete": "Delete",
     "edit": "Edit",
@@ -96,14 +121,22 @@
     "name": "Name",
     "password": "Password",
     "status": "Status",
-    "loading": "Loading"
+    "loading": "Loading",
+    "validation": {
+      "required": "This field is required.",
+      "passwordTooShort": "Use at least {count} characters.",
+      "invalidEmail": "Enter a valid email address.",
+      "passwordsMismatch": "Passwords do not match."
+    }
   },
   "Ui": {
+    "close": "Close",
+    "closeToast": "Close toast",
     "more": "More",
     "previousSlide": "Previous slide",
     "nextSlide": "Next slide",
     "morePages": "More pages",
-    "sidebar": "Sidebar",
+    "sidebarTitle": "Sidebar",
     "mobileSidebarDescription": "Displays the mobile sidebar.",
     "toggleSidebar": "Toggle sidebar"
   },
@@ -223,6 +256,14 @@
     "noMatches": "No members match these filters.",
     "add": "Add member",
     "addDescription": "Create a new account for a CSK member.",
+    "addErrors": {
+      "name-required": "Name is required.",
+      "email-required": "Email is required.",
+      "email-invalid": "Email must be a valid email address.",
+      "email-exists": "A user with that email already exists.",
+      "create-failed": "Unable to create the user right now. Please try again.",
+      "unknown": "Please check the form and try again."
+    },
     "adding": "Adding member",
     "inviteSent": "Invite sent",
     "inviteSentDescription": "An activation link was sent to {email}.",
@@ -231,6 +272,24 @@
     "usernameHandle": "@{username}",
     "importUsers": "Import users",
     "importDescription": "Upload a CSV with name and email columns, then review each row before inviting.",
+    "importActionErrors": {
+      "invalid-preview": "The import preview is invalid. Please upload the CSV again.",
+      "file-required": "Please choose a CSV file.",
+      "file-extension": "Please choose a file with a .csv extension.",
+      "file-too-large": "The CSV must be 1 MB or smaller.",
+      "no-valid-rows": "Keep at least one valid row to import."
+    },
+    "importRowErrors": {
+      "email-exists": "A user with that email already exists.",
+      "create-failed": "Unable to create this user."
+    },
+    "csvParseErrors": {
+      "parse-failed": "The CSV could not be parsed. Please check its quoted values.",
+      "empty": "The CSV is empty.",
+      "columns": "The CSV must include name and email columns.",
+      "no-users": "The CSV does not contain any users.",
+      "too-many-users": "You can import up to 50 users at a time."
+    },
     "csvFile": "CSV file",
     "csvColumns": "Required columns: name, email. Other columns are ignored.",
     "csvExtensionRequired": "Please choose a file with a .csv extension.",
@@ -377,7 +436,18 @@
     "authenticatorEnabled": "Authenticator app enabled.",
     "profileTab": "Profile",
     "securityTab": "Security",
-    "notificationsTab": "Notifications"
+    "notificationsTab": "Notifications",
+    "twoFactorErrors": {
+      "enableFailed": "Unable to enable two-factor authentication.",
+      "disableFailed": "Unable to disable two-factor authentication.",
+      "verifyFailed": "Unable to verify the authenticator code."
+    },
+    "passkeyErrors": {
+      "addFailed": "Unable to add the passkey right now. Please try again.",
+      "nameRequired": "Passkey name is required.",
+      "renameFailed": "Unable to rename the passkey right now. Please try again.",
+      "deleteFailed": "Unable to delete the passkey right now. Please try again."
+    }
   },
   "PushNotifications": {
     "settingsTitle": "Push notifications",
