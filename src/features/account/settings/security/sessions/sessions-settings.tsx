@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
 import { useFormatter, useTranslations } from "@/core/i18n/translations"
+import { logout } from "@/core/navigation/logout"
+import { ROUTES } from "@/core/navigation/site"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Badge } from "@/shared/ui/base/badge"
 import { Button } from "@/shared/ui/base/button"
@@ -10,7 +12,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 
 type Session = NonNullable<Awaited<ReturnType<typeof authClient.listSessions>>["data"]>[number]
 
-export function SessionsSettings({ currentSessionToken }: { currentSessionToken: string }) {
+export function SessionsSettings({
+  currentSessionToken,
+  isImpersonating = false
+}: {
+  currentSessionToken: string
+  isImpersonating?: boolean
+}) {
   const t = useTranslations("AccountSettings")
   const common = useTranslations("Common")
   const format = useFormatter()
@@ -31,11 +39,18 @@ export function SessionsSettings({ currentSessionToken }: { currentSessionToken:
 
   async function revoke(token: string) {
     setPendingToken(token)
-    const result = await authClient.revokeSession({ token })
-    setPendingToken(undefined)
-    if (result.error) setError(t("sessionRevokeFailed"))
-    else if (token === currentSessionToken) window.location.assign("/login")
-    else await loadSessions()
+    setError(undefined)
+    try {
+      const current = token === currentSessionToken
+      const result = current ? await logout(isImpersonating) : await authClient.revokeSession({ token })
+      if (result.error) setError(t("sessionRevokeFailed"))
+      else if (current) window.location.assign(isImpersonating ? ROUTES.adminUsers : ROUTES.login)
+      else await loadSessions()
+    } catch {
+      setError(t("sessionRevokeFailed"))
+    } finally {
+      setPendingToken(undefined)
+    }
   }
 
   return (
