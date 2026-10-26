@@ -1,56 +1,106 @@
 # Application authorization
 
-`@/core/authz` is a server-only module for action/resource policies. It reads trusted identity
-through `core/auth` and authorization facts directly from `core/db`; it never imports features.
-Policies live in code. Better Auth retains authentication and its native account-administration
-permissions. The detailed policy decisions and feature adoption map are in
-[`docs/authorization.md`](../../../docs/authorization.md).
+`@/core/authz` decides whether the current actor may perform an action using typed resource
+and relationship attributes. Features supply facts from trusted server reads; authorization
+owns the decisions. Better Auth retains authentication and its native account permissions.
+The module never imports features and does not load their resources itself.
 
-This is stage one: no existing feature, route, menu or Server Action has been migrated to this
-module. Existing global Post grants still control production flows. Group-authored Posts,
-audience targets, Recalled Group Posts and Event instance policies are not implemented.
+This module is not yet adopted by production features. Feature guards, routes and UI behavior
+are unchanged. Feature migration and reconciliation of the broader authorization design/adoption
+documents are separate work; this README describes the current module interface.
 
-## Interface
+## Calling the module
 
 ```ts
-import { can, requirePermission, isCurrentMemberOfGroup, holdsCurrentPosition } from "@/core/authz"
+import { can, requirePermission } from "@/core/authz"
 
-const showEdit = await can({ action: "post.update", postId })
-const belongs = await isCurrentMemberOfGroup(groupId)
-const holds = await holdsCurrentPosition({ groupId, positionId })
+const mayCreate = await can({ action: "post.create" })
+const mayEdit = await can({ action: "post.update", context: { post } })
+const actor = await requirePermission({ action: "post.update", context: { post } }, tx)
 ```
 
-`can` returns false for expected denials. `requirePermission` checks the same policy and either
-returns `{ userId, isAdmin, impersonatedBy }` for attribution or throws `AuthorizationDeniedError`.
-Unexpected session/database failures propagate from both. `PermissionRequest` is a typed union;
-unsupported actions fail closed at runtime. Universal types are also available from
-`@/core/authz/model`, without importing the server entrypoint.
+`PermissionContext` in `model.ts` declares the facts for every action. `PermissionRequest` is
+a discriminated union: the action determines its context, and unrelated or missing context
+fails typechecking. Context-free actions need only their action name. A null resource denies
+access. Types and minimal attribute projections are available through `@/core/authz/model`
+without importing the server entrypoint.
 
-Every operation validates the request session without Better Auth's cookie cache, then reads
-the User's current role and active status. It takes neither an actor ID nor browser-supplied
-ownership/Position claims. No authorization result is cached. Rendering callers need Suspense
-and must stay outside Next.js cache scopes, as with other session reads.
+Supply resource attributes such as `authorId` and `publishedAt`, not a decision such as
+`isOwnerOrAdmin`. Group work requires the Group, Membership records and Position holding
+records. Policies match each relationship's User and Group and decide whether it is current;
+callers must not turn a holding or membership fact into a separate permission fallback.
+Membership/holding periods currently mean `endDate === null`, including future start dates.
+Archived Groups deny Group operations even when their relationships remain current.
 
-Both permission functions and both fact functions accept an optional database/transaction as
-their final argument. A protected command must pass its transaction and preserve its lifecycle
-predicates. **Passing a transaction does not acquire authorization locks.** See the adoption
-guide for coordinating resource changes, Membership departure, archiving and deactivation.
-Do not interpret a successful UI check as authority for a subsequent request.
+Context is a trusted server contract, not a runtime validator for browser payloads. Validate
+incoming IDs/content and load authoritative resource facts before calling authorization. Never
+accept submitted ownership, roles, Memberships or Position claims as these facts. Authorization
+resolves the actor itself, bypassing Better Auth's cookie cache and reloading current User
+role/status; features cannot supply an actor to the server interface. Impersonation attributes
+refer to the effective User and preserve the support actor only for attribution.
 
-The Membership/Position functions are facts, not grants: like org-structure, they report rows
-with no end date, including archived Groups and future start dates. Group permissions also
-require an active Group and, for non-Admin holders, a current Membership. A fact that someone
-holds a Position must never be substituted for a permission check.
+`can` returns false for expected denials. `requirePermission` evaluates the same policy and
+returns `{ userId, isAdmin, impersonatedBy }` or throws `AuthorizationDeniedError`. Session and
+database failures propagate. Unknown runtime action names deny access. Error diagnostics contain
+the actor and supplied context: keep them on the server and map denials to the feature's existing
+localized errors or 404 behavior without serializing these details.
 
-## Tests and composition
+## One server operation with multiple checks
 
-`createAuthorization({ database, readSession })` composes the same interface against an isolated
-database and a trusted server session resolver. It is not a client-facing authentication
-endpoint. The production entrypoint supplies `getFreshRequestSession`; tests supply explicit
-session state. The factory itself lives at `@/core/authz/authorization` so tests need not import
-the request/Next.js composition.
+`forCurrentRequest(tx?)` resolves one immutable actor snapshot. Its `can` and `requirePermission`
+methods are synchronous evaluations using that snapshot and the supplied facts:
 
-[`test/authz.test.ts`](../../../test/authz.test.ts) exercises the interface against a migrated,
-disposable local PostgreSQL database. It also compares Membership and Position facts with the
-org-structure public reads. No shared organisational helper or org-structure rewrite is needed
-for this stage.
+```ts
+import { forCurrentRequest } from "@/core/authz"
+
+await db.transaction(async (tx) => {
+  const access = await forCurrentRequest(tx)
+  // A feature-owned loader reads and locks the resource as required by this operation.
+  const post = await loadPostForUpdate(tx, postId)
+  const actor = access.requirePermission({ action: "post.update", context: { post } })
+  // Apply the feature command with actor.userId for attribution and preserve its state predicates.
+})
+```
+
+`access.actor` is null without an active authenticated User; both methods deny in that case.
+Otherwise its ID can be used to load actor-specific facts. The snapshot belongs to one operation:
+do not cache it, store it in module state, pass it to a client, or reuse it for another request or
+write. Standalone `can`/`requirePermission` resolve a fresh actor on every invocation.
+
+A transaction shares visibility but acquires no authorization locks by itself. The feature
+coordinates reads/checks/writes with resource updates, deactivation, Membership departure and
+other permission-changing commands. Keep existing lifecycle predicates and lock ordering.
+Neither a snapshot nor a successful `can` is a durable grant. Rendering callers still need
+Suspense and must keep actor resolution outside Next.js cache scopes.
+
+## Editing policies
+
+Policies are ordinary synchronous TypeScript functions with boolean expressions:
+
+- `post-policies.ts`: personal Post creation, reading and lifecycle permissions.
+- `group-policies.ts`: exact-Group representation and administration.
+- `member-policies.ts`: shared profiles, private email and self-profile edits.
+- `admin-policies.ts`: explicit administrative grants.
+
+Each function receives the actor and the context declared for its action. `policies.ts` evaluates
+the matching function; null actors deny before any policy runs. There is no implicit Admin bypass
+or predicate-composition interface. Private Drafts remain author-only even against Admin.
+
+To add an action, declare its context in `model.ts`, register its policy, and cover its grants
+and denials. Missing policies fail typechecking.
+New operations that change authorization-relevant fields must include the proposed values in
+their context and check those values in the policy, as well as the existing resource. Current
+Post policies do not implement Group attribution, audience changes or recall, and Group work
+grants do not authorize arbitrary Post or Event instances.
+
+## Tests
+
+`policies.test.ts` exercises the pure evaluator with attribute fixtures and needs no database.
+`test/authz.test.ts` uses a migrated disposable local PostgreSQL database for trusted actor
+resolution, transaction visibility, attribution, errors and organisational period compatibility.
+`test/authz.typecheck.ts` checks invalid action/context combinations and policy registration
+through `bun run typecheck`.
+
+`createAuthorization({ database, readSession })` is the server composition seam for those tests;
+the production entrypoint supplies the application database and `getFreshRequestSession`.
+It is not an endpoint for browser-supplied identity.
