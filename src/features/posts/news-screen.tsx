@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { canCurrentUser } from "@/core/auth/permissions.server"
+import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getRequestSession, requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { useTranslations } from "@/core/i18n/translations"
@@ -72,7 +72,7 @@ export async function NewsScreen() {
   const [entries, unread, canPublish, t] = await Promise.all([
     listNewsFeed(),
     listUnreadForCurrentUser(),
-    canCurrentUser({ resource: "post", action: "create" }),
+    isUserAdmin(),
     getTranslations("Posts")
   ])
 
