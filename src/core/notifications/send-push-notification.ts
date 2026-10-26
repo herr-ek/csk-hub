@@ -1,58 +1,148 @@
 import "server-only"
 
-import { and, eq, inArray } from "drizzle-orm"
+import https from "node:https"
+import { and, eq, getTableColumns, inArray, isNull, or, sql } from "drizzle-orm"
 import webpush from "web-push"
 import { app } from "@/core/config/app"
 import { env } from "@/core/config/env"
 import { db } from "@/core/db"
+import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
-import type { NotificationDeliveryResult } from "./types"
+import { InvalidNotificationSubscriptionError, parseNotificationSubscription } from "./subscription-validation"
+import type {
+  NotificationDeliveryDiagnostics,
+  NotificationDeliveryFailureCategory,
+  NotificationDeliveryResult
+} from "./types"
+
+const DEFAULT_CONCURRENCY = 5
+const SOCKET_IDLE_TIMEOUT_MS = 7_000
+const REQUEST_DEADLINE_MS = 10_000
+const BOOKKEEPING_DEADLINE_MS = 2_000
 
 webpush.setVapidDetails(`mailto:${env.CONTACT_EMAIL}`, env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
 
+class PushDeliveryDeadlineError extends Error {
+  constructor() {
+    super("Push delivery deadline exceeded")
+    this.name = "PushDeliveryDeadlineError"
+  }
+}
+
+type StoredSubscription = typeof pushSubscription.$inferSelect
+
+async function withDeadline(operation: Promise<unknown>, timeoutMs: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new PushDeliveryDeadlineError()), timeoutMs)
+      })
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+function failureCategory(error: unknown): NotificationDeliveryFailureCategory {
+  if (error instanceof InvalidNotificationSubscriptionError) return "invalidSubscription"
+  if (error instanceof PushDeliveryDeadlineError || (error instanceof Error && error.message === "Socket timeout"))
+    return "timeout"
+  const statusCode = error instanceof webpush.WebPushError ? error.statusCode : undefined
+  if (statusCode === 404 || statusCode === 410) return "subscriptionGone"
+  return statusCode === undefined ? "transport" : "providerRejected"
+}
+
+async function deliverOne(stored: StoredSubscription, message: string) {
+  const agent = new https.Agent({ keepAlive: false })
+  let category: NotificationDeliveryFailureCategory | undefined
+  try {
+    const subscription = parseNotificationSubscription({
+      endpoint: stored.endpoint,
+      keys: { p256dh: stored.p256dh, auth: stored.auth }
+    })
+    await withDeadline(
+      webpush.sendNotification(
+        { endpoint: subscription.endpoint, keys: subscription.keys },
+        JSON.stringify({ title: app.name, body: message }),
+        { timeout: SOCKET_IDLE_TIMEOUT_MS, agent }
+      ),
+      REQUEST_DEADLINE_MS
+    )
+  } catch (error) {
+    category = failureCategory(error)
+  } finally {
+    // Closing this attempt's sockets cancels transport when the overall deadline expires.
+    agent.destroy()
+  }
+
+  let bookkeepingFailed = false
+  try {
+    const update = category === undefined ? recordSuccess(stored) : recordFailure(stored, category)
+    await withDeadline(update, BOOKKEEPING_DEADLINE_MS)
+  } catch {
+    bookkeepingFailed = true
+  }
+  return { accepted: category === undefined, category, bookkeepingFailed }
+}
+
 async function sendToSubscriptions(
-  subscriptions: (typeof pushSubscription.$inferSelect)[],
+  subscriptions: StoredSubscription[],
   message: string
 ): Promise<NotificationDeliveryResult> {
   if (subscriptions.length === 0) {
-    return { success: false, error: "noActiveSubscriptions" }
+    return { success: false, error: "noActiveSubscriptions", accepted: 0, failed: 0, failureCategories: {} }
   }
-
-  const results = await Promise.allSettled(
-    subscriptions.map(async (stored) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: stored.endpoint, keys: { p256dh: stored.p256dh, auth: stored.auth } },
-          JSON.stringify({ title: app.name, body: message })
-        )
-        const now = new Date()
-        await db
-          .update(pushSubscription)
-          .set({ lastSuccessAt: now, lastSeenAt: now, failureCount: 0, updatedAt: now })
-          .where(eq(pushSubscription.id, stored.id))
-      } catch (error) {
-        const statusCode = error instanceof webpush.WebPushError ? error.statusCode : undefined
-        const permanentlyInvalid = statusCode === 404 || statusCode === 410
-        const now = new Date()
-        await db
-          .update(pushSubscription)
-          .set({
-            status: permanentlyInvalid ? "disabled" : "active",
-            lastFailureAt: now,
-            failureCount: stored.failureCount + 1,
-            disabledAt: permanentlyInvalid ? now : null,
-            disabledReason: permanentlyInvalid ? `Push provider returned HTTP ${statusCode}` : null,
-            updatedAt: now
-          })
-          .where(eq(pushSubscription.id, stored.id))
-        throw error
+  let nextIndex = 0
+  let accepted = 0
+  const failureCategories: NotificationDeliveryDiagnostics["failureCategories"] = {}
+  const countFailure = (category: NotificationDeliveryFailureCategory) => {
+    failureCategories[category] = (failureCategories[category] ?? 0) + 1
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(DEFAULT_CONCURRENCY, subscriptions.length) }, async () => {
+      while (nextIndex < subscriptions.length) {
+        const attempt = await deliverOne(subscriptions[nextIndex++], message)
+        if (attempt.accepted) accepted += 1
+        if (attempt.category) countFailure(attempt.category)
+        if (attempt.bookkeepingFailed) countFailure("bookkeeping")
       }
     })
   )
+  const diagnostics = { accepted, failed: subscriptions.length - accepted, failureCategories }
+  if (Object.keys(failureCategories).length > 0) console.error("[push:delivery]", diagnostics)
+  return accepted > 0 ? { success: true, ...diagnostics } : { success: false, error: "deliveryFailed", ...diagnostics }
+}
 
-  return results.some((result) => result.status === "fulfilled")
-    ? { success: true }
-    : { success: false, error: "deliveryFailed" }
+async function recordFailure(stored: StoredSubscription, category: NotificationDeliveryFailureCategory) {
+  const disabledReasons: Partial<Record<NotificationDeliveryFailureCategory, string>> = {
+    invalidSubscription: "Stored push subscription failed validation",
+    subscriptionGone: "Push provider returned HTTP 404 or 410"
+  }
+  const disabledReason = disabledReasons[category] ?? null
+  const permanentlyInvalid = disabledReason !== null
+  const now = new Date()
+
+  await db
+    .update(pushSubscription)
+    .set({
+      status: permanentlyInvalid ? "disabled" : "active",
+      lastFailureAt: now,
+      failureCount: sql`${pushSubscription.failureCount} + 1`,
+      disabledAt: permanentlyInvalid ? now : null,
+      disabledReason,
+      updatedAt: now
+    })
+    .where(eq(pushSubscription.id, stored.id))
+}
+
+async function recordSuccess(stored: StoredSubscription) {
+  const now = new Date()
+  await db
+    .update(pushSubscription)
+    .set({ lastSuccessAt: now, lastSeenAt: now, failureCount: 0, updatedAt: now })
+    .where(eq(pushSubscription.id, stored.id))
 }
 
 /** Delivers a message to every active push subscription belonging to one User. */
@@ -66,18 +156,26 @@ export async function sendToUser(userId: string, message: string) {
  */
 export async function sendToUsers(userIds: string[], message: string): Promise<NotificationDeliveryResult> {
   if (userIds.length === 0) {
-    return { success: false, error: "noRecipients" }
+    return { success: false, error: "noRecipients", accepted: 0, failed: 0, failureCategories: {} }
   }
-  const subscriptions = await db
-    .select()
-    .from(pushSubscription)
-    .where(and(inArray(pushSubscription.userId, userIds), eq(pushSubscription.status, "active")))
-
-  return sendToSubscriptions(subscriptions, message)
+  return sendToSubscriptions(await listDeliverySubscriptions(userIds), message)
 }
 
-/** Delivers a message to every active push subscription, succeeding when at least one accepts it. */
+/** Delivers a message to every eligible active User's push subscriptions. */
 export async function sendToAll(message: string) {
-  const subscriptions = await db.select().from(pushSubscription).where(eq(pushSubscription.status, "active"))
-  return sendToSubscriptions(subscriptions, message)
+  return sendToSubscriptions(await listDeliverySubscriptions(), message)
+}
+
+function listDeliverySubscriptions(userIds?: string[]) {
+  return db
+    .select(getTableColumns(pushSubscription))
+    .from(pushSubscription)
+    .innerJoin(user, eq(user.id, pushSubscription.userId))
+    .where(
+      and(
+        eq(pushSubscription.status, "active"),
+        or(eq(user.banned, false), isNull(user.banned)),
+        userIds ? inArray(user.id, userIds) : undefined
+      )
+    )
 }

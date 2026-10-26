@@ -65,7 +65,13 @@ export function SendToSelectedUsersCard() {
         const result = await sendTestNotificationToUsers(selectedUserIds, message)
         setFeedback({
           success: result.success,
-          message: result.success ? t("sentToSelected") : t(result.error)
+          message: result.success
+            ? t("sentToSelected", {
+                accepted: result.accepted,
+                attempted: result.accepted + result.failed,
+                failed: result.failed
+              })
+            : t(result.error)
         })
         if (result.success) setMessage("")
       } catch {

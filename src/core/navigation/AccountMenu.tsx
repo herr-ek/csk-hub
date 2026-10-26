@@ -3,7 +3,6 @@
 import { LogOutIcon, SettingsIcon, UserRoundIcon } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
-import { authClient } from "@/core/auth/auth-client"
 import { useTranslations } from "@/core/i18n/translations"
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/base/avatar"
 import { Button } from "@/shared/ui/base/button"
@@ -17,6 +16,7 @@ import {
   DropdownMenuTrigger
 } from "@/shared/ui/base/dropdown-menu"
 import { toast } from "@/shared/ui/base/toast"
+import { logout } from "./logout"
 import { ROUTES } from "./site"
 
 /** Combines account navigation and sign-out; impersonated sessions return to the Admin's session instead. */
@@ -33,7 +33,7 @@ export function AccountMenu({
   async function handleLogout() {
     setIsPending(true)
     try {
-      const result = isImpersonating ? await authClient.admin.stopImpersonating() : await authClient.signOut()
+      const result = await logout(isImpersonating)
       if (result.error) {
         toast.add({ type: "error", title: isImpersonating ? t("stopImpersonationFailed") : t("logoutFailed") })
         return
