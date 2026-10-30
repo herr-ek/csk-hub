@@ -11,10 +11,19 @@ if (!POSTGRES_URL) {
 }
 
 const { connectionString, ssl } = secureConnection(POSTGRES_URL)
+const connection = new URL(connectionString)
 
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/core/db/schema",
   out: "./drizzle",
-  dbCredentials: { url: connectionString, ssl }
+  // v1's URL form excludes explicit TLS options. Use fields so Kit keeps our CA policy.
+  dbCredentials: {
+    host: connection.hostname.replace(/^\[|\]$/g, ""),
+    port: Number(connection.port || 5432),
+    user: decodeURIComponent(connection.username),
+    password: decodeURIComponent(connection.password),
+    database: decodeURIComponent(connection.pathname.slice(1)),
+    ssl
+  }
 })

@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm"
+import { defineRelations } from "drizzle-orm"
 import { index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
@@ -37,9 +37,8 @@ export const pushSubscription = pgTable(
   ]
 )
 
-export const pushSubscriptionRelations = relations(pushSubscription, ({ one }) => ({
-  user: one(user, {
-    fields: [pushSubscription.userId],
-    references: [user.id]
-  })
+export const notificationRelations = defineRelations({ pushSubscription, user }, (r) => ({
+  pushSubscription: {
+    user: r.one.user({ from: [r.pushSubscription.userId], to: [r.user.id] })
+  }
 }))

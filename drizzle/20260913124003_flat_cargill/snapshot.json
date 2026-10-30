@@ -1,0 +1,129 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "804079ce-45ba-4632-976e-0025d84c374e",
+  "prevIds": [
+    "aea56278-4321-4017-8357-7fee9e49499e"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "user_preferences"
+      ],
+      "writes": [
+        "s|tbl|public.user_preferences",
+        "n|tbl|public.user_preferences",
+        "e|tbl|public.user_preferences",
+        "n|rel|public.user_preferences",
+        "n|type|public.user_preferences",
+        "n|rel|public.user_preferences_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "user_preferences"
+      ],
+      "writes": [
+        "s|fk|public.user_preferences.user_preferences_user_id_user_id_fk",
+        "n|fk|public.user_preferences.user_preferences_user_id_user_id_fk",
+        "e|fk|public.user_preferences.user_preferences_user_id_user_id_fk",
+        "n|con|public.user_preferences.user_preferences_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.user_preferences",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.user_preferences.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "user_preferences",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user_preferences",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user_preferences",
+        "name": "preferences",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user_preferences",
+        "name": "user_preferences_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user_preferences",
+        "name": "user_preferences_pkey",
+        "columns": [
+          "user_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

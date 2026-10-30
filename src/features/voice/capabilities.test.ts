@@ -64,7 +64,7 @@ describe.skipIf(!database)("voice capabilities", () => {
       await expect(Promise.resolve(t.db.execute(sql`SELECT 'B'::voice_family = 'B'::voice`))).rejects.toMatchObject({
         cause: { code: "42883" }
       })
-      const { rows } = await t.db.execute(sql`SELECT 'B'::voice_family::voice = 'B'::voice AS same`)
+      const { rows } = await t.db.execute<{ same: boolean }>(sql`SELECT 'B'::voice_family::voice = 'B'::voice AS same`)
       expect(rows).toEqual([{ same: true }])
     })
   })

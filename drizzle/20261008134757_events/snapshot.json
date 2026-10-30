@@ -1,0 +1,4280 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "0cd65ca5-87ae-4c1f-926a-b3b3f7e4717b",
+  "prevIds": [
+    "eb9a0835-e46f-4b83-8495-fed2d2cb40b8"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "attendance_status"
+      ],
+      "writes": [
+        "s|enum|public.attendance_status",
+        "n|enum|public.attendance_status",
+        "e|enum|public.attendance_status",
+        "n|type|public.attendance_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "event_status"
+      ],
+      "writes": [
+        "s|enum|public.event_status",
+        "n|enum|public.event_status",
+        "e|enum|public.event_status",
+        "n|type|public.event_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "event_type"
+      ],
+      "writes": [
+        "s|enum|public.event_type",
+        "n|enum|public.event_type",
+        "e|enum|public.event_type",
+        "n|type|public.event_type"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "participation_mode"
+      ],
+      "writes": [
+        "s|enum|public.participation_mode",
+        "n|enum|public.participation_mode",
+        "e|enum|public.participation_mode",
+        "n|type|public.participation_mode"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "registration_question_kind"
+      ],
+      "writes": [
+        "s|enum|public.registration_question_kind",
+        "n|enum|public.registration_question_kind",
+        "e|enum|public.registration_question_kind",
+        "n|type|public.registration_question_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "registration_status"
+      ],
+      "writes": [
+        "s|enum|public.registration_status",
+        "n|enum|public.registration_status",
+        "e|enum|public.registration_status",
+        "n|type|public.registration_status"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "rsvp_answer"
+      ],
+      "writes": [
+        "s|enum|public.rsvp_answer",
+        "n|enum|public.rsvp_answer",
+        "e|enum|public.rsvp_answer",
+        "n|type|public.rsvp_answer"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "absence_reason"
+      ],
+      "writes": [
+        "s|tbl|public.absence_reason",
+        "n|tbl|public.absence_reason",
+        "e|tbl|public.absence_reason",
+        "n|rel|public.absence_reason",
+        "n|type|public.absence_reason",
+        "n|rel|public.absence_reason_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event"
+      ],
+      "writes": [
+        "s|tbl|public.event",
+        "n|tbl|public.event",
+        "e|tbl|public.event",
+        "n|rel|public.event",
+        "n|type|public.event",
+        "n|rel|public.event_pkey",
+        "n|rel|public.event_id_type_unique"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.event_type",
+        "n|enum|public.event_status",
+        "n|enum|public.participation_mode"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_attendance"
+      ],
+      "writes": [
+        "s|tbl|public.event_attendance",
+        "n|tbl|public.event_attendance",
+        "e|tbl|public.event_attendance",
+        "n|rel|public.event_attendance",
+        "n|type|public.event_attendance",
+        "n|rel|public.event_attendance_pkey",
+        "n|rel|public.event_attendance_event_user_unique"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.attendance_status"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_detail"
+      ],
+      "writes": [
+        "s|tbl|public.event_detail",
+        "n|tbl|public.event_detail",
+        "e|tbl|public.event_detail",
+        "n|rel|public.event_detail",
+        "n|type|public.event_detail",
+        "n|rel|public.event_detail_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration"
+      ],
+      "writes": [
+        "s|tbl|public.event_registration",
+        "n|tbl|public.event_registration",
+        "e|tbl|public.event_registration",
+        "n|rel|public.event_registration",
+        "n|type|public.event_registration",
+        "n|rel|public.event_registration_pkey",
+        "n|rel|public.event_registration_event_user_unique"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.registration_status"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_answer"
+      ],
+      "writes": [
+        "s|tbl|public.event_registration_answer",
+        "n|tbl|public.event_registration_answer",
+        "e|tbl|public.event_registration_answer",
+        "n|rel|public.event_registration_answer",
+        "n|type|public.event_registration_answer",
+        "n|rel|public.event_registration_answer_pk"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_answer_choice"
+      ],
+      "writes": [
+        "s|tbl|public.event_registration_answer_choice",
+        "n|tbl|public.event_registration_answer_choice",
+        "e|tbl|public.event_registration_answer_choice",
+        "n|rel|public.event_registration_answer_choice",
+        "n|type|public.event_registration_answer_choice",
+        "n|rel|public.event_registration_answer_choice_pk"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_question"
+      ],
+      "writes": [
+        "s|tbl|public.event_registration_question",
+        "n|tbl|public.event_registration_question",
+        "e|tbl|public.event_registration_question",
+        "n|rel|public.event_registration_question",
+        "n|type|public.event_registration_question",
+        "n|rel|public.event_registration_question_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.registration_question_kind"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_question_option"
+      ],
+      "writes": [
+        "s|tbl|public.event_registration_question_option",
+        "n|tbl|public.event_registration_question_option",
+        "e|tbl|public.event_registration_question_option",
+        "n|rel|public.event_registration_question_option",
+        "n|type|public.event_registration_question_option",
+        "n|rel|public.event_registration_question_option_pkey",
+        "n|rel|public.event_registration_question_option_question_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_response"
+      ],
+      "writes": [
+        "s|tbl|public.event_response",
+        "n|tbl|public.event_response",
+        "e|tbl|public.event_response",
+        "n|rel|public.event_response",
+        "n|type|public.event_response",
+        "n|rel|public.event_response_pkey",
+        "n|rel|public.event_response_event_user_unique"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.rsvp_answer"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_series"
+      ],
+      "writes": [
+        "s|tbl|public.event_series",
+        "n|tbl|public.event_series",
+        "e|tbl|public.event_series",
+        "n|rel|public.event_series",
+        "n|type|public.event_series",
+        "n|rel|public.event_series_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_target"
+      ],
+      "writes": [
+        "s|tbl|public.event_target",
+        "n|tbl|public.event_target",
+        "e|tbl|public.event_target",
+        "n|rel|public.event_target",
+        "n|type|public.event_target",
+        "n|rel|public.event_target_pkey",
+        "n|rel|public.event_target_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "gig"
+      ],
+      "writes": [
+        "s|tbl|public.gig",
+        "n|tbl|public.gig",
+        "e|tbl|public.gig",
+        "n|rel|public.gig",
+        "n|type|public.gig",
+        "n|rel|public.gig_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.event_type"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "location"
+      ],
+      "writes": [
+        "s|tbl|public.location",
+        "n|tbl|public.location",
+        "e|tbl|public.location",
+        "n|rel|public.location",
+        "n|type|public.location",
+        "n|rel|public.location_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "rehearsal"
+      ],
+      "writes": [
+        "s|tbl|public.rehearsal",
+        "n|tbl|public.rehearsal",
+        "e|tbl|public.rehearsal",
+        "n|rel|public.rehearsal",
+        "n|type|public.rehearsal",
+        "n|rel|public.rehearsal_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.event_type"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "social_event"
+      ],
+      "writes": [
+        "s|tbl|public.social_event",
+        "n|tbl|public.social_event",
+        "e|tbl|public.social_event",
+        "n|rel|public.social_event",
+        "n|type|public.social_event",
+        "n|rel|public.social_event_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.event_type"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "absence_reason",
+        "absence_reason_label_active_unique"
+      ],
+      "writes": [
+        "s|idx|public.absence_reason_label_active_unique",
+        "n|idx|public.absence_reason_label_active_unique",
+        "e|idx|public.absence_reason_label_active_unique",
+        "n|rel|public.absence_reason_label_active_unique"
+      ],
+      "reads": [
+        "n|tbl|public.absence_reason",
+        "n|sch|public",
+        "n|col|public.absence_reason.label"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event",
+        "event_starts_at_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_starts_at_idx",
+        "n|idx|public.event_starts_at_idx",
+        "e|idx|public.event_starts_at_idx",
+        "n|rel|public.event_starts_at_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event.starts_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event",
+        "event_series_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_series_id_idx",
+        "n|idx|public.event_series_id_idx",
+        "e|idx|public.event_series_id_idx",
+        "n|rel|public.event_series_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event.series_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event",
+        "event_organiser_group_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_organiser_group_id_idx",
+        "n|idx|public.event_organiser_group_id_idx",
+        "e|idx|public.event_organiser_group_id_idx",
+        "n|rel|public.event_organiser_group_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event.organiser_group_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_attendance",
+        "event_attendance_user_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_attendance_user_id_idx",
+        "n|idx|public.event_attendance_user_id_idx",
+        "e|idx|public.event_attendance_user_id_idx",
+        "n|rel|public.event_attendance_user_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_attendance",
+        "n|sch|public",
+        "n|col|public.event_attendance.user_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_detail",
+        "event_detail_event_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_detail_event_id_idx",
+        "n|idx|public.event_detail_event_id_idx",
+        "e|idx|public.event_detail_event_id_idx",
+        "n|rel|public.event_detail_event_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_detail",
+        "n|sch|public",
+        "n|col|public.event_detail.event_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_registration",
+        "event_registration_user_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_registration_user_id_idx",
+        "n|idx|public.event_registration_user_id_idx",
+        "e|idx|public.event_registration_user_id_idx",
+        "n|rel|public.event_registration_user_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration",
+        "n|sch|public",
+        "n|col|public.event_registration.user_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_registration_answer",
+        "event_registration_answer_question_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_registration_answer_question_id_idx",
+        "n|idx|public.event_registration_answer_question_id_idx",
+        "e|idx|public.event_registration_answer_question_id_idx",
+        "n|rel|public.event_registration_answer_question_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_answer",
+        "n|sch|public",
+        "n|col|public.event_registration_answer.question_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_registration_answer_choice",
+        "event_registration_answer_choice_option_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_registration_answer_choice_option_idx",
+        "n|idx|public.event_registration_answer_choice_option_idx",
+        "e|idx|public.event_registration_answer_choice_option_idx",
+        "n|rel|public.event_registration_answer_choice_option_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_answer_choice",
+        "n|sch|public",
+        "n|col|public.event_registration_answer_choice.question_id",
+        "n|col|public.event_registration_answer_choice.option_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_registration_question",
+        "event_registration_question_event_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_registration_question_event_id_idx",
+        "n|idx|public.event_registration_question_event_id_idx",
+        "e|idx|public.event_registration_question_event_id_idx",
+        "n|rel|public.event_registration_question_event_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_question",
+        "n|sch|public",
+        "n|col|public.event_registration_question.event_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_response",
+        "event_response_user_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_response_user_id_idx",
+        "n|idx|public.event_response_user_id_idx",
+        "e|idx|public.event_response_user_id_idx",
+        "n|rel|public.event_response_user_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_response",
+        "n|sch|public",
+        "n|col|public.event_response.user_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "event_target",
+        "event_target_group_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.event_target_group_id_idx",
+        "n|idx|public.event_target_group_id_idx",
+        "e|idx|public.event_target_group_id_idx",
+        "n|rel|public.event_target_group_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.event_target",
+        "n|sch|public",
+        "n|col|public.event_target.group_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "location",
+        "location_name_active_unique"
+      ],
+      "writes": [
+        "s|idx|public.location_name_active_unique",
+        "n|idx|public.location_name_active_unique",
+        "e|idx|public.location_name_active_unique",
+        "n|rel|public.location_name_active_unique"
+      ],
+      "reads": [
+        "n|tbl|public.location",
+        "n|sch|public",
+        "n|col|public.location.name"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event"
+      ],
+      "writes": [
+        "s|fk|public.event.event_location_id_location_id_fk",
+        "n|fk|public.event.event_location_id_location_id_fk",
+        "e|fk|public.event.event_location_id_location_id_fk",
+        "n|con|public.event.event_location_id_location_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|tbl|public.location",
+        "n|sch|public",
+        "n|col|public.event.location_id",
+        "n|col|public.location.id",
+        "e|uniqueness|public.location.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event"
+      ],
+      "writes": [
+        "s|fk|public.event.event_organiser_group_id_group_id_fk",
+        "n|fk|public.event.event_organiser_group_id_group_id_fk",
+        "e|fk|public.event.event_organiser_group_id_group_id_fk",
+        "n|con|public.event.event_organiser_group_id_group_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.event.organiser_group_id",
+        "n|col|public.group.id",
+        "e|uniqueness|public.group.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event"
+      ],
+      "writes": [
+        "s|fk|public.event.event_series_id_event_series_id_fk",
+        "n|fk|public.event.event_series_id_event_series_id_fk",
+        "e|fk|public.event.event_series_id_event_series_id_fk",
+        "n|con|public.event.event_series_id_event_series_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|tbl|public.event_series",
+        "n|sch|public",
+        "n|col|public.event.series_id",
+        "n|col|public.event_series.id",
+        "e|uniqueness|public.event_series.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event"
+      ],
+      "writes": [
+        "s|fk|public.event.event_created_by_user_id_fk",
+        "n|fk|public.event.event_created_by_user_id_fk",
+        "e|fk|public.event.event_created_by_user_id_fk",
+        "n|con|public.event.event_created_by_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.event.created_by",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_attendance"
+      ],
+      "writes": [
+        "s|fk|public.event_attendance.event_attendance_event_id_event_id_fk",
+        "n|fk|public.event_attendance.event_attendance_event_id_event_id_fk",
+        "e|fk|public.event_attendance.event_attendance_event_id_event_id_fk",
+        "n|con|public.event_attendance.event_attendance_event_id_event_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_attendance",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event_attendance.event_id",
+        "n|col|public.event.id",
+        "e|uniqueness|public.event.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_attendance"
+      ],
+      "writes": [
+        "s|fk|public.event_attendance.event_attendance_user_id_user_id_fk",
+        "n|fk|public.event_attendance.event_attendance_user_id_user_id_fk",
+        "e|fk|public.event_attendance.event_attendance_user_id_user_id_fk",
+        "n|con|public.event_attendance.event_attendance_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_attendance",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.event_attendance.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_attendance"
+      ],
+      "writes": [
+        "s|fk|public.event_attendance.event_attendance_recorded_by_user_id_fk",
+        "n|fk|public.event_attendance.event_attendance_recorded_by_user_id_fk",
+        "e|fk|public.event_attendance.event_attendance_recorded_by_user_id_fk",
+        "n|con|public.event_attendance.event_attendance_recorded_by_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_attendance",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.event_attendance.recorded_by",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_detail"
+      ],
+      "writes": [
+        "s|fk|public.event_detail.event_detail_event_id_event_id_fk",
+        "n|fk|public.event_detail.event_detail_event_id_event_id_fk",
+        "e|fk|public.event_detail.event_detail_event_id_event_id_fk",
+        "n|con|public.event_detail.event_detail_event_id_event_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_detail",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event_detail.event_id",
+        "n|col|public.event.id",
+        "e|uniqueness|public.event.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration"
+      ],
+      "writes": [
+        "s|fk|public.event_registration.event_registration_event_id_event_id_fk",
+        "n|fk|public.event_registration.event_registration_event_id_event_id_fk",
+        "e|fk|public.event_registration.event_registration_event_id_event_id_fk",
+        "n|con|public.event_registration.event_registration_event_id_event_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event_registration.event_id",
+        "n|col|public.event.id",
+        "e|uniqueness|public.event.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration"
+      ],
+      "writes": [
+        "s|fk|public.event_registration.event_registration_user_id_user_id_fk",
+        "n|fk|public.event_registration.event_registration_user_id_user_id_fk",
+        "e|fk|public.event_registration.event_registration_user_id_user_id_fk",
+        "n|con|public.event_registration.event_registration_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.event_registration.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_answer"
+      ],
+      "writes": [
+        "s|fk|public.event_registration_answer.event_registration_answer_registration_fk",
+        "n|fk|public.event_registration_answer.event_registration_answer_registration_fk",
+        "e|fk|public.event_registration_answer.event_registration_answer_registration_fk",
+        "n|con|public.event_registration_answer.event_registration_answer_registration_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_answer",
+        "n|sch|public",
+        "n|tbl|public.event_registration",
+        "n|sch|public",
+        "n|col|public.event_registration_answer.registration_id",
+        "n|col|public.event_registration.id",
+        "e|uniqueness|public.event_registration.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_answer"
+      ],
+      "writes": [
+        "s|fk|public.event_registration_answer.event_registration_answer_question_fk",
+        "n|fk|public.event_registration_answer.event_registration_answer_question_fk",
+        "e|fk|public.event_registration_answer.event_registration_answer_question_fk",
+        "n|con|public.event_registration_answer.event_registration_answer_question_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_answer",
+        "n|sch|public",
+        "n|tbl|public.event_registration_question",
+        "n|sch|public",
+        "n|col|public.event_registration_answer.question_id",
+        "n|col|public.event_registration_question.id",
+        "e|uniqueness|public.event_registration_question.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_answer_choice"
+      ],
+      "writes": [
+        "s|fk|public.event_registration_answer_choice.event_registration_answer_choice_answer_fk",
+        "n|fk|public.event_registration_answer_choice.event_registration_answer_choice_answer_fk",
+        "e|fk|public.event_registration_answer_choice.event_registration_answer_choice_answer_fk",
+        "n|con|public.event_registration_answer_choice.event_registration_answer_choice_answer_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_answer_choice",
+        "n|sch|public",
+        "n|tbl|public.event_registration_answer",
+        "n|sch|public",
+        "n|col|public.event_registration_answer_choice.registration_id",
+        "n|col|public.event_registration_answer_choice.question_id",
+        "n|col|public.event_registration_answer.registration_id",
+        "n|col|public.event_registration_answer.question_id",
+        "e|uniqueness|public.event_registration_answer.question_id.registration_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_answer_choice"
+      ],
+      "writes": [
+        "s|fk|public.event_registration_answer_choice.event_registration_answer_choice_option_fk",
+        "n|fk|public.event_registration_answer_choice.event_registration_answer_choice_option_fk",
+        "e|fk|public.event_registration_answer_choice.event_registration_answer_choice_option_fk",
+        "n|con|public.event_registration_answer_choice.event_registration_answer_choice_option_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_answer_choice",
+        "n|sch|public",
+        "n|tbl|public.event_registration_question_option",
+        "n|sch|public",
+        "n|col|public.event_registration_answer_choice.question_id",
+        "n|col|public.event_registration_answer_choice.option_id",
+        "n|col|public.event_registration_question_option.question_id",
+        "n|col|public.event_registration_question_option.id",
+        "e|uniqueness|public.event_registration_question_option.id.question_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_question"
+      ],
+      "writes": [
+        "s|fk|public.event_registration_question.event_registration_question_event_id_event_id_fk",
+        "n|fk|public.event_registration_question.event_registration_question_event_id_event_id_fk",
+        "e|fk|public.event_registration_question.event_registration_question_event_id_event_id_fk",
+        "n|con|public.event_registration_question.event_registration_question_event_id_event_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_question",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event_registration_question.event_id",
+        "n|col|public.event.id",
+        "e|uniqueness|public.event.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_registration_question_option"
+      ],
+      "writes": [
+        "s|fk|public.event_registration_question_option.event_registration_question_option_question_fk",
+        "n|fk|public.event_registration_question_option.event_registration_question_option_question_fk",
+        "e|fk|public.event_registration_question_option.event_registration_question_option_question_fk",
+        "n|con|public.event_registration_question_option.event_registration_question_option_question_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_registration_question_option",
+        "n|sch|public",
+        "n|tbl|public.event_registration_question",
+        "n|sch|public",
+        "n|col|public.event_registration_question_option.question_id",
+        "n|col|public.event_registration_question.id",
+        "e|uniqueness|public.event_registration_question.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_response"
+      ],
+      "writes": [
+        "s|fk|public.event_response.event_response_event_id_event_id_fk",
+        "n|fk|public.event_response.event_response_event_id_event_id_fk",
+        "e|fk|public.event_response.event_response_event_id_event_id_fk",
+        "n|con|public.event_response.event_response_event_id_event_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_response",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event_response.event_id",
+        "n|col|public.event.id",
+        "e|uniqueness|public.event.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_response"
+      ],
+      "writes": [
+        "s|fk|public.event_response.event_response_user_id_user_id_fk",
+        "n|fk|public.event_response.event_response_user_id_user_id_fk",
+        "e|fk|public.event_response.event_response_user_id_user_id_fk",
+        "n|con|public.event_response.event_response_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_response",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.event_response.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_response"
+      ],
+      "writes": [
+        "s|fk|public.event_response.event_response_absence_reason_id_absence_reason_id_fk",
+        "n|fk|public.event_response.event_response_absence_reason_id_absence_reason_id_fk",
+        "e|fk|public.event_response.event_response_absence_reason_id_absence_reason_id_fk",
+        "n|con|public.event_response.event_response_absence_reason_id_absence_reason_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_response",
+        "n|sch|public",
+        "n|tbl|public.absence_reason",
+        "n|sch|public",
+        "n|col|public.event_response.absence_reason_id",
+        "n|col|public.absence_reason.id",
+        "e|uniqueness|public.absence_reason.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_target"
+      ],
+      "writes": [
+        "s|fk|public.event_target.event_target_event_id_event_id_fk",
+        "n|fk|public.event_target.event_target_event_id_event_id_fk",
+        "e|fk|public.event_target.event_target_event_id_event_id_fk",
+        "n|con|public.event_target.event_target_event_id_event_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_target",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.event_target.event_id",
+        "n|col|public.event.id",
+        "e|uniqueness|public.event.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "event_target"
+      ],
+      "writes": [
+        "s|fk|public.event_target.event_target_group_id_group_id_fk",
+        "n|fk|public.event_target.event_target_group_id_group_id_fk",
+        "e|fk|public.event_target.event_target_group_id_group_id_fk",
+        "n|con|public.event_target.event_target_group_id_group_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.event_target",
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.event_target.group_id",
+        "n|col|public.group.id",
+        "e|uniqueness|public.group.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "gig"
+      ],
+      "writes": [
+        "s|fk|public.gig.gig_responsible_user_id_user_id_fk",
+        "n|fk|public.gig.gig_responsible_user_id_user_id_fk",
+        "e|fk|public.gig.gig_responsible_user_id_user_id_fk",
+        "n|con|public.gig.gig_responsible_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.gig",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.gig.responsible_user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "gig"
+      ],
+      "writes": [
+        "s|fk|public.gig.gig_event_id_type_event_id_type_fk",
+        "n|fk|public.gig.gig_event_id_type_event_id_type_fk",
+        "e|fk|public.gig.gig_event_id_type_event_id_type_fk",
+        "n|con|public.gig.gig_event_id_type_event_id_type_fk"
+      ],
+      "reads": [
+        "n|tbl|public.gig",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.gig.event_id",
+        "n|col|public.gig.type",
+        "n|col|public.event.id",
+        "n|col|public.event.type",
+        "e|uniqueness|public.event.id.type"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "rehearsal"
+      ],
+      "writes": [
+        "s|fk|public.rehearsal.rehearsal_leader_user_id_user_id_fk",
+        "n|fk|public.rehearsal.rehearsal_leader_user_id_user_id_fk",
+        "e|fk|public.rehearsal.rehearsal_leader_user_id_user_id_fk",
+        "n|con|public.rehearsal.rehearsal_leader_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.rehearsal",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.rehearsal.leader_user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "rehearsal"
+      ],
+      "writes": [
+        "s|fk|public.rehearsal.rehearsal_event_id_type_event_id_type_fk",
+        "n|fk|public.rehearsal.rehearsal_event_id_type_event_id_type_fk",
+        "e|fk|public.rehearsal.rehearsal_event_id_type_event_id_type_fk",
+        "n|con|public.rehearsal.rehearsal_event_id_type_event_id_type_fk"
+      ],
+      "reads": [
+        "n|tbl|public.rehearsal",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.rehearsal.event_id",
+        "n|col|public.rehearsal.type",
+        "n|col|public.event.id",
+        "n|col|public.event.type",
+        "e|uniqueness|public.event.id.type"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "social_event"
+      ],
+      "writes": [
+        "s|fk|public.social_event.social_event_event_id_type_event_id_type_fk",
+        "n|fk|public.social_event.social_event_event_id_type_event_id_type_fk",
+        "e|fk|public.social_event.social_event_event_id_type_event_id_type_fk",
+        "n|con|public.social_event.social_event_event_id_type_event_id_type_fk"
+      ],
+      "reads": [
+        "n|tbl|public.social_event",
+        "n|sch|public",
+        "n|tbl|public.event",
+        "n|sch|public",
+        "n|col|public.social_event.event_id",
+        "n|col|public.social_event.type",
+        "n|col|public.event.id",
+        "n|col|public.event.type",
+        "e|uniqueness|public.event.id.type"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "absence_reason",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_attendance",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_detail",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_registration",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_registration_answer",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_registration_answer_choice",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_registration_question",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_registration_question_option",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_response",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_series",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_target",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "gig",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "location",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "rehearsal",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "social_event",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "attendance_status",
+        "values": [
+          "Present",
+          "Excused",
+          "Absent"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_status",
+        "values": [
+          "Draft",
+          "Published",
+          "Cancelled"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_type",
+        "values": [
+          "Rehearsal",
+          "Gig",
+          "Concert",
+          "Social",
+          "Rephelg",
+          "Körmöte",
+          "Booking",
+          "Meeting",
+          "Other"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "participation_mode",
+        "values": [
+          "None",
+          "ResponseRequired",
+          "ResponseRequiredStrict",
+          "Registration"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "registration_question_kind",
+        "values": [
+          "Text",
+          "SingleChoice",
+          "MultipleChoice",
+          "Checkbox"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "registration_status",
+        "values": [
+          "Registered",
+          "Withdrawn"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "rsvp_answer",
+        "values": [
+          "Yes",
+          "No",
+          "Maybe"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "absence_reason",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "absence_reason",
+        "name": "label",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "absence_reason",
+        "name": "active",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "type",
+        "type": "event_type",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "status",
+        "type": "event_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'Draft'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "title",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "description",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "starts_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "ends_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "all_day",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "location_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "location_text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "call_time",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "respond_by",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "participation_mode",
+        "type": "participation_mode",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "organiser_group_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "series_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "created_by",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "status",
+        "type": "attendance_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "recorded_by",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "label",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "value",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "sort_order",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "status",
+        "type": "registration_status",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'Registered'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "comment",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "registered_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "withdrawn_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "registration_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "question_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "checked",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer_choice",
+        "name": "registration_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer_choice",
+        "name": "question_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer_choice",
+        "name": "option_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "label",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "kind",
+        "type": "registration_question_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "required",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "sort_order",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "question_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "label",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "sort_order",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "answer",
+        "type": "rsvp_answer",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "comment",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "absence_reason_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "reason_text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "responded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_series",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_series",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_series",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "group_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "voice_family",
+        "type": "voice_family",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "type",
+        "type": "event_type",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'Gig'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "responsible_user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "contact_name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "contact_details",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "address",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "map_url",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "active",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "rehearsal",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "rehearsal",
+        "name": "type",
+        "type": "event_type",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'Rehearsal'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "rehearsal",
+        "name": "leader_user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "social_event",
+        "name": "event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "social_event",
+        "name": "type",
+        "type": "event_type",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'Social'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "social_event",
+        "name": "cost_info",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "absence_reason",
+        "name": "absence_reason_label_active_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "label",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"active\"",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_starts_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "starts_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_series_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "series_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_organiser_group_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "organiser_group_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "event_attendance_user_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "event_detail_event_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "event_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "event_registration_user_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "event_registration_answer_question_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "question_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer_choice",
+        "name": "event_registration_answer_choice_option_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "question_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "option_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "event_registration_question_event_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "event_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_user_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "event_target_group_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "group_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "location_name_active_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "name",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"active\"",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_location_id_location_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "location_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "location",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_organiser_group_id_group_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "organiser_group_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_series_id_event_series_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "series_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event_series",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_created_by_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "created_by"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "event_attendance_event_id_event_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "event_attendance_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "event_attendance_recorded_by_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "event_detail_event_id_event_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "event_registration_event_id_event_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "event_registration_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "event_registration_answer_registration_fk",
+        "nameExplicit": true,
+        "columns": [
+          "registration_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event_registration",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "event_registration_answer_question_fk",
+        "nameExplicit": true,
+        "columns": [
+          "question_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event_registration_question",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer_choice",
+        "name": "event_registration_answer_choice_answer_fk",
+        "nameExplicit": true,
+        "columns": [
+          "registration_id",
+          "question_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event_registration_answer",
+        "columnsTo": [
+          "registration_id",
+          "question_id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer_choice",
+        "name": "event_registration_answer_choice_option_fk",
+        "nameExplicit": true,
+        "columns": [
+          "question_id",
+          "option_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event_registration_question_option",
+        "columnsTo": [
+          "question_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "event_registration_question_event_id_event_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "event_registration_question_option_question_fk",
+        "nameExplicit": true,
+        "columns": [
+          "question_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event_registration_question",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_event_id_event_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_absence_reason_id_absence_reason_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "absence_reason_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "absence_reason",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "event_target_event_id_event_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "event_target_group_id_group_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "group_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "gig_responsible_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "responsible_user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "gig_event_id_type_event_id_type_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id",
+          "type"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id",
+          "type"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "rehearsal",
+        "name": "rehearsal_leader_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "leader_user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "rehearsal",
+        "name": "rehearsal_event_id_type_event_id_type_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id",
+          "type"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id",
+          "type"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "social_event",
+        "name": "social_event_event_id_type_event_id_type_fk",
+        "nameExplicit": false,
+        "columns": [
+          "event_id",
+          "type"
+        ],
+        "schemaTo": "public",
+        "tableTo": "event",
+        "columnsTo": [
+          "id",
+          "type"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "absence_reason",
+        "name": "absence_reason_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "event_attendance_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "event_detail_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "event_registration_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "event_registration_answer_pk",
+        "columns": [
+          "registration_id",
+          "question_id"
+        ],
+        "nameExplicit": true,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer_choice",
+        "name": "event_registration_answer_choice_pk",
+        "columns": [
+          "registration_id",
+          "question_id",
+          "option_id"
+        ],
+        "nameExplicit": true,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "event_registration_question_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "event_registration_question_option_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_series",
+        "name": "event_series_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "event_target_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "gig_pkey",
+        "columns": [
+          "event_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "location_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "rehearsal",
+        "name": "rehearsal_pkey",
+        "columns": [
+          "event_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "social_event",
+        "name": "social_event_pkey",
+        "columns": [
+          "event_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_id_type_unique",
+        "nameExplicit": false,
+        "columns": [
+          "id",
+          "type"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_attendance",
+        "name": "event_attendance_event_user_unique",
+        "nameExplicit": true,
+        "columns": [
+          "event_id",
+          "user_id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "event_registration_event_user_unique",
+        "nameExplicit": true,
+        "columns": [
+          "event_id",
+          "user_id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "event_registration_question_option_question_unique",
+        "nameExplicit": true,
+        "columns": [
+          "question_id",
+          "id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_event_user_unique",
+        "nameExplicit": true,
+        "columns": [
+          "event_id",
+          "user_id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "event_target_unique",
+        "nameExplicit": true,
+        "columns": [
+          "event_id",
+          "group_id",
+          "voice_family"
+        ],
+        "nullsNotDistinct": true,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "absence_reason",
+        "name": "absence_reason_label_not_blank_check",
+        "value": "length(btrim(\"label\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_title_not_blank_check",
+        "value": "length(btrim(\"title\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_period_check",
+        "value": "\"ends_at\" > \"starts_at\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_call_time_check",
+        "value": "\"call_time\" IS NULL OR \"call_time\" <= \"starts_at\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_respond_by_check",
+        "value": "\"respond_by\" IS NULL OR \"respond_by\" <= \"starts_at\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event",
+        "name": "event_respond_by_mode_check",
+        "value": "\"participation_mode\" <> 'None' OR \"respond_by\" IS NULL",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_detail",
+        "name": "event_detail_label_not_blank_check",
+        "value": "length(btrim(\"label\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration",
+        "name": "event_registration_withdrawn_check",
+        "value": "(\"status\" = 'Withdrawn') = (\"withdrawn_at\" IS NOT NULL)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_answer",
+        "name": "event_registration_answer_one_value_check",
+        "value": "\"text\" IS NULL OR \"checked\" IS NULL",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question",
+        "name": "event_registration_question_label_not_blank_check",
+        "value": "length(btrim(\"label\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_registration_question_option",
+        "name": "event_registration_question_option_label_not_blank_check",
+        "value": "length(btrim(\"label\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_one_reason_check",
+        "value": "\"absence_reason_id\" IS NULL OR \"reason_text\" IS NULL",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_response",
+        "name": "event_response_reason_only_with_no_check",
+        "value": "\"answer\" = 'No' OR (\"absence_reason_id\" IS NULL AND \"reason_text\" IS NULL)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_series",
+        "name": "event_series_name_not_blank_check",
+        "value": "length(btrim(\"name\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "event_target",
+        "name": "event_target_not_empty_check",
+        "value": "\"group_id\" IS NOT NULL OR \"voice_family\" IS NOT NULL",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "gig",
+        "name": "gig_type_check",
+        "value": "\"type\" = 'Gig'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "location",
+        "name": "location_name_not_blank_check",
+        "value": "length(btrim(\"name\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "rehearsal",
+        "name": "rehearsal_type_check",
+        "value": "\"type\" = 'Rehearsal'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "social_event",
+        "name": "social_event_type_check",
+        "value": "\"type\" = 'Social'",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f40983be-8de0-400a-b50b-1ab158c809ad",
+  "prevIds": [
+    "f60c8d0f-7841-43db-a5dc-7709e09f11c9"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "body_search"
+      ],
+      "writes": [
+        "s|col|public.post.body_search",
+        "n|col|public.post.body_search",
+        "e|col|public.post.body_search"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "body"
+      ],
+      "writes": [
+        "s|colprop|public.post.body.type",
+        "s|colprop|public.post.body.default"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|col|public.post.body"
+      ],
+      "sqlHash": "010409d2af406fd2"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "post",
+        "post_body_search_idx"
+      ],
+      "writes": [
+        "s|idx|public.post_body_search_idx",
+        "n|idx|public.post_body_search_idx",
+        "e|idx|public.post_body_search_idx",
+        "n|rel|public.post_body_search_idx"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|col|public.post.body_search"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "body_search",
+        "type": "tsvector",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": {
+          "as": "to_tsvector('swedish', jsonb_path_query_array(\"body\", 'strict $.**.text')::text)",
+          "type": "stored"
+        },
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "post_body_search_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "body_search",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "gin",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"post\",\"body\"]",
+      "set": {
+        "type": "jsonb"
+      }
+    }
+  ]
+}

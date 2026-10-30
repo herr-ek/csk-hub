@@ -1,0 +1,69 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9d0a8d1e-26b9-4bfa-aaf1-b77a293b968a",
+  "prevIds": [
+    "dcd72704-51d7-445f-860b-e23b369f777c"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "author_id"
+      ],
+      "writes": [
+        "s|colprop|public.post.author_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|col|public.post.author_id"
+      ],
+      "sqlHash": "f0f927aabacef547"
+    },
+    {
+      "statementType": "recreate_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "post"
+      ],
+      "writes": [
+        "s|fk|public.post.post_author_id_user_id_fk",
+        "n|fk|public.post.post_author_id_user_id_fk",
+        "e|fk|public.post.post_author_id_user_id_fk",
+        "n|con|public.post.post_author_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.post.author_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ],
+      "sqlHash": "1a7f3c4c443a8c40"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"post\",\"author_id\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "fks\u0000[\"public\",\"post\",\"post_author_id_user_id_fk\"]",
+      "set": {
+        "onDelete": "SET NULL"
+      }
+    }
+  ]
+}
