@@ -7,6 +7,22 @@ Redis streams carry only outbox IDs, with approximately 1,000 entries and 24-hou
 Redis is not the source of truth: pending deliveries and scheduled deadlines live in
 Postgres. Delivery runs through Next.js `after()` without a separate worker.
 
+## Ownership
+
+`core/realtime` owns the shared delivery system: event contracts, transactional enqueue,
+Redis transport, authenticated SSE, acknowledgement handling, push fallback, retries,
+retention, `after()` scheduling and the app-wide browser connection. It imports no features.
+
+`createActivityDelivery(policy)` binds the server workflow to required feature checks for
+current delivery access and authoritative read state. `features/activity/server` is the
+app composition point: it supplies `conversationActivityPolicy` from
+`features/messaging/activity`. Messaging owns Conversation membership and read-cursor
+rules; other features use the same composed delivery entrypoint. The policy is passed
+explicitly, with no global registration or permissive default for protected deliveries.
+
+The integration suite stays in `features/activity` because it verifies the composed
+Messaging/Post workflows. Transport and scheduling tests live beside their core modules.
+
 ## Setup
 
 1. Run `docker compose up -d` locally to start PostgreSQL and Redis 7.

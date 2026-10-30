@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
+import type { ActivityDeliveryPolicy } from "./delivery-access"
 
 if (!process.env.CSK_DISPATCH_TEST) {
   test("bounded after-response activity delivery", async () => {
@@ -17,7 +18,8 @@ if (!process.env.CSK_DISPATCH_TEST) {
 } else {
   const env = { REDIS_URL: "redis://localhost:6379" }
   mock.module("@/core/config/env", () => ({ env }))
-  const dispatch = mock(async (_signal?: AbortSignal) => ({ processed: 1 }))
+  const policy: ActivityDeliveryPolicy = { canDeliver: async () => true, isAlreadyOpened: async () => false }
+  const dispatch = mock(async (_policy: ActivityDeliveryPolicy, _signal?: AbortSignal) => ({ processed: 1 }))
   const nextDelay = mock(async (): Promise<number | null> => null)
   const prune = mock(async () => {})
   mock.module("./dispatch", () => ({ dispatchActivity: dispatch, nextActivityDelay: nextDelay, pruneActivity: prune }))
@@ -38,30 +40,31 @@ if (!process.env.CSK_DISPATCH_TEST) {
 
   describe("after-response delivery", () => {
     test("scheduling does no delivery until the response callback runs", async () => {
-      scheduleActivityDispatch()
+      scheduleActivityDispatch(policy)
       expect(dispatch).not.toHaveBeenCalled()
       expect(callbacks).toHaveLength(1)
       await callbacks[0]()
       expect(dispatch).toHaveBeenCalledTimes(1)
+      expect(dispatch.mock.calls[0][0]).toBe(policy)
       expect(sleep).not.toHaveBeenCalled()
     })
 
     test("disabled realtime schedules no work", () => {
       env.REDIS_URL = ""
-      scheduleActivityDispatch()
+      scheduleActivityDispatch(policy)
       expect(callbacks).toHaveLength(0)
     })
 
     test("waits for a pending push deadline before attempting delivery again", async () => {
       nextDelay.mockResolvedValueOnce(8_000)
-      await deliverPendingActivity()
+      await deliverPendingActivity(policy)
       expect(dispatch).toHaveBeenCalledTimes(2)
       expect(sleep.mock.calls[0][0]).toBe(8_000)
     })
 
     test("transient database failure retries within the same response callback", async () => {
       dispatch.mockRejectedValueOnce(new Error("Database unavailable"))
-      await deliverPendingActivity()
+      await deliverPendingActivity(policy)
       expect(dispatch).toHaveBeenCalledTimes(2)
       expect(sleep.mock.calls[0][0]).toBe(1_000)
     })
@@ -74,13 +77,13 @@ if (!process.env.CSK_DISPATCH_TEST) {
         stop.abort()
         throw new Error("Aborted")
       })
-      await deliverPendingActivity(stop.signal)
+      await deliverPendingActivity(policy, stop.signal)
       expect(dispatch).toHaveBeenCalledTimes(1)
       expect(sleep).toHaveBeenCalledTimes(1)
     })
 
     test("a task whose budget already expired does not claim anything", async () => {
-      await deliverPendingActivity(AbortSignal.abort())
+      await deliverPendingActivity(policy, AbortSignal.abort())
       expect(dispatch).not.toHaveBeenCalled()
     })
   })

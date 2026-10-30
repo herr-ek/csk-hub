@@ -19,8 +19,7 @@ if (!process.env.CSK_STREAM_RECOVERY_TEST) {
   mock.module("@/core/db", () => ({ db: {} }))
   mock.module("./access", () => ({
     getActivitySession: async () => ({ userId: "recipient", sessionId: "session" }),
-    isActivitySessionActive: async () => true,
-    isDeliveryAllowed: async () => true
+    isActivitySessionActive: async () => true
   }))
   const connect = mock()
   mock.module("@/core/realtime/broker", () => ({
@@ -28,10 +27,11 @@ if (!process.env.CSK_STREAM_RECOVERY_TEST) {
     activityStreamKey: () => "recipient-stream"
   }))
   const { handleActivityStream } = await import("./stream")
+  const policy = { canDeliver: async () => true, isAlreadyOpened: async () => false }
   afterEach(() => connect.mockReset())
 
   async function expectReconnectResponse() {
-    const response = await handleActivityStream(new Request("http://localhost/api/realtime/events"))
+    const response = await handleActivityStream(policy, new Request("http://localhost/api/realtime/events"))
     expect(response.status).toBe(200)
     expect(response.headers.get("content-type")).toBe("text/event-stream")
     expect(await response.text()).toBe("retry: 5000\nevent: unavailable\ndata: {}\n\n")

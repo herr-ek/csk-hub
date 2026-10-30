@@ -7,7 +7,7 @@ import { activityDelivery } from "@/core/db/schema/activity"
 import { logger } from "@/core/logging"
 import { sendToUser } from "@/core/notifications"
 import { type ActivityBroker, connectActivityBroker, publishActivity } from "@/core/realtime/broker"
-import { type Delivery, isDeliveryAllowed, isDeliveryAlreadyOpened } from "./delivery-access"
+import { type ActivityDeliveryPolicy, type Delivery, isDeliveryAllowed } from "./delivery-access"
 
 async function claimDelivery() {
   return db.transaction(async (tx) => {
@@ -45,7 +45,11 @@ async function claimDelivery() {
   })
 }
 
-async function dispatchOne(delivery: Delivery, publish: (userId: string, deliveryId: string) => Promise<void>) {
+async function dispatchOne(
+  policy: ActivityDeliveryPolicy,
+  delivery: Delivery,
+  publish: (userId: string, deliveryId: string) => Promise<void>
+) {
   const owned = and(eq(activityDelivery.id, delivery.id), eq(activityDelivery.leaseToken, delivery.leaseToken ?? ""))
   const updates: {
     [K in keyof typeof activityDelivery.$inferInsert]?: (typeof activityDelivery.$inferInsert)[K] | SQL
@@ -53,7 +57,7 @@ async function dispatchOne(delivery: Delivery, publish: (userId: string, deliver
   const retryMs = Math.min(60_000, 1_000 * 2 ** Math.min(delivery.attempts, 6))
   const retryAt = sql`now() + (${retryMs} * interval '1 millisecond')`
   try {
-    if (!(await isDeliveryAllowed(delivery))) {
+    if (!(await isDeliveryAllowed(policy, delivery))) {
       updates.publishedAt = sql`now()`
       updates.pushCompletedAt = sql`now()`
       return
@@ -74,7 +78,11 @@ async function dispatchOne(delivery: Delivery, publish: (userId: string, deliver
         .from(activityDelivery)
         .where(and(owned, lte(activityDelivery.pushAfter, sql`now()`)))
       if (!current) return
-      if (current.acknowledgedAt || (await isDeliveryAlreadyOpened(current)) || !(await isDeliveryAllowed(current))) {
+      if (
+        current.acknowledgedAt ||
+        (await policy.isAlreadyOpened(current)) ||
+        !(await isDeliveryAllowed(policy, current))
+      ) {
         updates.pushCompletedAt = sql`now()`
       } else if (current.body) {
         const result = await sendToUser(current.userId, current.body, {
@@ -101,7 +109,7 @@ async function dispatchOne(delivery: Delivery, publish: (userId: string, deliver
 }
 
 /** Processes one bounded batch. Leases coordinate concurrent dispatches; abort finishes the current delivery. */
-export async function dispatchActivity(signal?: AbortSignal) {
+export async function dispatchActivity(policy: ActivityDeliveryPolicy, signal?: AbortSignal) {
   if (!env.REDIS_URL) return { processed: 0 }
   let processed = 0
   let broker: Promise<ActivityBroker> | undefined
@@ -110,7 +118,7 @@ export async function dispatchActivity(signal?: AbortSignal) {
     while (!signal?.aborted && processed < 50 && Date.now() < deadline) {
       const delivery = await claimDelivery()
       if (!delivery) break
-      await dispatchOne(delivery, async (userId, deliveryId) => {
+      await dispatchOne(policy, delivery, async (userId, deliveryId) => {
         broker ??= connectActivityBroker()
         await publishActivity(await broker, userId, deliveryId)
       })

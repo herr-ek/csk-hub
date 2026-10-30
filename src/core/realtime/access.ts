@@ -5,7 +5,6 @@ import { getRequestSession } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { session, user } from "@/core/db/schema/auth"
 
-export { isDeliveryAllowed } from "./delivery-access"
 export type ActivitySession = { userId: string; sessionId: string }
 
 /** The database check bypasses the cookie cache for long-lived streams and acknowledgements. */

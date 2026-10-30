@@ -74,12 +74,12 @@ if (!process.env.CSK_ACTIVITY_TEST) {
     const { createGroupConversation, leaveGroupConversation } = await import("@/features/messaging/group-conversations")
     const { markConversationRead } = await import("@/features/messaging/ui/conversation/read")
     const { createReadToken } = await import("@/features/messaging/ui/conversation/read-token")
-    const { dispatchActivity, nextActivityDelay, pruneActivity } = await import("./dispatch")
-    const { deliverPendingActivity } = await import("./deliver-pending")
-    const { scheduleActivityDispatch } = await import("./schedule-dispatch")
-    const { handleActivityStream } = await import("./stream")
-    const { handleActivityAcknowledgement } = await import("./acknowledge")
-    const { notifyUsers } = await import("./notifications")
+    const { dispatchActivity, nextActivityDelay, pruneActivity } = await import("@/core/realtime/dispatch")
+    const { deliverPendingActivity } = await import("@/core/realtime/deliver-pending")
+    const { conversationActivityPolicy } = await import("@/features/messaging/activity")
+    const { scheduleActivityDispatch, handleActivityStream, handleActivityAcknowledgement, notifyUsers } = await import(
+      "./server"
+    )
     const { createPost, saveDraft, unpublishPost } = await import("@/features/posts/lifecycle")
     const { markPostRead, nextUnreadPostChangeAt } = await import("@/features/posts/unread/service")
 
@@ -237,7 +237,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         const stream = await streamAs(recipient)
         try {
           expect(await stream.read()).toContain("event: ready")
-          expect((await dispatchActivity()).processed).toBe(2)
+          expect((await dispatchActivity(conversationActivityPolicy)).processed).toBe(2)
           expect((await messageDelivery(recipient.userId)).publishedAt).not.toBeNull()
           const update = await stream.read()
           expect(update).toContain("event: activity")
@@ -257,7 +257,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         )
         expect(response.status).toBe(204)
         await makePushDue()
-        await dispatchActivity()
+        await dispatchActivity(conversationActivityPolicy)
         expect(push).not.toHaveBeenCalled()
         const [cursor] = await testDatabase.db
           .select()
@@ -279,7 +279,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         const token = createReadToken(sent.conversationId, recipient.userId, sent.sequence)
         await identity.run(recipient, () => markConversationRead(sent.conversationId, sent.sequence, token))
         await makePushDue()
-        await dispatchActivity()
+        await dispatchActivity(conversationActivityPolicy)
         expect(push).not.toHaveBeenCalled()
         expect((await messageDelivery(recipient.userId)).acknowledgedAt).not.toBeNull()
       })
@@ -307,7 +307,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
       test("concurrent dispatches lease fallback once; presentation carries a Conversation link", async () => {
         const { recipient, sent } = await direct()
         await makePushDue()
-        await Promise.all([dispatchActivity(), dispatchActivity()])
+        await Promise.all([dispatchActivity(conversationActivityPolicy), dispatchActivity(conversationActivityPolicy)])
         expect(push).toHaveBeenCalledTimes(1)
         expect(push).toHaveBeenCalledWith(
           recipient.userId,
@@ -324,14 +324,14 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         const configured = env.REDIS_URL
         env.REDIS_URL = "redis://127.0.0.1:1"
         try {
-          await dispatchActivity()
+          await dispatchActivity(conversationActivityPolicy)
         } finally {
           env.REDIS_URL = configured
         }
         expect(push).toHaveBeenCalledTimes(1)
         expect((await messageDelivery(recipient.userId)).publishedAt).toBeNull()
         await testDatabase.db.update(activityDelivery).set({ publishAfter: new Date(0) })
-        await dispatchActivity()
+        await dispatchActivity(conversationActivityPolicy)
         expect((await messageDelivery(recipient.userId)).publishedAt).not.toBeNull()
         expect(push).toHaveBeenCalledTimes(1)
       })
@@ -356,7 +356,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         )
         await identity.run(recipient, () => leaveGroupConversation(group.conversationId))
         await makePushDue()
-        await dispatchActivity()
+        await dispatchActivity(conversationActivityPolicy)
         expect(push).not.toHaveBeenCalled()
         expect(await redis.exists(activityStreamKey(recipient.userId))).toBe(1) // personal departure invalidation only
         const entries = await redis.xRange(activityStreamKey(recipient.userId), "-", "+")
@@ -366,7 +366,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
 
       test("reconnect replays retained events and invalid cursors still reconcile", async () => {
         const { recipient } = await direct()
-        await dispatchActivity()
+        await dispatchActivity(conversationActivityPolicy)
         const replay = await streamAs(recipient, "0-0")
         try {
           expect(await replay.read()).toContain("event: ready")
@@ -388,7 +388,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         try {
           await stream.read()
           await testDatabase.db.delete(session).where(eq(session.id, recipient.sessionId))
-          await dispatchActivity()
+          await dispatchActivity(conversationActivityPolicy)
           expect(await stream.read()).not.toContain("message.created")
         } finally {
           stream.close()
@@ -426,7 +426,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
 
       test("the next deadline respects active leases and ignores acknowledged push", async () => {
         const { recipient } = await direct()
-        await dispatchActivity()
+        await dispatchActivity(conversationActivityPolicy)
         const delivery = await messageDelivery(recipient.userId)
         await testDatabase.db
           .update(activityDelivery)
@@ -474,7 +474,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           .update(activityDelivery)
           .set({ pushAfter: sql`now() + interval '400 milliseconds'` })
           .where(eq(activityDelivery.id, delivery.id))
-        const running = deliverPendingActivity()
+        const running = deliverPendingActivity(conversationActivityPolicy)
         try {
           await waitUntil(async () => (await storedDelivery(delivery.id)).publishedAt !== null)
           await identity.run(recipient, () => handleActivityAcknowledgement(acknowledgement(delivery.id)))
@@ -492,9 +492,9 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           .update(activityDelivery)
           .set({ leaseToken: crypto.randomUUID(), leaseUntil: sql`now() + interval '300 milliseconds'` })
           .where(eq(activityDelivery.id, id))
-        await deliverPendingActivity(AbortSignal.timeout(50))
+        await deliverPendingActivity(conversationActivityPolicy, AbortSignal.timeout(50))
         expect((await storedDelivery(id)).publishedAt).toBeNull()
-        await deliverPendingActivity()
+        await deliverPendingActivity(conversationActivityPolicy)
         expect((await storedDelivery(id)).publishedAt).not.toBeNull()
       })
 
