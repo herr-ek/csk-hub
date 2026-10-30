@@ -3,6 +3,7 @@ import "server-only"
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm"
 import { db } from "@/core/db"
 import { post } from "@/core/db/schema/posts"
+import { queuePublicActivity } from "@/core/realtime/outbox"
 import type { RichTextDocument } from "@/features/rich-text"
 import { isPostId, type PostsDatabase } from "./service"
 
@@ -32,17 +33,20 @@ export async function createPost(
   input: { authorId: string; content: PostContent; publish: boolean },
   database: PostsDatabase = db
 ): Promise<SavedPost> {
-  const [created] = await database
-    .insert(post)
-    .values({
-      ...input.content,
-      authorId: input.authorId,
-      publishedAt: input.publish ? new Date() : null
-    })
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(post)
+      .values({
+        ...input.content,
+        authorId: input.authorId,
+        publishedAt: input.publish ? new Date() : null
+      })
+      .returning({ id: post.id })
 
-  if (!created) throw new Error("The post insert returned no row.")
-  return created
+    if (!created) throw new Error("The post insert returned no row.")
+    if (input.publish) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return created
+  })
 }
 
 /**
@@ -55,13 +59,16 @@ export async function saveDraft(
 ): Promise<SavedPost | null> {
   if (!isPostId(input.postId)) return null
 
-  const [saved] = await database
-    .update(post)
-    .set({ ...input.content, ...(input.publish ? { publishedAt: new Date() } : {}) })
-    .where(draftOf(input.postId, input.authorId))
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const [saved] = await tx
+      .update(post)
+      .set({ ...input.content, ...(input.publish ? { publishedAt: new Date() } : {}) })
+      .where(draftOf(input.postId, input.authorId))
+      .returning({ id: post.id })
 
-  return saved ?? null
+    if (saved && input.publish) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return saved ?? null
+  })
 }
 
 /**
@@ -82,13 +89,16 @@ export async function editPublishedPost(
     when ${post.title} is distinct from ${title} or ${post.body} is distinct from ${JSON.stringify(body)}::jsonb
     then now() else ${post.editedAt} end`
 
-  const [saved] = await database
-    .update(post)
-    .set({ title, body, editedAt })
-    .where(and(eq(post.id, input.postId), isNotNull(post.publishedAt)))
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const [saved] = await tx
+      .update(post)
+      .set({ title, body, editedAt })
+      .where(and(eq(post.id, input.postId), isNotNull(post.publishedAt)))
+      .returning({ id: post.id })
 
-  return saved ?? null
+    if (saved) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return saved ?? null
+  })
 }
 
 /**
@@ -99,13 +109,16 @@ export async function editPublishedPost(
 export async function unpublishPost(postId: string, database: PostsDatabase = db): Promise<boolean> {
   if (!isPostId(postId)) return false
 
-  const recalled = await database
-    .update(post)
-    .set({ publishedAt: null, editedAt: null })
-    .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const recalled = await tx
+      .update(post)
+      .set({ publishedAt: null, editedAt: null })
+      .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
+      .returning({ id: post.id })
 
-  return recalled.length > 0
+    if (recalled.length) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return recalled.length > 0
+  })
 }
 
 /**

@@ -6,6 +6,8 @@ export type NotificationSubscription = {
   deviceLabel?: string | null
 }
 
+export type PushPresentation = { title?: string; href?: string; tag?: string }
+
 export type NotificationDeliveryFailureCategory =
   | "invalidSubscription"
   | "subscriptionGone"
