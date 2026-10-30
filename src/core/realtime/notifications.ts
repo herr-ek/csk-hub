@@ -6,10 +6,11 @@ import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { sendToAll, sendToUsers } from "@/core/notifications"
 import { queueActivity } from "@/core/realtime/outbox"
+import type { ActivityDeliveryPolicy } from "./delivery-access"
 import { scheduleActivityDispatch } from "./schedule-dispatch"
 
 /** Authorized callers select the audience. Live feedback does not require push permission. */
-export async function notifyUsers(message: string, userIds?: string[]) {
+export async function notifyUsers(policy: ActivityDeliveryPolicy, message: string, userIds?: string[]) {
   if (!env.REDIS_URL) return userIds ? sendToUsers(userIds, message) : sendToAll(message)
   const ids = userIds ? [...new Set(userIds)] : undefined
   if (ids && !ids.length) return { success: false as const, error: "noRecipients" as const }
@@ -26,7 +27,7 @@ export async function notifyUsers(message: string, userIds?: string[]) {
     )
     return recipients.length
   })
-  scheduleActivityDispatch()
+  scheduleActivityDispatch(policy)
   return queued ? { success: true as const, queued } : { success: false as const, error: "noRecipients" as const }
 }
 
