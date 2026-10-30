@@ -47,5 +47,5 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)"]
+  matcher: ["/((?!api|_next|_vercel|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)"]
 }
