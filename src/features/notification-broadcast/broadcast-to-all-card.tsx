@@ -22,11 +22,13 @@ export function BroadcastToAllCard() {
         setFeedback({
           success: result.success,
           message: result.success
-            ? t("sentToAll", {
-                accepted: result.accepted,
-                attempted: result.accepted + result.failed,
-                failed: result.failed
-              })
+            ? "queued" in result
+              ? t("queued", { count: result.queued })
+              : t("sentToAll", {
+                  accepted: result.accepted,
+                  attempted: result.accepted + result.failed,
+                  failed: result.failed
+                })
             : t(result.error)
         })
         if (result.success) setMessage("")

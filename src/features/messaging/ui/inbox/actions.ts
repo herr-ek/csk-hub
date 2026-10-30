@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { scheduleActivityDispatch } from "@/features/activity/server"
 import { createGroupConversation } from "../../group-conversations"
 import { groupMemberIds } from "../../model/group-conversation"
 import { startDirectConversation } from "../../sending"
@@ -35,6 +36,7 @@ export async function startConversationAction(
             idempotencyKey: String(formData.get("idempotencyKey") ?? "")
           })
     revalidatePath("/[locale]/(app)/messages", "page")
+    scheduleActivityDispatch()
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {
     return messageCommandErrorState(error, text)

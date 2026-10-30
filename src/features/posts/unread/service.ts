@@ -5,6 +5,7 @@ import { cache } from "react"
 import { z } from "zod"
 import { db } from "@/core/db"
 import { post, postRead } from "@/core/db/schema/posts"
+import { queueActivity } from "@/core/realtime/outbox"
 
 /**
  * How long a Post stays unread for a User who has not opened it. Without a horizon every
@@ -59,20 +60,46 @@ export async function markPostRead(userId: string, postId: string): Promise<bool
 
   // One statement: the Post is looked up as it is inserted, so a missing or unpublished
   // Post simply inserts nothing.
-  const inserted = await db
-    .insert(postRead)
-    .select(
-      db
-        .select({
-          userId: sql<string>`${userId}`.as("user_id"),
-          postId: post.id,
-          readAt: sql<Date>`now()`.as("read_at")
-        })
-        .from(post)
-        .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
-    )
-    .onConflictDoNothing()
-    .returning({ postId: postRead.postId })
+  return db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(postRead)
+      .select(
+        tx
+          .select({
+            userId: sql<string>`${userId}`.as("user_id"),
+            postId: post.id,
+            readAt: sql<Date>`now()`.as("read_at")
+          })
+          .from(post)
+          .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
+      )
+      .onConflictDoNothing()
+      .returning({ postId: postRead.postId })
 
-  return inserted.length > 0
+    if (inserted.length) await queueActivity(tx, [userId], { kind: "unread.changed" })
+    return inserted.length > 0
+  })
+}
+
+/** Next time the unread predicate changes without a write (publication or 30-day expiry). */
+export async function nextUnreadPostChangeAt(userId: string): Promise<number | null> {
+  const [row] = await db
+    .select({
+      at: sql<string | null>`min(case when ${post.publishedAt} > now()
+    then ${post.publishedAt} else ${post.publishedAt} + interval '30 days' end)`
+    })
+    .from(post)
+    .where(
+      and(
+        isNotNull(post.publishedAt),
+        gt(post.publishedAt, sql`now() - interval '30 days'`),
+        notExists(
+          db
+            .select({ id: postRead.postId })
+            .from(postRead)
+            .where(and(eq(postRead.postId, post.id), eq(postRead.userId, userId)))
+        )
+      )
+    )
+  return row?.at ? new Date(row.at).getTime() : null
 }

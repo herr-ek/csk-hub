@@ -39,6 +39,8 @@ const headers = async () => [
 ]
 
 const nextConfig: NextConfig = {
+  // Allows runtime verification/builds to use isolated output beside a running dev server.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   /* config options here */
   reactCompiler: true,
   logging: {

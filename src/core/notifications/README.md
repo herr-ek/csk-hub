@@ -1,5 +1,12 @@
 # Push notifications
 
+Application Messages and Admin broadcasts use the shared
+[live-delivery workflow](../realtime/README.md) when Redis is configured: visible feedback
+is attempted first, followed by durable Web Push fallback. The functions below remain
+the immediate, low-level Web Push capability; settings delivery tests deliberately use
+them to verify push even when the app is open. A successful low-level result means
+provider acceptance, while the broadcast UI separately reports queued recipients.
+
 `@/core/notifications` is the server-only capability for storing web-push subscriptions and delivering a push message. Feature modules own their own authorization, recipient selection, and UI; this module owns the subscription records and the web-push provider interaction.
 
 ## Prerequisites
