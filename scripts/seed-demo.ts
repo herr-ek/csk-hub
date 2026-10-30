@@ -2,7 +2,7 @@
 import { Client } from "pg"
 import { assertLocalDatabase } from "./ops/guards"
 import { insertReferenceData } from "./ops/reference-data"
-import { SEED_PASSWORD, type SeedDatabase } from "./ops/seed-data"
+import { DEMO_ORGANISATION_YEAR, SEED_PASSWORD, type SeedDatabase } from "./ops/seed-data"
 import { seedGroups } from "./seed-groups"
 import { seedPosts } from "./seed-posts"
 import { seedUsers } from "./seed-users"
@@ -22,7 +22,7 @@ if (import.meta.main) {
   const client = new Client({ connectionString: process.env.POSTGRES_URL })
   try {
     await client.connect()
-    await insertReferenceData(client)
+    await insertReferenceData(client, DEMO_ORGANISATION_YEAR)
     const result = await seedDemo(db)
     console.log(
       `Created ${result.users.created} users, ${result.groups.created.length} groups and ${result.posts.created} Posts; placed ${result.groups.placed} singers.`
