@@ -55,7 +55,10 @@ receive the current name and their retained Messages, but no current member list
 Creation needs no Message. Joining or rejoining initializes the read cursor through existing
 history; adding an already active member preserves their cursor. Empty groups remain retained,
 with no former member able to reactivate them. The UI uses the same update behavior as Direct
-Conversations; no polling, conversation subscriptions, or push delivery is introduced.
+Conversations. Live updates and Message notification delivery use the shared
+[SSE/Redis infrastructure](../../core/realtime/README.md). `activity/` owns current
+Conversation recipients, live access checks, and signed-history notification acknowledgement.
+Only newly persisted Messages enqueue activity; an exact retry never queues another intent.
 
 Creation and addition requests accept at most 100 submitted member IDs, including duplicates
 and blanks, before normalization or opening a transaction. The creator is included automatically

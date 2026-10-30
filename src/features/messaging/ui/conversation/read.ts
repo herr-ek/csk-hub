@@ -1,9 +1,11 @@
 import "server-only"
 
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, lt, sql } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { conversation, conversationReadState, directConversation, groupMembership } from "@/core/db/schema/messaging"
+import { queueActivity } from "@/core/realtime/outbox"
+import { acknowledgeConversationActivity } from "../../activity"
 import { canViewGroupSequence } from "../../group-conversations/access"
 import { getDirectCounterpartId } from "../../model/direct-conversation"
 import { MessagingAccessError } from "../../model/messaging-error"
@@ -40,9 +42,18 @@ export async function markConversationRead(conversationId: string, sequence: num
         .limit(1)
       if (!pair || !getDirectCounterpartId(pair, userId)) throw new MessagingAccessError("conversation-view-forbidden")
     }
-    await tx
+    const changed = await tx
       .update(conversationReadState)
       .set({ lastReadSequence: sql`GREATEST(${conversationReadState.lastReadSequence}, ${sequence})` })
-      .where(and(eq(conversationReadState.conversationId, conversationId), eq(conversationReadState.userId, userId)))
+      .where(
+        and(
+          eq(conversationReadState.conversationId, conversationId),
+          eq(conversationReadState.userId, userId),
+          lt(conversationReadState.lastReadSequence, sequence)
+        )
+      )
+      .returning({ sequence: conversationReadState.lastReadSequence })
+    await acknowledgeConversationActivity(tx, userId, conversationId, sequence)
+    if (changed.length) await queueActivity(tx, [userId], { kind: "unread.changed" })
   })
 }

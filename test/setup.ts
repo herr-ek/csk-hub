@@ -1,5 +1,11 @@
 import { mock } from "bun:test"
 
+// Keep ordinary unit/DB tests independent of a developer's live-delivery configuration.
+// The process-isolated activity integration suite opts in and supplies its own broker prefix.
+if (!process.env.CSK_ACTIVITY_TEST) {
+  delete process.env.REDIS_URL
+}
+
 Object.defineProperty(globalThis, "window", {
   value: {
     location: {
