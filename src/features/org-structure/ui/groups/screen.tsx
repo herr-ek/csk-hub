@@ -2,20 +2,18 @@ import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
+import { currentOrganisationYear } from "@/core/org-structure"
 import { Skeleton } from "@/shared/ui/base/skeleton"
-import { PositionCatalogue } from "../catalogue/position-catalogue"
-import { listPositionCatalogue } from "../catalogue/query"
+import { cskToday } from "../../effective-reads"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { GroupsOverview } from "./overview"
+import { PrepareYearDialog } from "./PrepareYearDialog"
 import { getGroupsOverview } from "./query"
 
-/** The groups beside the Choirs' Sections, and the Positions they can have. */
+/** The groups beside the Choirs' Sections, with their complete member rosters. */
 export async function GroupsScreen() {
-  const [overview, catalogue, t] = await Promise.all([
-    getGroupsOverview(),
-    listPositionCatalogue(),
-    getTranslations("Groups")
-  ])
+  const [overview, t] = await Promise.all([getGroupsOverview(), getTranslations("Groups")])
+  const currentYear = currentOrganisationYear(cskToday())
   const choirs = overview.choirs
     .filter(({ choir }) => choir.active)
     .map(({ choir }) => ({ id: choir.id, name: choir.name }))
@@ -33,12 +31,20 @@ export async function GroupsScreen() {
           >
             {t("groupsPage.choirsLink")}
           </Link>
+          <Link
+            href={ROUTES.adminGigGroups}
+            className="mt-2 ml-4 inline-block text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {t("groupsPage.gigGroupsLink")}
+          </Link>
         </div>
-        <CreateGroupDialog choirs={choirs} />
+        <div className="flex flex-wrap gap-2">
+          <PrepareYearDialog currentYear={currentYear} />
+          <CreateGroupDialog choirs={choirs} currentYear={currentYear} />
+        </div>
       </div>
 
       <GroupsOverview overview={overview} />
-      <PositionCatalogue catalogue={catalogue} />
     </main>
   )
 }

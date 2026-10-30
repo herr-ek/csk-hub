@@ -1,51 +1,88 @@
+import { listLocalizedGroupLabels } from "./group-labels"
 import "server-only"
 
-import { asc, count, eq, isNull } from "drizzle-orm"
+import { io } from "next/cache"
 import { db } from "@/core/db"
-import { user } from "@/core/db/schema/auth"
-import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
+import { section } from "@/core/db/schema/org-structure"
+import { timeZone } from "@/core/i18n/time-zone"
+import type { GroupType, PositionCode } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
-import type { GroupType } from "../model"
+import { listAppointmentsForGroups, listEffectiveMembersForGroupsAt } from "../appointments"
+import { listOrganisationGroups } from "../group-management"
 
 export type GroupSummary = {
   id: string
   name: string
   type: GroupType
   choirId: string | null
+  organisationYear: number | null
+  phase: "future" | "current" | "completed"
   active: boolean
   memberCount: number
   voices: Voice[]
-  holders: { position: string; holder: string }[]
+  members: {
+    userId: string
+    name: string
+    positions: { id: string; positionCode: PositionCode; contextGroupId: string; context: string }[]
+  }[]
 }
 
 /** Every group, archived ones included, with what the admin overviews show of it, ordered by name. */
 export async function listGroupSummaries(): Promise<GroupSummary[]> {
-  const [groups, counts, sections, holders] = await Promise.all([
-    db.select().from(group).orderBy(asc(group.name)),
-    db
-      .select({ groupId: groupMember.groupId, members: count() })
-      .from(groupMember)
-      .where(isNull(groupMember.endDate))
-      .groupBy(groupMember.groupId),
-    db.select().from(section),
-    db
-      .select({ groupId: positionHolder.groupId, position: position.name, holder: user.name })
-      .from(positionHolder)
-      .innerJoin(position, eq(position.id, positionHolder.positionId))
-      .innerJoin(user, eq(user.id, positionHolder.userId))
-      .where(isNull(positionHolder.endDate))
-      .orderBy(asc(position.name))
+  await io()
+  const labels = await listLocalizedGroupLabels()
+  const date = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
+  const [groups, sections] = await Promise.all([listOrganisationGroups(db, date), db.select().from(section)])
+  const [effectiveMembers, appointmentsByGroup] = await Promise.all([
+    listEffectiveMembersForGroupsAt(
+      db,
+      groups.map((row) => row.id),
+      date
+    ),
+    listAppointmentsForGroups(
+      db,
+      groups.map((row) => row.id)
+    )
   ])
-
-  const memberCounts = new Map(counts.map(({ groupId, members }) => [groupId, members]))
-  return groups.map((row) => ({
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    choirId: row.choirId,
-    active: row.active,
-    memberCount: memberCounts.get(row.id) ?? 0,
-    voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
-    holders: holders.filter(({ groupId }) => groupId === row.id).map(({ position, holder }) => ({ position, holder }))
-  }))
+  return groups.map((row) => {
+    const members = effectiveMembers.get(row.id) ?? []
+    const appointments = appointmentsByGroup.get(row.id) ?? []
+    const holders = appointments
+      .filter(
+        (appointment) =>
+          appointment.startDate <= date &&
+          (appointment.endDate === null || appointment.endDate > date) &&
+          (appointment.contextGroupId === row.id ||
+            members.some(
+              (member) =>
+                member.userId === appointment.userId &&
+                member.positions.some((position) => position.id === appointment.id)
+            ))
+      )
+      .map((appointment) => ({
+        id: appointment.id,
+        positionCode: appointment.positionCode,
+        userId: appointment.userId,
+        contextGroupId: appointment.contextGroupId,
+        context: labels.get(appointment.contextGroupId) ?? appointment.contextGroupId
+      }))
+    return {
+      id: row.id,
+      name: labels.get(row.id) ?? row.id,
+      type: row.type,
+      choirId: row.choirId,
+      active: row.active,
+      organisationYear: row.organisationYear,
+      phase: row.phase,
+      memberCount: members.length,
+      voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
+      members: members.map((member) => ({
+        userId: member.userId,
+        name: member.name,
+        positions: holders
+          .filter((holder) => holder.userId === member.userId)
+          .map(({ userId: _userId, ...position }) => position)
+      }))
+    }
+  })
 }

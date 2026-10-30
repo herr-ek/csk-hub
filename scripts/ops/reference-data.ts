@@ -1,18 +1,18 @@
 import { Client, type ClientBase } from "pg"
 import { secureConnection } from "@/core/db/tls"
+import { timeZone } from "@/core/i18n/time-zone"
+import { currentOrganisationYear, GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { confirmProductionWrite } from "./guards"
+import { referenceChoirId, referenceContinuingGroupId, referenceSectionId } from "./seed-data"
 import { announce, type Database } from "./target"
 
 /**
- * The org structure every environment shares: the three Choirs with their four Sections and the
- * Voice each sings, the Board and the Gigmästeri, and the Position catalogue with the group types
- * each is allowed in. A Position may also be limited to some CSK-wide groups by name, as each
- * Choir's Gigmästare is to that Choir and the Gigmästeri.
+ * Fixed Groups every environment shares. Position rules live in the domain catalogue.
  */
 export const REFERENCE_DATA: {
   choirs: { name: string; sections: { name: string; voice: string }[] }[]
-  groups: { name: string; type: string }[]
-  positions: { name: string; groupTypes: string[]; groups?: string[] }[]
+  continuingGroups: { type: GroupType }[]
+  annualGroups(year: number): { type: GroupType; year: number }[]
 } = {
   choirs: [
     {
@@ -43,29 +43,20 @@ export const REFERENCE_DATA: {
       ]
     }
   ],
-  groups: [
-    { name: "Styret 25/26", type: "Board" },
-    { name: "Gigmästeri", type: "Gigmästeri" }
-  ],
-  positions: [
-    { name: "Ordförande", groupTypes: ["Board"] },
-    { name: "Vice Ordförande", groupTypes: ["Board", "Rekryteringskommitté"] },
-    { name: "Kassör", groupTypes: ["Board"] },
-    { name: "Sekreterare", groupTypes: ["Board", "Föräldramötet"] },
-    { name: "PR-mästare", groupTypes: ["Board"] },
-    { name: "1:a Konsertmästare", groupTypes: ["Board", "Konsertmästeri"] },
-    { name: "Gigmästare", groupTypes: ["Board", "Gigmästeri"] },
-    { name: "Sexmästare", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Sexmästarinna", groupTypes: ["Sexmästeri"] },
-    { name: "Dirigent", groupTypes: ["Choir"] },
-    { name: "Notfiskal", groupTypes: ["Choir"] },
-    { name: "Konsertmästare", groupTypes: ["Choir", "Konsertmästeri"] },
-    { name: "Gigmästare MK", groupTypes: ["Choir", "Gigmästeri"], groups: ["MK", "Gigmästeri"] },
-    { name: "Gigmästare DK", groupTypes: ["Choir", "Gigmästeri"], groups: ["DK", "Gigmästeri"] },
-    { name: "Gigmästare KK", groupTypes: ["Choir", "Gigmästeri"], groups: ["KK", "Gigmästeri"] },
-    { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] },
-    { name: "Ekonomiskt Ansvarig", groupTypes: ["Turnékommitté"] }
-  ]
+  continuingGroups: [{ type: GroupType.ParentsMeeting }],
+  annualGroups: (year) =>
+    [
+      GroupType.Board,
+      GroupType.GigCommittee,
+      GroupType.SocialCommittee,
+      GroupType.ConcertCommittee,
+      GroupType.RecruitmentCommittee,
+      GroupType.TourCommittee,
+      GroupType.NominationCommittee,
+      GroupType.WebTeam,
+      GroupType.Archives,
+      GroupType.MemorisationCommittee
+    ].map((type) => ({ type, year }))
 }
 
 /**
@@ -99,60 +90,49 @@ export async function createReferenceData(
 }
 
 /**
- * Insert the missing reference data in one transaction and return the names of what was created.
- * Existing active groups and Positions are matched by name and left as they are.
+ * Insert missing fixed Groups in one transaction and return explicit names or stable type identifiers.
+ * Defaults to the live organisational year and the following year; demos pass their snapshot year.
+ * Existing active Choirs/Sections and annual identities are retained.
  */
-export async function insertReferenceData(client: ClientBase): Promise<string[]> {
+export async function insertReferenceData(
+  client: ClientBase,
+  currentYear = currentOrganisationYear(new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date()))
+): Promise<string[]> {
   const created: string[] = []
   await client.query("BEGIN")
   try {
     for (const choir of REFERENCE_DATA.choirs) {
-      let choirId = await activeGroupId(client, choir.name, "Choir", null)
+      const choirSeedId = referenceChoirId(choir.name as "MK" | "DK" | "KK")
+      let choirId = await seededGroupId(client, choirSeedId, GroupType.Choir, null)
+      choirId ??= await activeGroupId(client, choir.name, GroupType.Choir, null)
       if (!choirId) {
-        choirId = await insertGroup(client, choir.name, "Choir", null)
+        choirId = await insertGroup(client, choir.name, GroupType.Choir, null, null, choirSeedId)
         await client.query(`insert into "choir" ("group_id") values ($1)`, [choirId])
         created.push(choir.name)
       }
       for (const section of choir.sections) {
-        if (await activeGroupId(client, section.name, "Section", choirId)) continue
-        const sectionId = await insertGroup(client, section.name, "Section", choirId)
+        const sectionSeedId = referenceSectionId(choir.name as "MK" | "DK" | "KK", section.name)
+        let sectionId = await seededGroupId(client, sectionSeedId, GroupType.Section, choirId)
+        sectionId ??= await activeGroupId(client, section.name, GroupType.Section, choirId)
+        if (sectionId) continue
+        sectionId = await insertGroup(client, section.name, GroupType.Section, choirId, null, sectionSeedId)
         await client.query(`insert into "section" ("group_id", "voice") values ($1, $2)`, [sectionId, section.voice])
         created.push(section.name)
       }
     }
 
-    for (const group of REFERENCE_DATA.groups) {
-      if (await activeGroupId(client, group.name, group.type, null)) continue
-      await insertGroup(client, group.name, group.type, null)
-      created.push(group.name)
+    for (const definition of REFERENCE_DATA.continuingGroups) {
+      const id = referenceContinuingGroupId(definition.type)
+      const existingId = await seededGroupId(client, id, definition.type, null)
+      if (existingId || (await activeGroupId(client, null, definition.type, null))) continue
+      await insertGroup(client, null, definition.type, null, null, id)
+      created.push(definition.type)
     }
-
-    for (const position of REFERENCE_DATA.positions) {
-      const { rowCount } = await client.query(
-        `insert into "position" ("name") values ($1) on conflict ("name") do nothing`,
-        [position.name]
-      )
-      if (rowCount) created.push(position.name)
-      for (const type of position.groupTypes) {
-        await client.query(
-          `insert into "group_type_position" ("type", "position_id")
-           select $1, "id" from "position" where "name" = $2
-           on conflict do nothing`,
-          [type, position.name]
-        )
-      }
-      for (const groupName of position.groups ?? []) {
-        const { rowCount: matched } = await client.query(
-          `insert into "position_group" ("position_id", "group_id")
-           select p."id", g."id" from "position" p, "group" g
-           where p."name" = $1 and g."name" = $2 and g."active" and g."choir_id" is null
-           on conflict do nothing`,
-          [position.name, groupName]
-        )
-        // Nothing inserted is either an existing limit or a missing group; only the second is wrong.
-        if (!matched && !(await activeCskWideGroupExists(client, groupName))) {
-          throw new Error(`The Position ${position.name} is limited to ${groupName}, which is not an active group.`)
-        }
+    for (const year of [currentYear, currentYear + 1]) {
+      for (const definition of REFERENCE_DATA.annualGroups(year)) {
+        if (await annualGroupId(client, definition.type, year)) continue
+        await insertGroup(client, null, definition.type, null, year)
+        created.push(definition.type)
       }
     }
 
@@ -164,28 +144,54 @@ export async function insertReferenceData(client: ClientBase): Promise<string[]>
   }
 }
 
-async function activeGroupId(client: ClientBase, name: string, type: string, choirId: string | null) {
+async function activeGroupId(client: ClientBase, name: string | null, type: GroupType, choirId: string | null) {
   const { rows } = await client.query<{ id: string }>(
     `select "id" from "group"
-     where "name" = $1 and "type" = $2 and "active" and "choir_id" is not distinct from $3::uuid`,
-    [name, type, choirId]
+     where ($1::text IS NULL OR "name" = $1) and "type" = $2 and "active" and "choir_id" is not distinct from $3::uuid`,
+    [hasExplicitGroupName(type) ? name : null, type, choirId]
   )
   return rows[0]?.id
 }
 
-async function activeCskWideGroupExists(client: ClientBase, name: string) {
-  const { rowCount } = await client.query(
-    `select 1 from "group" where "name" = $1 and "active" and "choir_id" is null`,
-    [name]
+async function seededGroupId(client: ClientBase, id: string, type: GroupType, choirId: string | null) {
+  const { rows } = await client.query<{ id: string; type: GroupType; choir_id: string | null; active: boolean }>(
+    `select "id", "type", "choir_id", "active" from "group" where "id" = $1`,
+    [id]
   )
-  return Boolean(rowCount)
+  const row = rows[0]
+  if (!row) return undefined
+  if (row.type !== type || row.choir_id !== choirId)
+    throw new Error(`Reference Group identity ${id} has edited structural metadata; review it before seeding.`)
+  if (!row.active) throw new Error(`Reference Group identity ${id} is archived; seeding will not recreate it.`)
+  return row.id
 }
 
-async function insertGroup(client: ClientBase, name: string, type: string, choirId: string | null) {
+async function annualGroupId(client: ClientBase, type: GroupType, year: number) {
   const { rows } = await client.query<{ id: string }>(
-    `insert into "group" ("name", "type", "choir_id") values ($1, $2, $3) returning "id"`,
-    [name, type, choirId]
+    `select "id" from "group" where "type" = $1 and "organisation_year" = $2`,
+    [type, year]
   )
+  if (rows.length > 1) throw new Error(`More than one ${type} Group is marked for ${year}/${year + 1}.`)
+  return rows[0]?.id
+}
+
+async function insertGroup(
+  client: ClientBase,
+  name: string | null,
+  type: GroupType,
+  choirId: string | null,
+  year: number | null = null,
+  id?: string
+) {
+  const { rows } = id
+    ? await client.query<{ id: string }>(
+        `insert into "group" ("id", "name", "type", "choir_id", "organisation_year") values ($1, $2, $3, $4, $5) returning "id"`,
+        [id, hasExplicitGroupName(type) ? name : null, type, choirId, year]
+      )
+    : await client.query<{ id: string }>(
+        `insert into "group" ("name", "type", "choir_id", "organisation_year") values ($1, $2, $3, $4) returning "id"`,
+        [hasExplicitGroupName(type) ? name : null, type, choirId, year]
+      )
   const [row] = rows
   if (!row) throw new Error(`Creating the group ${name} did not return a record.`)
   return row.id

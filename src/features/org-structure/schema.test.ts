@@ -1,141 +1,107 @@
 import { afterAll, describe, expect, test } from "bun:test"
-import { eq } from "drizzle-orm"
-import { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
-import { createOrgStructureTestDatabase } from "./test-support"
-
-// The constraints the database enforces by itself, written to directly so that the module's own
-// checks cannot mask a missing constraint.
+import { sql } from "drizzle-orm"
+import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { GroupType, PositionCode } from "@/core/org-structure"
+import { createOrganisationGroup } from "./appointments"
+import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
 const database = await createOrgStructureTestDatabase()
 
-describe.skipIf(!database)("groups schema constraints", () => {
+describe.skipIf(!database)("final organisation schema", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
 
-  test("rejects a Section Membership whose Voice the Section's Voice does not contain", async () => {
-    const userId = await t.user()
-    const mkb1 = await t.groupId("MKB1")
-
-    await expect(
-      t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice: "B2" }).execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
-    await t.db.insert(groupMember).values({ userId, groupId: mkb1, startDate: "2025-01-01", voice: "B1" })
-  })
-
-  test("accepts any division of the family in a Section that sings the family", async () => {
-    const kkb = await t.groupId("KKB")
-    for (const voice of ["B1", "B2"] as const) {
-      await t.db.insert(groupMember).values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice })
-    }
-    await expect(
-      t.db
-        .insert(groupMember)
-        .values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice: "T1" })
-        .execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
-  })
-
-  test("records a singer's Voice in divisions only, through the voice_division domain", async () => {
-    const kkb = await t.groupId("KKB")
-    await expect(
-      t.db
-        .insert(groupMember)
-        .values({ userId: await t.user(), groupId: kkb, startDate: "2025-01-01", voice: "B" as never })
-        .execute()
-    ).rejects.toMatchObject({ cause: { constraint: "voice_division_check" } })
-  })
-
-  test("rechecks the Voice when a Membership is updated", async () => {
-    const userId = await t.user()
-    const kkb = await t.groupId("KKB")
-    await t.db.insert(groupMember).values({ userId, groupId: kkb, startDate: "2025-01-01", voice: "B1" })
-    await expect(
-      t.db.update(groupMember).set({ voice: "A1" }).where(eq(groupMember.userId, userId)).execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_containment_check" } })
-  })
-
-  test("sets a Voice exactly on Section Memberships", async () => {
-    const userId = await t.user()
-    await t.db.insert(groupMember).values({ userId, groupId: await t.groupId("MK"), startDate: "2025-01-01" })
-
-    await expect(
-      t.db
-        .insert(groupMember)
-        .values({ userId, groupId: await t.groupId("KK"), startDate: "2025-01-01", voice: "B1" })
-        .execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_section_check" } })
-    await expect(
-      t.db
-        .insert(groupMember)
-        .values({ userId, groupId: await t.groupId("MKB1"), startDate: "2025-01-01" })
-        .execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_voice_section_check" } })
-  })
-
-  test("keeps a Choir CSK-wide, and a Section inside a Choir", async () => {
-    await expect(
-      t.db
-        .insert(group)
-        .values({ name: "Nested choir", type: "Choir", choirId: await t.groupId("MK") })
-        .execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_choir_csk_wide_check" } })
-    await expect(t.db.insert(group).values({ name: "Loose section", type: "Section" }).execute()).rejects.toMatchObject(
-      { cause: { constraint: "group_section_in_choir_check" } }
-    )
-  })
-
-  test("rejects a second current Membership of the same user in a group, but keeps history", async () => {
-    const userId = await t.user()
-    const mk = await t.groupId("MK")
-    await t.db.insert(groupMember).values({ userId, groupId: mk, startDate: "2020-01-01", endDate: "2021-01-01" })
-    await t.db.insert(groupMember).values({ userId, groupId: mk, startDate: "2022-01-01" })
-
-    await expect(
-      t.db.insert(groupMember).values({ userId, groupId: mk, startDate: "2023-01-01" }).execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_current_unique" } })
-  })
-
-  test("rejects a second current holder of the same Position in a group", async () => {
-    const [first, second] = [await t.user(), await t.user()]
-    const kk = await t.groupId("KK")
-    const conductor = await t.positionId("Dirigent")
-    await t.db
-      .insert(positionHolder)
-      .values({ userId: first, groupId: kk, positionId: conductor, startDate: "2025-01-01" })
-
-    await expect(
-      t.db
-        .insert(positionHolder)
-        .values({ userId: second, groupId: kk, positionId: conductor, startDate: "2025-02-01" })
-        .execute()
-    ).rejects.toMatchObject({ cause: { constraint: "position_holder_current_unique" } })
-  })
-
-  test("scopes active group names to their Choir, with CSK-wide names unique among themselves", async () => {
-    const [mk, kk] = [await t.groupId("MK"), await t.groupId("KK")]
-    await t.db.insert(group).values({ name: "Roddgrupp", type: "Roddgrupp", choirId: mk })
-    await t.db.insert(group).values({ name: "Roddgrupp", type: "Roddgrupp", choirId: kk })
-
-    await t.db.insert(group).values({ name: "Valberedningen", type: "Valberedning" })
-    await expect(
-      t.db.insert(group).values({ name: "Valberedningen", type: "Valberedning" }).execute()
-    ).rejects.toMatchObject({
-      cause: { constraint: "group_name_choir_active_unique" }
+  test("a fresh migration contains only the final organisation representation", async () => {
+    const result = await t.db.execute(sql`
+      SELECT to_regclass('public.group_member') AS old_membership,
+             to_regclass('public.position') AS old_position,
+             to_regclass('public.position_holder') AS old_holding,
+             to_regclass('public.group_type_position') AS old_applicability,
+             to_regclass('public.position_group') AS old_restriction,
+             EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = 'group' AND column_name = 'uses_appointment_model') AS has_marker
+    `)
+    expect(result.rows[0]).toEqual({
+      old_membership: null,
+      old_position: null,
+      old_holding: null,
+      old_applicability: null,
+      old_restriction: null,
+      has_marker: false
     })
   })
 
-  test("frees an archived group's name", async () => {
-    await t.db.insert(group).values({ name: "Festgrupp", type: "Festgrupp", active: false })
-    await t.db.insert(group).values({ name: "Festgrupp", type: "Festgrupp" })
+  test("Section Voice containment and direct period overlap are database enforced", async () => {
+    const userId = await t.user()
+    const sectionId = await t.groupId("MKB1")
+    await expect(
+      t.db
+        .insert(directMembership)
+        .values({ userId, groupId: sectionId, startDate: "2025-01-01", voice: "B2" })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "direct_membership_voice_check" } })
+    await t.db.insert(directMembership).values({ userId, groupId: sectionId, startDate: "2025-01-01", voice: "B1" })
+    await expect(
+      t.db
+        .insert(directMembership)
+        .values({ userId, groupId: sectionId, startDate: "2025-06-01", endDate: "2025-08-01", voice: "B1" })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "direct_membership_overlap_excl" } })
   })
 
-  test("rejects a period that ends before it starts", async () => {
+  test("appointments reject unknown Position codes and annual dates outside their Group year", async () => {
+    const boardId = expectSuccess(
+      await createOrganisationGroup(
+        t.db,
+        { name: "Schema Board", type: GroupType.Board, organisationYear: 2040 },
+        "4000-10-22"
+      )
+    ).id
     const userId = await t.user()
     await expect(
       t.db
-        .insert(groupMember)
-        .values({ userId, groupId: await t.groupId("DK"), startDate: "2025-01-02", endDate: "2025-01-01" })
+        .insert(positionAppointment)
+        .values({
+          userId,
+          positionCode: "invented-post" as PositionCode,
+          contextGroupId: boardId,
+          organisationYear: 2040,
+          startDate: "2040-07-01",
+          endDate: "2041-07-01"
+        })
         .execute()
-    ).rejects.toMatchObject({ cause: { constraint: "group_member_period_check" } })
+    ).rejects.toMatchObject({ cause: { constraint: "position_appointment_policy_check" } })
+    await expect(
+      t.db
+        .insert(positionAppointment)
+        .values({
+          userId,
+          positionCode: PositionCode.Chair,
+          contextGroupId: boardId,
+          organisationYear: 2040,
+          startDate: "2040-06-30",
+          endDate: "2041-07-01"
+        })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "position_appointment_annual_check" } })
+  })
+
+  test("known Group types require their fixed scope and annual identity", async () => {
+    await expect(
+      t.db.insert(group).values({ name: "Missing year", type: GroupType.Board }).execute()
+    ).rejects.toMatchObject({
+      cause: { constraint: "group_organisation_policy_check" }
+    })
+    await expect(
+      t.db
+        .insert(group)
+        .values({
+          name: "Choir-owned Board",
+          type: GroupType.Board,
+          choirId: await t.groupId("MK"),
+          organisationYear: 2042
+        })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_organisation_policy_check" } })
   })
 })

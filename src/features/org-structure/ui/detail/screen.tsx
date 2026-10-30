@@ -2,11 +2,13 @@ import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
 import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
+import { currentOrganisationYear, GroupType, groupTypeKey, POSITION_DEFINITIONS } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { AppointmentManagement } from "./AppointmentManagement"
+import { FluidAppointmentManagement } from "./FluidAppointmentManagement"
 import { GroupHeaderActions } from "./group-header-actions"
-import { MembersSection } from "./members-section"
-import { PositionsSection } from "./positions-section"
+import { MembersSection } from "./MembersSection"
 import { getGroupDetail } from "./query"
 
 /** Today in CSK's time zone, as the default date for new Memberships and holdings. */
@@ -15,22 +17,30 @@ function today() {
 }
 
 export async function GroupDetailScreen({ groupId }: { groupId: string }) {
+  const date = today()
   const [detail, t, types] = await Promise.all([
-    getGroupDetail(groupId),
+    getGroupDetail(groupId, date),
     getTranslations("Groups"),
     getTranslations("Groups.types")
   ])
   if (!detail) notFound()
   const { group } = detail
-  const isChoirOrSection = group.type === "Choir" || group.type === "Section"
-  const date = today()
+  const isChoirOrSection = group.type === GroupType.Choir || group.type === GroupType.Section
+  const fluidAppointmentContext =
+    group.type === GroupType.Choir || group.type === GroupType.Section || group.type === GroupType.GigGroup
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-2">
         {/* Choirs and Sections are listed on the Choirs page, every other group on the groups page. */}
         <PageBreadcrumb
-          route={isChoirOrSection ? "adminOrgStructure" : "adminOrgStructureGroups"}
+          route={
+            isChoirOrSection
+              ? "adminOrgStructure"
+              : group.type === GroupType.GigGroup
+                ? "adminGigGroups"
+                : "adminOrgStructureGroups"
+          }
           current={group.name}
         />
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -41,22 +51,38 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {group.choir
-                ? t("detail.typeInChoir", { type: types(group.type), choir: group.choir.name })
-                : t("detail.typeCskWide", { type: types(group.type) })}
+                ? t("detail.typeInChoir", { type: types(groupTypeKey(group.type)), choir: group.choir.name })
+                : t("detail.typeCskWide", { type: types(groupTypeKey(group.type)) })}
             </p>
+            {group.organisationYear !== null ? (
+              <Badge variant="outline">
+                {t("management.yearValue", { start: group.organisationYear, end: group.organisationYear + 1 })}
+              </Badge>
+            ) : null}
             {detail.sectionVoice ? (
               <div className="mt-2 flex flex-wrap gap-1">
                 <Badge variant="outline">{detail.sectionVoice}</Badge>
               </div>
             ) : null}
           </div>
-          {group.active ? <GroupHeaderActions group={group} /> : null}
+          <GroupHeaderActions currentYear={currentOrganisationYear(date)} group={group} choirs={detail.choirs} />
         </div>
         {group.active ? null : <p className="text-sm text-muted-foreground">{t("detail.archivedNotice")}</p>}
       </div>
 
       <MembersSection detail={detail} today={date} />
-      <PositionsSection detail={detail} today={date} />
+      {Object.values(POSITION_DEFINITIONS).some(
+        ({ context, endPolicy }) => context === group.type && endPolicy === "annual"
+      ) ? (
+        <AppointmentManagement detail={detail} today={date} />
+      ) : null}
+      {fluidAppointmentContext &&
+      (Object.values(POSITION_DEFINITIONS).some(
+        ({ context, endPolicy }) => context === group.type && endPolicy === "fluid"
+      ) ||
+        detail.appointments.some(({ organisationYear }) => organisationYear === null)) ? (
+        <FluidAppointmentManagement detail={detail} today={date} />
+      ) : null}
     </main>
   )
 }

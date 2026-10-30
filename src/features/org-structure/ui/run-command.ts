@@ -5,8 +5,8 @@ import type { z } from "zod"
 import { requireAdmin } from "@/core/auth/permissions.server"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
+import type { OrgStructureResult } from "@/core/org-structure"
 import { getErrorCode, getErrorName } from "@/shared/errors"
-import type { OrgStructureResult } from "../model"
 import type { GroupCommandState } from "./command-state"
 
 /**
@@ -38,5 +38,12 @@ export async function runGroupCommand<Schema extends z.ZodType>(
   if (!result.success) return { status: "error", error: result.error }
 
   revalidatePath(ROUTES.adminOrgStructure, "layout")
+  revalidatePath(ROUTES.adminGigGroups, "page")
+  revalidatePath(ROUTES.adminPositions, "page")
+  revalidatePath("/[locale]/(app)/members", "page")
+  revalidatePath("/[locale]/(app)/members/[memberId]", "page")
+  revalidatePath("/[locale]/(app)/me", "page")
+  revalidatePath("/[locale]/(app)/members/[memberId]/career", "page")
+  revalidatePath("/[locale]/(app)/me/career", "page")
   return { status: "success", completedAt: Date.now() }
 }

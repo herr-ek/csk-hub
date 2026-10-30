@@ -1,5 +1,7 @@
 import "server-only"
 
+import { GroupType } from "@/core/org-structure"
+
 import { compareVoices, type Voice } from "@/features/voice/model"
 import { type GroupSummary, listGroupSummaries } from "../group-summaries"
 
@@ -11,9 +13,11 @@ const bySectionVoice = (a: GroupSummary, b: GroupSummary) => compareVoices(a.voi
 export async function getChoirPlacement(): Promise<ChoirPlacement> {
   const summaries = await listGroupSummaries()
   return summaries
-    .filter(({ type }) => type === "Choir")
+    .filter(({ type }) => type === GroupType.Choir)
     .map((choir) => ({
       choir,
-      sections: summaries.filter(({ choirId, type }) => choirId === choir.id && type === "Section").sort(bySectionVoice)
+      sections: summaries
+        .filter(({ choirId, type }) => choirId === choir.id && type === GroupType.Section)
+        .sort(bySectionVoice)
     }))
 }

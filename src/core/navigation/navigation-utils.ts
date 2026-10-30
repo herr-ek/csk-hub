@@ -73,6 +73,10 @@ export function memberProfilePath(userId: string) {
   return `${ROUTES.members}/${encodeURIComponent(userId)}`
 }
 
+export function memberCareerPath(userId: string) {
+  return `${memberProfilePath(userId)}/career`
+}
+
 /** Builds a Conversation URL from its opaque ID, encoded as a single path segment. */
 export function conversationPath(conversationId: string) {
   return `${ROUTES.messages}/${encodeURIComponent(conversationId)}`

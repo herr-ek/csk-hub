@@ -1,19 +1,16 @@
 import { and, eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { group, position } from "@/core/db/schema/org-structure"
+import { group } from "@/core/db/schema/org-structure"
+import type { GroupType, OrgStructureResult } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
-import type { GroupType, OrgStructureResult } from "./model"
-import { createChoir, createGroup, createPosition } from "./structure"
+import { createChoir } from "./structure"
 
 /**
- * The structure the tests name: the scheme's Choirs and Sections, the Board and the Position
- * catalogue. Production gets the same from `bun run ops reference-data`, which this feature cannot
- * import; this copy is built through the module's own commands instead.
+ * The structural Choir and Section fixture shared by domain tests.
  */
 const STRUCTURE: {
   choirs: { name: string; sections: { name: string; voice: Voice }[] }[]
-  positions: { name: string; groupTypes: GroupType[] }[]
 } = {
   choirs: [
     {
@@ -43,16 +40,6 @@ const STRUCTURE: {
         { name: "KKB", voice: "B" }
       ]
     }
-  ],
-  positions: [
-    { name: "Ordförande", groupTypes: ["Board"] },
-    { name: "Gigmästare", groupTypes: ["Board", "Gigmästeri"] },
-    { name: "Sexmästare", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Sexmästarinna", groupTypes: ["Sexmästeri"] },
-    { name: "Dirigent", groupTypes: ["Choir"] },
-    { name: "Notfiskal", groupTypes: ["Choir"] },
-    { name: "Konsertmästare", groupTypes: ["Choir", "Konsertmästeri"] },
-    { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] }
   ]
 }
 
@@ -61,8 +48,6 @@ export async function createOrgStructureTestDatabase() {
   const database = await createTestDatabase()
   if (!database) return undefined
   for (const choir of STRUCTURE.choirs) expectSuccess(await createChoir(database.db, choir))
-  expectSuccess(await createGroup(database.db, { name: "Styret", type: "Board" }))
-  for (const position of STRUCTURE.positions) expectSuccess(await createPosition(database.db, position))
   return fixture(database)
 }
 
@@ -78,6 +63,16 @@ function fixture({ db, drop }: TestDatabase) {
       return id
     },
 
+    /** A singleton Group identity, independent of its localized label. */
+    async groupIdOfType(type: GroupType) {
+      const [row] = await db
+        .select({ id: group.id })
+        .from(group)
+        .where(and(eq(group.type, type), eq(group.active, true)))
+      if (!row) throw new Error(`No active Group of type ${type}.`)
+      return row.id
+    },
+
     /** The id of an active group by name, within a Choir when given. */
     async groupId(name: string, choirName?: string) {
       const choirId = choirName ? await this.groupId(choirName) : undefined
@@ -86,12 +81,6 @@ function fixture({ db, drop }: TestDatabase) {
         .from(group)
         .where(and(eq(group.name, name), eq(group.active, true), choirId ? eq(group.choirId, choirId) : undefined))
       if (!row) throw new Error(`No active group named ${name}.`)
-      return row.id
-    },
-
-    async positionId(name: string) {
-      const [row] = await db.select({ id: position.id }).from(position).where(eq(position.name, name))
-      if (!row) throw new Error(`No Position named ${name}.`)
       return row.id
     }
   }
