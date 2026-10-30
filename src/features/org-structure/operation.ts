@@ -2,7 +2,7 @@ import "server-only"
 
 import { sql } from "drizzle-orm"
 import type { db } from "@/core/db"
-import type { IsoDate, OrgStructureResult, OrgStructureViolation } from "./model"
+import type { IsoDate, OrgStructureResult, OrgStructureViolation } from "@/core/org-structure"
 
 /** The application database client, or a transaction on it. Every groups command accepts either. */
 export type OrgStructureDatabase = typeof db | OrgStructureTransaction
@@ -22,15 +22,25 @@ export class RuleViolation extends Error {
  * A race between two commands ends here rather than in a raw constraint error.
  */
 const CONSTRAINT_VIOLATIONS: Record<string, OrgStructureViolation> = {
-  group_name_choir_active_unique: "group-name-taken",
-  group_member_current_unique: "already-member",
-  group_member_user_id_group_id_start_date_pk: "period-conflict",
-  group_member_period_check: "period-conflict",
-  group_member_voice_containment_check: "voice-not-sung-in-section",
-  position_name_unique: "position-name-taken",
-  position_holder_current_unique: "position-taken",
-  position_holder_user_id_group_id_position_id_start_date_pk: "period-conflict",
-  position_holder_period_check: "period-conflict"
+  group_annual_active_check: "annual-group-lifecycle-derived",
+  group_annual_identity_unique: "group-name-taken",
+  group_continuing_singleton_unique: "group-name-taken",
+  group_choir_team_unique: "group-name-taken",
+  group_organisation_policy_check: "position-not-allowed",
+  group_organisation_year_check: "period-conflict",
+  position_appointment_occupancy_excl: "position-taken",
+  position_appointment_board_excl: "already-holding-elected-post",
+  position_appointment_period_check: "period-conflict",
+  position_appointment_year_check: "period-conflict",
+  position_appointment_policy_check: "position-not-allowed",
+  position_appointment_annual_check: "period-conflict",
+  direct_membership_overlap_excl: "already-member",
+  direct_membership_period_check: "period-conflict",
+  direct_membership_annual_check: "period-conflict",
+  direct_membership_policy_check: "position-not-allowed",
+  direct_membership_voice_check: "voice-not-sung-in-section",
+  group_name_policy_check: "invalid-group-name",
+  group_name_choir_active_unique: "group-name-taken"
 }
 
 function violationOf(error: unknown): OrgStructureViolation | undefined {
@@ -65,16 +75,6 @@ export async function runOrgStructureCommand<T>(
  */
 export async function lockUser(tx: OrgStructureTransaction, userId: string) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:user:${userId}`}))`)
-}
-
-/** Serializes changes to a Position's catalogue rules with holding assignments. */
-export async function lockPositionCatalogue(tx: OrgStructureTransaction, positionId: string) {
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:position-catalogue:${positionId}`}))`)
-}
-
-/** Serializes holding checks and inserts for one Position in one Group. */
-export async function lockPositionSlot(tx: OrgStructureTransaction, groupId: string, positionId: string) {
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:position:${groupId}:${positionId}`}))`)
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
