@@ -13,7 +13,13 @@ export function ReadMarker({
   token?: string
 }) {
   useEffect(() => {
-    if (token) void markConversationReadAction(conversationId, sequence, token).catch(() => {})
+    const mark = () => {
+      if (token && document.visibilityState === "visible")
+        void markConversationReadAction(conversationId, sequence, token).catch(() => {})
+    }
+    mark()
+    document.addEventListener("visibilitychange", mark)
+    return () => document.removeEventListener("visibilitychange", mark)
   }, [conversationId, sequence, token])
   return null
 }

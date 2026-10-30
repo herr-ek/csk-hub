@@ -4,6 +4,7 @@ import { refresh, revalidatePath } from "next/cache"
 import { getRequestSession } from "@/core/auth/session.server"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
+import { scheduleActivityDispatch } from "@/features/activity/server"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import { markPostRead } from "./service"
 
@@ -31,5 +32,6 @@ export async function markPostReadAction(postId: string) {
   // a refresh re-renders its badge. The feed the User came from is cached by the router,
   // and would still label the Post unread on the way back without being revalidated.
   revalidatePath(ROUTES.news)
+  scheduleActivityDispatch()
   refresh()
 }

@@ -453,11 +453,11 @@
     "settingsTitle": "Push-Benachrichtigungen",
     "settingsDescription": "Erhalte Updates von CSK Hub, auch wenn die App nicht geöffnet ist.",
     "managementTitle": "Benachrichtigungen",
-    "managementDescription": "Sende Test-Push-Benachrichtigungen an abonnierte Mitglieder.",
+    "managementDescription": "Benachrichtigungen an Mitglieder senden.",
     "broadcastTitle": "An alle senden",
-    "broadcastDescription": "Sofort an jedes aktive Push-Abonnement senden.",
+    "broadcastDescription": "Alle berechtigten Mitglieder benachrichtigen.",
     "selectedTitle": "An ausgewählte Nutzer senden",
-    "selectedDescription": "Es werden nur Nutzer mit mindestens einem aktiven Abonnement angezeigt.",
+    "selectedDescription": "Empfänger nach Namen oder E-Mail-Adresse suchen.",
     "enabled": "Push-Benachrichtigungen sind auf diesem Gerät aktiviert.",
     "disabled": "Push-Benachrichtigungen sind auf diesem Gerät deaktiviert.",
     "unsupportedSubscription": "Das Push-Abonnement dieses Browsers wird nicht mehr unterstützt. Entferne es, bevor du Benachrichtigungen erneut aktivierst.",
@@ -478,9 +478,9 @@
     "testMessagePlaceholder": "Testnachricht eingeben",
     "messagePlaceholder": "Benachrichtigungstext eingeben",
     "searchPlaceholder": "Nach Name oder E-Mail suchen",
-    "searchLabel": "Abonnierte Nutzer suchen",
+    "searchLabel": "Personen suchen",
     "searching": "Suche läuft…",
-    "noSubscribedUsers": "Keine abonnierten Nutzer gefunden",
+    "noSubscribedUsers": "Keine Personen gefunden",
     "notSupported": "Push-Benachrichtigungen werden von diesem Browser nicht unterstützt.",
     "deviceEnableFailed": "Die App konnte Push-Benachrichtigungen auf diesem Gerät nicht aktivieren.",
     "notConfigured": "Push-Benachrichtigungen sind noch nicht eingerichtet.",
@@ -499,7 +499,8 @@
     "userRequired": "Wähle zuerst mindestens einen Nutzer aus.",
     "noActiveSubscriptions": "Keine aktiven Benachrichtigungsabonnements.",
     "deliveryFailed": "Benachrichtigung konnte nicht gesendet werden.",
-    "noRecipients": "Keine Empfänger ausgewählt."
+    "noRecipients": "Keine Empfänger ausgewählt.",
+    "queued": "Benachrichtigungen für {count, plural, one {# Person} other {# Personen}} eingereiht. Bei geöffneter App erscheinen Hinweise in der App, andernfalls bei aktivierter Funktion als Push-Benachrichtigung."
   },
   "RichText": {
     "editor": {
@@ -807,5 +808,10 @@
       "invalid-input": "Prüfe das Formular und versuche es erneut.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
     }
+  },
+  "Realtime": {
+    "newMessage": "Neue Nachricht",
+    "notification": "Benachrichtigung",
+    "open": "Öffnen"
   }
 }
