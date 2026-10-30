@@ -2,7 +2,7 @@
 
 Application Messages and Admin broadcasts use the shared
 [live-delivery workflow](../realtime/README.md) when Redis is configured: visible feedback
-is attempted first, followed by durable Web Push fallback. The functions below remain
+is attempted first, followed by best-effort Web Push fallback. The functions below remain
 the immediate, low-level Web Push capability; settings delivery tests deliberately use
 them to verify push even when the app is open. A successful low-level result means
 provider acceptance, while the broadcast UI separately reports queued recipients.

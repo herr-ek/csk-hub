@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { AppNavigation, AppQuickAccessBar } from "@/core/navigation/app-navigation"
-import { ActivitySubscription } from "@/features/activity"
+import { ActivitySubscription } from "@/core/realtime/ActivitySubscription"
 import type { UnreadSources } from "@/core/navigation/unread-sources"
 import { countUnreadConversations } from "@/features/messaging/unread"
 import { countUnreadPosts } from "@/features/posts/unread"

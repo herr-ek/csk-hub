@@ -6,7 +6,8 @@ import { db } from "@/core/db"
 import { activityDelivery } from "@/core/db/schema/activity"
 import { activityStreamKey, connectActivityBroker } from "@/core/realtime/broker"
 import { type ActivityEvent, isStreamCursor } from "@/core/realtime/events"
-import { getActivitySession, isActivitySessionActive, isDeliveryAllowed } from "./access"
+import { getActivitySession, isActivitySessionActive } from "./access"
+import { type ActivityDeliveryPolicy, isDeliveryAllowed } from "./delivery-access"
 
 function unavailableStream() {
   // A non-200 response can permanently close EventSource. A valid stream followed
@@ -21,7 +22,7 @@ function unavailableStream() {
 }
 
 /** Streams only the authenticated User's activity; channel selection never comes from the browser. */
-export async function handleActivityStream(request: Request) {
+export async function handleActivityStream(policy: ActivityDeliveryPolicy, request: Request) {
   if (!env.REDIS_URL) return new Response(null, { status: 204 })
   const identity = await getActivitySession()
   if (!identity) return new Response(null, { status: 204 })
@@ -89,7 +90,7 @@ export async function handleActivityStream(request: Request) {
                 .select()
                 .from(activityDelivery)
                 .where(and(eq(activityDelivery.id, id), eq(activityDelivery.userId, identity.userId)))
-              if (!delivery || !(await isDeliveryAllowed(delivery))) continue
+              if (!delivery || !(await isDeliveryAllowed(policy, delivery))) continue
               const event: ActivityEvent = {
                 ...delivery.change,
                 id: delivery.id,
