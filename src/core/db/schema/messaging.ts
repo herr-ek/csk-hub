@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm"
+import { defineRelations, sql } from "drizzle-orm"
 import {
   check,
   index,
@@ -143,75 +143,57 @@ export const message = pgTable(
   ]
 )
 
-export const conversationRelations = relations(conversation, ({ many, one }) => ({
-  directConversation: one(directConversation),
-  groupConversation: one(groupConversation),
-  groupMemberships: many(groupMembership),
-  readStates: many(conversationReadState),
-  messages: many(message)
-}))
-
-export const directConversationRelations = relations(directConversation, ({ one }) => ({
-  conversation: one(conversation, {
-    fields: [directConversation.conversationId],
-    references: [conversation.id]
-  }),
-  firstMember: one(user, {
-    fields: [directConversation.firstMemberId],
-    references: [user.id],
-    relationName: "directConversationFirstMember"
-  }),
-  secondMember: one(user, {
-    fields: [directConversation.secondMemberId],
-    references: [user.id],
-    relationName: "directConversationSecondMember"
+export const messagingRelations = defineRelations(
+  { conversation, conversationReadState, directConversation, groupConversation, groupMembership, message, user },
+  (r) => ({
+    conversation: {
+      directConversation: r.one.directConversation({
+        from: [r.conversation.id],
+        to: [r.directConversation.conversationId]
+      }),
+      groupConversation: r.one.groupConversation({
+        from: [r.conversation.id],
+        to: [r.groupConversation.conversationId]
+      }),
+      groupMemberships: r.many.groupMembership({ from: [r.conversation.id], to: [r.groupMembership.conversationId] }),
+      readStates: r.many.conversationReadState({
+        from: [r.conversation.id],
+        to: [r.conversationReadState.conversationId]
+      }),
+      messages: r.many.message({ from: [r.conversation.id], to: [r.message.conversationId] })
+    },
+    directConversation: {
+      conversation: r.one.conversation({ from: [r.directConversation.conversationId], to: [r.conversation.id] }),
+      firstMember: r.one.user({
+        from: [r.directConversation.firstMemberId],
+        to: [r.user.id],
+        alias: "directConversationFirstMember"
+      }),
+      secondMember: r.one.user({
+        from: [r.directConversation.secondMemberId],
+        to: [r.user.id],
+        alias: "directConversationSecondMember"
+      })
+    },
+    groupConversation: {
+      conversation: r.one.conversation({ from: [r.groupConversation.conversationId], to: [r.conversation.id] }),
+      createdBy: r.one.user({
+        from: [r.groupConversation.createdByUserId],
+        to: [r.user.id],
+        alias: "groupConversationCreator"
+      })
+    },
+    groupMembership: {
+      conversation: r.one.conversation({ from: [r.groupMembership.conversationId], to: [r.conversation.id] }),
+      member: r.one.user({ from: [r.groupMembership.userId], to: [r.user.id], alias: "conversationMember" })
+    },
+    conversationReadState: {
+      conversation: r.one.conversation({ from: [r.conversationReadState.conversationId], to: [r.conversation.id] }),
+      user: r.one.user({ from: [r.conversationReadState.userId], to: [r.user.id], alias: "conversationReadStateUser" })
+    },
+    message: {
+      conversation: r.one.conversation({ from: [r.message.conversationId], to: [r.conversation.id] }),
+      author: r.one.user({ from: [r.message.authorUserId], to: [r.user.id], alias: "messageAuthor" })
+    }
   })
-}))
-
-export const groupConversationRelations = relations(groupConversation, ({ one }) => ({
-  conversation: one(conversation, {
-    fields: [groupConversation.conversationId],
-    references: [conversation.id]
-  }),
-  createdBy: one(user, {
-    fields: [groupConversation.createdByUserId],
-    references: [user.id],
-    relationName: "groupConversationCreator"
-  })
-}))
-
-export const groupMembershipRelations = relations(groupMembership, ({ one }) => ({
-  conversation: one(conversation, {
-    fields: [groupMembership.conversationId],
-    references: [conversation.id]
-  }),
-  member: one(user, {
-    fields: [groupMembership.userId],
-    references: [user.id],
-    relationName: "conversationMember"
-  })
-}))
-
-export const conversationReadStateRelations = relations(conversationReadState, ({ one }) => ({
-  conversation: one(conversation, {
-    fields: [conversationReadState.conversationId],
-    references: [conversation.id]
-  }),
-  user: one(user, {
-    fields: [conversationReadState.userId],
-    references: [user.id],
-    relationName: "conversationReadStateUser"
-  })
-}))
-
-export const messageRelations = relations(message, ({ one }) => ({
-  conversation: one(conversation, {
-    fields: [message.conversationId],
-    references: [conversation.id]
-  }),
-  author: one(user, {
-    fields: [message.authorUserId],
-    references: [user.id],
-    relationName: "messageAuthor"
-  })
-}))
+)

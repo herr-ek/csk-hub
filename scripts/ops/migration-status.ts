@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { readMigrationFiles } from "drizzle-orm/migrator"
 import { Client } from "pg"
 import { secureConnection } from "@/core/db/tls"
 import { type Database, databaseFor, type Target } from "./target"
@@ -10,23 +11,16 @@ import { type Database, databaseFor, type Target } from "./target"
  * Supabase dashboard.
  */
 
-type JournalEntry = {
-  idx: number
-  /** Millisecond timestamp, and the value drizzle records as `created_at`. */
-  when: number
-  tag: string
-}
-
 export type TargetStatus =
   | { kind: "not-configured" }
   | { kind: "unreachable"; host: string; reason: string }
   | { kind: "ok"; host: string; applied: string[]; pending: string[] }
 
-const JOURNAL = new URL("../../drizzle/meta/_journal.json", import.meta.url)
+const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../drizzle", import.meta.url))
 
-export function readJournal(): JournalEntry[] {
-  const journal = JSON.parse(readFileSync(JOURNAL, "utf8")) as { entries: JournalEntry[] }
-  return [...journal.entries].sort((a, b) => a.idx - b.idx)
+/** Read the ordered local migrations using the same parser and SQL hashes as Drizzle. */
+export function readMigrations() {
+  return readMigrationFiles({ migrationsFolder: MIGRATIONS_FOLDER })
 }
 
 export async function statusFor(target: Target): Promise<TargetStatus> {
@@ -48,7 +42,7 @@ export async function statusOf(
   { timeout = 10_000 }: { timeout?: number } = {}
 ): Promise<Exclude<TargetStatus, { kind: "not-configured" }>> {
   const { host } = database
-  const entries = readJournal()
+  const entries = readMigrations()
   const client = new Client({
     ...secureConnection(database.url),
     connectionTimeoutMillis: timeout,
@@ -58,22 +52,26 @@ export async function statusOf(
   try {
     await client.connect()
 
-    const { rows } = await client.query<{ created_at: string }>(
-      `select created_at from drizzle.__drizzle_migrations order by created_at`
+    const { rows } = await client.query<{ name: string | null; hash: string }>(
+      // Reading the row as JSON also works before v1's migrator adds the name column.
+      `select to_jsonb(m)->>'name' as name, hash from drizzle.__drizzle_migrations m`
     )
-    const appliedAt = new Set(rows.map((row) => Number(row.created_at)))
+    const appliedNames = new Set(rows.flatMap((row) => (row.name === null ? [] : [row.name])))
+    const legacyHashes = new Set(rows.filter((row) => row.name === null).map((row) => row.hash))
+    const applied = entries.filter((entry) => appliedNames.has(entry.name) || legacyHashes.has(entry.hash))
+    const appliedSet = new Set(applied)
 
     return {
       kind: "ok",
       host,
-      applied: entries.filter((entry) => appliedAt.has(entry.when)).map((entry) => entry.tag),
-      pending: entries.filter((entry) => !appliedAt.has(entry.when)).map((entry) => entry.tag)
+      applied: applied.map((entry) => entry.name),
+      pending: entries.filter((entry) => !appliedSet.has(entry)).map((entry) => entry.name)
     }
   } catch (error) {
     // An absent ledger means the database exists but has never been migrated, which is a
     // normal state for a fresh checkout rather than a failure to report.
     if (isMissingLedger(error)) {
-      return { kind: "ok", host, applied: [], pending: entries.map((entry) => entry.tag) }
+      return { kind: "ok", host, applied: [], pending: entries.map((entry) => entry.name) }
     }
 
     return { kind: "unreachable", host, reason: describeError(error) }

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, spyOn, test } from "bun:test"
 import { sql } from "drizzle-orm"
 import { Client } from "pg"
 import { createTestDatabase } from "../../test/database"
-import { readJournal } from "./migration-status"
+import { readMigrations } from "./migration-status"
 import { checkProductionMigrations } from "./pre-build"
 
 const database = await createTestDatabase()
@@ -45,21 +45,21 @@ describe.skipIf(!database)("checkProductionMigrations", () => {
   afterAll(() => t.drop())
 
   test("stops while a migration is pending and passes once it is applied", async () => {
-    const latest = readJournal().at(-1) as NonNullable<ReturnType<typeof readJournal>[number]>
+    const latest = readMigrations().at(-1) as NonNullable<ReturnType<typeof readMigrations>[number]>
     const environment = { VERCEL_ENV: "production", POSTGRES_URL: t.url }
 
     expect((await check(environment)).code).toBe(0)
 
     const { rows } = await t.db.execute<{ hash: string }>(
-      sql`delete from drizzle.__drizzle_migrations where created_at = ${latest.when} returning hash`
+      sql`delete from drizzle.__drizzle_migrations where name = ${latest.name} returning hash`
     )
 
     const behind = await check(environment)
     expect(behind.code).toBe(1)
-    expect(behind.output).toContain(`pending: ${latest.tag}`)
+    expect(behind.output).toContain(`pending: ${latest.name}`)
 
     await t.db.execute(
-      sql`insert into drizzle.__drizzle_migrations (hash, created_at) values (${rows[0]?.hash}, ${latest.when})`
+      sql`insert into drizzle.__drizzle_migrations (hash, created_at, name) values (${rows[0]?.hash}, ${latest.folderMillis}, ${latest.name})`
     )
 
     expect((await check(environment)).code).toBe(0)

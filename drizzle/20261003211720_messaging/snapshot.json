@@ -1,0 +1,1518 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4d9e4973-5a82-4c1d-94f7-0d1f615d7ed3",
+  "prevIds": [
+    "f40983be-8de0-400a-b50b-1ab158c809ad"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "conversation_kind"
+      ],
+      "writes": [
+        "s|enum|public.conversation_kind",
+        "n|enum|public.conversation_kind",
+        "e|enum|public.conversation_kind",
+        "n|type|public.conversation_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "conversation"
+      ],
+      "writes": [
+        "s|tbl|public.conversation",
+        "n|tbl|public.conversation",
+        "e|tbl|public.conversation",
+        "n|rel|public.conversation",
+        "n|type|public.conversation",
+        "n|rel|public.conversation_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.conversation_kind"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "conversation_read_state"
+      ],
+      "writes": [
+        "s|tbl|public.conversation_read_state",
+        "n|tbl|public.conversation_read_state",
+        "e|tbl|public.conversation_read_state",
+        "n|rel|public.conversation_read_state",
+        "n|type|public.conversation_read_state",
+        "n|rel|public.conversation_read_state_conversation_id_user_id_pk"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "direct_conversation"
+      ],
+      "writes": [
+        "s|tbl|public.direct_conversation",
+        "n|tbl|public.direct_conversation",
+        "e|tbl|public.direct_conversation",
+        "n|rel|public.direct_conversation",
+        "n|type|public.direct_conversation",
+        "n|rel|public.direct_conversation_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_conversation"
+      ],
+      "writes": [
+        "s|tbl|public.group_conversation",
+        "n|tbl|public.group_conversation",
+        "e|tbl|public.group_conversation",
+        "n|rel|public.group_conversation",
+        "n|type|public.group_conversation",
+        "n|rel|public.group_conversation_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_membership"
+      ],
+      "writes": [
+        "s|tbl|public.group_membership",
+        "n|tbl|public.group_membership",
+        "e|tbl|public.group_membership",
+        "n|rel|public.group_membership",
+        "n|type|public.group_membership",
+        "n|rel|public.group_membership_conversation_id_user_id_pk"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "message"
+      ],
+      "writes": [
+        "s|tbl|public.message",
+        "n|tbl|public.message",
+        "e|tbl|public.message",
+        "n|rel|public.message",
+        "n|type|public.message",
+        "n|rel|public.message_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "direct_conversation",
+        "directConversation_member_pair_unique"
+      ],
+      "writes": [
+        "s|idx|public.directConversation_member_pair_unique",
+        "n|idx|public.directConversation_member_pair_unique",
+        "e|idx|public.directConversation_member_pair_unique",
+        "n|rel|public.directConversation_member_pair_unique"
+      ],
+      "reads": [
+        "n|tbl|public.direct_conversation",
+        "n|sch|public",
+        "n|col|public.direct_conversation.first_member_id",
+        "n|col|public.direct_conversation.second_member_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group_membership",
+        "groupMembership_userId_idx"
+      ],
+      "writes": [
+        "s|idx|public.groupMembership_userId_idx",
+        "n|idx|public.groupMembership_userId_idx",
+        "e|idx|public.groupMembership_userId_idx",
+        "n|rel|public.groupMembership_userId_idx"
+      ],
+      "reads": [
+        "n|tbl|public.group_membership",
+        "n|sch|public",
+        "n|col|public.group_membership.user_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "message",
+        "message_conversation_sequence_unique"
+      ],
+      "writes": [
+        "s|idx|public.message_conversation_sequence_unique",
+        "n|idx|public.message_conversation_sequence_unique",
+        "e|idx|public.message_conversation_sequence_unique",
+        "n|rel|public.message_conversation_sequence_unique"
+      ],
+      "reads": [
+        "n|tbl|public.message",
+        "n|sch|public",
+        "n|col|public.message.conversation_id",
+        "n|col|public.message.sequence"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "message",
+        "message_author_idempotency_key_unique"
+      ],
+      "writes": [
+        "s|idx|public.message_author_idempotency_key_unique",
+        "n|idx|public.message_author_idempotency_key_unique",
+        "e|idx|public.message_author_idempotency_key_unique",
+        "n|rel|public.message_author_idempotency_key_unique"
+      ],
+      "reads": [
+        "n|tbl|public.message",
+        "n|sch|public",
+        "n|col|public.message.author_user_id",
+        "n|col|public.message.idempotency_key"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "message",
+        "message_conversation_sent_at_idx"
+      ],
+      "writes": [
+        "s|idx|public.message_conversation_sent_at_idx",
+        "n|idx|public.message_conversation_sent_at_idx",
+        "e|idx|public.message_conversation_sent_at_idx",
+        "n|rel|public.message_conversation_sent_at_idx"
+      ],
+      "reads": [
+        "n|tbl|public.message",
+        "n|sch|public",
+        "n|col|public.message.conversation_id",
+        "n|col|public.message.sent_at"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "conversation_read_state"
+      ],
+      "writes": [
+        "s|fk|public.conversation_read_state.conversation_read_state_conversation_id_conversation_id_fk",
+        "n|fk|public.conversation_read_state.conversation_read_state_conversation_id_conversation_id_fk",
+        "e|fk|public.conversation_read_state.conversation_read_state_conversation_id_conversation_id_fk",
+        "n|con|public.conversation_read_state.conversation_read_state_conversation_id_conversation_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.conversation_read_state",
+        "n|sch|public",
+        "n|tbl|public.conversation",
+        "n|sch|public",
+        "n|col|public.conversation_read_state.conversation_id",
+        "n|col|public.conversation.id",
+        "e|uniqueness|public.conversation.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "conversation_read_state"
+      ],
+      "writes": [
+        "s|fk|public.conversation_read_state.conversation_read_state_user_id_user_id_fk",
+        "n|fk|public.conversation_read_state.conversation_read_state_user_id_user_id_fk",
+        "e|fk|public.conversation_read_state.conversation_read_state_user_id_user_id_fk",
+        "n|con|public.conversation_read_state.conversation_read_state_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.conversation_read_state",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.conversation_read_state.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "direct_conversation"
+      ],
+      "writes": [
+        "s|fk|public.direct_conversation.direct_conversation_conversation_id_conversation_id_fk",
+        "n|fk|public.direct_conversation.direct_conversation_conversation_id_conversation_id_fk",
+        "e|fk|public.direct_conversation.direct_conversation_conversation_id_conversation_id_fk",
+        "n|con|public.direct_conversation.direct_conversation_conversation_id_conversation_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.direct_conversation",
+        "n|sch|public",
+        "n|tbl|public.conversation",
+        "n|sch|public",
+        "n|col|public.direct_conversation.conversation_id",
+        "n|col|public.conversation.id",
+        "e|uniqueness|public.conversation.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "direct_conversation"
+      ],
+      "writes": [
+        "s|fk|public.direct_conversation.direct_conversation_first_member_id_user_id_fk",
+        "n|fk|public.direct_conversation.direct_conversation_first_member_id_user_id_fk",
+        "e|fk|public.direct_conversation.direct_conversation_first_member_id_user_id_fk",
+        "n|con|public.direct_conversation.direct_conversation_first_member_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.direct_conversation",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.direct_conversation.first_member_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "direct_conversation"
+      ],
+      "writes": [
+        "s|fk|public.direct_conversation.direct_conversation_second_member_id_user_id_fk",
+        "n|fk|public.direct_conversation.direct_conversation_second_member_id_user_id_fk",
+        "e|fk|public.direct_conversation.direct_conversation_second_member_id_user_id_fk",
+        "n|con|public.direct_conversation.direct_conversation_second_member_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.direct_conversation",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.direct_conversation.second_member_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_conversation"
+      ],
+      "writes": [
+        "s|fk|public.group_conversation.group_conversation_conversation_id_conversation_id_fk",
+        "n|fk|public.group_conversation.group_conversation_conversation_id_conversation_id_fk",
+        "e|fk|public.group_conversation.group_conversation_conversation_id_conversation_id_fk",
+        "n|con|public.group_conversation.group_conversation_conversation_id_conversation_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.group_conversation",
+        "n|sch|public",
+        "n|tbl|public.conversation",
+        "n|sch|public",
+        "n|col|public.group_conversation.conversation_id",
+        "n|col|public.conversation.id",
+        "e|uniqueness|public.conversation.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_conversation"
+      ],
+      "writes": [
+        "s|fk|public.group_conversation.group_conversation_created_by_user_id_user_id_fk",
+        "n|fk|public.group_conversation.group_conversation_created_by_user_id_user_id_fk",
+        "e|fk|public.group_conversation.group_conversation_created_by_user_id_user_id_fk",
+        "n|con|public.group_conversation.group_conversation_created_by_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.group_conversation",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.group_conversation.created_by_user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_membership"
+      ],
+      "writes": [
+        "s|fk|public.group_membership.group_membership_conversation_id_group_conversation_conversatio",
+        "n|fk|public.group_membership.group_membership_conversation_id_group_conversation_conversatio",
+        "e|fk|public.group_membership.group_membership_conversation_id_group_conversation_conversatio",
+        "n|con|public.group_membership.group_membership_conversation_id_group_conversation_conversatio"
+      ],
+      "reads": [
+        "n|tbl|public.group_membership",
+        "n|sch|public",
+        "n|tbl|public.group_conversation",
+        "n|sch|public",
+        "n|col|public.group_membership.conversation_id",
+        "n|col|public.group_conversation.conversation_id",
+        "e|uniqueness|public.group_conversation.conversation_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_membership"
+      ],
+      "writes": [
+        "s|fk|public.group_membership.group_membership_user_id_user_id_fk",
+        "n|fk|public.group_membership.group_membership_user_id_user_id_fk",
+        "e|fk|public.group_membership.group_membership_user_id_user_id_fk",
+        "n|con|public.group_membership.group_membership_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.group_membership",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.group_membership.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "message"
+      ],
+      "writes": [
+        "s|fk|public.message.message_conversation_id_conversation_id_fk",
+        "n|fk|public.message.message_conversation_id_conversation_id_fk",
+        "e|fk|public.message.message_conversation_id_conversation_id_fk",
+        "n|con|public.message.message_conversation_id_conversation_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.message",
+        "n|sch|public",
+        "n|tbl|public.conversation",
+        "n|sch|public",
+        "n|col|public.message.conversation_id",
+        "n|col|public.conversation.id",
+        "e|uniqueness|public.conversation.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "message"
+      ],
+      "writes": [
+        "s|fk|public.message.message_author_user_id_user_id_fk",
+        "n|fk|public.message.message_author_user_id_user_id_fk",
+        "e|fk|public.message.message_author_user_id_user_id_fk",
+        "n|con|public.message.message_author_user_id_user_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.message",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.message.author_user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "conversation",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "conversation_read_state",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "direct_conversation",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "group_conversation",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "group_membership",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "message",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "conversation_kind",
+        "values": [
+          "direct",
+          "group"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation",
+        "name": "kind",
+        "type": "conversation_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation",
+        "name": "next_message_sequence",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation_read_state",
+        "name": "conversation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation_read_state",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation_read_state",
+        "name": "last_read_sequence",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "conversation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "first_member_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "second_member_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "conversation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "created_by_user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "conversation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "joined_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "left_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "history_visible_through_sequence",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "conversation_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "sequence",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "author_user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "idempotency_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "sent_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "directConversation_member_pair_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "first_member_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "second_member_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "groupMembership_userId_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_conversation_sequence_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "conversation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "sequence",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_author_idempotency_key_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "author_user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "idempotency_key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_conversation_sent_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "conversation_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "sent_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation_read_state",
+        "name": "conversation_read_state_conversation_id_conversation_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "conversation_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "conversation",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation_read_state",
+        "name": "conversation_read_state_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "direct_conversation_conversation_id_conversation_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "conversation_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "conversation",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "direct_conversation_first_member_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "first_member_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "direct_conversation_second_member_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "second_member_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "group_conversation_conversation_id_conversation_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "conversation_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "conversation",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "group_conversation_created_by_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "created_by_user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "group_membership_conversation_id_group_conversation_conversatio",
+        "nameExplicit": false,
+        "columns": [
+          "conversation_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group_conversation",
+        "columnsTo": [
+          "conversation_id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "group_membership_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_conversation_id_conversation_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "conversation_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "conversation",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_author_user_id_user_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "author_user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation",
+        "name": "conversation_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation_read_state",
+        "name": "conversation_read_state_conversation_id_user_id_pk",
+        "columns": [
+          "conversation_id",
+          "user_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "direct_conversation_pkey",
+        "columns": [
+          "conversation_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "group_conversation_pkey",
+        "columns": [
+          "conversation_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "group_membership_conversation_id_user_id_pk",
+        "columns": [
+          "conversation_id",
+          "user_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "conversation_read_state",
+        "name": "conversationReadState_last_read_sequence_check",
+        "value": "\"last_read_sequence\" >= 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_conversation",
+        "name": "directConversation_member_pair_order_check",
+        "value": "\"first_member_id\" COLLATE \"C\" < \"second_member_id\" COLLATE \"C\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "groupConversation_name_not_blank_check",
+        "value": "length(btrim(\"name\")) > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "groupMembership_departure_visibility_check",
+        "value": "(\"left_at\" IS NULL) = (\"history_visible_through_sequence\" IS NULL)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_membership",
+        "name": "groupMembership_history_visible_through_sequence_check",
+        "value": "\"history_visible_through_sequence\" IS NULL OR \"history_visible_through_sequence\" >= 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_sequence_check",
+        "value": "\"sequence\" > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "message",
+        "name": "message_text_not_blank_check",
+        "value": "length(btrim(\"text\")) > 0",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

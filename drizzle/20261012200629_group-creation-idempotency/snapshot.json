@@ -1,0 +1,163 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7ab04112-f8b1-4afe-8e95-a83de1565dd4",
+  "prevIds": [
+    "1f170708-de89-4684-a70e-efeeb11cb8c5"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "group_conversation",
+        "creation_idempotency_key"
+      ],
+      "writes": [
+        "s|col|public.group_conversation.creation_idempotency_key",
+        "n|col|public.group_conversation.creation_idempotency_key",
+        "e|col|public.group_conversation.creation_idempotency_key"
+      ],
+      "reads": [
+        "n|tbl|public.group_conversation",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "group_conversation",
+        "creation_payload_hash"
+      ],
+      "writes": [
+        "s|col|public.group_conversation.creation_payload_hash",
+        "n|col|public.group_conversation.creation_payload_hash",
+        "e|col|public.group_conversation.creation_payload_hash"
+      ],
+      "reads": [
+        "n|tbl|public.group_conversation",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group_conversation",
+        "groupConversation_creator_creation_key_unique"
+      ],
+      "writes": [
+        "s|idx|public.groupConversation_creator_creation_key_unique",
+        "n|idx|public.groupConversation_creator_creation_key_unique",
+        "e|idx|public.groupConversation_creator_creation_key_unique",
+        "n|rel|public.groupConversation_creator_creation_key_unique"
+      ],
+      "reads": [
+        "n|tbl|public.group_conversation",
+        "n|sch|public",
+        "n|col|public.group_conversation.created_by_user_id",
+        "n|col|public.group_conversation.creation_idempotency_key"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_conversation"
+      ],
+      "writes": [
+        "s|ck|public.group_conversation.groupConversation_creation_intent_check",
+        "n|ck|public.group_conversation.groupConversation_creation_intent_check",
+        "e|ck|public.group_conversation.groupConversation_creation_intent_check",
+        "n|con|public.group_conversation.groupConversation_creation_intent_check"
+      ],
+      "reads": [
+        "n|tbl|public.group_conversation",
+        "n|sch|public",
+        "n|col|public.group_conversation.creation_idempotency_key",
+        "n|col|public.group_conversation.creation_payload_hash"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "creation_idempotency_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "creation_payload_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "groupConversation_creator_creation_key_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "created_by_user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "creation_idempotency_key",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group_conversation",
+        "name": "groupConversation_creation_intent_check",
+        "value": "(\"creation_idempotency_key\" IS NULL AND \"creation_payload_hash\" IS NULL)\n        OR (\"creation_idempotency_key\" IS NOT NULL AND length(btrim(\"creation_idempotency_key\")) > 0\n          AND \"creation_payload_hash\" IS NOT NULL)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

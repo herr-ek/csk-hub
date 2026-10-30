@@ -1,0 +1,40 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "c5ef9d2e-892f-4629-a558-5e15fb3dc8e5",
+  "prevIds": [
+    "0cd65ca5-87ae-4c1f-926a-b3b3f7e4717b"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "group_member",
+        "voice"
+      ],
+      "writes": [
+        "s|colprop|public.group_member.voice.type",
+        "s|colprop|public.group_member.voice.default"
+      ],
+      "reads": [
+        "n|tbl|public.group_member",
+        "n|sch|public",
+        "n|col|public.group_member.voice"
+      ],
+      "sqlHash": "fb10d011d2b7f423"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"group_member\",\"voice\"]",
+      "set": {
+        "type": "voice_division",
+        "typeSchema": null
+      }
+    }
+  ]
+}

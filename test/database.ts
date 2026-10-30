@@ -1,7 +1,9 @@
+import { defineRelations } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import { Client } from "pg"
 import type { db as applicationDb } from "@/core/db"
+import * as authSchema from "@/core/db/schema/auth"
 import { isLocalDatabase } from "@/core/db/tls"
 
 export type TestDatabase = {
@@ -38,7 +40,10 @@ export async function createTestDatabase(migrationsFolder = "drizzle"): Promise<
 
   const url = new URL(baseUrl)
   url.pathname = `/${name}`
-  const db = drizzle<Record<string, never>>({ connection: url.toString() })
+  const db = drizzle({
+    connection: url.toString(),
+    relations: { ...defineRelations(authSchema), ...authSchema.authRelations }
+  })
   await migrate(db, { migrationsFolder })
 
   return {

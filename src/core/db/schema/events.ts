@@ -1,5 +1,5 @@
 import type { JSONContent } from "@tiptap/core"
-import { relations, sql } from "drizzle-orm"
+import { defineRelations, sql } from "drizzle-orm"
 import {
   boolean,
   check,
@@ -25,8 +25,8 @@ import { voiceFamily } from "./voice"
 // (v2)" in `docs/schemas/Events - DB Scheme.md`, which tags every rule with where it is enforced;
 // the rules tagged [app] are not database constraints.
 //
-// Drizzle cannot express triggers, so `drizzle/0012_events.sql` carries these additions written
-// by hand, each marked "Hand-written in drizzle/0012_events.sql" here and "Added by hand" there:
+// Drizzle cannot express triggers, so `drizzle/20261008134757_events/migration.sql` carries these additions written
+// by hand, each marked "Hand-written in drizzle/20261008134757_events/migration.sql" here and "Added by hand" there:
 //   1. the `event_participation_mode_change_check` trigger and its function
 //   2. the `event_response_check` trigger and its function
 //   3. the `event_registration_check` trigger and its function
@@ -123,7 +123,7 @@ export const event = pgTable(
     // accepted and flagged, never blocked.
     respondBy: timestamp("respond_by", { withTimezone: true }),
     // No database default: the app picks one by type, and the organiser may override it.
-    // Hand-written in drizzle/0012_events.sql (1): the `event_participation_mode_change_check`
+    // Hand-written in drizzle/20261008134757_events/migration.sql (1): the `event_participation_mode_change_check`
     // trigger rejects a change that would strand Responses, Registrations or Registration
     // questions under a mode that does not collect them.
     participationMode: participationMode("participation_mode").notNull(),
@@ -266,10 +266,10 @@ export const absenceReason = pgTable(
  * A singer's answer in advance. No row means no response yet. A surrogate key, so the row can
  * outlive its User.
  *
- * Hand-written in drizzle/0012_events.sql (2): the `event_response_check` trigger accepts a
+ * Hand-written in drizzle/20261008134757_events/migration.sql (2): the `event_response_check` trigger accepts a
  * Response only to a Published Event in a response mode (`event_response_mode_check`), and in
  * ResponseRequiredStrict only Yes, or No with a reason (`event_response_strict_check`).
- * Hand-written in drizzle/0012_events.sql (6): Erasure also wipes `comment` and `reasonText`.
+ * Hand-written in drizzle/20261008134757_events/migration.sql (6): Erasure also wipes `comment` and `reasonText`.
  */
 export const eventResponse = pgTable(
   "event_response",
@@ -305,7 +305,7 @@ export const eventResponse = pgTable(
 /**
  * What the organiser asks registrants, in `sortOrder`.
  *
- * Hand-written in drizzle/0012_events.sql (4): the `event_registration_question_check` trigger
+ * Hand-written in drizzle/20261008134757_events/migration.sql (4): the `event_registration_question_check` trigger
  * accepts a question only on an Event in Registration mode
  * (`event_registration_question_mode_check`).
  */
@@ -353,10 +353,10 @@ export const eventRegistrationQuestionOption = pgTable(
  * A User signing up. No row means not signed up, never a No or an absence. Withdrawing keeps the
  * row and its answers. A surrogate key, so the row can outlive its User.
  *
- * Hand-written in drizzle/0012_events.sql (3): the `event_registration_check` trigger accepts a
+ * Hand-written in drizzle/20261008134757_events/migration.sql (3): the `event_registration_check` trigger accepts a
  * Registration only on an Event in Registration mode, and registering (status Registered) only
  * while the Event is Published (`event_registration_mode_check`).
- * Hand-written in drizzle/0012_events.sql (6): Erasure also wipes `comment` and every text answer.
+ * Hand-written in drizzle/20261008134757_events/migration.sql (6): Erasure also wipes `comment` and every text answer.
  */
 export const eventRegistration = pgTable(
   "event_registration",
@@ -390,7 +390,7 @@ export const eventRegistration = pgTable(
  * choice answers carry their options in `eventRegistrationAnswerChoice`. That an answer fits its
  * question's kind is the app's job.
  *
- * Hand-written in drizzle/0012_events.sql (5): the `event_registration_answer_check` trigger
+ * Hand-written in drizzle/20261008134757_events/migration.sql (5): the `event_registration_answer_check` trigger
  * requires the question to belong to the Registration's Event
  * (`event_registration_answer_question_check`).
  */
@@ -476,111 +476,131 @@ export const eventAttendance = pgTable(
   ]
 )
 
-export const locationRelations = relations(location, ({ many }) => ({
-  events: many(event)
-}))
-
-export const eventSeriesRelations = relations(eventSeries, ({ many }) => ({
-  events: many(event)
-}))
-
-export const eventRelations = relations(event, ({ one, many }) => ({
-  location: one(location, { fields: [event.locationId], references: [location.id] }),
-  series: one(eventSeries, { fields: [event.seriesId], references: [eventSeries.id] }),
-  organiserGroup: one(group, { fields: [event.organiserGroupId], references: [group.id] }),
-  creator: one(user, { fields: [event.createdBy], references: [user.id], relationName: "eventCreator" }),
-  rehearsal: one(rehearsal, { fields: [event.id], references: [rehearsal.eventId] }),
-  gig: one(gig, { fields: [event.id], references: [gig.eventId] }),
-  socialEvent: one(socialEvent, { fields: [event.id], references: [socialEvent.eventId] }),
-  details: many(eventDetail),
-  targets: many(eventTarget),
-  responses: many(eventResponse),
-  registrationQuestions: many(eventRegistrationQuestion),
-  registrations: many(eventRegistration),
-  attendance: many(eventAttendance)
-}))
-
-export const eventDetailRelations = relations(eventDetail, ({ one }) => ({
-  event: one(event, { fields: [eventDetail.eventId], references: [event.id] })
-}))
-
-export const rehearsalRelations = relations(rehearsal, ({ one }) => ({
-  event: one(event, { fields: [rehearsal.eventId], references: [event.id] }),
-  leader: one(user, { fields: [rehearsal.leaderUserId], references: [user.id], relationName: "rehearsalLeader" })
-}))
-
-export const gigRelations = relations(gig, ({ one }) => ({
-  event: one(event, { fields: [gig.eventId], references: [event.id] }),
-  responsible: one(user, { fields: [gig.responsibleUserId], references: [user.id], relationName: "gigResponsible" })
-}))
-
-export const socialEventRelations = relations(socialEvent, ({ one }) => ({
-  event: one(event, { fields: [socialEvent.eventId], references: [event.id] })
-}))
-
-export const eventTargetRelations = relations(eventTarget, ({ one }) => ({
-  event: one(event, { fields: [eventTarget.eventId], references: [event.id] }),
-  group: one(group, { fields: [eventTarget.groupId], references: [group.id] })
-}))
-
-export const absenceReasonRelations = relations(absenceReason, ({ many }) => ({
-  responses: many(eventResponse)
-}))
-
-export const eventResponseRelations = relations(eventResponse, ({ one }) => ({
-  event: one(event, { fields: [eventResponse.eventId], references: [event.id] }),
-  user: one(user, { fields: [eventResponse.userId], references: [user.id], relationName: "eventResponse" }),
-  absenceReason: one(absenceReason, { fields: [eventResponse.absenceReasonId], references: [absenceReason.id] })
-}))
-
-export const eventRegistrationQuestionRelations = relations(eventRegistrationQuestion, ({ one, many }) => ({
-  event: one(event, { fields: [eventRegistrationQuestion.eventId], references: [event.id] }),
-  options: many(eventRegistrationQuestionOption),
-  answers: many(eventRegistrationAnswer)
-}))
-
-export const eventRegistrationQuestionOptionRelations = relations(eventRegistrationQuestionOption, ({ one }) => ({
-  question: one(eventRegistrationQuestion, {
-    fields: [eventRegistrationQuestionOption.questionId],
-    references: [eventRegistrationQuestion.id]
+export const eventRelations = defineRelations(
+  {
+    absenceReason,
+    event,
+    eventAttendance,
+    eventDetail,
+    eventRegistration,
+    eventRegistrationAnswer,
+    eventRegistrationAnswerChoice,
+    eventRegistrationQuestion,
+    eventRegistrationQuestionOption,
+    eventResponse,
+    eventSeries,
+    eventTarget,
+    gig,
+    group,
+    location,
+    rehearsal,
+    socialEvent,
+    user
+  },
+  (r) => ({
+    location: {
+      events: r.many.event({ from: [r.location.id], to: [r.event.locationId] })
+    },
+    eventSeries: {
+      events: r.many.event({ from: [r.eventSeries.id], to: [r.event.seriesId] })
+    },
+    event: {
+      location: r.one.location({ from: [r.event.locationId], to: [r.location.id] }),
+      series: r.one.eventSeries({ from: [r.event.seriesId], to: [r.eventSeries.id] }),
+      organiserGroup: r.one.group({ from: [r.event.organiserGroupId], to: [r.group.id] }),
+      creator: r.one.user({ from: [r.event.createdBy], to: [r.user.id], alias: "eventCreator" }),
+      rehearsal: r.one.rehearsal({ from: [r.event.id], to: [r.rehearsal.eventId] }),
+      gig: r.one.gig({ from: [r.event.id], to: [r.gig.eventId] }),
+      socialEvent: r.one.socialEvent({ from: [r.event.id], to: [r.socialEvent.eventId] }),
+      details: r.many.eventDetail({ from: [r.event.id], to: [r.eventDetail.eventId] }),
+      targets: r.many.eventTarget({ from: [r.event.id], to: [r.eventTarget.eventId] }),
+      responses: r.many.eventResponse({ from: [r.event.id], to: [r.eventResponse.eventId] }),
+      registrationQuestions: r.many.eventRegistrationQuestion({
+        from: [r.event.id],
+        to: [r.eventRegistrationQuestion.eventId]
+      }),
+      registrations: r.many.eventRegistration({ from: [r.event.id], to: [r.eventRegistration.eventId] }),
+      attendance: r.many.eventAttendance({ from: [r.event.id], to: [r.eventAttendance.eventId] })
+    },
+    eventDetail: {
+      event: r.one.event({ from: [r.eventDetail.eventId], to: [r.event.id] })
+    },
+    rehearsal: {
+      event: r.one.event({ from: [r.rehearsal.eventId], to: [r.event.id] }),
+      leader: r.one.user({ from: [r.rehearsal.leaderUserId], to: [r.user.id], alias: "rehearsalLeader" })
+    },
+    gig: {
+      event: r.one.event({ from: [r.gig.eventId], to: [r.event.id] }),
+      responsible: r.one.user({ from: [r.gig.responsibleUserId], to: [r.user.id], alias: "gigResponsible" })
+    },
+    socialEvent: {
+      event: r.one.event({ from: [r.socialEvent.eventId], to: [r.event.id] })
+    },
+    eventTarget: {
+      event: r.one.event({ from: [r.eventTarget.eventId], to: [r.event.id] }),
+      group: r.one.group({ from: [r.eventTarget.groupId], to: [r.group.id] })
+    },
+    absenceReason: {
+      responses: r.many.eventResponse({ from: [r.absenceReason.id], to: [r.eventResponse.absenceReasonId] })
+    },
+    eventResponse: {
+      event: r.one.event({ from: [r.eventResponse.eventId], to: [r.event.id] }),
+      user: r.one.user({ from: [r.eventResponse.userId], to: [r.user.id], alias: "eventResponse" }),
+      absenceReason: r.one.absenceReason({ from: [r.eventResponse.absenceReasonId], to: [r.absenceReason.id] })
+    },
+    eventRegistrationQuestion: {
+      event: r.one.event({ from: [r.eventRegistrationQuestion.eventId], to: [r.event.id] }),
+      options: r.many.eventRegistrationQuestionOption({
+        from: [r.eventRegistrationQuestion.id],
+        to: [r.eventRegistrationQuestionOption.questionId]
+      }),
+      answers: r.many.eventRegistrationAnswer({
+        from: [r.eventRegistrationQuestion.id],
+        to: [r.eventRegistrationAnswer.questionId]
+      })
+    },
+    eventRegistrationQuestionOption: {
+      question: r.one.eventRegistrationQuestion({
+        from: [r.eventRegistrationQuestionOption.questionId],
+        to: [r.eventRegistrationQuestion.id]
+      })
+    },
+    eventRegistration: {
+      event: r.one.event({ from: [r.eventRegistration.eventId], to: [r.event.id] }),
+      user: r.one.user({ from: [r.eventRegistration.userId], to: [r.user.id], alias: "eventRegistration" }),
+      answers: r.many.eventRegistrationAnswer({
+        from: [r.eventRegistration.id],
+        to: [r.eventRegistrationAnswer.registrationId]
+      })
+    },
+    eventRegistrationAnswer: {
+      registration: r.one.eventRegistration({
+        from: [r.eventRegistrationAnswer.registrationId],
+        to: [r.eventRegistration.id]
+      }),
+      question: r.one.eventRegistrationQuestion({
+        from: [r.eventRegistrationAnswer.questionId],
+        to: [r.eventRegistrationQuestion.id]
+      }),
+      choices: r.many.eventRegistrationAnswerChoice({
+        from: [r.eventRegistrationAnswer.registrationId, r.eventRegistrationAnswer.questionId],
+        to: [r.eventRegistrationAnswerChoice.registrationId, r.eventRegistrationAnswerChoice.questionId]
+      })
+    },
+    eventRegistrationAnswerChoice: {
+      answer: r.one.eventRegistrationAnswer({
+        from: [r.eventRegistrationAnswerChoice.registrationId, r.eventRegistrationAnswerChoice.questionId],
+        to: [r.eventRegistrationAnswer.registrationId, r.eventRegistrationAnswer.questionId]
+      }),
+      option: r.one.eventRegistrationQuestionOption({
+        from: [r.eventRegistrationAnswerChoice.optionId],
+        to: [r.eventRegistrationQuestionOption.id]
+      })
+    },
+    eventAttendance: {
+      event: r.one.event({ from: [r.eventAttendance.eventId], to: [r.event.id] }),
+      user: r.one.user({ from: [r.eventAttendance.userId], to: [r.user.id], alias: "eventAttendee" }),
+      recorder: r.one.user({ from: [r.eventAttendance.recordedBy], to: [r.user.id], alias: "eventAttendanceRecorder" })
+    }
   })
-}))
-
-export const eventRegistrationRelations = relations(eventRegistration, ({ one, many }) => ({
-  event: one(event, { fields: [eventRegistration.eventId], references: [event.id] }),
-  user: one(user, { fields: [eventRegistration.userId], references: [user.id], relationName: "eventRegistration" }),
-  answers: many(eventRegistrationAnswer)
-}))
-
-export const eventRegistrationAnswerRelations = relations(eventRegistrationAnswer, ({ one, many }) => ({
-  registration: one(eventRegistration, {
-    fields: [eventRegistrationAnswer.registrationId],
-    references: [eventRegistration.id]
-  }),
-  question: one(eventRegistrationQuestion, {
-    fields: [eventRegistrationAnswer.questionId],
-    references: [eventRegistrationQuestion.id]
-  }),
-  choices: many(eventRegistrationAnswerChoice)
-}))
-
-export const eventRegistrationAnswerChoiceRelations = relations(eventRegistrationAnswerChoice, ({ one }) => ({
-  answer: one(eventRegistrationAnswer, {
-    fields: [eventRegistrationAnswerChoice.registrationId, eventRegistrationAnswerChoice.questionId],
-    references: [eventRegistrationAnswer.registrationId, eventRegistrationAnswer.questionId]
-  }),
-  option: one(eventRegistrationQuestionOption, {
-    fields: [eventRegistrationAnswerChoice.optionId],
-    references: [eventRegistrationQuestionOption.id]
-  })
-}))
-
-export const eventAttendanceRelations = relations(eventAttendance, ({ one }) => ({
-  event: one(event, { fields: [eventAttendance.eventId], references: [event.id] }),
-  user: one(user, { fields: [eventAttendance.userId], references: [user.id], relationName: "eventAttendee" }),
-  recorder: one(user, {
-    fields: [eventAttendance.recordedBy],
-    references: [user.id],
-    relationName: "eventAttendanceRecorder"
-  })
-}))
+)
