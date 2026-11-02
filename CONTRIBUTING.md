@@ -16,6 +16,7 @@ changing the code they cover; loading every guide before every edit is unnecessa
 | Changing database connections or TLS policy | [Database infrastructure](src/core/db/README.md) |
 | Running or changing migrations, Studio, or seeding | [Database operations](scripts/ops/README.md) |
 | Changing domain concepts or making architectural decisions | [Project context](CONTEXT.md), applicable [ADRs](docs/adr/), and the ADR guidance below |
+| Adding or migrating application authorization | [Authorization design and feature adoption](docs/authorization.md), and [authz interface](src/core/authz/README.md) |
 | Working on a feature with its own guide | That feature's `README.md`, such as [rich text](src/features/rich-text/README.md) |
 
 ## Architectural decision records
