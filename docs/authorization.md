@@ -25,6 +25,12 @@ There are no schema changes or organisational period changes in stages two and t
 statements now contain only native User/Session grants, without an application Post fallback.
 The glossary includes future domain behavior; it does not imply all that behavior is implemented.
 
+Application impersonation has been removed: there is no User-switching action, navigation state
+or feature-specific impersonation rule. Native Admin role grants exclude impersonation, so the
+Better Auth endpoint cannot start it. The Better Auth plugin setup and its Session schema remain
+unchanged; no database migration is required. Authorization actors contain only `userId` and
+`isAdmin`.
+
 ## Responsibility and interface
 
 Features import `@/core/authz`; authorization imports `core/auth`, `core/db` and generic shared
@@ -47,15 +53,15 @@ await db.transaction(async (tx) => {
 })
 ```
 
-`requirePermission` returns `{ userId, isAdmin, impersonatedBy }` or throws
+`requirePermission` returns `{ userId, isAdmin }` or throws
 `AuthorizationDeniedError`. Never accept actor identity or ownership claims from browser input.
 `can` uses the same policy but returns false for expected denials. Unexpected session/database
 failures propagate. Map denials to localized feature errors or 404s without exposing the error's
 server-side actor/resource diagnostics. Rendering guards require Suspense and stay outside caches.
 
-`requireMessagingUserId(tx?)` derives fresh active identity and rejects support impersonation.
-It does not grant Conversation access. Group policies accept Group, Membership and Position
-holding attributes from trusted feature reads. The policies determine relationship scope and
+`app.access` establishes fresh active identity for shared application workflows, including
+Messaging. It does not grant Conversation access. Group policies accept Group, Membership and
+Position holding attributes from trusted feature reads. The policies determine relationship scope and
 currentness; features must not substitute precomputed permission booleans. Position UUIDs identify
 records. Do not hardcode mutable titles or environment-specific seed UUIDs as policy identities.
 Specific Choir Position grants remain deferred.
@@ -74,7 +80,6 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 | Request | Grant |
 | --- | --- |
 | `app.access` | Any active User |
-| `messaging.access` | Active User outside support impersonation |
 | `post.create` | Any active User may create/publish personal content |
 | `post.read` | Published Posts by active Users; private Drafts only by their author |
 | `post.update` | Own Draft; published personal content by its author or Admin |
@@ -85,7 +90,7 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 | `org.manage`, `user.administer`, `notification.broadcast`, `admin.access` | Explicit Admin grants; feature safeguards still apply |
 | `member.read` | Active Users may read other active Users' shared profiles |
 | `member.readEmail` | Profile owner only; no Admin bypass |
-| `member.editProfile` | Profile owner outside support impersonation |
+| `member.editProfile` | Profile owner |
 
 Discarded Posts are inaccessible. Group requests express authority to represent a Group; they
 cannot authorize an arbitrary Post, Event or Conversation ID. Future instance policies must bind
@@ -95,8 +100,7 @@ propagates through `choirId`, linked holdings or the Board to unrelated Groups.
 ## Freshness, locks and limitations
 
 `getFreshRequestSession()` bypasses Better Auth's five-minute cookie cache, disables session
-refresh and is not React-cached. Authz reloads the effective User's roles and `banned` status.
-An impersonated session receives the effective User's grants, never the supporting Admin's.
+refresh and is not React-cached. Authz reloads the authenticated User's roles and `banned` status.
 `getRequestSession()` remains suitable for presentation metadata, with ordinary refresh behavior.
 
 `requirePermission(request, tx)` shares transaction visibility but acquires no authorization
@@ -148,11 +152,11 @@ profiles require `member.read`; email is masked unless `member.readEmail` allows
 use `member.editProfile`. Active-target filtering, directory projections and existing inactive
 viewer/target handling remain in the service.
 
-`edit-profile/actions.ts` derives actor and impersonation state. `saveOwnVoiceCapabilities` checks
+`edit-profile/actions.ts` derives the authenticated actor. `saveOwnVoiceCapabilities` checks
 `member.editProfile` inside the existing User-locked transaction before calling the Voice module.
 The Voice capability primitives remain independent of request identity; callers must authorize.
 These grants do not permit editing arbitrary User fields or reading others' email. Existing
-service/action tests cover ownership, inactive Users and impersonation.
+service/action tests cover ownership, inactive Users and unauthenticated requests.
 
 ## Organisational administration: implemented boundaries
 
@@ -171,8 +175,8 @@ introduced. Existing results, savepoints, advisory locks and invariant tests rem
 
 `user-management/service.ts/listUsers`, invitation entrypoints, sensitive import lookup and all
 administration actions require `user.administer`. Native Better Auth User/Session permissions,
-self/final-Admin checks, inactive-before-Erasure, literal confirmation and impersonation-target
-checks remain. Central policy never bypasses them.
+self/final-Admin checks, inactive-before-Erasure and literal confirmation remain. Central policy
+never bypasses them.
 
 The three `notification-broadcast/actions.ts` entrypoints require `notification.broadcast`,
 including subscription search. Notification infrastructure still owns delivery and subscriptions,
@@ -181,9 +185,9 @@ not feature authority or recipient selection.
 ## Messaging: implemented boundaries
 
 Protected inbox/search reads, Conversation page reads, read markers, sends, Direct starts and Group
-Conversation commands derive identity with `requireMessagingUserId`. Transactional operations
-recheck through the same boundary inside their transaction. Direct command calls also reject
-support impersonation; UI adapters translate that denial to the existing localized error.
+Conversation commands derive identity with `requirePermission({ action: "app.access" })`.
+Transactional operations recheck through the same boundary inside their transaction. UI adapters
+translate authorization denials to the existing localized sign-in error.
 
 Conversation Membership remains the source of Conversation authority. Organisational Group grants
 give no Messaging access. Direct-pair checks, recipient availability, Group authorization callbacks,
@@ -204,8 +208,7 @@ its own native endpoint rules.
 Account settings rendering, locale updates, subscription writes and self push tests require
 `app.access` and derive their actor. Locale and subscription writes check inside their database
 transaction. Passwords, passkeys, sessions, username, email verification and 2FA continue through
-native Better Auth endpoints. Locale/push settings keep their existing impersonation behavior;
-the narrow self-profile restriction is not silently extended to every account operation.
+native Better Auth endpoints.
 
 `features/events` contains schema tests only. Future Event instance policies must bind management
 to `organiserGroupId`, separately from audience and `createdBy`. Non-Choir organiser Position

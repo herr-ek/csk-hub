@@ -118,12 +118,11 @@ Validation and access failures use stable `MessagingErrorKind` values from `mode
 Unexpected database and programming errors are not converted here; they propagate so the UI adapter
 can present a generic failure while server observability retains the original error.
 
-Server Actions are transport adapters: they check request availability for localized feedback,
-parse `FormData`, call this module, invalidate routes and translate errors. Commands themselves
-derive identity through `core/authz` and recheck inside their transaction, holding the User and
-Session locks alongside existing Conversation/recipient protection. Direct callers cannot bypass
-the support-impersonation restriction. Keep Conversation and recipient rules here rather than
-duplicating them in the transport.
+Server Actions are transport adapters: they parse `FormData`, call this module, invalidate routes
+and translate errors. Commands derive fresh active identity through `app.access` and recheck
+inside their transaction. Conversation locks, recipient checks and departure cutoffs remain
+feature-owned. A fresh actor check does not itself lock the User or Session against a later
+revocation. Keep Conversation and recipient rules here rather than duplicating them in the transport.
 
 ## Tests
 

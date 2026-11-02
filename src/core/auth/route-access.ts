@@ -23,12 +23,8 @@ const AUTH_ENTRY_PATHS = new Set<string>([
   ROUTES.twoFactor
 ])
 
-export type RouteAccessPolicy =
-  | { kind: "public" }
-  | { kind: "authenticated" }
-  | { kind: "impersonation-unavailable" }
-  | { kind: "admin" }
-export type RouteSession = { user: { id: string; role?: string | null }; session?: { impersonatedBy?: string | null } }
+export type RouteAccessPolicy = { kind: "public" } | { kind: "authenticated" } | { kind: "admin" }
+export type RouteSession = { user: { id: string; role?: string | null } }
 export type AccessDecision = { kind: "allow" } | { kind: "redirect"; location: string } | { kind: "forbidden" }
 
 function isAuthEntryRoute(pathname: string, requestedPath: string): boolean {
@@ -45,10 +41,6 @@ export function getRouteAccessPolicy(path: string): RouteAccessPolicy {
   if (PUBLIC_PATHS.has(path)) return { kind: "public" }
 
   if (path === ROUTES.admin || path.startsWith(`${ROUTES.admin}/`)) return { kind: "admin" }
-
-  if (path === ROUTES.accountEditProfile || path === ROUTES.messages || path.startsWith(`${ROUTES.messages}/`)) {
-    return { kind: "impersonation-unavailable" }
-  }
 
   return { kind: "authenticated" }
 }
@@ -74,14 +66,9 @@ export async function getRouteAccessDecision(
   // 3. If you the requested path is not public, you need to login
   if (!session) return { kind: "redirect", location: loginPath(requestedPath) }
 
-  // 4. Impersonated sessions cannot enter workflows that must be performed as the real member.
-  if (policy.kind === "impersonation-unavailable" && session.session?.impersonatedBy) {
-    return { kind: "forbidden" }
-  }
-
   // Cached session roles only shape navigation; protected pages/data/actions use fresh authz.
   if (policy.kind === "admin" && !hasAdminRole(session.user.role)) return { kind: "forbidden" }
 
-  // 6. All other pages are open to authenticated users
+  // 4. All other pages are open to authenticated users
   return { kind: "allow" }
 }

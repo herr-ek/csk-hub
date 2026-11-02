@@ -5,9 +5,7 @@ import * as messaging from "@/features/messaging/reading"
 import { getProfile } from "./query"
 import * as service from "./service"
 
-const viewer = { userId: "viewer", isAdmin: false, impersonatedBy: null } as Awaited<
-  ReturnType<typeof session.requirePermission>
->
+const viewer = { userId: "viewer", isAdmin: false } as Awaited<ReturnType<typeof session.requirePermission>>
 
 const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> = {
   id: "member",
@@ -60,11 +58,5 @@ describe("profile conversation visibility", () => {
   test("does not expose a Conversation to an inactive viewer", async () => {
     profileRead.mockRejectedValueOnce(new service.InactiveViewerError())
     await expect(getProfile("member")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" })
-  })
-
-  test("does not look up Conversations while impersonating", async () => {
-    sessionRead.mockResolvedValueOnce({ ...viewer, impersonatedBy: "admin" })
-    expect(await getProfile("member")).toMatchObject({ canMessage: false, messageConversationId: null })
-    expect(conversationRead).not.toHaveBeenCalled()
   })
 })

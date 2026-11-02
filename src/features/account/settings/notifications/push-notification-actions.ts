@@ -7,14 +7,13 @@ import { InvalidNotificationSubscriptionError } from "@/core/notifications/subsc
 
 async function requireUserId(database?: AuthorizationDatabase) {
   const actor = await requirePermission({ action: "app.access" }, database)
-  if (actor.impersonatedBy) throw new Error("Push notifications are unavailable while impersonating a User")
   return actor.userId
 }
 
 /**
  * Checks the signed-in User's binding without revealing another owner's identity.
  * Unsupported endpoints return `unsupported` so the browser can offer removal.
- * Throws `Unauthorized` without a session, rejects impersonation, and propagates
+ * Throws `AuthorizationDeniedError` without an active User and propagates
  * lookup failures rather than reporting them as an absent binding.
  */
 export async function getPushSubscriptionBinding(endpoint: string): Promise<"bound" | "unbound" | "unsupported"> {
@@ -29,7 +28,7 @@ export async function getPushSubscriptionBinding(endpoint: string): Promise<"bou
 
 /**
  * Binds validated browser subscription data to the signed-in User. Throws
- * `Unauthorized` without a session, rejects impersonation, and propagates
+ * `AuthorizationDeniedError` without an active User and propagates
  * `InvalidNotificationSubscriptionError` or persistence failures.
  */
 export async function subscribeUserToPush(subscription: unknown) {
@@ -39,7 +38,7 @@ export async function subscribeUserToPush(subscription: unknown) {
 
 /**
  * Removes only the signed-in User's endpoint binding and reports whether it existed.
- * Throws `Unauthorized` without a session, rejects impersonation, and propagates
+ * Throws `AuthorizationDeniedError` without an active User and propagates
  * `InvalidNotificationSubscriptionError` or persistence failures.
  */
 export async function unsubscribeUserFromPush(endpoint: string) {
@@ -49,8 +48,8 @@ export async function unsubscribeUserFromPush(endpoint: string) {
 
 /**
  * Sends a test to the signed-in User's active subscriptions and returns provider
- * acceptance counts. Throws `Unauthorized` without a session, rejects
- * impersonation, and propagates subscription lookup failures.
+ * acceptance counts. Throws `AuthorizationDeniedError` without an active User
+ * and propagates subscription lookup failures.
  */
 export async function sendPushNotificationTest(message: string) {
   return sendToUser(await requireUserId(), message)

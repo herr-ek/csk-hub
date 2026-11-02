@@ -17,9 +17,8 @@ const getTranslations = mock(async () => {
   throw new Error("Notification actions must not resolve a rendering locale")
 })
 const getSession = mock(
-  async (): Promise<{ user: { id: string }; session: { impersonatedBy?: string } } | null> => ({
-    user: { id: "user-1" },
-    session: {}
+  async (): Promise<{ user: { id: string } } | null> => ({
+    user: { id: "user-1" }
   })
 )
 const subscribe = mock(async () => undefined)
@@ -31,7 +30,7 @@ mock.module("@/core/authz", () => ({
     if (request.action === "notification.broadcast") return requireAdmin()
     const session = await getSession()
     if (!session) throw new Error("Unauthorized")
-    return { userId: session.user.id, impersonatedBy: session.session.impersonatedBy ?? null }
+    return { userId: session.user.id }
   }
 }))
 mock.module("@/core/i18n/server", () => ({ getTranslations }))
@@ -62,7 +61,7 @@ beforeEach(() => {
   requireAdmin.mockClear()
   requireAdmin.mockResolvedValue(undefined)
   getSession.mockClear()
-  getSession.mockResolvedValue({ user: { id: "user-1" }, session: {} })
+  getSession.mockResolvedValue({ user: { id: "user-1" } })
   getTranslations.mockClear()
   select.mockClear()
   updateWhere.mockClear()
@@ -214,26 +213,6 @@ test("binding lookup distinguishes owned, missing, unsupported, and unavailable"
   await expect(getPushSubscriptionBinding(activeSubscription.endpoint)).rejects.toThrow("Database unavailable")
 })
 
-test("impersonation cannot inspect, rebind, remove, or test push subscriptions", async () => {
-  getSession.mockResolvedValue({ user: { id: "user-1" }, session: { impersonatedBy: "admin-1" } })
-  for (const operation of [
-    () => getPushSubscriptionBinding(activeSubscription.endpoint),
-    () =>
-      subscribeUserToPush({
-        endpoint: activeSubscription.endpoint,
-        keys: { p256dh: activeSubscription.p256dh, auth: activeSubscription.auth }
-      }),
-    () => unsubscribeUserFromPush(activeSubscription.endpoint),
-    () => sendPushNotificationTest("Hello")
-  ]) {
-    await expect(operation()).rejects.toThrow("Push notifications are unavailable while impersonating")
-  }
-  expect(hasActiveSubscription).not.toHaveBeenCalled()
-  expect(subscribe).not.toHaveBeenCalled()
-  expect(unsubscribe).not.toHaveBeenCalled()
-  expect(select).not.toHaveBeenCalled()
-})
-
 test("signed-out binding lookup rejects before inspecting subscriptions", async () => {
   getSession.mockResolvedValue(null)
   await expect(getPushSubscriptionBinding(activeSubscription.endpoint)).rejects.toThrow("Unauthorized")
@@ -248,12 +227,9 @@ test("logout revocation uses only the authenticated owner and reports whether re
   expect(await revokePushBindingBeforeLogout(activeSubscription.endpoint)).toBe(false)
 })
 
-test("logout revocation refuses signed-out sessions and leaves impersonation untouched", async () => {
+test("logout revocation refuses signed-out sessions", async () => {
   getSession.mockResolvedValue(null)
   await expect(revokePushBindingBeforeLogout(activeSubscription.endpoint)).rejects.toThrow("Unauthorized")
-  getSession.mockResolvedValue({ user: { id: "user-1" }, session: { impersonatedBy: "admin-1" } })
-  expect(await revokePushBindingBeforeLogout(activeSubscription.endpoint)).toBe(false)
-  expect(unsubscribe).not.toHaveBeenCalled()
 })
 
 afterEach(() => jest.useRealTimers())

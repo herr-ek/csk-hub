@@ -54,8 +54,7 @@ export function createAuthorization({ database, readSession }: Dependencies) {
     if (!row || row.banned === true) return null
     return Object.freeze({
       userId: row.id,
-      isAdmin: hasAdminRole(row.role),
-      impersonatedBy: session.session.impersonatedBy ?? null
+      isAdmin: hasAdminRole(row.role)
     })
   }
 

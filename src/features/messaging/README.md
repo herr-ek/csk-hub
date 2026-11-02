@@ -27,7 +27,7 @@ Routes import screens only through `@/features/messaging`. UI Server Actions cal
 
 - Change sender authentication, Conversation authorization, idempotency, transaction ordering, or
   Message persistence in `sending/`. Protected reads and commands use
-  `requireMessagingUserId(tx?)` from `core/authz` to reject inactive, revoked and impersonated
+  `requirePermission({ action: "app.access" }, tx?)` from `core/authz` to reject inactive or revoked
   sessions. Server Actions in `ui/` translate these denials for the user; direct command callers
   receive the same restriction. Read
   [`sending/README.md`](sending/README.md) before changing that module.

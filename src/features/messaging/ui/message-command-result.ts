@@ -12,9 +12,7 @@ export function messageCommandErrorState(error: unknown, text: string): MessageC
       error instanceof MessagingAccessError
         ? error.kind
         : error instanceof AuthorizationDeniedError
-          ? error.actor?.impersonatedBy
-            ? "impersonation-unavailable"
-            : "sign-in-required"
+          ? "sign-in-required"
           : "unexpected"
   }
 }

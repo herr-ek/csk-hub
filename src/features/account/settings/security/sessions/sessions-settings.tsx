@@ -12,13 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 
 type Session = NonNullable<Awaited<ReturnType<typeof authClient.listSessions>>["data"]>[number]
 
-export function SessionsSettings({
-  currentSessionToken,
-  isImpersonating = false
-}: {
-  currentSessionToken: string
-  isImpersonating?: boolean
-}) {
+export function SessionsSettings({ currentSessionToken }: { currentSessionToken: string }) {
   const t = useTranslations("AccountSettings")
   const common = useTranslations("Common")
   const format = useFormatter()
@@ -42,9 +36,9 @@ export function SessionsSettings({
     setError(undefined)
     try {
       const current = token === currentSessionToken
-      const result = current ? await logout(isImpersonating) : await authClient.revokeSession({ token })
+      const result = current ? await logout() : await authClient.revokeSession({ token })
       if (result.error) setError(t("sessionRevokeFailed"))
-      else if (current) window.location.assign(isImpersonating ? ROUTES.adminUsers : ROUTES.login)
+      else if (current) window.location.assign(ROUTES.login)
       else await loadSessions()
     } catch {
       setError(t("sessionRevokeFailed"))

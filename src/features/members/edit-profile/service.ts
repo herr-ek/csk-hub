@@ -11,7 +11,7 @@ export async function getOwnVoiceCapabilities(database: MemberDatabase, userId: 
   return listVoiceCapabilities(database, userId)
 }
 
-export type ProfileEditorActor = { userId: string; impersonating: boolean }
+export type ProfileEditorActor = { userId: string }
 
 /** The actor comes from authentication, never from the submitted profile form. */
 export async function saveOwnVoiceCapabilities(
@@ -21,7 +21,6 @@ export async function saveOwnVoiceCapabilities(
   authorize = requirePermission
 ): Promise<EditProfileState> {
   if (!actor) return { status: "error", error: "sign-in-required" }
-  if (actor.impersonating) return { status: "error", error: "impersonation-unavailable" }
   if (!Array.isArray(input) || input.length > VOICE_DIVISIONS.length || !input.every(isVoiceDivision)) {
     return { status: "error", error: "invalid-voices" }
   }

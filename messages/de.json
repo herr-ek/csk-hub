@@ -146,13 +146,9 @@
     "news": "Neuigkeiten",
     "login": "Anmelden",
     "primary": "Hauptnavigation",
-    "impersonating": "Imitieren von {name}",
     "logout": "Abmelden",
     "loggingOut": "Abmeldung läuft…",
     "logoutFailed": "Du konntest gerade nicht abgemeldet werden. Bitte versuche es erneut.",
-    "stopImpersonating": "Imitierung beenden",
-    "stoppingImpersonation": "Imitierung wird beendet…",
-    "stopImpersonationFailed": "Die Imitierung konnte gerade nicht beendet werden. Bitte versuche es erneut.",
     "language": "Sprache",
     "messages": "Nachrichten",
     "openMenu": "Menü öffnen",
@@ -332,15 +328,12 @@
     "roleUpdated": "Rolle aktualisiert",
     "roleUpdatedDescription": "Die Rolle von {memberName} wurde aktualisiert.",
     "memberActionFailed": "Mitgliederaktion fehlgeschlagen",
-    "impersonationFailed": "Imitierung fehlgeschlagen",
-    "impersonationFailedDescription": "Es konnte nicht zu diesem Mitglied gewechselt werden.",
     "actionsFor": "Aktionen für {memberName}",
     "manageRoles": "Rollen verwalten",
-    "impersonate": "Imitieren",
     "dialogTitle": "{action} {memberName}?",
     "typeToConfirm": "Zum Bestätigen {confirmation} eingeben",
     "admin": "Administrator",
-    "adminDescription": "Kann Mitglieder einladen, verwalten und imitieren."
+    "adminDescription": "Kann Mitglieder einladen und verwalten."
   },
   "AccountSettings": {
     "pageTitle": "Kontoeinstellungen",
@@ -560,7 +553,6 @@
       "blank-message": "Gib eine Nachricht ein.",
       "message-too-long": "Nachrichten dürfen höchstens 4.000 Zeichen lang sein.",
       "sign-in-required": "Melde dich an, um Nachrichten zu verwenden.",
-      "impersonation-unavailable": "Während du ein Mitglied imitierst, können keine Nachrichten gesendet werden.",
       "inactive-member": "Nur aktive Mitglieder können Nachrichten verwenden.",
       "recipient-required": "Wähle einen Empfänger.",
       "idempotency-key-required": "Diese Anfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
@@ -646,7 +638,6 @@
     "backToProfile": "Zurück zum Profil",
     "editErrors": {
       "sign-in-required": "Melde dich an, um dein Profil zu bearbeiten.",
-      "impersonation-unavailable": "Du kannst selbst angegebene Fähigkeiten nicht ändern, während du ein anderes Mitglied imitierst.",
       "inactive-user": "Dein Konto ist nicht mehr aktiv.",
       "invalid-voices": "Wähle nur die aufgeführten Stimmen.",
       "unexpected": "Dein Profil konnte nicht gespeichert werden. Bitte versuche es erneut."

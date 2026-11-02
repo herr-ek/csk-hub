@@ -151,10 +151,9 @@ Server Components are the default. Use Client Components only for interaction, b
 ### Server-side session reads
 
 Protected reads and commands use `@/core/authz`: `requirePermission` establishes authority and
-returns the effective actor, while `can` supplies UI hints. Messaging uses
-`requireMessagingUserId(tx?)` for fresh active identity without support impersonation, then applies
-its own Conversation access rules. See [the adoption guide](authorization.md) for transaction and
-resource requirements. Never pass cached session claims or submitted actor IDs as authority.
+returns the authenticated actor, while `can` supplies UI hints. Messaging uses `app.access`
+for fresh active identity, then applies its own Conversation access rules. See
+[the adoption guide](authorization.md) for transaction and resource requirements. Never pass cached session claims or submitted actor IDs as authority.
 
 For presentation metadata, read the request's Better Auth session through
 [`getRequestSession()`](../src/core/auth/session.server.ts), imported from

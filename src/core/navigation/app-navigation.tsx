@@ -38,7 +38,6 @@ export function getNavigationItems(
 export type NavigationConfig = {
   showAdmin: boolean
   user: { name: string; image?: string | null }
-  impersonatingUserName?: string
 }
 
 /**
@@ -59,7 +58,6 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
     label: item.label,
     badge: badges?.[item.id]
   }))
-  const isImpersonating = Boolean(config?.impersonatingUserName)
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
@@ -79,14 +77,9 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
                 <MobileNavigation items={items} />
               </div>
             ) : null}
-            {config ? <AccountMenu user={config.user} isImpersonating={isImpersonating} /> : null}
+            {config ? <AccountMenu user={config.user} /> : null}
           </div>
         </div>
-        {config?.impersonatingUserName ? (
-          <div className="rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground" role="status">
-            {t("impersonating", { name: config.impersonatingUserName })}
-          </div>
-        ) : null}
       </div>
     </header>
   )
@@ -111,8 +104,7 @@ export async function RuntimeAppNavigation({ badges }: { badges?: NavigationBadg
         active && session
           ? {
               showAdmin: Boolean(isAdmin),
-              user: { name: session.user.name, image: session.user.image },
-              ...(session?.session.impersonatedBy ? { impersonatingUserName: session.user.name } : {})
+              user: { name: session.user.name, image: session.user.image }
             }
           : null
       }

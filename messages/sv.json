@@ -146,13 +146,9 @@
     "news": "Nyheter",
     "login": "Logga in",
     "primary": "Primär navigering",
-    "impersonating": "Imiterar {name}",
     "logout": "Logga ut",
     "loggingOut": "Loggar ut…",
     "logoutFailed": "Det gick inte att logga ut just nu. Försök igen.",
-    "stopImpersonating": "Sluta imitera",
-    "stoppingImpersonation": "Avslutar imitiering…",
-    "stopImpersonationFailed": "Det gick inte att avsluta imitieringen just nu. Försök igen.",
     "language": "Språk",
     "messages": "Meddelanden",
     "openMenu": "Öppna menyn",
@@ -332,15 +328,12 @@
     "roleUpdated": "Roll uppdaterad",
     "roleUpdatedDescription": "{memberName}s roll har uppdaterats.",
     "memberActionFailed": "Medlemsåtgärden misslyckades",
-    "impersonationFailed": "Imiteringen misslyckades",
-    "impersonationFailedDescription": "Det gick inte att växla till denna medlem.",
     "actionsFor": "Åtgärder för {memberName}",
     "manageRoles": "Hantera roller",
-    "impersonate": "Imitera",
     "dialogTitle": "{action} {memberName}?",
     "typeToConfirm": "Skriv {confirmation} för att bekräfta",
     "admin": "Administratör",
-    "adminDescription": "Kan bjuda in, hantera och imitera medlemmar."
+    "adminDescription": "Kan bjuda in och hantera medlemmar."
   },
   "AccountSettings": {
     "pageTitle": "Kontoinställningar",
@@ -560,7 +553,6 @@
       "blank-message": "Skriv ett meddelande.",
       "message-too-long": "Meddelanden får vara högst 4 000 tecken.",
       "sign-in-required": "Logga in för att använda meddelanden.",
-      "impersonation-unavailable": "Meddelanden kan inte skickas medan du imiterar en medlem.",
       "inactive-member": "Endast aktiva medlemmar kan använda meddelanden.",
       "recipient-required": "Välj en mottagare.",
       "idempotency-key-required": "Det gick inte att slutföra begäran. Försök igen.",
@@ -646,7 +638,6 @@
     "backToProfile": "Tillbaka till profilen",
     "editErrors": {
       "sign-in-required": "Logga in för att redigera din profil.",
-      "impersonation-unavailable": "Du kan inte ändra självrapporterade uppgifter när du imiterar en annan medlem.",
       "inactive-user": "Ditt konto är inte längre aktivt.",
       "invalid-voices": "Välj endast de delstämmor som visas.",
       "unexpected": "Det gick inte att spara din profil. Försök igen."

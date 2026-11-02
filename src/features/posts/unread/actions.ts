@@ -8,14 +8,12 @@ import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import { markPostRead } from "./service"
 
 /**
- * Marks the Post read for the signed-in User, then refreshes the unread badges. Does nothing
- * while an Admin impersonates the User: support looking at a Post must not take it off the
- * User's own unread list.
+ * Marks the Post read for the signed-in User, then refreshes the unread badges.
  */
 export async function markPostReadAction(postId: string) {
   try {
     const session = await getRequestSession()
-    if (!session || session.session.impersonatedBy) return
+    if (!session) return
 
     if (!(await markPostRead(session.user.id, postId))) return
   } catch (error) {

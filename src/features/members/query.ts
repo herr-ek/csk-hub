@@ -22,7 +22,7 @@ export async function getProfile(memberId?: string) {
   const actor = await getViewer(memberId ? memberProfilePath(memberId) : ROUTES.account)
   try {
     const targetId = memberId ?? actor.userId
-    const canMessage = targetId !== actor.userId && !actor.impersonatedBy
+    const canMessage = targetId !== actor.userId
     const profile = await getMemberProfile(db, actor.userId, targetId)
     if (!profile) notFound()
     const context = { member: { id: profile.id, banned: profile.banned } }

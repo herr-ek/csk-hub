@@ -16,7 +16,7 @@ Posts, audience targets, Recalled Group Posts and Event instance policies remain
 | --- | --- |
 | `README.md` | Calling the module and adding policies |
 | `model.ts` | The action catalogue, required resource facts and policy types |
-| `post-policies.ts`, `group-policies.ts`, `member-policies.ts`, `admin-policies.ts` | The permission rules for each subject |
+| `app-policies.ts`, `post-policies.ts`, `group-policies.ts`, `member-policies.ts`, `admin-policies.ts` | The permission rules for each subject |
 | `policy-registry.ts` | Static registration and pure policy evaluation |
 | `authorization.ts` | Fresh actor resolution, operation snapshots and denial errors |
 | `index.ts` | Production wiring and the application entrypoint |
@@ -51,16 +51,14 @@ Context is a trusted server contract, not a runtime validator for browser payloa
 incoming IDs/content and load authoritative resource facts before calling authorization. Never
 accept submitted ownership, roles, Memberships or Position claims as these facts. Authorization
 resolves the actor itself, bypassing Better Auth's cookie cache and reloading current User
-role/status; features cannot supply an actor to the server interface. Impersonation attributes
-refer to the effective User and preserve the support actor only for attribution.
+role/status; features cannot supply an actor to the server interface.
 
 `can` returns false for expected denials. `requirePermission` evaluates the same policy and
-returns `{ userId, isAdmin, impersonatedBy }` or throws `AuthorizationDeniedError`. Session and
+returns `{ userId, isAdmin }` or throws `AuthorizationDeniedError`. Session and
 database failures propagate. Unknown runtime action names deny access. Error diagnostics contain
 the actor and supplied context: keep them on the server and map denials to the feature's existing
 localized errors or 404 behavior without serializing these details.
-`requireMessagingUserId(tx?)` derives fresh active identity and denies support impersonation;
-Conversation access remains feature-owned.
+Messaging uses `app.access` for fresh active identity; Conversation access remains feature-owned.
 
 ## One server operation with multiple checks
 
@@ -94,6 +92,7 @@ Suspense and must keep actor resolution outside Next.js cache scopes.
 
 Policies are ordinary synchronous TypeScript functions with boolean expressions:
 
+- `app-policies.ts`: baseline application access for active Users.
 - `post-policies.ts`: personal Post creation, reading and lifecycle permissions.
 - `group-policies.ts`: exact-Group representation and administration.
 - `member-policies.ts`: shared profiles, private email and self-profile edits.
@@ -109,11 +108,11 @@ or predicate-composition interface. Private Drafts remain author-only even again
    for context-free actions. The `PermissionAction`, `PermissionRequest` and `AuthorizationPolicies`
    types derive from this catalogue; they do not need separate entries.
 2. Add a synchronous policy function to the matching `*-policies.ts` file and map the exact
-   action name to it in that file's exported policy object. Post, Group and Member maps use
+   action name to it in that file's exported policy object. App, Post, Group and Member maps use
    `satisfies Pick<AuthorizationPolicies, ...>` to require every action with their prefix.
    `adminPolicies` lists its action names explicitly; extend that list when adding a grant there.
 3. Cover grants and denials through `evaluatePermission` in `policies.test.ts`, including missing
-   resources, other actors, relevant resource states, Admin and impersonation behavior.
+   resources, other actors, relevant resource states and Admin behavior.
 4. Run `bun test src/core/authz/policies.test.ts` and `bun run typecheck`. The latter includes
    `test/authz.typecheck.ts`, which checks action/context correlation and registration contracts.
 

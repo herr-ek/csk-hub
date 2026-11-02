@@ -13,14 +13,13 @@ describe.skipIf(!database)("authorization server enforcement", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
 
-  async function actor(options: { role?: string; banned?: boolean; impersonatedBy?: string } = {}) {
+  async function actor(options: { role?: string; banned?: boolean } = {}) {
     const id = crypto.randomUUID()
     await t.db
       .insert(user)
       .values({ id, name: "Singer", email: `${id}@example.com`, role: options.role, banned: options.banned })
     let session: AuthorizationSession | null = {
-      user: { id },
-      session: { impersonatedBy: options.impersonatedBy }
+      user: { id }
     }
     const access = createAuthorization({ database: t.db, readSession: async () => session })
     return { id, access, revoke: () => (session = null) }
@@ -77,9 +76,9 @@ describe.skipIf(!database)("authorization server enforcement", () => {
   })
 
   test("one operation's actor snapshot drives can, requirePermission and attribution", async () => {
-    const support = await actor({ impersonatedBy: "support-admin" })
-    const access = await support.access.forCurrentRequest()
-    const post = { id: crypto.randomUUID(), authorId: support.id, publishedAt: null, discardedAt: null }
+    const member = await actor()
+    const access = await member.access.forCurrentRequest()
+    const post = { id: crypto.randomUUID(), authorId: member.id, publishedAt: null, discardedAt: null }
     const request: PermissionRequest = {
       action: "post.update",
       context: { post }
@@ -87,7 +86,7 @@ describe.skipIf(!database)("authorization server enforcement", () => {
     // The resource is supplied by the caller, not looked up again by authorization.
     expect(access.can(request)).toBe(true)
     expect(access.actor).toBe(access.requirePermission(request))
-    expect(access.actor).toEqual({ userId: support.id, isAdmin: false, impersonatedBy: "support-admin" })
+    expect(access.actor).toEqual({ userId: member.id, isAdmin: false })
     expect(Object.isFrozen(access.actor)).toBe(true)
     expect(Object.isFrozen(access)).toBe(true)
 
@@ -97,7 +96,7 @@ describe.skipIf(!database)("authorization server enforcement", () => {
     }
     expect(access.can(denied)).toBe(false)
     expect(() => access.requirePermission(denied)).toThrow(AuthorizationDeniedError)
-    await expect(support.access.requirePermission(denied)).rejects.toMatchObject({
+    await expect(member.access.requirePermission(denied)).rejects.toMatchObject({
       code: "AUTHORIZATION_DENIED",
       request: denied,
       actor: access.actor
