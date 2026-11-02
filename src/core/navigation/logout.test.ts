@@ -18,14 +18,13 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
   })
 } else {
   const signOut = mock(async () => ({ error: null }))
-  const stopImpersonating = mock(async () => ({ error: null }))
   const revoke = mock(async () => true)
   const unsubscribe = mock(async () => true)
   const getSubscription = mock(async () => ({ endpoint: "https://fcm.googleapis.com/send/test", unsubscribe }))
   const getRegistration = mock(async () => ({ pushManager: { getSubscription } }))
   const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator")
 
-  mock.module("@/core/auth/auth-client", () => ({ authClient: { signOut, admin: { stopImpersonating } } }))
+  mock.module("@/core/auth/auth-client", () => ({ authClient: { signOut } }))
   mock.module("./logout-actions", () => ({ revokePushBindingBeforeLogout: revoke }))
   const { logout } = await import("./logout")
 
@@ -37,7 +36,6 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
       value: { serviceWorker: { getRegistration } }
     })
     signOut.mockReset().mockResolvedValue({ error: null })
-    stopImpersonating.mockReset().mockResolvedValue({ error: null })
     revoke.mockReset().mockResolvedValue(true)
     unsubscribe.mockReset().mockResolvedValue(true)
     getSubscription.mockReset().mockResolvedValue({ endpoint: "https://fcm.googleapis.com/send/test", unsubscribe })
@@ -50,7 +48,7 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
   })
 
   test("revokes the owned binding and removes browser push before signing out", async () => {
-    await logout(false)
+    await logout()
     expect(revoke).toHaveBeenCalledWith("https://fcm.googleapis.com/send/test")
     expect(unsubscribe).toHaveBeenCalledTimes(1)
     expect(unsubscribe.mock.invocationCallOrder[0]).toBeLessThan(signOut.mock.invocationCallOrder[0])
@@ -58,7 +56,7 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
 
   test("failed server revocation still removes browser push and signs out", async () => {
     revoke.mockRejectedValue(new Error("Network unavailable"))
-    await expect(logout(false)).resolves.toMatchObject({ error: null })
+    await expect(logout()).resolves.toMatchObject({ error: null })
     expect(unsubscribe).toHaveBeenCalledTimes(1)
     expect(signOut).toHaveBeenCalledTimes(1)
   })
@@ -70,14 +68,14 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
   ] as const) {
     test(`failed ${name} never prevents sign-out`, async () => {
       operation.mockRejectedValue(new Error("Browser failure"))
-      await expect(logout(false)).resolves.toMatchObject({ error: null })
+      await expect(logout()).resolves.toMatchObject({ error: null })
       expect(signOut).toHaveBeenCalledTimes(1)
     })
   }
 
   test("a binding owned by another User is left untouched", async () => {
     revoke.mockResolvedValue(false)
-    await logout(false)
+    await logout()
     expect(unsubscribe).not.toHaveBeenCalled()
     expect(signOut).toHaveBeenCalledTimes(1)
   })
@@ -95,7 +93,7 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
         started.resolve()
         return new Promise<never>(() => undefined)
       })
-      const result = logout(false)
+      const result = logout()
       await started.promise
       jest.advanceTimersByTime(2_000)
       await Promise.resolve()
@@ -113,7 +111,7 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
       started.resolve()
       return revocation.promise
     })
-    const result = logout(false)
+    const result = logout()
     await started.promise
     jest.advanceTimersByTime(2_000)
     await result
@@ -123,22 +121,14 @@ if (process.env.CSK_LOGOUT_TEST_FILE !== import.meta.path) {
     expect(unsubscribe).not.toHaveBeenCalled()
   })
 
-  test("stopping impersonation never touches browser push or signs out the Admin", async () => {
-    await logout(true)
-    expect(stopImpersonating).toHaveBeenCalledTimes(1)
-    expect(getRegistration).not.toHaveBeenCalled()
-    expect(revoke).not.toHaveBeenCalled()
-    expect(signOut).not.toHaveBeenCalled()
-  })
-
   test("logout works without service-worker support", async () => {
     Object.defineProperty(globalThis, "navigator", { configurable: true, value: {} })
-    await logout(false)
+    await logout()
     expect(signOut).toHaveBeenCalledTimes(1)
   })
 
   test("auth transport errors still reach the caller", async () => {
     signOut.mockRejectedValue(new Error("Auth unavailable"))
-    await expect(logout(false)).rejects.toThrow("Auth unavailable")
+    await expect(logout()).rejects.toThrow("Auth unavailable")
   })
 }

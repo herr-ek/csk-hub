@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, eq, lt } from "drizzle-orm"
-import { requireMessagingUserId } from "@/core/authz"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { conversation, conversationReadState, directConversation, groupMembership } from "@/core/db/schema/messaging"
 import { queueActivity } from "@/core/realtime/outbox"
@@ -13,13 +13,13 @@ import { verifiesReadToken } from "./read-token"
 
 /** Advances the signed-in User's read cursor; resolves whether it moved. */
 export async function markConversationRead(conversationId: string, sequence: number, token: string): Promise<boolean> {
-  const userId = await requireMessagingUserId()
+  const { userId } = await requirePermission({ action: "app.access" })
 
   if (!Number.isInteger(sequence) || sequence < 1 || !verifiesReadToken(token, conversationId, userId, sequence))
     throw new MessagingAccessError("read-position-invalid")
 
   return db.transaction(async (tx) => {
-    await requireMessagingUserId(tx)
+    await requirePermission({ action: "app.access" }, tx)
     // Conversation kind is immutable; resolving it must not contend with sends.
     const [target] = await tx
       .select({ kind: conversation.kind })

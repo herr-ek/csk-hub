@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { requestAuthorization } from "@test/request-authorization"
 import { AuthorizationDeniedError } from "@/core/authz/authorization"
 
 const markConversationRead = mock(async () => true)
-const getSession = mock(async () => null as null | { session: { impersonatedBy: string | null } })
 const revalidatePath = mock()
 const refresh = mock()
 const sendMessage = mock(async () => ({ conversationId: "conversation-1", created: true }))
@@ -16,13 +14,9 @@ mock.module("../../sending", () => ({ sendMessage }))
 
 mock.module("next/cache", () => ({ refresh, revalidatePath }))
 
-mock.module("@/core/authz", () => requestAuthorization(getSession))
-
 const { markConversationReadAction, sendMessageAction } = await import("./actions")
 
 beforeEach(() => {
-  getSession.mockClear()
-  getSession.mockResolvedValue({ session: { impersonatedBy: null } })
   revalidatePath.mockClear()
   refresh.mockClear()
   sendMessage.mockReset().mockResolvedValue({ conversationId: "conversation-1", created: true })
@@ -32,23 +26,7 @@ beforeEach(() => {
 })
 
 describe("message Server Actions", () => {
-  test("refuse to send while the current session is impersonating a member", async () => {
-    getSession.mockResolvedValue({ session: { impersonatedBy: "admin-1" } })
-    const existingConversation = new FormData()
-    existingConversation.set("conversationId", "conversation-1")
-    existingConversation.set("idempotencyKey", "request-1")
-    existingConversation.set("text", "Existing conversation")
-    await expect(sendMessageAction({ status: "idle" }, existingConversation)).resolves.toEqual({
-      status: "error",
-      error: "impersonation-unavailable",
-      text: "Existing conversation"
-    })
-    expect(sendMessage).not.toHaveBeenCalled()
-    expect(revalidatePath).not.toHaveBeenCalled()
-  })
-
-  test("sends a message in an existing conversation for a non-impersonated session", async () => {
-    getSession.mockResolvedValue({ session: { impersonatedBy: null } })
+  test("sends a message in an existing conversation", async () => {
     const existingConversation = new FormData()
     existingConversation.set("conversationId", "conversation-1")
     existingConversation.set("idempotencyKey", "request-1")
@@ -69,7 +47,7 @@ describe("message Server Actions", () => {
     formData.set("conversationId", "conversation-1")
     formData.set("idempotencyKey", "request-1")
     formData.set("text", "Sign in first")
-    sendMessage.mockRejectedValueOnce(new AuthorizationDeniedError({ action: "messaging.access" }, null))
+    sendMessage.mockRejectedValueOnce(new AuthorizationDeniedError({ action: "app.access" }, null))
 
     await expect(sendMessageAction({ status: "idle" }, formData)).resolves.toEqual({
       status: "error",
@@ -85,7 +63,7 @@ describe("message Server Actions", () => {
     formData.set("conversationId", "conversation-1")
     formData.set("idempotencyKey", "request-1")
     formData.set("text", "Try later")
-    getSession.mockRejectedValueOnce(new Error("session lookup failed"))
+    sendMessage.mockRejectedValueOnce(new Error("session lookup failed"))
 
     await expect(sendMessageAction({ status: "idle" }, formData)).resolves.toEqual({
       status: "error",
@@ -93,7 +71,7 @@ describe("message Server Actions", () => {
       text: "Try later"
     })
 
-    expect(sendMessage).not.toHaveBeenCalled()
+    expect(sendMessage).toHaveBeenCalledTimes(1)
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 

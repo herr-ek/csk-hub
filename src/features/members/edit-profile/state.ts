@@ -5,5 +5,5 @@ export type EditProfileState =
   | { status: "success"; voices: VoiceDivision[] }
   | {
       status: "error"
-      error: "sign-in-required" | "impersonation-unavailable" | "inactive-user" | "invalid-voices" | "unexpected"
+      error: "sign-in-required" | "inactive-user" | "invalid-voices" | "unexpected"
     }

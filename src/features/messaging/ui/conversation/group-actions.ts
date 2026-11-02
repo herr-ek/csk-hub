@@ -5,7 +5,6 @@ import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import { addGroupMembers, leaveGroupConversation, renameGroupConversation } from "../../group-conversations"
 import { MessagingAccessError } from "../../model/messaging-error"
 import type { MessageCommandState } from "../composer/message-command-state"
-import { requireMessageSendingAvailable } from "../message-command-access"
 import { messageCommandErrorState } from "../message-command-result"
 
 export async function groupConversationAction(
@@ -16,7 +15,6 @@ export async function groupConversationAction(
   const conversationId = String(formData.get("conversationId") ?? "")
   const memberIds = formData.getAll("memberIds").map(String)
   try {
-    await requireMessageSendingAvailable()
     const operation = formData.get("operation")
     let result: { conversationId: string }
     switch (operation) {

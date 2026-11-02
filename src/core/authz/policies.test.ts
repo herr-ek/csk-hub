@@ -10,9 +10,9 @@ import type {
 } from "./model"
 import { evaluatePermission } from "./policy-registry"
 
-const owner: AuthorizationActor = { userId: "owner", isAdmin: false, impersonatedBy: null }
-const other: AuthorizationActor = { userId: "other", isAdmin: false, impersonatedBy: null }
-const admin: AuthorizationActor = { userId: "admin", isAdmin: true, impersonatedBy: null }
+const owner: AuthorizationActor = { userId: "owner", isAdmin: false }
+const other: AuthorizationActor = { userId: "other", isAdmin: false }
+const admin: AuthorizationActor = { userId: "admin", isAdmin: true }
 
 function post(state: "draft" | "published" | "discarded", authorId: string | null = owner.userId): PostAttributes {
   return {
@@ -36,6 +36,12 @@ const groupContext: PermissionContext["group.manageContent"] = {
   memberships: [membership],
   positionHoldings: [holding]
 }
+
+test("baseline application access allows active actors and denies anonymous requests", () => {
+  expect(evaluatePermission(owner, { action: "app.access" })).toBe(true)
+  expect(evaluatePermission(admin, { action: "app.access" })).toBe(true)
+  expect(evaluatePermission(null, { action: "app.access" })).toBe(false)
+})
 
 describe("personal Post policies", () => {
   test("any active actor may create personal content without organisational facts", () => {
@@ -173,13 +179,6 @@ describe("member and administrative policies", () => {
     }
   })
 
-  test("support impersonation cannot edit the effective actor's profile or borrow Admin authority", () => {
-    const support = { ...owner, impersonatedBy: admin.userId }
-    expect(evaluatePermission(support, { action: "member.readEmail", context: { member } })).toBe(true)
-    expect(evaluatePermission(support, { action: "member.editProfile", context: { member } })).toBe(false)
-    expect(evaluatePermission(support, { action: "admin.access" })).toBe(false)
-  })
-
   test("missing or inactive target profiles deny all member actions", () => {
     for (const resource of [null, { ...member, banned: true }]) {
       for (const action of ["member.read", "member.readEmail", "member.editProfile"] as const) {
@@ -200,6 +199,7 @@ describe("member and administrative policies", () => {
 
 test("every action denies without an active actor, and unknown runtime actions deny", () => {
   const requests = [
+    { action: "app.access" },
     { action: "post.create" },
     ...(["post.read", "post.update", "post.publish", "post.unpublish", "post.discard"] as const).map((action) => ({
       action,

@@ -33,7 +33,6 @@ export type PermissionContext = {
   "memberId.issue": undefined
   "memberId.verify": undefined
   "app.access": undefined
-  "messaging.access": undefined
   "post.create": undefined
   "post.read": PostContext
   "post.update": PostContext
@@ -65,17 +64,15 @@ export type PermissionRequest<Action extends PermissionAction = PermissionAction
   >
 }[Action]
 
-/** Effective active User identity; impersonatedBy preserves the support actor for attribution. */
+/** Authenticated active User identity, resolved from the current session and database. */
 export type AuthorizationActor = Readonly<{
   userId: string
   isAdmin: boolean
-  impersonatedBy: string | null
 }>
 
 /** Only a trusted server session resolver may produce this, never a submitted form or client. */
 export type AuthorizationSession = {
   user: { id: string }
-  session: { impersonatedBy?: string | null }
 }
 
 /** Each policy receives exactly the context declared for its action. */

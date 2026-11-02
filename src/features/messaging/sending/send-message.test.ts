@@ -6,14 +6,14 @@ class MessagingAccessError extends Error {
   }
 }
 
-const requireMessagingUserId = mock(async () => "sender")
+const requirePermission = mock(async () => ({ userId: "sender", isAdmin: false }))
 const requireActiveDirectRecipient = mock()
 const resolveActiveDirectCounterpart = mock()
 const appendMessage = mock()
 const db = { select: mock(), transaction: mock() }
 
 mock.module("@/core/db", () => ({ db }))
-mock.module("@/core/authz", () => ({ requireMessagingUserId }))
+mock.module("@/core/authz", () => ({ requirePermission }))
 mock.module("../model/messaging-error", () => ({ MessagingAccessError }))
 mock.module("./direct-recipient", () => ({ requireActiveDirectRecipient, resolveActiveDirectCounterpart }))
 mock.module("./append-message", () => ({ appendMessage }))

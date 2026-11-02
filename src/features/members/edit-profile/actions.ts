@@ -10,8 +10,7 @@ import type { EditProfileState } from "./state"
 
 export async function saveProfileAction(_state: EditProfileState, formData: FormData): Promise<EditProfileState> {
   try {
-    const current = await requirePermission({ action: "app.access" })
-    const actor = { userId: current.userId, impersonating: Boolean(current.impersonatedBy) }
+    const actor = await requirePermission({ action: "app.access" })
     const result = await saveOwnVoiceCapabilities(db, actor, formData.getAll("voices"))
     if (result.status === "success" && actor) {
       revalidatePath("/[locale]/(app)/me", "page")

@@ -4,7 +4,6 @@ const banUser = mock(async () => undefined)
 const removeUser = mock(async () => undefined)
 const setRole = mock(async () => undefined)
 const signInMagicLink = mock(async () => undefined)
-const impersonateUserApi = mock(async () => undefined)
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
 const requestHeaders = mock(async () => new Headers({ cookie: "session=admin" }))
 const revalidatePath = mock(() => undefined)
@@ -16,14 +15,14 @@ const from = mock(() => ({ where }))
 const select = mock(() => ({ from }))
 
 mock.module("@/core/auth/auth", () => ({
-  auth: { api: { banUser, removeUser, setRole, signInMagicLink, impersonateUser: impersonateUserApi } }
+  auth: { api: { banUser, removeUser, setRole, signInMagicLink } }
 }))
 mock.module("@/core/authz", () => ({ requirePermission: requireAdmin }))
 mock.module("@/core/db", () => ({ db: { select } }))
 mock.module("next/headers", () => ({ headers: requestHeaders }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
-import { changeUserRole, deactivateUser, eraseUser, impersonateUser, resendInvitation } from "./actions"
+import { changeUserRole, deactivateUser, eraseUser, resendInvitation } from "./actions"
 
 function formData(confirmation?: string) {
   const data = new FormData()
@@ -43,7 +42,6 @@ beforeEach(() => {
   removeUser.mockClear()
   setRole.mockClear()
   signInMagicLink.mockClear()
-  impersonateUserApi.mockClear()
   requireAdmin.mockClear()
   requestHeaders.mockClear()
   revalidatePath.mockClear()
@@ -149,26 +147,6 @@ describe("user lifecycle commands", () => {
       error: "You cannot demote the final remaining admin."
     })
     expect(setRole).not.toHaveBeenCalled()
-  })
-
-  test("refuses an admin target for impersonation before calling Better Auth", async () => {
-    limit.mockResolvedValue([
-      {
-        id: "user-1",
-        banned: false,
-        email: "admin@example.com",
-        emailVerified: true,
-        hasPassword: true,
-        name: "Admin",
-        role: "admin"
-      }
-    ] as never)
-
-    await expect(impersonateUser("user-1")).resolves.toEqual({
-      status: "error",
-      error: "Admins cannot be impersonated."
-    })
-    expect(impersonateUserApi).not.toHaveBeenCalled()
   })
 
   test("resends an invitation until the user has set a password", async () => {

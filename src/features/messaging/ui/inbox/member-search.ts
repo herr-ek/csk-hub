@@ -1,14 +1,14 @@
 import "server-only"
 
 import { and, asc, eq, ilike, isNull, ne, or } from "drizzle-orm"
-import { requireMessagingUserId } from "@/core/authz"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 
 const MEMBER_SEARCH_LIMIT = 20
 
 export async function searchMembers(query: string) {
-  const userId = await requireMessagingUserId()
+  const { userId } = await requirePermission({ action: "app.access" })
   const search = query.trim()
 
   if (!search) return []

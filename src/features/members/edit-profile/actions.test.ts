@@ -6,9 +6,7 @@ import { logger } from "@/core/logging"
 import { saveProfileAction } from "./actions"
 import * as service from "./service"
 
-const actorSession = { userId: "member-1", isAdmin: false, impersonatedBy: null } as Awaited<
-  ReturnType<typeof session.requirePermission>
->
+const actorSession = { userId: "member-1", isAdmin: false } as Awaited<ReturnType<typeof session.requirePermission>>
 
 const sessionRead = spyOn(session, "requirePermission")
 const save = spyOn(service, "saveOwnVoiceCapabilities")
@@ -35,7 +33,7 @@ describe("profile save action", () => {
     const form = new FormData()
     form.append("voices", "B1")
     expect(await saveProfileAction({ status: "idle" }, form)).toEqual({ status: "success", voices: ["B1"] })
-    expect(save).toHaveBeenCalledWith(db, { userId: "member-1", impersonating: false }, ["B1"])
+    expect(save).toHaveBeenCalledWith(db, actorSession, ["B1"])
     expect(revalidate.mock.calls).toEqual([
       ["/[locale]/(app)/me", "page"],
       ["/[locale]/(app)/me/edit", "page"],

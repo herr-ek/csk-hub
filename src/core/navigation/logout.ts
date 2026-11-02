@@ -25,13 +25,11 @@ async function cleanUpPushSubscription(signal: AbortSignal) {
 }
 
 /**
- * Signs out after at most two seconds of best-effort push cleanup. Stopping
- * impersonation leaves the Admin's browser subscription untouched. Auth errors
+ * Signs out after at most two seconds of best-effort push cleanup. Auth errors
  * are returned to the caller; auth transport failures reject, while push cleanup
  * failures never block logout.
  */
-export async function logout(isImpersonating: boolean) {
-  if (isImpersonating) return authClient.admin.stopImpersonating()
+export async function logout() {
   const controller = new AbortController()
   let timer: ReturnType<typeof setTimeout> | undefined
   try {

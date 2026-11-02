@@ -26,10 +26,7 @@ export async function AccountSettings() {
           <PasswordSettings />
           <PasskeySettings />
           <TwoFactorSettings enabled={Boolean(session.user.twoFactorEnabled)} />
-          <SessionsSettings
-            currentSessionToken={session.session.token}
-            isImpersonating={Boolean(session.session.impersonatedBy)}
-          />
+          <SessionsSettings currentSessionToken={session.session.token} />
         </>
       }
       notifications={<PushNotificationSettings />}
