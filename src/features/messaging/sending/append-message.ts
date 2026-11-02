@@ -3,6 +3,7 @@ import "server-only"
 import { and, eq, sql } from "drizzle-orm"
 import type { db } from "@/core/db"
 import { conversation, conversationReadState, message } from "@/core/db/schema/messaging"
+import { queueMessageActivity } from "../activity"
 import { MessagingAccessError } from "../model/messaging-error"
 
 /** The Drizzle transaction type inferred from this application's database client. */
@@ -105,5 +106,6 @@ export async function appendMessage(
       )
     )
 
+  await queueMessageActivity(tx, { ...input, sequence })
   return { ...created, created: true }
 }

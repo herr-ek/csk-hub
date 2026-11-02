@@ -12,7 +12,8 @@ import { InvalidNotificationSubscriptionError, parseNotificationSubscription } f
 import type {
   NotificationDeliveryDiagnostics,
   NotificationDeliveryFailureCategory,
-  NotificationDeliveryResult
+  NotificationDeliveryResult,
+  PushPresentation
 } from "./types"
 
 const DEFAULT_CONCURRENCY = 5
@@ -54,7 +55,7 @@ function failureCategory(error: unknown): NotificationDeliveryFailureCategory {
   return statusCode === undefined ? "transport" : "providerRejected"
 }
 
-async function deliverOne(stored: StoredSubscription, message: string) {
+async function deliverOne(stored: StoredSubscription, message: string, presentation?: PushPresentation) {
   const agent = new https.Agent({ keepAlive: false })
   let category: NotificationDeliveryFailureCategory | undefined
   try {
@@ -65,7 +66,12 @@ async function deliverOne(stored: StoredSubscription, message: string) {
     await withDeadline(
       webpush.sendNotification(
         { endpoint: subscription.endpoint, keys: subscription.keys },
-        JSON.stringify({ title: app.name, body: message }),
+        JSON.stringify({
+          title: presentation?.title ?? app.name,
+          body: message,
+          href: presentation?.href,
+          tag: presentation?.tag
+        }),
         { timeout: SOCKET_IDLE_TIMEOUT_MS, agent }
       ),
       REQUEST_DEADLINE_MS
@@ -89,7 +95,8 @@ async function deliverOne(stored: StoredSubscription, message: string) {
 
 async function sendToSubscriptions(
   subscriptions: StoredSubscription[],
-  message: string
+  message: string,
+  presentation?: PushPresentation
 ): Promise<NotificationDeliveryResult> {
   if (subscriptions.length === 0) {
     return { success: false, error: "noActiveSubscriptions", accepted: 0, failed: 0, failureCategories: {} }
@@ -103,7 +110,7 @@ async function sendToSubscriptions(
   await Promise.all(
     Array.from({ length: Math.min(DEFAULT_CONCURRENCY, subscriptions.length) }, async () => {
       while (nextIndex < subscriptions.length) {
-        const attempt = await deliverOne(subscriptions[nextIndex++], message)
+        const attempt = await deliverOne(subscriptions[nextIndex++], message, presentation)
         if (attempt.accepted) accepted += 1
         if (attempt.category) countFailure(attempt.category)
         if (attempt.bookkeepingFailed) countFailure("bookkeeping")
@@ -146,8 +153,8 @@ async function recordSuccess(stored: StoredSubscription) {
 }
 
 /** Delivers a message to every active push subscription belonging to one User. */
-export async function sendToUser(userId: string, message: string) {
-  return sendToUsers([userId], message)
+export async function sendToUser(userId: string, message: string, presentation?: PushPresentation) {
+  return sendToSubscriptions(await listDeliverySubscriptions([userId]), message, presentation)
 }
 
 /**

@@ -453,11 +453,11 @@
     "settingsTitle": "Pushnotiser",
     "settingsDescription": "Få uppdateringar från CSK Hub även när appen inte är öppen.",
     "managementTitle": "Notiser",
-    "managementDescription": "Skicka test-pushnotiser till prenumererande medlemmar.",
+    "managementDescription": "Skicka aviseringar till medlemmar.",
     "broadcastTitle": "Skicka till alla",
-    "broadcastDescription": "Skicka direkt till alla aktiva pushprenumerationer.",
+    "broadcastDescription": "Avisera alla tillgängliga medlemmar.",
     "selectedTitle": "Skicka till valda användare",
-    "selectedDescription": "Endast användare med minst en aktiv prenumeration visas.",
+    "selectedDescription": "Hitta mottagare efter namn eller e-postadress.",
     "enabled": "Pushnotiser är aktiverade på den här enheten.",
     "disabled": "Pushnotiser är inaktiverade på den här enheten.",
     "unsupportedSubscription": "Den här webbläsarens push-prenumeration stöds inte längre. Ta bort den innan du aktiverar aviseringar igen.",
@@ -478,9 +478,9 @@
     "testMessagePlaceholder": "Ange ett testmeddelande",
     "messagePlaceholder": "Ange notismeddelandet",
     "searchPlaceholder": "Sök efter namn eller e-post",
-    "searchLabel": "Sök prenumererande användare",
+    "searchLabel": "Sök användare",
     "searching": "Söker…",
-    "noSubscribedUsers": "Inga prenumererande användare hittades",
+    "noSubscribedUsers": "Inga användare hittades",
     "notSupported": "Pushnotiser stöds inte i den här webbläsaren.",
     "deviceEnableFailed": "Appen kunde inte aktivera pushnotiser på den här enheten.",
     "notConfigured": "Pushnotiser är inte konfigurerade ännu.",
@@ -499,7 +499,8 @@
     "userRequired": "Välj minst en användare först.",
     "noActiveSubscriptions": "Inga aktiva notisprenumerationer.",
     "deliveryFailed": "Det gick inte att skicka notisen.",
-    "noRecipients": "Inga mottagare valda."
+    "noRecipients": "Inga mottagare valda.",
+    "queued": "Aviseringar har köats för {count, plural, one {# användare} other {# användare}}. De visas i appen när den är öppen, annars som pushavisering om funktionen är aktiverad."
   },
   "RichText": {
     "editor": {
@@ -807,5 +808,10 @@
       "invalid-input": "Kontrollera formuläret och försök igen.",
       "unexpected": "Något gick fel. Försök igen."
     }
+  },
+  "Realtime": {
+    "newMessage": "Nytt meddelande",
+    "notification": "Avisering",
+    "open": "Öppna"
   }
 }

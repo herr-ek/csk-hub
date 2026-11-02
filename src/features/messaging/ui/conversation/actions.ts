@@ -1,6 +1,8 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { getRequestSession } from "@/core/auth/session.server"
+import { scheduleActivityDispatch } from "@/features/activity/server"
 import { sendMessage } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { requireMessageSendingAvailable } from "../message-command-access"
@@ -22,6 +24,7 @@ export async function sendMessageAction(_state: MessageCommandState, formData: F
 
     revalidatePath("/[locale]/(app)/messages/[conversationId]", "page")
     revalidatePath("/[locale]/(app)/messages", "page")
+    scheduleActivityDispatch()
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {
     return messageCommandErrorState(error, text)
@@ -29,5 +32,8 @@ export async function sendMessageAction(_state: MessageCommandState, formData: F
 }
 
 export async function markConversationReadAction(conversationId: string, sequence: number, token: string) {
+  const session = await getRequestSession()
+  if (!session || session.session.impersonatedBy) return
   await markConversationRead(conversationId, sequence, token)
+  scheduleActivityDispatch()
 }

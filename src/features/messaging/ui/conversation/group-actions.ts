@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { scheduleActivityDispatch } from "@/features/activity/server"
 import { addGroupMembers, leaveGroupConversation, renameGroupConversation } from "../../group-conversations"
 import { MessagingAccessError } from "../../model/messaging-error"
 import type { MessageCommandState } from "../composer/message-command-state"
@@ -33,6 +34,7 @@ export async function groupConversationAction(
     }
     revalidatePath("/[locale]/(app)/messages", "page")
     revalidatePath("/[locale]/(app)/messages/[conversationId]", "page")
+    scheduleActivityDispatch()
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {
     return messageCommandErrorState(error, name)
