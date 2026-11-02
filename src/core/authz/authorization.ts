@@ -5,7 +5,7 @@ import type { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
 import type { AuthorizationActor, AuthorizationSession, PermissionRequest } from "./model"
-import { evaluatePermission } from "./policies"
+import { evaluatePermission } from "./policy-registry"
 
 export type AuthorizationDatabase = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
 

@@ -1,7 +1,9 @@
 # Authorization design and feature adoption
 
 This guide records the authorization discussion and the exact seams for adopting `core/authz`.
-It describes the intended application rules as well as capabilities not implemented yet.
+The current module and feature status are described below; migration instructions and future
+capabilities are labeled separately. The [authz README](../src/core/authz/README.md) owns the
+calling contract, reading order and steps for registering policies.
 The architectural decision is drafted in
 [ADR 0007](adr/0007-application-authorization-uses-domain-policies.md); it remains proposed,
 subject to the team discussion required by CONTRIBUTING.md.
@@ -17,39 +19,57 @@ already exists in the application.
 The legacy `core/auth/permissions.ts`, `permissions.server.ts` and `route-access.ts` remain active
 until their callers are migrated. A feature must switch its authoritative read/write checks
 and relevant UI gates together. Do not combine legacy global Post grants and resource policies
-as an OR fallback. When the final Post caller migrates, remove application Post grants from
-Better Auth's statements and retain its native User/Session grants.
+as an OR fallback. Better Auth's active statements already contain only its native User/Session
+grants; the old application Post statements are commented out. Keep application policy decisions
+in authz when migrating the current Admin guards.
 
 ## Responsibility and interface
 
 Features import `@/core/authz`; authorization imports `core/auth`, `core/db` and generic shared
-helpers, never features. Authorization owns its minimal fact projections from database schemas.
-This is a deliberate exception to org-structure's ordinary read-helper convention. Organisational
-writes still go through org-structure, and document validation remains feature-owned.
+helpers, never features. Authorization declares minimal attribute types derived from database
+schemas, resolves a fresh session and reloads the current User's role/status. It does not load
+Posts, Groups, Memberships or Position holdings. Features load those facts through trusted server
+reads and supply them as context. Organisational reads use org-structure's read helpers and writes
+still go through its commands; document validation also remains feature-owned.
 
 ```ts
-import { can, requirePermission } from "@/core/authz"
+import { can } from "@/core/authz"
 
-const mayEdit = await can({ action: "post.update", postId }) // UI hint only
+// post is a feature-loaded PostAttributes value, or null for a missing record.
+const mayEdit = await can({ action: "post.update", context: { post } }) // UI hint only
 ```
 
 At a protected write, use `requirePermission(request, tx)` inside the transaction after the
-required locks, then attribute using its returned actor. Do not accept actor identity from the
-request payload. `can` and `requirePermission` use the same policies; missing/forbidden resources
-are denials, and unexpected session/DB failures propagate. Map denials to existing localized
-feature errors or 404s without exposing the error's server-side actor/resource diagnostics.
+required locks and trusted resource reads, then attribute using its returned actor. Do not accept
+actor identity or resource/relationship claims from the request payload. Context is a typed
+server contract, not runtime validation of submitted facts. `can` and `requirePermission` use the
+same policies; missing/forbidden resources are denials, and unexpected session/DB failures
+propagate. Map denials to existing localized feature errors or 404s without exposing the error's
+server-side actor/resource diagnostics.
 
-`isCurrentMemberOfGroup(groupId, tx?)` and
-`holdsCurrentPosition({ groupId, positionId? }, tx?)` answer facts about the effective User.
-They do not authorize operations. Position UUIDs identify the specific record; mutable display
-names and environment-specific seed UUIDs must not become hardcoded policy identities. Specific
-Choir Position grants are deferred, so no semantic-key migration is introduced now.
+For several checks in one operation, `forCurrentRequest(tx?)` resolves a single immutable actor
+snapshot. Its `can` and `requirePermission` methods evaluate synchronously without I/O. Use
+`access.actor.userId`, after handling a null actor, when loading actor-specific Memberships and
+Position holdings. Pass raw relationship attributes, including User and Group IDs and period
+fields; policies match the actor and exact Group and decide whether relationships are current.
+There are no standalone Membership/Position fact helpers in authz. The existing org-structure
+helpers `listCurrentGroupsOfUser` and `listCurrentPositionsOfUser` return summaries, not complete
+authz contexts: they omit some required identity/period fields. When adopting Group policies,
+extend or add focused org-structure read helpers that expose the required attributes; do not
+pass summary rows directly or replace missing facts with precomputed permission booleans.
+
+Position UUIDs identify specific records; mutable display names and environment-specific seed
+UUIDs must not become hardcoded policy identities. Current Group policies require any current
+Position holding in the exact Group. Specific Choir Position grants are deferred, so no
+semantic-key migration is introduced now.
 
 ## Policies available against today's schema
 
 All policies require a currently active User with a freshly validated session. Admin is a
-specific source of grants, not a universal bypass. Unknown actions and invalid/missing resource
-IDs deny access. Discarded Posts are inaccessible through the policy interface.
+specific source of grants, not a universal bypass. Unknown runtime actions and null resources
+deny access. Callers validate IDs and load the actual records; authz neither validates IDs nor
+fetches resources by ID. Discarded Posts are inaccessible through the policy interface.
+These are implemented module policies; production features still use their legacy guards.
 
 | Request | Grant |
 | --- | --- |
@@ -106,24 +126,29 @@ with the feature's existing persistence and permission-changing commands:
 No check is a durable grant for a later operation. Fresh session reads likewise do not hold a
 session/User lock until a write commits. Each migrated command must decide and test its
 coordination with session revocation and deactivation rather than claim atomicity from `tx` alone.
+An actor snapshot belongs to one operation and must not be cached or reused for another request
+or write. Standalone `can`/`requirePermission` resolve a fresh actor each time. Rendering callers
+need an enclosing Suspense boundary and must resolve actors outside Next.js cache scopes.
 
 ## Posts: migrate existing personal workflows first
 
 | Where | Required adoption |
 | --- | --- |
-| `src/features/posts/compose/actions.ts` — `createPost`, `saveDraft`, `discardDraft`, `editPublishedPost`, `unpublishPost` | Replace the private coarse `authorize` gate with the matching `post.*` resource request; derive author from the returned actor |
+| `src/features/posts/compose/commands.ts` — `writePost` and the exported commands | Replace the shared `requireAdmin` guard with matching `post.*` checks coordinated with resource reads/writes; derive author from the returned actor |
+| `src/features/posts/compose/actions.ts` — form and confirmation actions | Keep validation, result mapping, revalidation and redirects while the delegated commands adopt resource policies |
 | `src/features/posts/lifecycle.ts` — matching commands | Preserve author/live-Draft/published/discarded SQL predicates; coordinate resource authorization with the actual write |
 | `src/features/posts/service.ts` — `listNewsFeed`, `getPublishedPost` | Add an active request actor at the protected read entry; currently these helpers rely on route authentication |
 | Same — `listDraftsByAuthor`, `getEditablePost` | Derive the reader/author from trusted server context; apply record policy before returning content |
 | `src/features/posts/news-screen.tsx` — `NewsScreen`, `OwnDrafts` | Use `post.create` for compose availability and derive own Draft identity from the actor |
 | `src/features/posts/post-screen.tsx` — `PostControls` | Use the particular Post's update/unpublish capability |
-| `src/features/posts/compose/EditPostScreen.tsx` — `mayEdit` | Replace create/update global grants with per-record checks; preserve 404 behavior |
+| `src/features/posts/compose/EditPostScreen.tsx` — `EditPostScreen` | Replace `isUserAdmin` with per-record update permission and derive the reader from fresh identity; preserve 404 behavior |
 | `src/core/auth/route-access.ts` — `/news/new` | Align composition-route availability with personal publishing; retain authoritative checks inside reads and commands |
 
 This migration changes behavior: ordinary active Users may author personal Posts and edit
-their own published work. It must replace UI and mutation gates together. Expand
-`posts/compose/actions.test.ts` and `posts/lifecycle.test.ts` for other-author denials, direct
-action submission, stale lifecycle state, impersonated actor attribution and private Drafts.
+their own published work. It must replace UI and mutation gates together. Add focused command
+coverage and expand `posts/compose/actions.test.ts` and `posts/lifecycle.test.ts` for other-author
+denials, direct action submission, stale lifecycle state, impersonated actor attribution and
+private Drafts.
 
 ### Then add Group attribution, targeting and recall together
 
@@ -201,11 +226,12 @@ Memberships/Positions. Stage one makes no changes to these workflows.
 
 ## User management and notification broadcast
 
-- `src/features/user-management/service.ts/listUsers` currently relies on its Admin route.
-  Establish `user.administer` at the protected read entry before returning account metadata.
-- `user-management/actions.ts`: `activateUser`, `deactivateUser`, `eraseUser`,
-  `resendInvitation`, `changeUserRole`, `impersonateUser` need fresh explicit administrative
-  authority. Preserve self/final-Admin restrictions, inactive-before-Erasure, literal confirmation
+- `src/features/user-management/service.ts/listUsers` already calls `requireAdmin`. Replace that
+  guard with fresh `user.administer` authority before returning account metadata.
+- `user-management/commands.ts`: `activateUserCommand`, `deactivateUserCommand`, `eraseUserCommand`,
+  `resendInvitationCommand`, `changeUserRoleCommand`, `impersonateUserCommand` already call
+  `requireAdmin`. Replace those guards with `user.administer`; `actions.ts` delegates to these
+  commands. Preserve self/final-Admin restrictions, inactive-before-Erasure, literal confirmation
   and impersonation target checks. Better Auth must still enforce its own native grants.
 - `user-management/invite-user.ts`: `inviteUser`/`inviteUsers` are the shared invitation seam
   used by `add/actions.ts` and `import/actions.ts`; avoid checking only the dialog. Protect
@@ -287,8 +313,9 @@ Before adopting it, change the following together:
 3. Strengthen transactional/range invariants for one effective holder and elected Position rules.
    Coordinate with per-user/Group locking instead of assuming the current indexes enforce ranges.
 4. Update `reads.ts`, `ui/detail/query.ts`, `ui/group-summaries.ts`, other organisational consumers,
-   authz fact queries and relevant schema documentation in one change. Update historical Event
-   audience calculations too: the design schema currently uses an inclusive end date.
+   authz relationship policies and fixtures, feature-owned fact reads and relevant schema
+   documentation in one change. Update historical Event audience calculations too: the design
+   schema currently uses an inclusive end date.
 5. Extend parity tests for before/on/after start/end, future handover, same-day replacement,
    departure cascades, archive behavior and concurrent changes. Update the glossary only when
    org and authz adopt the new definition together.

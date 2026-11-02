@@ -55,8 +55,10 @@ Use `src/shared` only for genuinely cross-feature modules:
 Use `src/core` for infrastructure and app shell modules:
 
 - `src/core/auth`: Better Auth setup, server/client auth objects, plugins, cookie integration, and auth infrastructure tests.
-- `src/core/authz`: server-only application authorization policies and their minimal database fact
-  reads. It depends on auth and database schemas, never features. See
+- `src/core/authz`: application authorization with a server-only entrypoint for fresh actor
+  resolution and enforcement. Pure policies evaluate feature-supplied resource and relationship
+  attributes; only actor resolution reads the database. It depends on auth and database schemas,
+  never features. See
   [authorization adoption](authorization.md) before migrating existing guards.
 - `src/core/db`: database client and schemas.
 - `src/core/email`: email delivery adapters.

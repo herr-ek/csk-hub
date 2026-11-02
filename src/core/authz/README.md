@@ -6,8 +6,21 @@ owns the decisions. Better Auth retains authentication and its native account pe
 The module never imports features and does not load their resources itself.
 
 This module is not yet adopted by production features. Feature guards, routes and UI behavior
-are unchanged. Feature migration and reconciliation of the broader authorization design/adoption
-documents are separate work; this README describes the current module interface.
+still use their existing authorization. See the [adoption guide](../../../docs/authorization.md)
+for the current migration points and future capabilities; this README owns the module interface
+and policy registration workflow.
+
+## Reading order
+
+| File | Read it to understand |
+| --- | --- |
+| `README.md` | Calling the module and adding policies |
+| `model.ts` | The action catalogue, required resource facts and policy types |
+| `post-policies.ts`, `group-policies.ts`, `member-policies.ts`, `admin-policies.ts` | The permission rules for each subject |
+| `policy-registry.ts` | Static registration and pure policy evaluation |
+| `authorization.ts` | Fresh actor resolution, operation snapshots and denial errors |
+| `index.ts` | Production wiring and the application entrypoint |
+| `policies.test.ts` | Examples of grants, denials and policy exceptions |
 
 ## Calling the module
 
@@ -31,6 +44,8 @@ records. Policies match each relationship's User and Group and decide whether it
 callers must not turn a holding or membership fact into a separate permission fallback.
 Membership/holding periods currently mean `endDate === null`, including future start dates.
 Archived Groups deny Group operations even when their relationships remain current.
+Existing org-structure summary reads omit some required identity/period fields. Group policy
+adoption must extend or add focused read helpers there to supply the complete attributes.
 
 Context is a trusted server contract, not a runtime validator for browser payloads. Validate
 incoming IDs/content and load authoritative resource facts before calling authorization. Never
@@ -82,12 +97,52 @@ Policies are ordinary synchronous TypeScript functions with boolean expressions:
 - `member-policies.ts`: shared profiles, private email and self-profile edits.
 - `admin-policies.ts`: explicit administrative grants.
 
-Each function receives the actor and the context declared for its action. `policies.ts` evaluates
+Each function receives the actor and the context declared for its action. `policy-registry.ts` evaluates
 the matching function; null actors deny before any policy runs. There is no implicit Admin bypass
 or predicate-composition interface. Private Drafts remain author-only even against Admin.
 
-To add an action, declare its context in `model.ts`, register its policy, and cover its grants
-and denials. Missing policies fail typechecking.
+### Adding an action to an existing family
+
+1. Add the action and its required facts to `PermissionContext` in `model.ts`. Use `undefined`
+   for context-free actions. The `PermissionAction`, `PermissionRequest` and `AuthorizationPolicies`
+   types derive from this catalogue; they do not need separate entries.
+2. Add a synchronous policy function to the matching `*-policies.ts` file and map the exact
+   action name to it in that file's exported policy object. Post, Group and Member maps use
+   `satisfies Pick<AuthorizationPolicies, ...>` to require every action with their prefix.
+   `adminPolicies` lists its action names explicitly; extend that list when adding a grant there.
+3. Cover grants and denials through `evaluatePermission` in `policies.test.ts`, including missing
+   resources, other actors, relevant resource states, Admin and impersonation behavior.
+4. Run `bun test src/core/authz/policies.test.ts` and `bun run typecheck`. The latter includes
+   `test/authz.typecheck.ts`, which checks action/context correlation and registration contracts.
+
+For example, the existing `post.publish` action connects these declarations:
+
+```ts
+// model.ts — entry inside PermissionContext
+"post.publish": PostContext
+
+// post-policies.ts — policy implementation
+function canPublishPost(actor: AuthorizationActor, { post }: PermissionContext["post.publish"]): boolean {
+  return post !== null && post.discardedAt === null && post.publishedAt === null && post.authorId === actor.userId
+}
+
+// post-policies.ts — entry inside the exported postPolicies object
+"post.publish": canPublishPost
+```
+
+`postPolicies` is already included in `policy-registry.ts`, so adding another Post action does
+not require editing the registry. Missing policies fail typechecking.
+
+### Adding a policy family
+
+Follow the action steps above, creating a `<subject>-policies.ts` file with its typed policy map.
+Then import that map into `policy-registry.ts` and spread it into the `policies` object, alongside
+the existing families. Keep each action in exactly one family: object spreads overwrite duplicate
+keys in order. Registration is explicit static composition; there is no runtime registration or
+file discovery. Add the new family to the reading order and policy list above.
+
+### Resource changes and feature adoption
+
 New operations that change authorization-relevant fields must include the proposed values in
 their context and check those values in the policy, as well as the existing resource. Current
 Post policies do not implement Group attribution, audience changes or recall, and Group work
@@ -101,6 +156,9 @@ resolution, transaction visibility, attribution, errors and organisational perio
 `test/authz.typecheck.ts` checks invalid action/context combinations and policy registration
 through `bun run typecheck`.
 
-`createAuthorization({ database, readSession })` is the server composition seam for those tests;
-the production entrypoint supplies the application database and `getFreshRequestSession`.
-It is not an endpoint for browser-supplied identity.
+`createAuthorization({ database, readSession })`, imported directly from
+`@/core/authz/authorization`, is the internal server composition seam for those tests and for
+`index.ts`. The application entrypoint `@/core/authz` exposes `can`, `requirePermission`,
+`forCurrentRequest`, denial errors and caller-facing types; it does not re-export the factory.
+Production wiring supplies the application database and `getFreshRequestSession`. Never use
+the factory to accept browser-supplied identity.

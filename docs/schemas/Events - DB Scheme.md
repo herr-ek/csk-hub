@@ -1,5 +1,13 @@
 ## Events scheme (v2)
 
+This is a design specification. Event tables and schema tests exist, but application Event
+workflows and instance authorization policies are not implemented. The permission examples
+below predate the current [authorization design](../authorization.md): Choir/subgroup/target
+inheritance and a blanket Admin bypass are not adopted grants. Future instance policies must
+check the exact organiser Group, current Membership and Position holding for non-Admin actors,
+keep Choir management Admin-only, and enforce field privacy explicitly. The existing
+`group.manageEvents` policy alone does not authorize an Event instance.
+
 > Self-contained spec. Builds on [[Groups - DB Scheme]] (v3). Target: Postgres (15+).
 > Every constraint is tagged with where it is enforced: **[DB]** index/FK/CHECK, **[trigger]**, or **[app]**.
 

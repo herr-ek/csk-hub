@@ -1,3 +1,12 @@
+# Groups schema design history
+
+This document retains the v2 and v3 schema proposals and their original examples. Current
+organisational behavior is described in the [org-structure README](../../src/features/org-structure/README.md).
+The [authorization guide](../authorization.md) describes the implemented authz policies and
+remaining adoption work. The Choir-wide permission examples below are historical proposals:
+current policies require exact-Group authority, keep Choir work Admin-only, and do not propagate
+grants through `choirId` or audience targets. Group Post attribution and targeting remain future work.
+
 ## Revised scheme (v2)
 
 #### Terminology

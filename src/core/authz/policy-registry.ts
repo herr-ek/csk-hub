@@ -10,6 +10,7 @@ import type {
 } from "./model"
 import { postPolicies } from "./post-policies"
 
+// Register each policy family here. This complete map requires a policy for every declared action.
 const policies: AuthorizationPolicies = {
   ...postPolicies,
   ...groupPolicies,

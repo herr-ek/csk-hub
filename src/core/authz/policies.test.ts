@@ -8,7 +8,7 @@ import type {
   PositionHoldingAttributes,
   PostAttributes
 } from "./model"
-import { evaluatePermission } from "./policies"
+import { evaluatePermission } from "./policy-registry"
 
 const owner: AuthorizationActor = { userId: "owner", isAdmin: false, impersonatedBy: null }
 const other: AuthorizationActor = { userId: "other", isAdmin: false, impersonatedBy: null }

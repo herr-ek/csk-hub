@@ -3,15 +3,17 @@
 Who is in which Group, Choir and Section, and who holds which Position. Groups and Positions are
 both first-class here: Positions are held in Groups, and the rules tying them to Memberships are
 why they share one module. Terminology lives in [`GLOSSARY.md`](../../../GLOSSARY.md#groups); the
-scheme it implements is "Revised scheme (v3)" in `docs/Groups - DB Scheme.md`, introduced in #78.
+scheme it implements is "Revised scheme (v3)" in the [Groups schema design](../../../docs/schemas/Groups%20-%20DB%20Scheme.md), introduced in #78.
 Voices and what each user can sing are the separate [`voice`](../voice/README.md) feature.
 
 ## The write path
 
 Application code writes the tables in `src/core/db/schema/org-structure.ts` only through this
-module, and reads them through its read helpers rather than querying the tables. The
-`core/authz` module is an exception for minimal authorization-specific fact reads; its
-definition of current Memberships and Position holdings must match this module. See
+module, and reads them through its read helpers rather than querying the tables. Features
+adopting `core/authz` must load trusted Membership and Position-holding attributes through this
+module; authz does not query the organisational tables. Existing summary reads omit some authz
+fields, so Group policy adoption needs focused attribute projections. Authz's definition of
+current Memberships and Position holdings must match this module. See
 [`docs/authorization.md`](../../../docs/authorization.md) for the adoption contract.
 This is a convention, not a test. The ops scripts are another deliberate exception: `bun run ops
 reference-data` and `bun run ops seed-groups` write the tables directly, so that scripts never
