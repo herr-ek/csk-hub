@@ -1,0 +1,111 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3bc92383-3eb0-4dfa-83d4-36eee63c5465",
+  "prevIds": [
+    "7ab04112-f8b1-4afe-8e95-a83de1565dd4"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "edited_at"
+      ],
+      "writes": [
+        "s|col|public.post.edited_at",
+        "n|col|public.post.edited_at",
+        "e|col|public.post.edited_at"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "discarded_at"
+      ],
+      "writes": [
+        "s|col|public.post.discarded_at",
+        "n|col|public.post.discarded_at",
+        "e|col|public.post.discarded_at"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "post"
+      ],
+      "writes": [
+        "s|ck|public.post.post_discarded_draft_check",
+        "n|ck|public.post.post_discarded_draft_check",
+        "e|ck|public.post.post_discarded_draft_check",
+        "n|con|public.post.post_discarded_draft_check"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|col|public.post.discarded_at",
+        "n|col|public.post.published_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "edited_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "discarded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "post_discarded_draft_check",
+        "value": "\"discarded_at\" is null or \"published_at\" is null",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

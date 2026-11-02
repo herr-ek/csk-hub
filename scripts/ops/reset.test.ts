@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { group } from "@/core/db/schema/org-structure"
 import { createTestDatabase } from "../../test/database"
-import { readJournal } from "./migration-status"
+import { readMigrations } from "./migration-status"
 import { resetLocalDatabase } from "./reset"
 
 const database = await createTestDatabase()
@@ -38,8 +38,10 @@ describe.skipIf(!database)("resetLocalDatabase", () => {
     expect(await resetLocalDatabase({ target: "local", url: t.url, host: "test" }, { skipConfirmation: true })).toBe(0)
 
     expect(await t.db.select().from(user)).toEqual([])
-    const { rows } = await t.db.execute(sql`select count(*)::int as applied from drizzle.__drizzle_migrations`)
-    expect(rows).toEqual([{ applied: readJournal().length }])
+    const { rows } = await t.db.execute<{ applied: number }>(
+      sql`select count(*)::int as applied from drizzle.__drizzle_migrations`
+    )
+    expect(rows).toEqual([{ applied: readMigrations().length }])
     expect((await t.db.select({ name: group.name }).from(group)).map(({ name }) => name)).toContain("KKB")
   }, 60_000)
 })

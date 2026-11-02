@@ -113,3 +113,34 @@ passwords, profile edits and Post edits. A conflicting existing Position assignm
 demo transaction rather than displacing its holder. Direct scripts also enforce the local-only
 database guard. To return to the original demo after editing it, deliberately run
 `bun run ops reset`, then `bun run ops seed-demo`.
+
+## Drizzle v1 migration history
+
+Both Drizzle packages are pinned to `1.0.0-rc.5`. Each migration now has a timestamped
+folder containing `migration.sql` and a v9 `snapshot.json`; there is no shared journal.
+The 18 SQL files were preserved byte for byte during conversion, including the
+hand-written domains, triggers and `NULLS NOT DISTINCT` index.
+
+Better Auth uses its `relations-v2` adapter and the matching `auth` CLI. Running
+`bun run auth:generate` emits `defineRelationsPart` definitions for Drizzle v1.
+
+The conversion repaired three metadata issues:
+
+- The data-only `member-role-to-user` migration had no snapshot. Its snapshot repeats
+  the preceding schema with its own ID, and the following snapshot points to it.
+- `post-body-to-document` and `post-body-search` originally shared a second. Their
+  folder timestamps were moved to the next two seconds to retain dependency order.
+  Both moved out of the original second so v1 backfills their ledger names by SQL
+  hash, rather than assigning both rows to the same timestamp match.
+- Check and partial-index expressions were normalized by removing their own table
+  qualifier before conversion. This avoids the converter's [false schema changes](https://github.com/drizzle-team/drizzle-orm/issues/6020)
+  and an index rebuild that would lose the hand-written `NULLS NOT DISTINCT` behavior.
+
+`bunx drizzle-kit check` and `bun run db:generate` should report no schema changes.
+Keep the converted folders and the upgraded packages together when deploying.
+
+The first v1 `bun run ops migrate` upgrades the database ledger, adding `name` and
+`applied_at` and backfilling existing migration names. The status command and build
+check can read both ledger versions without writing to either: v1 uses folder
+names, while a legacy ledger is matched by SQL hash. Test the ledger upgrade on a
+local copy before using the normal guarded production migration command.

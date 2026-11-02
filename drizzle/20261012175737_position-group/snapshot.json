@@ -1,0 +1,217 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1f170708-de89-4684-a70e-efeeb11cb8c5",
+  "prevIds": [
+    "c5ef9d2e-892f-4629-a558-5e15fb3dc8e5"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_group"
+      ],
+      "writes": [
+        "s|tbl|public.position_group",
+        "n|tbl|public.position_group",
+        "e|tbl|public.position_group",
+        "n|rel|public.position_group",
+        "n|type|public.position_group",
+        "n|rel|public.position_group_position_id_group_id_pk"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "position_group",
+        "position_group_groupId_idx"
+      ],
+      "writes": [
+        "s|idx|public.position_group_groupId_idx",
+        "n|idx|public.position_group_groupId_idx",
+        "e|idx|public.position_group_groupId_idx",
+        "n|rel|public.position_group_groupId_idx"
+      ],
+      "reads": [
+        "n|tbl|public.position_group",
+        "n|sch|public",
+        "n|col|public.position_group.group_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_group"
+      ],
+      "writes": [
+        "s|fk|public.position_group.position_group_position_id_position_id_fk",
+        "n|fk|public.position_group.position_group_position_id_position_id_fk",
+        "e|fk|public.position_group.position_group_position_id_position_id_fk",
+        "n|con|public.position_group.position_group_position_id_position_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.position_group",
+        "n|sch|public",
+        "n|tbl|public.position",
+        "n|sch|public",
+        "n|col|public.position_group.position_id",
+        "n|col|public.position.id",
+        "e|uniqueness|public.position.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_group"
+      ],
+      "writes": [
+        "s|fk|public.position_group.position_group_group_id_group_id_fk",
+        "n|fk|public.position_group.position_group_group_id_group_id_fk",
+        "e|fk|public.position_group.position_group_group_id_group_id_fk",
+        "n|con|public.position_group.position_group_group_id_group_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.position_group",
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.position_group.group_id",
+        "n|col|public.group.id",
+        "e|uniqueness|public.group.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "position_group",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_group",
+        "name": "position_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_group",
+        "name": "group_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_group",
+        "name": "position_group_groupId_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "group_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_group",
+        "name": "position_group_position_id_position_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "position_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "position",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_group",
+        "name": "position_group_group_id_group_id_fk",
+        "nameExplicit": false,
+        "columns": [
+          "group_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_group",
+        "name": "position_group_position_id_group_id_pk",
+        "columns": [
+          "position_id",
+          "group_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}
