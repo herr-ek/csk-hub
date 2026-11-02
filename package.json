@@ -41,6 +41,7 @@
     "@tiptap/pm": "3.31.3",
     "@tiptap/react": "3.31.3",
     "@tiptap/static-renderer": "3.31.3",
+    "@vercel/analytics": "^2.0.1",
     "@wrksz/themes": "^1.2.0",
     "better-auth": "^1.7.4",
     "class-variance-authority": "^0.7.1",

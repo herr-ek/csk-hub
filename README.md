@@ -162,6 +162,16 @@ Email delivery is controlled by `EMAIL_MODE`:
 - `smtp` sends through Gmail SMTP. Configure `SMTP_HOST` (`smtp.gmail.com`),
   `SMTP_PORT` (`587`), `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`.
 
+## Web Analytics
+
+Vercel Web Analytics tracks page views through the shared root layout using
+`@vercel/analytics/next`. Enable Web Analytics in the Vercel project's Analytics
+tab, then deploy the app to start collecting data. No environment variables are
+required. Local development uses the SDK's debug mode without sending analytics.
+
+The proxy excludes `/_vercel/*` so analytics requests bypass authentication and
+locale redirects.
+
 ## Checks and useful commands
 
 ```bash
