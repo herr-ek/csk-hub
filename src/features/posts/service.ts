@@ -1,14 +1,15 @@
 import "server-only"
 
-import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm"
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm"
 import { z } from "zod"
+import { type AuthorizationDatabase, AuthorizationDeniedError, requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { post } from "@/core/db/schema/posts"
 import type { RichTextDocument } from "@/features/rich-text"
 
 /** The application database client. Tests hand the reads and writes a throwaway one. */
-export type PostsDatabase = typeof db
+export type PostsDatabase = AuthorizationDatabase
 
 export type NewsFeedEntry = {
   id: string
@@ -54,67 +55,104 @@ const publishedPostColumns = {
 }
 
 /** The whole feed, newest first. Every signed-in User sees the same one, and no drafts. */
-export async function listNewsFeed(database: PostsDatabase = db): Promise<NewsFeedEntry[]> {
-  const rows = await database
-    .select(publishedPostColumns)
-    .from(post)
-    // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
-    // in the feed.
-    .leftJoin(user, eq(post.authorId, user.id))
-    .where(isNotNull(post.publishedAt))
-    .orderBy(desc(post.publishedAt))
+export async function listNewsFeed(
+  database: PostsDatabase = db,
+  authorize = requirePermission
+): Promise<NewsFeedEntry[]> {
+  return database.transaction(async (tx) => {
+    await authorize({ action: "app.access" }, tx)
+    const rows = await tx
+      .select(publishedPostColumns)
+      .from(post)
+      // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
+      // in the feed.
+      .leftJoin(user, eq(post.authorId, user.id))
+      .where(isNotNull(post.publishedAt))
+      .orderBy(desc(post.publishedAt))
 
-  return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
+    return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
+  })
 }
 
 /** One Post by its opaque id, or null when it does not exist or is not published. */
-export async function getPublishedPost(postId: string, database: PostsDatabase = db): Promise<PublishedPost | null> {
+export async function getPublishedPost(
+  postId: string,
+  database: PostsDatabase = db,
+  authorize = requirePermission
+): Promise<PublishedPost | null> {
   if (!isPostId(postId)) return null
+  try {
+    return await database.transaction(async (tx) => {
+      const [row] = await tx
+        .select({ ...publishedPostColumns, authorId: post.authorId, discardedAt: post.discardedAt })
+        .from(post)
+        .leftJoin(user, eq(post.authorId, user.id))
+        .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
+        .limit(1)
+        .for("share", { of: post })
 
-  const [row] = await database
-    .select(publishedPostColumns)
-    .from(post)
-    .leftJoin(user, eq(post.authorId, user.id))
-    .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
-    .limit(1)
-
-  return row?.publishedAt ? { ...row, publishedAt: row.publishedAt } : null
+      await authorize({ action: "post.read", context: { post: row ?? null } }, tx)
+      if (!row?.publishedAt) return null
+      const { authorId: _authorId, discardedAt: _discardedAt, ...published } = row
+      return { ...published, publishedAt: row.publishedAt }
+    })
+  } catch (error) {
+    if (error instanceof AuthorizationDeniedError) return null
+    throw error
+  }
 }
 
 /** The author's own drafts, most recently saved first. Nobody else's, and none they discarded. */
-export async function listDraftsByAuthor(authorId: string, database: PostsDatabase = db): Promise<DraftSummary[]> {
-  return database
-    .select({ id: post.id, title: post.title, savedAt: post.updatedAt })
-    .from(post)
-    .where(and(eq(post.authorId, authorId), isNull(post.publishedAt), isNull(post.discardedAt)))
-    .orderBy(desc(post.updatedAt))
+export async function listOwnDrafts(
+  database: PostsDatabase = db,
+  authorize = requirePermission
+): Promise<DraftSummary[]> {
+  return database.transaction(async (tx) => {
+    const { userId: authorId } = await authorize({ action: "app.access" }, tx)
+    return tx
+      .select({ id: post.id, title: post.title, savedAt: post.updatedAt })
+      .from(post)
+      .where(and(eq(post.authorId, authorId), isNull(post.publishedAt), isNull(post.discardedAt)))
+      .orderBy(desc(post.updatedAt))
+  })
 }
 
 /**
- * The Post `readerId` may open for editing: any published Post, or a draft they wrote.
- * Another author's draft, or a discarded one, reads as missing, exactly like a Post that
- * does not exist. Whether
- * the reader may then change it is a permission, which the caller checks for the state.
+ * The current actor's editable Post. The resource guard and content read share a transaction
+ * and Post lock, so an intervening Unpublish cannot expose another author's private Draft.
+ * Missing or forbidden Posts both return null.
  */
 export async function getEditablePost(
   postId: string,
-  readerId: string,
-  database: PostsDatabase = db
+  database: PostsDatabase = db,
+  authorize = requirePermission
 ): Promise<EditablePost | null> {
   if (!isPostId(postId)) return null
 
-  const [row] = await database
-    .select({ id: post.id, title: post.title, body: post.body, publishedAt: post.publishedAt, savedAt: post.updatedAt })
-    .from(post)
-    .where(
-      and(
-        eq(post.id, postId),
-        or(isNotNull(post.publishedAt), and(eq(post.authorId, readerId), isNull(post.discardedAt)))
-      )
-    )
-    .limit(1)
+  try {
+    return await database.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          id: post.id,
+          title: post.title,
+          body: post.body,
+          publishedAt: post.publishedAt,
+          authorId: post.authorId,
+          discardedAt: post.discardedAt,
+          savedAt: post.updatedAt
+        })
+        .from(post)
+        .where(and(eq(post.id, postId), isNull(post.discardedAt)))
+        .limit(1)
+        .for("share")
 
-  if (!row) return null
-  const { publishedAt, ...editable } = row
-  return { ...editable, state: publishedAt ? "published" : "draft" }
+      await authorize({ action: "post.update", context: { post: row ?? null } }, tx)
+      if (!row) return null
+      const { publishedAt, authorId: _authorId, discardedAt: _discardedAt, ...editable } = row
+      return { ...editable, state: publishedAt ? "published" : "draft" }
+    })
+  } catch (error) {
+    if (error instanceof AuthorizationDeniedError) return null
+    throw error
+  }
 }

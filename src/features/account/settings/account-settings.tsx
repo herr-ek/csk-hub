@@ -1,11 +1,13 @@
-import { getRequestSession } from "@/core/auth/session.server"
+import { getFreshRequestSession } from "@/core/auth/session.server"
+import { requirePermission } from "@/core/authz"
 import { AccountSettingsTabs } from "./account-settings-tabs"
 import { PushNotificationSettings } from "./notifications"
 import { LanguageSettings, ProfileSettings } from "./profile"
 import { PasskeySettings, PasswordSettings, SessionsSettings, TwoFactorSettings } from "./security"
 
 export async function AccountSettings() {
-  const session = await getRequestSession()
+  await requirePermission({ action: "app.access" })
+  const session = await getFreshRequestSession()
 
   if (!session) {
     return null
@@ -24,10 +26,7 @@ export async function AccountSettings() {
           <PasswordSettings />
           <PasskeySettings />
           <TwoFactorSettings enabled={Boolean(session.user.twoFactorEnabled)} />
-          <SessionsSettings
-            currentSessionToken={session.session.token}
-            isImpersonating={Boolean(session.session.impersonatedBy)}
-          />
+          <SessionsSettings currentSessionToken={session.session.token} />
         </>
       }
       notifications={<PushNotificationSettings />}

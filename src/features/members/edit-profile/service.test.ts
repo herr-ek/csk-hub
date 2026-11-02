@@ -1,9 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
+import { createAuthorization } from "@/core/authz/authorization"
 import { user } from "@/core/db/schema/auth"
 import { listVoiceCapabilities, setVoiceCapabilities } from "@/features/voice"
 import { createTestDatabase } from "../../../../test/database"
-import { getOwnVoiceCapabilities, saveOwnVoiceCapabilities } from "./service"
+import { getOwnVoiceCapabilities, saveOwnVoiceCapabilities as saveCapabilities } from "./service"
 
 const database = await createTestDatabase()
 
@@ -11,10 +12,17 @@ describe.skipIf(!database)("Self-reported profile capabilities", () => {
   if (!database) return
   const { db, drop } = database
   afterAll(drop)
+  function saveOwnVoiceCapabilities(database: typeof db, actor: { userId: string } | null, input: unknown) {
+    const authorize = createAuthorization({
+      database,
+      readSession: async () => (actor ? { user: { id: actor.userId } } : null)
+    }).requirePermission
+    return saveCapabilities(database, actor, input, authorize)
+  }
   async function member() {
     const id = crypto.randomUUID()
     await db.insert(user).values({ id, name: "Singer", email: `${id}@example.com` })
-    return { userId: id, impersonating: false }
+    return { userId: id }
   }
 
   test("replaces and clears only the authenticated actor's capabilities", async () => {
@@ -49,14 +57,10 @@ describe.skipIf(!database)("Self-reported profile capabilities", () => {
     expect(await getOwnVoiceCapabilities(db, actor.userId)).toEqual(["B1"])
   })
 
-  test("refuses unauthenticated and impersonated edits", async () => {
+  test("refuses unauthenticated edits", async () => {
     const actor = await member()
     await setVoiceCapabilities(db, actor.userId, ["A1"])
     expect(await saveOwnVoiceCapabilities(db, null, ["B1"])).toEqual({ status: "error", error: "sign-in-required" })
-    expect(await saveOwnVoiceCapabilities(db, { ...actor, impersonating: true }, ["B1"])).toEqual({
-      status: "error",
-      error: "impersonation-unavailable"
-    })
     expect(await getOwnVoiceCapabilities(db, actor.userId)).toEqual(["A1"])
   })
 
@@ -66,7 +70,7 @@ describe.skipIf(!database)("Self-reported profile capabilities", () => {
     await db.update(user).set({ banned: true }).where(eq(user.id, actor.userId))
     expect(await saveOwnVoiceCapabilities(db, actor, ["B1"])).toEqual({ status: "error", error: "inactive-user" })
     expect(await listVoiceCapabilities(db, actor.userId)).toEqual(["T1"])
-    expect(await saveOwnVoiceCapabilities(db, { userId: "missing", impersonating: false }, ["B1"])).toEqual({
+    expect(await saveOwnVoiceCapabilities(db, { userId: "missing" }, ["B1"])).toEqual({
       status: "error",
       error: "inactive-user"
     })

@@ -31,7 +31,7 @@ function checkInterface(
   // @ts-expect-error A permission boolean cannot substitute for resource and relationship facts.
   access.can({ action: "group.manageContent", context: { group, canManage: true } })
   // @ts-expect-error An actor cannot be supplied by the calling feature.
-  access.can({ action: "post.create", actor: { userId: "forged", isAdmin: true, impersonatedBy: null } })
+  access.can({ action: "post.create", actor: { userId: "forged", isAdmin: true } })
   // @ts-expect-error Context must remain correlated when the action itself is a union.
   access.can({ action, context: { post } })
   // @ts-expect-error Unsupported actions have no policy contract.

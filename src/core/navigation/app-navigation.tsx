@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Suspense } from "react"
-import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getRequestSession } from "@/core/auth/session.server"
+import { can } from "@/core/authz"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
 import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
@@ -38,7 +38,6 @@ export function getNavigationItems(
 export type NavigationConfig = {
   showAdmin: boolean
   user: { name: string; image?: string | null }
-  impersonatingUserName?: string
 }
 
 /**
@@ -59,7 +58,6 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
     label: item.label,
     badge: badges?.[item.id]
   }))
-  const isImpersonating = Boolean(config?.impersonatingUserName)
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
@@ -79,14 +77,9 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
                 <MobileNavigation items={items} />
               </div>
             ) : null}
-            {config ? <AccountMenu user={config.user} isImpersonating={isImpersonating} /> : null}
+            {config ? <AccountMenu user={config.user} /> : null}
           </div>
         </div>
-        {config?.impersonatingUserName ? (
-          <div className="rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground" role="status">
-            {t("impersonating", { name: config.impersonatingUserName })}
-          </div>
-        ) : null}
       </div>
     </header>
   )
@@ -102,16 +95,16 @@ export function AppNavigation({ badges }: { badges?: NavigationBadges }) {
 
 export async function RuntimeAppNavigation({ badges }: { badges?: NavigationBadges }) {
   const session = await getRequestSession()
-  const isAdmin = await isUserAdmin(session)
+  const active = session && (await can({ action: "app.access" }))
+  const isAdmin = active && (await can({ action: "admin.access" }))
   return (
     <AppNavigationTemplate
       badges={badges}
       config={
-        session
+        active && session
           ? {
-              showAdmin: isAdmin,
-              user: { name: session.user.name, image: session.user.image },
-              ...(session?.session.impersonatedBy ? { impersonatingUserName: session.user.name } : {})
+              showAdmin: Boolean(isAdmin),
+              user: { name: session.user.name, image: session.user.image }
             }
           : null
       }

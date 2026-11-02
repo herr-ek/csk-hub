@@ -146,13 +146,9 @@
     "news": "News",
     "login": "Login",
     "primary": "Primary navigation",
-    "impersonating": "Impersonating {name}",
     "logout": "Logout",
     "loggingOut": "Logging out…",
     "logoutFailed": "Unable to log out right now. Please try again.",
-    "stopImpersonating": "Stop impersonating",
-    "stoppingImpersonation": "Stopping impersonation…",
-    "stopImpersonationFailed": "Unable to stop impersonating right now. Please try again.",
     "language": "Language",
     "messages": "Messages",
     "openMenu": "Open menu",
@@ -332,15 +328,12 @@
     "roleUpdated": "Role updated",
     "roleUpdatedDescription": "{memberName}'s role has been updated.",
     "memberActionFailed": "Member action failed",
-    "impersonationFailed": "Impersonation failed",
-    "impersonationFailedDescription": "Unable to switch to this member.",
     "actionsFor": "Actions for {memberName}",
     "manageRoles": "Manage roles",
-    "impersonate": "Impersonate",
     "dialogTitle": "{action} {memberName}?",
     "typeToConfirm": "Type {confirmation} to confirm",
     "admin": "Admin",
-    "adminDescription": "Can invite, manage, and impersonate members."
+    "adminDescription": "Can invite and manage members."
   },
   "AccountSettings": {
     "pageTitle": "Account settings",
@@ -560,7 +553,6 @@
       "blank-message": "Enter a message.",
       "message-too-long": "Messages can be at most 4,000 characters.",
       "sign-in-required": "Sign in to use Messages.",
-      "impersonation-unavailable": "Messages cannot be sent while impersonating a member.",
       "inactive-member": "Only active members can use Messages.",
       "recipient-required": "Choose a recipient.",
       "idempotency-key-required": "Unable to complete this request. Please try again.",
@@ -646,7 +638,6 @@
     "backToProfile": "Back to profile",
     "editErrors": {
       "sign-in-required": "Sign in to edit your profile.",
-      "impersonation-unavailable": "You cannot change self-reported capabilities while impersonating another member.",
       "inactive-user": "Your account is no longer active.",
       "invalid-voices": "Choose only the listed Voice divisions.",
       "unexpected": "Your profile could not be saved. Please try again."

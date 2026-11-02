@@ -6,8 +6,13 @@ describe("auth roles", () => {
     expect(DEFAULT_ROLE).toBe("user")
     expect(adminPluginOptions).not.toHaveProperty("defaultRole")
   })
-  test("keeps the admin plugin's own grants", () => {
+})
+
+describe("native Better Auth permissions", () => {
+  test("keeps account administration with Better Auth", () => {
     expect(accessRoles[ADMIN_ROLE].authorize({ user: ["ban"] }).success).toBe(true)
     expect(accessRoles[USER_ROLE].authorize({ user: ["ban"] }).success).toBe(false)
+    expect(accessRoles[ADMIN_ROLE].statements).not.toHaveProperty("post")
+    expect(accessRoles[USER_ROLE].statements).not.toHaveProperty("post")
   })
 })

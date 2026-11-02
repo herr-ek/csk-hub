@@ -1,8 +1,16 @@
 import "server-only"
 
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import type { z } from "zod"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import {
+  type AuthorizationDatabase,
+  AuthorizationDeniedError,
+  type PermissionRequest,
+  requirePermission
+} from "@/core/authz"
+import { db } from "@/core/db"
+import { group } from "@/core/db/schema/org-structure"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName } from "@/shared/errors"
@@ -12,23 +20,39 @@ import type { GroupCommandState } from "./command-state"
 /**
  * The common shape of every admin groups Server Action: authorize the Admin, validate the form,
  * run one module command, and pass its typed result through. Non-Admins are refused by
- * `requireAdmin`, exactly as on the other admin routes.
+ * explicit application policies, exactly as on the other admin routes.
  */
 export async function runGroupCommand<Schema extends z.ZodType>(
   name: string,
   schema: Schema,
   values: Record<string, unknown>,
-  command: (input: z.infer<Schema>) => Promise<OrgStructureResult<unknown>>
+  command: (input: z.infer<Schema>, tx: AuthorizationDatabase) => Promise<OrgStructureResult<unknown>>
 ): Promise<GroupCommandState> {
-  await requireAdmin()
+  await requirePermission({ action: "org.manage" })
 
   const input = schema.safeParse(values)
   if (!input.success) return { status: "error", error: "invalid-input" }
 
   let result: OrgStructureResult<unknown>
   try {
-    result = await command(input.data)
+    result = await db.transaction(async (tx) => {
+      const groupId = (input.data as { groupId?: string }).groupId
+      const action = ["assign-holder", "end-holding"].includes(name)
+        ? "group.managePositions"
+        : "group.manageMemberships"
+      let permission: PermissionRequest = { action: "org.manage" }
+      if (groupId && ["add-member", "end-membership", "change-voice", "assign-holder", "end-holding"].includes(name)) {
+        const [resource] = await tx
+          .select({ id: group.id, type: group.type, active: group.active })
+          .from(group)
+          .where(eq(group.id, groupId))
+        permission = { action, context: { group: resource ?? null } }
+      }
+      await requirePermission(permission, tx)
+      return command(input.data, tx)
+    })
   } catch (error) {
+    if (error instanceof AuthorizationDeniedError) throw error
     logger.error(`admin.org-structure.${name}-failed`, {
       errorCode: getErrorCode(error),
       errorName: getErrorName(error)

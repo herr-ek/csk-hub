@@ -19,28 +19,22 @@ import { toast } from "@/shared/ui/base/toast"
 import { logout } from "./logout"
 import { ROUTES } from "./site"
 
-/** Combines account navigation and sign-out; impersonated sessions return to the Admin's session instead. */
-export function AccountMenu({
-  user,
-  isImpersonating = false
-}: {
-  user: { name: string; image?: string | null }
-  isImpersonating?: boolean
-}) {
+/** Combines account navigation and sign-out. */
+export function AccountMenu({ user }: { user: { name: string; image?: string | null } }) {
   const t = useTranslations("Navigation")
   const [isPending, setIsPending] = useState(false)
 
   async function handleLogout() {
     setIsPending(true)
     try {
-      const result = await logout(isImpersonating)
+      const result = await logout()
       if (result.error) {
-        toast.add({ type: "error", title: isImpersonating ? t("stopImpersonationFailed") : t("logoutFailed") })
+        toast.add({ type: "error", title: t("logoutFailed") })
         return
       }
-      window.location.assign(isImpersonating ? ROUTES.adminUsers : ROUTES.login)
+      window.location.assign(ROUTES.login)
     } catch {
-      toast.add({ type: "error", title: isImpersonating ? t("stopImpersonationFailed") : t("logoutFailed") })
+      toast.add({ type: "error", title: t("logoutFailed") })
     } finally {
       setIsPending(false)
     }
@@ -73,13 +67,7 @@ export function AccountMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={isPending} onClick={handleLogout} closeOnClick={false}>
           <LogOutIcon />
-          {isPending
-            ? isImpersonating
-              ? t("stoppingImpersonation")
-              : t("loggingOut")
-            : isImpersonating
-              ? t("stopImpersonating")
-              : t("logout")}
+          {isPending ? t("loggingOut") : t("logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

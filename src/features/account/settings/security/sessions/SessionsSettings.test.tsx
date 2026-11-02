@@ -25,7 +25,7 @@ if (process.env.CSK_SESSIONS_TEST_FILE !== import.meta.path) {
   const listSessions = mock(async () => ({ data: sessions }))
   const revokeSession = mock(async () => ({ error: null }))
   const logout = mock(
-    async (_isImpersonating: boolean): Promise<{ error: { message: string } | null }> => ({
+    async (): Promise<{ error: { message: string } | null }> => ({
       error: null
     })
   )
@@ -57,10 +57,8 @@ if (process.env.CSK_SESSIONS_TEST_FILE !== import.meta.path) {
     navigate.mockRestore()
   })
 
-  async function signOut(isImpersonating = false, label = "signOut") {
-    await act(async () =>
-      root.render(<SessionsSettings currentSessionToken="current" isImpersonating={isImpersonating} />)
-    )
+  async function signOut(label = "signOut") {
+    await act(async () => root.render(<SessionsSettings currentSessionToken="current" />))
     const button = [...container.querySelectorAll("button")].find((element) => element.textContent === label)
     expect(button).toBeDefined()
     await act(async () => button?.click())
@@ -69,20 +67,13 @@ if (process.env.CSK_SESSIONS_TEST_FILE !== import.meta.path) {
 
   test("current-device sign-out uses the push-cleaning logout flow", async () => {
     await signOut()
-    expect(logout).toHaveBeenCalledWith(false)
+    expect(logout).toHaveBeenCalledWith()
     expect(revokeSession).not.toHaveBeenCalled()
     expect(navigate).toHaveBeenCalledWith("/login")
   })
 
-  test("ending impersonation uses the shared flow and returns to the Admin", async () => {
-    await signOut(true)
-    expect(logout).toHaveBeenCalledWith(true)
-    expect(revokeSession).not.toHaveBeenCalled()
-    expect(navigate).toHaveBeenCalledWith("/admin/users")
-  })
-
   test("revoking another device leaves this browser's binding untouched", async () => {
-    await signOut(false, "delete")
+    await signOut("delete")
     expect(revokeSession).toHaveBeenCalledWith({ token: "other" })
     expect(logout).not.toHaveBeenCalled()
     expect(navigate).not.toHaveBeenCalled()

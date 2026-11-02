@@ -1,54 +1,35 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test"
-
-const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "user-1" }))
-const requireCurrentUserPermission = mock(async () => ({ state: "authenticated" as const, userId: "user-1" }))
-
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin, requireCurrentUserPermission }))
+import { describe, expect, test } from "bun:test"
 
 import { getRouteAccessDecision } from "./route-access"
 
 const userSession = { user: { id: "user-1", role: "user" } }
 const adminSession = { user: { id: "admin-1", role: "admin" } }
-const impersonatingSession = {
-  user: { id: "member-1", role: "user" },
-  session: { impersonatedBy: "admin-1" }
-}
-
-beforeEach(() => {
-  requireAdmin.mockReset()
-  requireAdmin.mockResolvedValue({ state: "authenticated", userId: "user-1" })
-  requireCurrentUserPermission.mockReset()
-  requireCurrentUserPermission.mockResolvedValue({ state: "authenticated", userId: "user-1" })
-})
 
 describe("route access", () => {
+  test("keeps internal locale rewrites from turning login into a protected route", async () => {
+    await expect(getRouteAccessDecision("/sv/login", null)).resolves.toEqual({ kind: "allow" })
+    await expect(getRouteAccessDecision("/en/news/new", userSession)).resolves.toEqual({ kind: "allow" })
+    await expect(getRouteAccessDecision("/de/admin/users", userSession)).resolves.toEqual({ kind: "forbidden" })
+  })
   test("allows public routes without a session", async () => {
     await expect(getRouteAccessDecision("/forgot-password", null)).resolves.toEqual({ kind: "allow" })
     await expect(getRouteAccessDecision("/activation-failed", null)).resolves.toEqual({ kind: "allow" })
-    expect(requireAdmin).not.toHaveBeenCalled()
   })
 
   test("allows authenticated users to access user routes", async () => {
     await expect(getRouteAccessDecision("/me", userSession)).resolves.toEqual({ kind: "allow" })
-  })
-
-  test("keeps impersonated sessions out of messaging routes", async () => {
-    await expect(getRouteAccessDecision("/messages", impersonatingSession)).resolves.toEqual({ kind: "forbidden" })
-    await expect(getRouteAccessDecision("/messages/conversation-1", impersonatingSession)).resolves.toEqual({
-      kind: "forbidden"
-    })
     await expect(getRouteAccessDecision("/messages", userSession)).resolves.toEqual({ kind: "allow" })
+    await expect(getRouteAccessDecision("/messages/conversation-1", userSession)).resolves.toEqual({ kind: "allow" })
   })
 
-  test("reserves profile editing for the real member while allowing profile and settings reads", async () => {
-    await expect(getRouteAccessDecision("/me/edit", impersonatingSession)).resolves.toEqual({ kind: "forbidden" })
+  test("requires authentication for profile editing and allows profile and settings reads", async () => {
     await expect(getRouteAccessDecision("/me/edit", userSession)).resolves.toEqual({ kind: "allow" })
     await expect(getRouteAccessDecision("/me/edit", null)).resolves.toEqual({
       kind: "redirect",
       location: "/login?returnTo=%2Fme%2Fedit"
     })
-    await expect(getRouteAccessDecision("/me", impersonatingSession)).resolves.toEqual({ kind: "allow" })
-    await expect(getRouteAccessDecision("/me/settings", impersonatingSession)).resolves.toEqual({ kind: "allow" })
+    await expect(getRouteAccessDecision("/me", userSession)).resolves.toEqual({ kind: "allow" })
+    await expect(getRouteAccessDecision("/me/settings", userSession)).resolves.toEqual({ kind: "allow" })
   })
 
   test("redirects unauthenticated users to sign in with the requested path", async () => {
@@ -99,23 +80,11 @@ describe("route access", () => {
   })
 
   test("forbids users from admin routes when authorization fails", async () => {
-    requireAdmin.mockRejectedValue(new Error("not an admin"))
-
     await expect(getRouteAccessDecision("/admin/users", userSession)).resolves.toEqual({ kind: "forbidden" })
-    expect(requireAdmin).toHaveBeenCalledWith(userSession)
   })
 
-  test("keeps non-admin users off the compose page", async () => {
-    requireAdmin.mockRejectedValue(new Error("not an admin"))
-
-    await expect(getRouteAccessDecision("/news/new", userSession)).resolves.toEqual({ kind: "forbidden" })
-    expect(requireAdmin).toHaveBeenCalledWith(userSession)
-    expect(requireCurrentUserPermission).not.toHaveBeenCalled()
-  })
-
-  test("lets an admin reach the compose page", async () => {
-    await expect(getRouteAccessDecision("/news/new", adminSession)).resolves.toEqual({ kind: "allow" })
-    expect(requireAdmin).toHaveBeenCalledWith(adminSession)
+  test("lets ordinary signed-in Users reach personal Post composition", async () => {
+    await expect(getRouteAccessDecision("/news/new", userSession)).resolves.toEqual({ kind: "allow" })
   })
 
   test("sends an unauthenticated visitor from the compose page to sign in", async () => {
@@ -123,16 +92,13 @@ describe("route access", () => {
       kind: "redirect",
       location: "/login?returnTo=%2Fnews%2Fnew"
     })
-    expect(requireCurrentUserPermission).not.toHaveBeenCalled()
   })
 
   test("leaves reading the news feed open to every user", async () => {
     await expect(getRouteAccessDecision("/news", userSession)).resolves.toEqual({ kind: "allow" })
-    expect(requireCurrentUserPermission).not.toHaveBeenCalled()
   })
 
   test("allows authorized users to access admin routes", async () => {
     await expect(getRouteAccessDecision("/admin/users", adminSession)).resolves.toEqual({ kind: "allow" })
-    expect(requireAdmin).toHaveBeenCalledWith(adminSession)
   })
 })

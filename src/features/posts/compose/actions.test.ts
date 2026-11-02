@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
 
 const POST_ID = "11111111-1111-4111-8111-111111111111"
 
-const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
+const requirePermission = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
+const resource = { id: POST_ID, authorId: "admin-1", publishedAt: null, discardedAt: null }
+const tx = { select: () => ({ from: () => ({ where: () => ({ for: async () => [resource] }) }) }) }
+mock.module("@/core/db", () => ({ db: { transaction: async (run: (tx: unknown) => Promise<unknown>) => run(tx) } }))
 const revalidatePath = mock(() => undefined)
 const redirect = mock((location: string) => {
   throw new Error(`NEXT_REDIRECT:${location}`)
@@ -18,10 +22,10 @@ class DeniedError extends Error {
   readonly code = "AUTHORIZATION_DENIED"
 }
 
-mock.module("@/core/auth/permissions.server", () => ({
-  requireAdmin,
+mock.module("@/core/authz", () => ({
+  requirePermission,
   AUTHORIZATION_DENIED: "AUTHORIZATION_DENIED",
-  AuthorizationDeniedError: DeniedError
+  AuthorizationDeniedError
 }))
 mock.module("../lifecycle", () => ({ createPost, saveDraft, editPublishedPost, unpublishPost, discardDraft }))
 mock.module("@/core/logging", () => ({ logger: { error: loggerError } }))
@@ -49,8 +53,8 @@ function postFormData({ title = TITLE, body = BODY, intent }: { title?: string; 
 }
 
 beforeEach(() => {
-  for (const fn of [requireAdmin, revalidatePath, redirect, loggerError]) fn.mockClear()
-  requireAdmin.mockResolvedValue({ state: "authenticated", userId: "admin-1" })
+  for (const fn of [requirePermission, revalidatePath, redirect, loggerError]) fn.mockClear()
+  requirePermission.mockResolvedValue({ state: "authenticated", userId: "admin-1" })
   createPost.mockReset()
   createPost.mockResolvedValue({ id: POST_ID })
   saveDraft.mockReset()
@@ -69,8 +73,8 @@ describe("writing a new Post", () => {
       `NEXT_REDIRECT:/news/${POST_ID}`
     )
 
-    expect(requireAdmin).toHaveBeenCalledWith()
-    expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: true })
+    expect(requirePermission).toHaveBeenCalledWith({ action: "post.create" }, tx)
+    expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: true }, tx)
     expect(revalidatePath).toHaveBeenCalledWith("/news")
   })
 
@@ -79,17 +83,17 @@ describe("writing a new Post", () => {
       `NEXT_REDIRECT:/news/${POST_ID}/edit`
     )
 
-    expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: false })
+    expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: false }, tx)
   })
 
   test("publishes only when Publish was pressed, never by default", async () => {
     await expect(actions.createPost(IDLE, postFormData())).rejects.toThrow(`NEXT_REDIRECT:/news/${POST_ID}/edit`)
 
-    expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ publish: false }))
+    expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ publish: false }), tx)
   })
 
-  test("refuses a non-admin User, without writing anything", async () => {
-    requireAdmin.mockRejectedValue(new DeniedError())
+  test("refuses a User without the post:create permission, without writing anything", async () => {
+    requirePermission.mockRejectedValue(new DeniedError())
 
     await expect(actions.createPost(IDLE, postFormData({ intent: "publish" }))).resolves.toEqual({
       status: "error",
@@ -101,7 +105,7 @@ describe("writing a new Post", () => {
   })
 
   test("treats a failed authorization lookup as retryable rather than a refusal", async () => {
-    requireAdmin.mockRejectedValue(new Error("connection refused"))
+    requirePermission.mockRejectedValue(new Error("connection refused"))
 
     await expect(actions.createPost(IDLE, postFormData())).resolves.toEqual({
       status: "error",
@@ -139,7 +143,8 @@ describe("writing a new Post", () => {
             ]
           }
         }
-      })
+      }),
+      tx
     )
   })
 
@@ -152,7 +157,7 @@ describe("writing a new Post", () => {
       values: { title: TITLE, body: plainText }
     })
 
-    expect(requireAdmin).not.toHaveBeenCalled()
+    expect(requirePermission).not.toHaveBeenCalled()
     expect(createPost).not.toHaveBeenCalled()
   })
 
@@ -166,7 +171,7 @@ describe("writing a new Post", () => {
       values: { title: TITLE, body: "  " }
     })
 
-    expect(requireAdmin).not.toHaveBeenCalled()
+    expect(requirePermission).not.toHaveBeenCalled()
     expect(createPost).not.toHaveBeenCalled()
   })
 
@@ -189,8 +194,11 @@ describe("working on a draft", () => {
       `NEXT_REDIRECT:/news/${POST_ID}/edit`
     )
 
-    expect(requireAdmin).toHaveBeenCalledWith()
-    expect(saveDraft).toHaveBeenCalledWith({ postId: POST_ID, authorId: "admin-1", content: CONTENT, publish: false })
+    expect(requirePermission).toHaveBeenCalledWith({ action: "post.update", context: { post: resource } }, tx)
+    expect(saveDraft).toHaveBeenCalledWith(
+      { postId: POST_ID, authorId: "admin-1", content: CONTENT, publish: false },
+      tx
+    )
   })
 
   test("publishes it explicitly and sends the Admin to its permalink", async () => {
@@ -198,7 +206,7 @@ describe("working on a draft", () => {
       `NEXT_REDIRECT:/news/${POST_ID}`
     )
 
-    expect(saveDraft).toHaveBeenCalledWith(expect.objectContaining({ publish: true }))
+    expect(saveDraft).toHaveBeenCalledWith(expect.objectContaining({ publish: true }), tx)
   })
 
   test("says the Post is gone when it is no longer a draft of theirs", async () => {
@@ -214,18 +222,18 @@ describe("working on a draft", () => {
 })
 
 describe("editing a published Post", () => {
-  test("needs an Admin, changes the Post and returns to its permalink", async () => {
+  test("needs post:update, changes the Post and returns to its permalink", async () => {
     await expect(actions.editPublishedPost(POST_ID, IDLE, postFormData())).rejects.toThrow(
       `NEXT_REDIRECT:/news/${POST_ID}`
     )
 
-    expect(requireAdmin).toHaveBeenCalledWith()
-    expect(editPublishedPost).toHaveBeenCalledWith({ postId: POST_ID, content: CONTENT })
+    expect(requirePermission).toHaveBeenCalledWith({ action: "post.update", context: { post: resource } }, tx)
+    expect(editPublishedPost).toHaveBeenCalledWith({ postId: POST_ID, content: CONTENT }, tx)
     expect(revalidatePath).toHaveBeenCalledWith(`/news/${POST_ID}`)
   })
 
-  test("refuses a non-admin User, without writing anything", async () => {
-    requireAdmin.mockRejectedValue(new DeniedError())
+  test("refuses a User without post:update, without writing anything", async () => {
+    requirePermission.mockRejectedValue(new DeniedError())
 
     await expect(actions.editPublishedPost(POST_ID, IDLE, postFormData())).resolves.toMatchObject({
       error: "writeUnauthorized"
@@ -244,16 +252,16 @@ describe("editing a published Post", () => {
 })
 
 describe("unpublishing a Post", () => {
-  test("needs an Admin, recalls the Post and returns to the feed", async () => {
+  test("needs post:update, recalls the Post and returns to the feed", async () => {
     await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news")
 
-    expect(requireAdmin).toHaveBeenCalledWith()
-    expect(unpublishPost).toHaveBeenCalledWith(POST_ID)
+    expect(requirePermission).toHaveBeenCalledWith({ action: "post.unpublish", context: { post: resource } }, tx)
+    expect(unpublishPost).toHaveBeenCalledWith(POST_ID, tx)
     expect(revalidatePath).toHaveBeenCalledWith(`/news/${POST_ID}`)
   })
 
-  test("refuses a non-admin User", async () => {
-    requireAdmin.mockRejectedValue(new DeniedError())
+  test("refuses a User without post:update", async () => {
+    requirePermission.mockRejectedValue(new DeniedError())
 
     await expect(actions.unpublishPost(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "writeUnauthorized" })
     expect(unpublishPost).not.toHaveBeenCalled()
@@ -278,13 +286,13 @@ describe("discarding a draft", () => {
   test("throws away the acting Admin's own draft and returns to the feed", async () => {
     await expect(actions.discardDraft(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news")
 
-    expect(requireAdmin).toHaveBeenCalledWith()
-    expect(discardDraft).toHaveBeenCalledWith({ postId: POST_ID, authorId: "admin-1" })
+    expect(requirePermission).toHaveBeenCalledWith({ action: "post.discard", context: { post: resource } }, tx)
+    expect(discardDraft).toHaveBeenCalledWith({ postId: POST_ID, authorId: "admin-1" }, tx)
     expect(revalidatePath).toHaveBeenCalledWith("/news")
   })
 
-  test("refuses a non-admin User", async () => {
-    requireAdmin.mockRejectedValue(new DeniedError())
+  test("refuses a User without post:create", async () => {
+    requirePermission.mockRejectedValue(new DeniedError())
 
     await expect(actions.discardDraft(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "writeUnauthorized" })
     expect(discardDraft).not.toHaveBeenCalled()

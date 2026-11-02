@@ -1,7 +1,6 @@
 import "server-only"
 
-import { AUTHENTICATION_REQUIRED } from "@/core/auth/session.server"
-import { getErrorCode } from "@/shared/errors"
+import { AuthorizationDeniedError } from "@/core/authz"
 import { MessagingAccessError } from "../model/messaging-error"
 import type { MessageCommandState } from "./composer/message-command-state"
 
@@ -12,7 +11,7 @@ export function messageCommandErrorState(error: unknown, text: string): MessageC
     error:
       error instanceof MessagingAccessError
         ? error.kind
-        : getErrorCode(error) === AUTHENTICATION_REQUIRED
+        : error instanceof AuthorizationDeniedError
           ? "sign-in-required"
           : "unexpected"
   }

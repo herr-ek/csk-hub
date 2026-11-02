@@ -1,7 +1,10 @@
+import { Suspense } from "react"
+import { requirePermission } from "@/core/authz"
 import { getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
+import { Skeleton } from "@/shared/ui/base/skeleton"
 import { createPost } from "./actions"
 import { PostForm } from "./PostForm"
 
@@ -16,12 +19,21 @@ async function ComposeHeader() {
   )
 }
 
+async function ComposeForm() {
+  await requirePermission({ action: "post.create" })
+  return (
+    <PostForm action={createPost} stage="draft" unsaved={{ slot: "new", version: "new" }} cancelHref={ROUTES.news} />
+  )
+}
+
 export function NewPostScreen() {
   return (
     <ContentPage fill>
       <PageBreadcrumb route="newsCompose" />
       <ComposeHeader />
-      <PostForm action={createPost} stage="draft" unsaved={{ slot: "new", version: "new" }} cancelHref={ROUTES.news} />
+      <Suspense fallback={<Skeleton className="h-56 w-full" />}>
+        <ComposeForm />
+      </Suspense>
     </ContentPage>
   )
 }

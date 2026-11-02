@@ -1,37 +1,35 @@
 import { beforeEach, expect, mock, test } from "bun:test"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
 
-const getSession = mock(async () => ({ session: { impersonatedBy: null as string | null } }))
 const command = mock(async () => ({ conversationId: "group-1" }))
 const revalidatePath = mock()
-mock.module("@/core/auth/session.server", () => ({
-  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
-  getRequestSession: getSession
-}))
+
 mock.module("next/cache", () => ({ revalidatePath }))
 mock.module("../../group-conversations", () => ({
   addGroupMembers: command,
   renameGroupConversation: command,
   leaveGroupConversation: command
 }))
+
 const { groupConversationAction } = await import("./group-actions")
 beforeEach(() => {
-  getSession.mockResolvedValue({ session: { impersonatedBy: null } })
-  command.mockClear()
+  command.mockReset().mockResolvedValue({ conversationId: "group-1" })
   revalidatePath.mockClear()
 })
 
-test("all Group Conversation mutations refuse support impersonation", async () => {
-  getSession.mockResolvedValue({ session: { impersonatedBy: "admin" } })
+test("all Group Conversation mutations report missing authentication", async () => {
+  const denied = new AuthorizationDeniedError({ action: "app.access" }, null)
+  command.mockRejectedValue(denied)
   for (const operation of ["add", "rename", "leave"]) {
     const form = new FormData()
     form.set("operation", operation)
     form.set("conversationId", "group-1")
     await expect(groupConversationAction({ status: "idle" }, form)).resolves.toMatchObject({
       status: "error",
-      error: "impersonation-unavailable"
+      error: "sign-in-required"
     })
   }
-  expect(command).not.toHaveBeenCalled()
+  expect(command).toHaveBeenCalledTimes(3)
   expect(revalidatePath).not.toHaveBeenCalled()
 })
 

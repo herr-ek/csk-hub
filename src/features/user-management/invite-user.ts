@@ -1,6 +1,6 @@
 import { headers } from "next/headers"
 import { auth } from "@/core/auth/auth"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
@@ -16,12 +16,12 @@ export type InviteUserResult =
 const INVITE_CONCURRENCY = 5
 
 export async function inviteUser(input: InviteUserInput): Promise<InviteUserResult> {
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   return inviteUserAsAdmin(input)
 }
 
 export async function inviteUsers(inputs: InviteUserInput[]): Promise<InviteUserResult[]> {
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   const results: InviteUserResult[] = []
 
   for (let index = 0; index < inputs.length; index += INVITE_CONCURRENCY) {
