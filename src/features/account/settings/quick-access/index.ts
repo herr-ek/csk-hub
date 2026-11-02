@@ -1,1 +1,0 @@
-export { QuickAccessSettings } from "./QuickAccessSettings"
