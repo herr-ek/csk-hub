@@ -1,25 +1,28 @@
 "use client"
 
-import { EllipsisIcon, MenuIcon } from "lucide-react"
+import { CalendarDays, CircleUser, EllipsisIcon, House, type LucideIcon, MessageCircle, Newspaper } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { type MouseEvent, type PointerEvent, type RefObject, Suspense, useEffect, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { cn } from "@/shared/utils"
-import { MobileNavigation } from "./MobileNavigation"
-import type { NavLinkItem } from "./NavLinks"
 import { isActiveRoute } from "./navigation-utils"
 import { slotIndexAt } from "./quick-access"
-import { ROUTE_ICONS } from "./route-icons"
-import type { MenuRouteId } from "./site"
+import { ROUTES } from "./site"
 
-export type QuickAccessShortcut = { id: MenuRouteId; href: string; label: string }
+type ShortcutLabel = "events" | "routes.news" | "routes.home" | "routes.messages" | "profile"
 
-export interface QuickAccessBarProps {
-  shortcuts: QuickAccessShortcut[]
-  /** The menu sheet's links, opened from the bar's last slot. */
-  items: NavLinkItem[]
-}
+/**
+ * The bar's slots, in order. Events has no page yet, so it opens Home for now and is never marked as the current page;
+ * `current: false` keeps it from lighting up alongside Home.
+ */
+const SHORTCUTS: { label: ShortcutLabel; href: string; icon: LucideIcon; current?: false }[] = [
+  { label: "events", href: ROUTES.home, icon: CalendarDays, current: false },
+  { label: "routes.news", href: ROUTES.news, icon: Newspaper },
+  { label: "routes.home", href: ROUTES.home, icon: House },
+  { label: "routes.messages", href: ROUTES.messages, icon: MessageCircle },
+  { label: "profile", href: ROUTES.account, icon: CircleUser }
+]
 
 /** Liquid Glass material: a clear grey tint (darkening light pages, lightening dark ones) with a light blur, a rim lit top and bottom, and a soft shadow. */
 const glass =
@@ -74,34 +77,34 @@ const DRAG_THRESHOLD_PX = 8
 const CLICK_SWALLOW_MS = 350
 
 /**
- * The member's quick-access shortcuts in a floating glass pill on small screens, with the menu in the last slot.
+ * The main sections in a floating glass pill on small screens.
  * Sliding a finger along the pill drags the highlight across the slots and opens the one it is released on.
  * While the page scrolls down the pill collapses into a single small button; tapping it or scrolling up restores it.
- * Renders nothing when the member has no shortcuts.
  */
-export function QuickAccessBar(props: QuickAccessBarProps) {
-  if (props.shortcuts.length === 0) return null
+export function QuickAccessBar() {
   return (
-    <Suspense fallback={<Bar {...props} pathname={null} />}>
-      <CurrentBar {...props} />
+    <Suspense fallback={<Bar pathname={null} />}>
+      <CurrentBar />
     </Suspense>
   )
 }
 
-function CurrentBar(props: QuickAccessBarProps) {
-  return <Bar {...props} pathname={usePathname()} />
+function CurrentBar() {
+  return <Bar pathname={usePathname()} />
 }
 
-function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: string | null }) {
+function Bar({ pathname }: { pathname: string | null }) {
   const t = useTranslations("Navigation")
   const router = useRouter()
   const [collapsed, setCollapsed] = useCollapseOnScroll(pathname)
-  const [menuOpen, setMenuOpen] = useState(false)
   useBottomBarOffset()
 
-  const slotCount = shortcuts.length + 1
-  const activeIndex = pathname === null ? -1 : shortcuts.findIndex((shortcut) => isActiveRoute(pathname, shortcut.href))
-  const CollapsedIcon = activeIndex === -1 ? EllipsisIcon : ROUTE_ICONS[shortcuts[activeIndex].id]
+  const slotCount = SHORTCUTS.length
+  const activeIndex =
+    pathname === null
+      ? -1
+      : SHORTCUTS.findIndex((shortcut) => shortcut.current !== false && isActiveRoute(pathname, shortcut.href))
+  const CollapsedIcon = activeIndex === -1 ? EllipsisIcon : SHORTCUTS[activeIndex].icon
 
   // The slot just chosen, held while its page loads so the lens does not fall back to the old page in the meantime.
   // It lapses by itself once the path changes.
@@ -113,10 +116,8 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
   const { dragIndex, pressed, startGesture, onClickCapture } = useDragToSelect(rowRef, slotCount, (index) => {
     // As on iOS, a drag released on the section already open keeps its current subpage; only a tap goes to its top.
     if (index === activeIndex) return
-    if (index < shortcuts.length) {
-      choose(index)
-      router.push(shortcuts[index].href)
-    } else setMenuOpen(true)
+    choose(index)
+    router.push(SHORTCUTS[index].href)
   })
   const lensIndex = dragIndex ?? pendingIndex ?? activeIndex
   const lensMoving = useIsMoving(lensIndex)
@@ -190,41 +191,18 @@ function Bar({ shortcuts, items, pathname }: QuickAccessBarProps & { pathname: s
                 )}
               />
             </span>
-            {shortcuts.map((shortcut, index) => {
-              const Icon = ROUTE_ICONS[shortcut.id]
-              return (
-                <Link
-                  key={shortcut.id}
-                  href={shortcut.href}
-                  aria-current={index === activeIndex ? "page" : undefined}
-                  onClick={() => choose(index)}
-                  className={slotClass(index === lensIndex)}
-                >
-                  <Icon className="size-6" aria-hidden="true" />
-                  <SlotLabel>{shortcut.label}</SlotLabel>
-                </Link>
-              )
-            })}
-            <MobileNavigation
-              items={items}
-              open={menuOpen}
-              onOpenChange={setMenuOpen}
-              trigger={{
-                render: (
-                  <button
-                    type="button"
-                    aria-label={t("openMenu")}
-                    className={slotClass(dragIndex === shortcuts.length)}
-                  />
-                ),
-                children: (
-                  <>
-                    <MenuIcon className="size-6" aria-hidden="true" />
-                    <SlotLabel>{t("menu")}</SlotLabel>
-                  </>
-                )
-              }}
-            />
+            {SHORTCUTS.map(({ label, href, icon: Icon }, index) => (
+              <Link
+                key={label}
+                href={href}
+                aria-current={index === activeIndex ? "page" : undefined}
+                onClick={() => choose(index)}
+                className={slotClass(index === lensIndex)}
+              >
+                <Icon className="size-6" aria-hidden="true" />
+                <SlotLabel>{t(label)}</SlotLabel>
+              </Link>
+            ))}
           </div>
           <button
             type="button"
