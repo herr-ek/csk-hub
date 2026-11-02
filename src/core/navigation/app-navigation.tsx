@@ -10,6 +10,7 @@ import { ThemeSwitch } from "../theme/ThemeSwitch"
 import { AccountMenu } from "./AccountMenu"
 import { MobileNavigation } from "./MobileNavigation"
 import { NavLinks } from "./NavLinks"
+import { QuickAccessBar } from "./QuickAccessBar"
 
 export type NavigationRoute = {
   id: NavigationRouteId
@@ -64,11 +65,18 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-3">
-          <Link href={ROUTES.home} className="font-semibold text-base tracking-normal">
+        {/*
+          On small screens the title is centred, with the avatar to its left and the menu to its right. From `md` up the
+          title leads and the links and avatar follow at the far end.
+        */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:flex md:gap-2">
+          <Link
+            href={ROUTES.home}
+            className="col-start-2 row-start-1 font-semibold text-base tracking-normal md:mr-auto"
+          >
             {app.name}
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="col-start-3 row-start-1 flex items-center justify-end gap-2">
             {/* Signed out there is only the login link, which fits on every screen. */}
             <nav aria-label={t("primary")} className={cn("items-center gap-1.5", config ? "hidden md:flex" : "flex")}>
               <NavLinks items={items} />
@@ -79,8 +87,12 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
                 <MobileNavigation items={items} />
               </div>
             ) : null}
-            {config ? <AccountMenu user={config.user} isImpersonating={isImpersonating} /> : null}
           </div>
+          {config ? (
+            <div className="col-start-1 row-start-1 flex">
+              <AccountMenu user={config.user} isImpersonating={isImpersonating} />
+            </div>
+          ) : null}
         </div>
         {config?.impersonatingUserName ? (
           <div className="rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground" role="status">
@@ -117,4 +129,18 @@ export async function RuntimeAppNavigation({ badges }: { badges?: NavigationBadg
       }
     />
   )
+}
+
+/** The quick-access bar for signed-in members on small screens. Render it after the page content, spacer last. */
+export function AppQuickAccessBar() {
+  return (
+    <Suspense fallback={null}>
+      <RuntimeQuickAccessBar />
+    </Suspense>
+  )
+}
+
+async function RuntimeQuickAccessBar() {
+  const session = await getRequestSession()
+  return session ? <QuickAccessBar /> : null
 }

@@ -159,6 +159,7 @@
     "closeMenu": "Stäng menyn",
     "breadcrumb": "Brödsmulor",
     "routes": {
+      "home": "Hem",
       "news": "Nyheter",
       "newsCompose": "Skriv ett inlägg",
       "messages": "Meddelanden",
@@ -170,7 +171,11 @@
       "adminOrgStructure": "Körer och stämmor",
       "adminOrgStructureGroups": "Grupper och poster"
     },
-    "members": "Medlemmar"
+    "members": "Medlemmar",
+    "quickAccess": "Snabbåtkomst",
+    "showQuickAccess": "Visa snabbåtkomst",
+    "events": "Evenemang",
+    "profile": "Profil"
   },
   "Posts": {
     "title": "Nyheter",

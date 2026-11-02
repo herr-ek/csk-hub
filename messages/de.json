@@ -159,6 +159,7 @@
     "closeMenu": "Menü schließen",
     "breadcrumb": "Brotkrümelnavigation",
     "routes": {
+      "home": "Startseite",
       "news": "Neuigkeiten",
       "newsCompose": "Beitrag schreiben",
       "messages": "Nachrichten",
@@ -170,7 +171,11 @@
       "adminOrgStructure": "Chöre und Stimmen",
       "adminOrgStructureGroups": "Gruppen und Ämter"
     },
-    "members": "Mitglieder"
+    "members": "Mitglieder",
+    "quickAccess": "Schnellzugriff",
+    "showQuickAccess": "Schnellzugriff anzeigen",
+    "events": "Veranstaltungen",
+    "profile": "Profil"
   },
   "Posts": {
     "title": "Neuigkeiten",

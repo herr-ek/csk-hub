@@ -1,4 +1,4 @@
-import { AppNavigation } from "@/core/navigation/app-navigation"
+import { AppNavigation, AppQuickAccessBar } from "@/core/navigation/app-navigation"
 import { UnreadPostsBadge } from "@/features/posts"
 
 export default function AuthenticatedAppLayout({
@@ -10,6 +10,7 @@ export default function AuthenticatedAppLayout({
     <>
       <AppNavigation badges={{ news: <UnreadPostsBadge /> }} />
       {children}
+      <AppQuickAccessBar />
     </>
   )
 }
