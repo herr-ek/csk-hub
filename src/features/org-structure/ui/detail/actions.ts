@@ -2,7 +2,6 @@
 
 import { z } from "zod"
 import { GroupType, shiftDate } from "@/core/org-structure"
-import { endAppointment, replaceAppointmentHolder } from "../../appointments"
 import { changeVoice, endMembership, placeSingerInSection, startMembership } from "../../membership"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
@@ -76,53 +75,5 @@ export async function changeVoiceAction(_state: GroupCommandState, formData: For
       if (!choirId) return { success: false, error: "not-a-singer" }
       return changeVoice(tx, { userId: input.userId, choirId, voice: input.voice, date: input.date })
     }
-  )
-}
-
-const assignHolderSchema = z.object({
-  groupId: fields.id,
-  positionId: fields.positionCode,
-  userId: fields.userId,
-  startDate: fields.date,
-  organisationYear: z.coerce.number().int().min(1000).max(9998).optional()
-})
-
-/** Gives a Position to a member, ending any current holder's holding on the same day. */
-export async function assignHolderAction(_state: GroupCommandState, formData: FormData) {
-  return runGroupCommand(
-    "assign-holder",
-    assignHolderSchema,
-    {
-      groupId: value(formData, "groupId"),
-      positionId: value(formData, "positionId"),
-      organisationYear: value(formData, "organisationYear"),
-      userId: value(formData, "userId"),
-      startDate: value(formData, "startDate")
-    },
-    (input, tx) =>
-      replaceAppointmentHolder(tx, {
-        contextGroupId: input.groupId,
-        positionCode: input.positionId,
-        userId: input.userId,
-        startDate: input.startDate,
-        organisationYear: input.organisationYear
-      })
-  )
-}
-
-const endHoldingSchema = z.object({
-  appointmentId: fields.id,
-  endDate: fields.date
-})
-
-export async function endHoldingAction(_state: GroupCommandState, formData: FormData) {
-  return runGroupCommand(
-    "end-holding",
-    endHoldingSchema,
-    {
-      appointmentId: value(formData, "appointmentId"),
-      endDate: value(formData, "endDate")
-    },
-    (input, tx) => endAppointment(tx, { ...input, endDate: shiftDate(input.endDate, 1) })
   )
 }

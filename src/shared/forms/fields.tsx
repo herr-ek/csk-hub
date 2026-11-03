@@ -156,6 +156,8 @@ type PickerFieldProps = FieldChrome & {
   required?: boolean
   /** The first day the calendar lets you pick, `YYYY-MM-DD` or a date-time. */
   min?: string
+  /** The last day the calendar lets you pick, `YYYY-MM-DD` or a date-time. */
+  max?: string
   /** The month the calendar opens on while empty, `YYYY-MM-DD` or a date-time. */
   defaultMonth?: string
 }
@@ -176,6 +178,7 @@ export function DateField({
   onValueChange,
   required,
   min,
+  max,
   defaultMonth
 }: PickerFieldProps) {
   const id = useId()
@@ -199,6 +202,7 @@ export function DateField({
         invalid={invalid}
         clearable={!required}
         min={min?.slice(0, 10)}
+        max={max?.slice(0, 10)}
         defaultMonth={defaultMonth?.slice(0, 10)}
       />
       <FormValue name={name} value={current} required={required} />

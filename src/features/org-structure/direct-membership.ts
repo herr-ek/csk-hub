@@ -1,6 +1,7 @@
 import "server-only"
 
-import { and, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import {
@@ -10,7 +11,8 @@ import {
   organisationYearPeriod,
   POSITION_DEFINITIONS,
   type PositionCode,
-  periodsCoverPeriod
+  periodsCoverPeriod,
+  sectionName
 } from "@/core/org-structure"
 import { contains, isVoiceDivision, type VoiceDivision } from "@/features/voice/model"
 import { appointmentMemberships } from "./appointment-memberships"
@@ -68,6 +70,33 @@ export async function listDirectMemberships(database: OrgStructureDatabase, grou
     .orderBy(user.name, directMembership.startDate)
 }
 
+/** Every direct Membership for one User, for Admin correction history. */
+export async function listDirectMembershipsOfUser(database: OrgStructureDatabase, userId: string) {
+  const owningChoir = alias(group, "direct_membership_choir")
+  const rows = await database
+    .select({
+      id: directMembership.id,
+      groupId: group.id,
+      groupName: group.name,
+      groupType: group.type,
+      choirName: owningChoir.name,
+      sectionVoice: section.voice,
+      startDate: directMembership.startDate,
+      endDate: directMembership.endDate,
+      voice: directMembership.voice
+    })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .leftJoin(section, eq(section.groupId, group.id))
+    .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
+    .where(eq(directMembership.userId, userId))
+    .orderBy(desc(directMembership.startDate))
+  return rows.map(({ groupType, choirName, sectionVoice, ...row }) => ({
+    ...row,
+    groupName: groupType === GroupType.Section ? sectionName(choirName, sectionVoice) : row.groupName
+  }))
+}
+
 /** Direct participation at an inclusive calendar date; never interprets a null end as current by itself. */
 export async function listDirectMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
   requireDate(date)
@@ -76,8 +105,32 @@ export async function listDirectMembersAt(database: OrgStructureDatabase, groupI
   )
 }
 
+/** Explicit correction of mistaken dates/placement, retaining the record's identity.
+ * Refuses any correction that strands an appointment, Choir-scoped member, or singer placement.
+ */
+export function correctDirectMembership(
+  database: OrgStructureDatabase,
+  input: {
+    membershipId: string
+    groupId: string
+    startDate: IsoDate
+    endDate: IsoDate | null
+    voice?: VoiceDivision | null
+  }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const current = await membershipForEdit(tx, input.membershipId)
+    await requireAllowedMembershipTransfer(tx, current.groupId, input.groupId)
+    const values = await membershipValues(tx, { ...input, userId: current.userId }, true)
+    await tx.update(directMembership).set(values).where(eq(directMembership.id, current.id))
+    await validateUserParticipation(tx, current.userId)
+    return { id: current.id }
+  })
+}
+
 /** Voice-only edits in a gig group retain the membership identity and dates.
  * Other changes close the previous period at `date` and open its successor.
+ * Use correctDirectMembership instead when fixing an erroneous historical record.
  */
 export function changeDirectMembership(
   database: OrgStructureDatabase,
@@ -154,8 +207,8 @@ async function requireAllowedMembershipTransfer(
     throw new RuleViolation("section-requires-placement")
 }
 
-async function membershipValues(tx: OrgStructureTransaction, input: MembershipInput) {
-  const target = await requireActiveGroup(tx, input.groupId)
+async function membershipValues(tx: OrgStructureTransaction, input: MembershipInput, correction = false) {
+  const target = correction ? await requireGroup(tx, input.groupId) : await requireActiveGroup(tx, input.groupId)
   const policy = GROUP_POLICIES[target.type]
   if (policy.directMembership === "no") throw new RuleViolation("direct-membership-forbidden")
   const startDate = requireDate(input.startDate)

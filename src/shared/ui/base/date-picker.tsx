@@ -35,6 +35,8 @@ type DatePickerProps = {
   clearable?: boolean
   /** The first day that can be picked. */
   min?: string
+  /** The last day the calendar lets you pick, `YYYY-MM-DD`. */
+  max?: string
   /** The month shown while there is no value; otherwise `min`'s month, or this month. */
   defaultMonth?: string
   className?: string
@@ -52,6 +54,7 @@ export function DatePicker({
   invalid,
   clearable,
   min,
+  max,
   defaultMonth,
   className
 }: DatePickerProps) {
@@ -92,7 +95,7 @@ export function DatePicker({
           locale={CALENDAR_LOCALES[locale] ?? enGB}
           selected={selected}
           defaultMonth={selected ?? toLocalDate(defaultMonth) ?? toLocalDate(min)}
-          disabled={min ? { before: toLocalDate(min) as Date } : undefined}
+          disabled={[...(min ? [{ before: toLocalDate(min) as Date }] : []), ...(max ? [{ after: toLocalDate(max) as Date }] : [])]}
           onSelect={(day) => {
             if (!day) return
             onValueChange(toIsoDate(day))
