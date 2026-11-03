@@ -1,58 +1,31 @@
 import { and, eq } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
-import { group, position } from "@/core/db/schema/org-structure"
+import { group, section } from "@/core/db/schema/org-structure"
+import { GroupType, type OrgStructureResult, sectionName } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
-import type { GroupType, OrgStructureResult } from "./model"
-import { createChoir, createGroup, createPosition } from "./structure"
+import { createChoir } from "./structure"
 
 /**
- * The structure the tests name: the scheme's Choirs and Sections, the Board and the Position
- * catalogue. Production gets the same from `bun run ops reference-data`, which this feature cannot
- * import; this copy is built through the module's own commands instead.
+ * The structural Choir and Section fixture shared by domain tests.
  */
 const STRUCTURE: {
-  choirs: { name: string; sections: { name: string; voice: Voice }[] }[]
-  positions: { name: string; groupTypes: GroupType[] }[]
+  choirs: { name: string; sections: { voice: Voice }[] }[]
 } = {
   choirs: [
     {
       name: "MK",
-      sections: [
-        { name: "MKT1", voice: "T1" },
-        { name: "MKT2", voice: "T2" },
-        { name: "MKB1", voice: "B1" },
-        { name: "MKB2", voice: "B2" }
-      ]
+      sections: [{ voice: "T1" }, { voice: "T2" }, { voice: "B1" }, { voice: "B2" }]
     },
     {
       name: "DK",
-      sections: [
-        { name: "DKS1", voice: "S1" },
-        { name: "DKS2", voice: "S2" },
-        { name: "DKA1", voice: "A1" },
-        { name: "DKA2", voice: "A2" }
-      ]
+      sections: [{ voice: "S1" }, { voice: "S2" }, { voice: "A1" }, { voice: "A2" }]
     },
     {
       name: "KK",
-      sections: [
-        { name: "KKS", voice: "S" },
-        { name: "KKA", voice: "A" },
-        { name: "KKT", voice: "T" },
-        { name: "KKB", voice: "B" }
-      ]
+      sections: [{ voice: "S" }, { voice: "A" }, { voice: "T" }, { voice: "B" }]
     }
-  ],
-  positions: [
-    { name: "Ordförande", groupTypes: ["Board"] },
-    { name: "Gigmästare", groupTypes: ["Board", "Gigmästeri"] },
-    { name: "Sexmästare", groupTypes: ["Board", "Sexmästeri"] },
-    { name: "Sexmästarinna", groupTypes: ["Sexmästeri"] },
-    { name: "Dirigent", groupTypes: ["Choir"] },
-    { name: "Notfiskal", groupTypes: ["Choir"] },
-    { name: "Konsertmästare", groupTypes: ["Choir", "Konsertmästeri"] },
-    { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] }
   ]
 }
 
@@ -61,8 +34,6 @@ export async function createOrgStructureTestDatabase() {
   const database = await createTestDatabase()
   if (!database) return undefined
   for (const choir of STRUCTURE.choirs) expectSuccess(await createChoir(database.db, choir))
-  expectSuccess(await createGroup(database.db, { name: "Styret", type: "Board" }))
-  for (const position of STRUCTURE.positions) expectSuccess(await createPosition(database.db, position))
   return fixture(database)
 }
 
@@ -78,20 +49,31 @@ function fixture({ db, drop }: TestDatabase) {
       return id
     },
 
-    /** The id of an active group by name, within a Choir when given. */
-    async groupId(name: string, choirName?: string) {
-      const choirId = choirName ? await this.groupId(choirName) : undefined
+    /** A singleton Group identity, independent of its localized label. */
+    async groupIdOfType(type: GroupType) {
       const [row] = await db
         .select({ id: group.id })
         .from(group)
-        .where(and(eq(group.name, name), eq(group.active, true), choirId ? eq(group.choirId, choirId) : undefined))
-      if (!row) throw new Error(`No active group named ${name}.`)
+        .where(and(eq(group.type, type), eq(group.active, true)))
+      if (!row) throw new Error(`No active Group of type ${type}.`)
       return row.id
     },
 
-    async positionId(name: string) {
-      const [row] = await db.select({ id: position.id }).from(position).where(eq(position.name, name))
-      if (!row) throw new Error(`No Position named ${name}.`)
+    /** The id of an active group by name, within a Choir when given. */
+    async groupId(name: string, choirName?: string) {
+      const choirId = choirName ? await this.groupId(choirName) : undefined
+      const owningChoir = alias(group, "fixture_owning_choir")
+      const rows = await db
+        .select({ group, choirName: owningChoir.name, sectionVoice: section.voice })
+        .from(group)
+        .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
+        .leftJoin(section, eq(section.groupId, group.id))
+        .where(and(eq(group.active, true), choirId ? eq(group.choirId, choirId) : undefined))
+      const row = rows.find(
+        ({ group: entry, choirName, sectionVoice }) =>
+          (entry.type === GroupType.Section ? sectionName(choirName, sectionVoice) : entry.name) === name
+      )?.group
+      if (!row) throw new Error(`No active group named ${name}.`)
       return row.id
     }
   }

@@ -1,0 +1,1268 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9fe0ab82-a163-4ba4-9bc2-1e60e1a6607c",
+  "prevIds": [
+    "90283ede-73a8-4123-a74e-063f96a042b5"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "direct_membership"
+      ],
+      "writes": [
+        "s|tbl|public.direct_membership",
+        "n|tbl|public.direct_membership",
+        "e|tbl|public.direct_membership",
+        "n|rel|public.direct_membership",
+        "n|type|public.direct_membership",
+        "n|rel|public.direct_membership_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_appointment"
+      ],
+      "writes": [
+        "s|tbl|public.position_appointment",
+        "n|tbl|public.position_appointment",
+        "e|tbl|public.position_appointment",
+        "n|rel|public.position_appointment",
+        "n|type|public.position_appointment",
+        "n|rel|public.position_appointment_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_type_position"
+      ],
+      "writes": [
+        "s|fk|public.group_type_position.group_type_position_position_id_position_id_fk",
+        "n|fk|public.group_type_position.group_type_position_position_id_position_id_fk",
+        "e|fk|public.group_type_position.group_type_position_position_id_position_id_fk",
+        "n|con|public.group_type_position.group_type_position_position_id_position_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.group_type_position",
+        "n|sch|public",
+        "e|col|public.group_type_position.position_id"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_holder"
+      ],
+      "writes": [
+        "s|fk|public.position_holder.position_holder_position_id_position_id_fk",
+        "n|fk|public.position_holder.position_holder_position_id_position_id_fk",
+        "e|fk|public.position_holder.position_holder_position_id_position_id_fk",
+        "n|con|public.position_holder.position_holder_position_id_position_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.position_holder",
+        "n|sch|public",
+        "e|col|public.position_holder.position_id"
+      ]
+    },
+    {
+      "statementType": "drop_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_group"
+      ],
+      "writes": [
+        "s|fk|public.position_group.position_group_position_id_position_id_fk",
+        "n|fk|public.position_group.position_group_position_id_position_id_fk",
+        "e|fk|public.position_group.position_group_position_id_position_id_fk",
+        "n|con|public.position_group.position_group_position_id_position_id_fk"
+      ],
+      "reads": [
+        "n|tbl|public.position_group",
+        "n|sch|public",
+        "e|col|public.position_group.position_id"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_member"
+      ],
+      "writes": [
+        "s|tbl|public.group_member",
+        "n|tbl|public.group_member",
+        "e|tbl|public.group_member",
+        "n|rel|public.group_member",
+        "n|type|public.group_member"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "group_type_position"
+      ],
+      "writes": [
+        "s|tbl|public.group_type_position",
+        "n|tbl|public.group_type_position",
+        "e|tbl|public.group_type_position",
+        "n|rel|public.group_type_position",
+        "n|type|public.group_type_position"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "position"
+      ],
+      "writes": [
+        "s|tbl|public.position",
+        "n|tbl|public.position",
+        "e|tbl|public.position",
+        "n|rel|public.position",
+        "n|type|public.position"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_holder"
+      ],
+      "writes": [
+        "s|tbl|public.position_holder",
+        "n|tbl|public.position_holder",
+        "e|tbl|public.position_holder",
+        "n|rel|public.position_holder",
+        "n|type|public.position_holder"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_group"
+      ],
+      "writes": [
+        "s|tbl|public.position_group",
+        "n|tbl|public.position_group",
+        "e|tbl|public.position_group",
+        "n|rel|public.position_group",
+        "n|type|public.position_group"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "group"
+      ],
+      "writes": [
+        "s|ck|public.group.group_name_not_blank_check",
+        "n|ck|public.group.group_name_not_blank_check",
+        "e|ck|public.group.group_name_not_blank_check",
+        "n|con|public.group.group_name_not_blank_check"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "e|col|public.group.name"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "group",
+        "organisation_year"
+      ],
+      "writes": [
+        "s|col|public.group.organisation_year",
+        "n|col|public.group.organisation_year",
+        "e|col|public.group.organisation_year"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "group",
+        "name"
+      ],
+      "writes": [
+        "s|colprop|public.group.name.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.name"
+      ],
+      "sqlHash": "162d8e61833cfd43"
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group",
+        "group_name_choir_active_unique"
+      ],
+      "writes": [
+        "s|idx|public.group_name_choir_active_unique",
+        "n|idx|public.group_name_choir_active_unique",
+        "e|idx|public.group_name_choir_active_unique",
+        "n|rel|public.group_name_choir_active_unique"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.name",
+        "n|col|public.group.choir_id"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "d60f2d369202c72a"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "direct_membership",
+        "direct_membership_group_idx"
+      ],
+      "writes": [
+        "s|idx|public.direct_membership_group_idx",
+        "n|idx|public.direct_membership_group_idx",
+        "e|idx|public.direct_membership_group_idx",
+        "n|rel|public.direct_membership_group_idx"
+      ],
+      "reads": [
+        "n|tbl|public.direct_membership",
+        "n|sch|public",
+        "n|col|public.direct_membership.group_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group",
+        "group_annual_identity_unique"
+      ],
+      "writes": [
+        "s|idx|public.group_annual_identity_unique",
+        "n|idx|public.group_annual_identity_unique",
+        "e|idx|public.group_annual_identity_unique",
+        "n|rel|public.group_annual_identity_unique"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.type",
+        "n|col|public.group.organisation_year"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group",
+        "group_continuing_singleton_unique"
+      ],
+      "writes": [
+        "s|idx|public.group_continuing_singleton_unique",
+        "n|idx|public.group_continuing_singleton_unique",
+        "e|idx|public.group_continuing_singleton_unique",
+        "n|rel|public.group_continuing_singleton_unique"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.type"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group",
+        "group_choir_team_unique"
+      ],
+      "writes": [
+        "s|idx|public.group_choir_team_unique",
+        "n|idx|public.group_choir_team_unique",
+        "e|idx|public.group_choir_team_unique",
+        "n|rel|public.group_choir_team_unique"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.type",
+        "n|col|public.group.choir_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "position_appointment",
+        "position_appointment_user_idx"
+      ],
+      "writes": [
+        "s|idx|public.position_appointment_user_idx",
+        "n|idx|public.position_appointment_user_idx",
+        "e|idx|public.position_appointment_user_idx",
+        "n|rel|public.position_appointment_user_idx"
+      ],
+      "reads": [
+        "n|tbl|public.position_appointment",
+        "n|sch|public",
+        "n|col|public.position_appointment.user_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "direct_membership"
+      ],
+      "writes": [
+        "s|fk|public.direct_membership.direct_membership_user_id_user_id_fkey",
+        "n|fk|public.direct_membership.direct_membership_user_id_user_id_fkey",
+        "e|fk|public.direct_membership.direct_membership_user_id_user_id_fkey",
+        "n|con|public.direct_membership.direct_membership_user_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.direct_membership",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.direct_membership.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "direct_membership"
+      ],
+      "writes": [
+        "s|fk|public.direct_membership.direct_membership_group_id_group_id_fkey",
+        "n|fk|public.direct_membership.direct_membership_group_id_group_id_fkey",
+        "e|fk|public.direct_membership.direct_membership_group_id_group_id_fkey",
+        "n|con|public.direct_membership.direct_membership_group_id_group_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.direct_membership",
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.direct_membership.group_id",
+        "n|col|public.group.id",
+        "e|uniqueness|public.group.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_appointment"
+      ],
+      "writes": [
+        "s|fk|public.position_appointment.position_appointment_user_id_user_id_fkey",
+        "n|fk|public.position_appointment.position_appointment_user_id_user_id_fkey",
+        "e|fk|public.position_appointment.position_appointment_user_id_user_id_fkey",
+        "n|con|public.position_appointment.position_appointment_user_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.position_appointment",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.position_appointment.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_appointment"
+      ],
+      "writes": [
+        "s|fk|public.position_appointment.position_appointment_context_group_id_group_id_fkey",
+        "n|fk|public.position_appointment.position_appointment_context_group_id_group_id_fkey",
+        "e|fk|public.position_appointment.position_appointment_context_group_id_group_id_fkey",
+        "n|con|public.position_appointment.position_appointment_context_group_id_group_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.position_appointment",
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.position_appointment.context_group_id",
+        "n|col|public.group.id",
+        "e|uniqueness|public.group.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "group"
+      ],
+      "writes": [
+        "s|ck|public.group.group_organisation_year_check",
+        "n|ck|public.group.group_organisation_year_check",
+        "e|ck|public.group.group_organisation_year_check",
+        "n|con|public.group.group_organisation_year_check"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.organisation_year"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "group"
+      ],
+      "writes": [
+        "s|ck|public.group.group_annual_active_check",
+        "n|ck|public.group.group_annual_active_check",
+        "e|ck|public.group.group_annual_active_check",
+        "n|con|public.group.group_annual_active_check"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.organisation_year",
+        "n|col|public.group.active"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "group"
+      ],
+      "writes": [
+        "s|ck|public.group.group_name_policy_check",
+        "n|ck|public.group.group_name_policy_check",
+        "e|ck|public.group.group_name_policy_check",
+        "n|con|public.group.group_name_policy_check"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.type",
+        "n|col|public.group.name"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "direct_membership",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "position_appointment",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "group_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "start_date",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "end_date",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "voice",
+        "type": "voice_division",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group",
+        "name": "organisation_year",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_code",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "context_group_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "organisation_year",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "start_date",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "end_date",
+        "type": "date",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "direct_membership_group_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "group_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group",
+        "name": "group_annual_identity_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "type",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "organisation_year",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"organisation_year\" IS NOT NULL",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group",
+        "name": "group_continuing_singleton_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "type",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"type\" = 'Föräldramötet'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group",
+        "name": "group_choir_team_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "type",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "choir_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"active\" AND \"type\" IN ('Roddgrupp', 'Festgrupp', 'Rephelg')",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_user_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "direct_membership_user_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "direct_membership_group_id_group_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "group_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_user_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_context_group_id_group_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "context_group_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "direct_membership_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "direct_membership_period_check",
+        "value": "\"end_date\" IS NULL OR \"end_date\" > \"start_date\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group",
+        "name": "group_organisation_year_check",
+        "value": "\"organisation_year\" IS NULL OR \"organisation_year\" BETWEEN 1000 AND 9998",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group",
+        "name": "group_annual_active_check",
+        "value": "\"organisation_year\" IS NULL OR \"active\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "group",
+        "name": "group_name_policy_check",
+        "value": "\n      CASE WHEN \"type\" IN ('Choir', 'Section', 'GigGroup', 'Övrig')\n        THEN \"name\" IS NOT NULL AND length(btrim(\"name\")) > 0\n        ELSE \"name\" IS NULL END\n    ",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_period_check",
+        "value": "\"end_date\" IS NULL OR \"end_date\" > \"start_date\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_year_check",
+        "value": "\"organisation_year\" IS NULL OR \"organisation_year\" BETWEEN 1000 AND 9998",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"group_member\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"group_type_position\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"position\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"position_holder\"]"
+    },
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"position_group\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"group_member\",\"user_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"group_member\",\"group_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"group_member\",\"start_date\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"group_member\",\"end_date\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"group_member\",\"voice\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"group_type_position\",\"type\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"group_type_position\",\"position_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position\",\"name\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position_holder\",\"user_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position_holder\",\"group_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position_holder\",\"position_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position_holder\",\"start_date\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position_holder\",\"end_date\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position_group\",\"position_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"position_group\",\"group_id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"group_member_current_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"group_member_groupId_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"position_name_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"position_holder_current_unique\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"position_holder_userId_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"position_group_groupId_idx\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"group_member\",\"group_member_user_id_user_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"group_member\",\"group_member_group_id_group_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"group_type_position\",\"group_type_position_position_id_position_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"position_holder\",\"position_holder_user_id_user_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"position_holder\",\"position_holder_group_id_group_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"position_holder\",\"position_holder_position_id_position_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"position_group\",\"position_group_position_id_position_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "fks\u0000[\"public\",\"position_group\",\"position_group_group_id_group_id_fk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"group_member\",\"group_member_user_id_group_id_start_date_pk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"group_type_position\",\"group_type_position_type_position_id_pk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"position\",\"position_pkey\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"position_holder\",\"position_holder_user_id_group_id_position_id_start_date_pk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"position_group\",\"position_group_position_id_group_id_pk\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"group\",\"group_name_not_blank_check\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"group_member\",\"group_member_period_check\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"position\",\"position_name_not_blank_check\"]"
+    },
+    {
+      "op": "drop",
+      "key": "checks\u0000[\"public\",\"position_holder\",\"position_holder_period_check\"]"
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"group\",\"name\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"group_name_choir_active_unique\"]",
+      "set": {
+        "where": "\"active\" AND \"name\" IS NOT NULL"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "uniques\u0000[\"public\",\"event\",\"event_id_type_unique\"]",
+      "set": {
+        "nameExplicit": true
+      }
+    }
+  ]
+}

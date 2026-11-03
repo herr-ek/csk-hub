@@ -1,7 +1,8 @@
 import "server-only"
 
 import { and, eq, isNull } from "drizzle-orm"
-import { group, groupMember } from "@/core/db/schema/org-structure"
+import { directMembership, group } from "@/core/db/schema/org-structure"
+import { GroupType } from "@/core/org-structure"
 import { type OrgStructureTransaction, RuleViolation } from "./operation"
 
 export type GroupRow = typeof group.$inferSelect
@@ -23,7 +24,7 @@ export async function requireChoir(tx: OrgStructureTransaction, choirId: string)
   const row = await requireGroup(tx, choirId).catch((error) => {
     throw error instanceof RuleViolation ? new RuleViolation("choir-not-found") : error
   })
-  if (row.type !== "Choir") throw new RuleViolation("choir-not-found")
+  if (row.type !== GroupType.Choir) throw new RuleViolation("choir-not-found")
   if (!row.active) throw new RuleViolation("group-archived")
   return row
 }
@@ -31,7 +32,9 @@ export async function requireChoir(tx: OrgStructureTransaction, choirId: string)
 export async function findCurrentMembership(tx: OrgStructureTransaction, userId: string, groupId: string) {
   const [row] = await tx
     .select()
-    .from(groupMember)
-    .where(and(eq(groupMember.userId, userId), eq(groupMember.groupId, groupId), isNull(groupMember.endDate)))
+    .from(directMembership)
+    .where(
+      and(eq(directMembership.userId, userId), eq(directMembership.groupId, groupId), isNull(directMembership.endDate))
+    )
   return row
 }

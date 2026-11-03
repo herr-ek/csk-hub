@@ -39,10 +39,14 @@ access. Types and minimal attribute projections are available through `@/core/au
 without importing the server entrypoint.
 
 Supply resource attributes such as `authorId` and `publishedAt`, not a decision such as
-`isOwnerOrAdmin`. Group work requires the Group, Membership records and Position holding
+`isOwnerOrAdmin`. Group work requires the Group, Membership records and Position appointment
 records. Policies match each relationship's User and Group and decide whether it is current;
-callers must not turn a holding or membership fact into a separate permission fallback.
-Membership/holding periods currently mean `endDate === null`, including future start dates.
+callers must not turn an appointment or membership fact into a separate permission fallback.
+Membership and appointment periods use Stockholm calendar dates: `startDate <= today` and
+`endDate === null || endDate > today`. Prepared appointments confer no current authority;
+current annual appointments remain valid until their exclusive end date.
+Appointment context IDs must match the represented Group; derived Membership in another
+Group does not by itself confer authority to represent that Group.
 Archived Groups deny Group operations even when their relationships remain current.
 Existing org-structure summary reads omit some required identity/period fields. Group policy
 adoption must extend or add focused read helpers there to supply the complete attributes.

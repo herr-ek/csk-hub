@@ -1,13 +1,13 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { holdsElectedPosts } from "@/core/org-structure"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
-import { holdsElectedPosts } from "../../model"
 import { CommandDialog } from "../command-dialog"
 import { assignHolderAction, endHoldingAction } from "./actions"
 import type { GroupDetail } from "./query"
@@ -108,8 +108,11 @@ function AssignHolderDialog({
   const t = useTranslations("Groups.detail")
   const electedPosts = holdsElectedPosts(detail.group.type)
   // In a group of elected posts, a member who already holds a post cannot take another.
-  const candidates = detail.members.filter(
-    ({ userId, positions }) => userId !== position.holder?.userId && !(electedPosts && positions.length > 0)
+  const candidates = detail.appointmentCandidates.filter(
+    ({ id }) =>
+      id !== position.holder?.userId &&
+      (!position.prerequisite || detail.members.some(({ userId }) => userId === id)) &&
+      !(electedPosts && detail.members.some((member) => member.userId === id && member.positions.length > 0))
   )
 
   return (
@@ -126,6 +129,9 @@ function AssignHolderDialog({
     >
       <input type="hidden" name="groupId" value={detail.group.id} />
       <input type="hidden" name="positionId" value={position.id} />
+      {position.organisationYear !== null ? (
+        <input type="hidden" name="organisationYear" value={position.organisationYear} />
+      ) : null}
       {electedPosts ? (
         <FieldDescription>{t("electedPostNotice", { group: detail.group.name })}</FieldDescription>
       ) : null}
@@ -136,7 +142,7 @@ function AssignHolderDialog({
           label={t("holder")}
           name="userId"
           required
-          options={candidates.map((member) => ({ value: member.userId, label: member.name }))}
+          options={candidates.map((member) => ({ value: member.id, label: member.name }))}
         />
       )}
       <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
@@ -171,7 +177,7 @@ function EndHoldingDialog({
     >
       <input type="hidden" name="groupId" value={detail.group.id} />
       <input type="hidden" name="positionId" value={position.id} />
-      <input type="hidden" name="userId" value={position.holder.userId} />
+      <input type="hidden" name="appointmentId" value={position.holder.appointmentId} />
       <InputField label={t("endDate")} name="endDate" defaultValue={today} type="date" required />
     </CommandDialog>
   )

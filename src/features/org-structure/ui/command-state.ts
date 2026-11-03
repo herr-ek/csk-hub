@@ -1,5 +1,5 @@
 import { ROUTES } from "@/core/navigation/site"
-import type { OrgStructureViolation } from "../model"
+import type { OrgStructureViolation } from "@/core/org-structure"
 
 /** Why an admin groups command failed: a rule the module enforces, bad form input, or anything else. */
 export type GroupCommandError = OrgStructureViolation | "invalid-input" | "unexpected"

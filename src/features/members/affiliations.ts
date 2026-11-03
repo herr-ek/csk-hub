@@ -1,57 +1,54 @@
-import type { GroupType } from "@/features/org-structure/model"
-import type { Voice, VoiceDivision } from "@/features/voice/model"
+import type { EffectiveGroup, EffectivePosition } from "@/core/org-structure"
+import { GroupType } from "@/core/org-structure"
 
-export type MemberGroup = {
-  groupId: string
-  name: string
-  type: GroupType
-  choirId: string | null
-  choirName: string | null
-  active: boolean
-  startDate: string
-  voice: VoiceDivision | null
-  sectionVoice: Voice | null
-}
+export type MemberGroup = EffectiveGroup
 
-export type MemberPosition = { groupId: string; positionId: string; name: string }
+export type MemberPosition = EffectivePosition
 
 /** Summaries preserve Group context; matching titles do not imply a shared appointment. */
 export function buildAffiliations(memberships: MemberGroup[], holdings: MemberPosition[]) {
   const activeGroups = memberships.filter((membership) => membership.active)
-  const positions = holdings.filter((holding) => activeGroups.some((group) => group.groupId === holding.groupId))
-  const groupPositions = (groupId: string) => positions.filter((holding) => holding.groupId === groupId)
+  const positions = holdings.filter((holding) =>
+    holding.affiliationGroups.some((context) => activeGroups.some((group) => group.groupId === context.id))
+  )
+  const groupPositions = (groupId: string) =>
+    positions.filter((holding) => holding.affiliationGroups.some((context) => context.id === groupId))
   const withPositions = (group: MemberGroup) => ({ ...group, positions: groupPositions(group.groupId) })
   const choirs = activeGroups
-    .filter((group) => group.type === "Choir")
+    .filter((group) => group.type === GroupType.Choir)
     .map((choir) => ({
       ...withPositions(choir),
       section:
         activeGroups
-          .filter((group) => group.type === "Section" && group.choirId === choir.groupId)
-          .map(withPositions)[0] ?? null,
+          .filter((group) => group.type === GroupType.Section && group.choirId === choir.groupId)
+          .map(withPositions)
+          .at(0) ?? null,
       groups: activeGroups
-        .filter((group) => group.choirId === choir.groupId && group.type !== "Section")
+        .filter((group) => group.choirId === choir.groupId && group.type !== GroupType.Section)
         .map(withPositions)
     }))
-  const groups = activeGroups.filter((group) => !group.choirId && group.type !== "Choir").map(withPositions)
+  const groups = activeGroups.filter((group) => !group.choirId && group.type !== GroupType.Choir).map(withPositions)
   // Archiving a Choir does not archive its other Groups. Keep those active Memberships visible.
   const otherGroups = activeGroups
     .filter(
-      (group) => group.choirId && group.type !== "Section" && !choirs.some((choir) => choir.groupId === group.choirId)
+      (group) =>
+        group.choirId && group.type !== GroupType.Section && !choirs.some((choir) => choir.groupId === group.choirId)
     )
     .map(withPositions)
-  const summary = [
-    ...new Map(
-      positions.map((position) => [position.positionId, { id: position.positionId, name: position.name }])
-    ).values()
-  ].map((position) => ({
-    ...position,
-    groups: positions
-      .filter((holding) => holding.positionId === position.id)
-      .flatMap((holding) => {
-        const group = activeGroups.find((group) => group.groupId === holding.groupId)
-        return group ? [{ id: group.groupId, name: group.name, choirName: group.choirName }] : []
-      })
+  const summary = positions.map((holding) => ({
+    id: holding.id,
+    positionCode: holding.positionCode,
+    name: holding.name,
+    contextGroupId: holding.contextGroupId,
+    contextName: holding.contextName,
+    contextType: holding.contextType,
+    contextChoirName: holding.contextChoirName,
+    organisationYear: holding.organisationYear,
+    startDate: holding.startDate,
+    endDate: holding.endDate,
+    groups: holding.affiliationGroups
+      .filter((context) => activeGroups.some((group) => group.groupId === context.id))
+      .map((context) => ({ id: context.id, name: context.name, choirName: context.choirName }))
   }))
   return { choirs, groups, otherGroups, positions: summary }
 }
