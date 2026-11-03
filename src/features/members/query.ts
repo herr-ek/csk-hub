@@ -6,6 +6,7 @@ import { db } from "@/core/db"
 import { loginPath, memberProfilePath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 import { findDirectConversation } from "@/features/messaging/reading"
+import { listLocalizedGroupLabels } from "@/features/org-structure"
 import { getOwnVoiceCapabilities } from "./edit-profile/service"
 import { getMemberProfile, InactiveViewerError, listMemberDirectory } from "./service"
 
@@ -25,8 +26,26 @@ export async function getProfile(memberId?: string) {
       canMessage ? findDirectConversation(db, session.user.id, targetId) : Promise.resolve(null)
     ])
     if (!profile) notFound()
+    const labels = await listLocalizedGroupLabels()
+    const groupLabel = (id: string) => labels.get(id) ?? id
+    const namedGroup = <T extends { groupId: string }>(item: T) => ({ ...item, name: groupLabel(item.groupId) })
+    const localizedProfile = {
+      ...profile,
+      choirs: profile.choirs.map((choir) => ({
+        ...namedGroup(choir),
+        section: choir.section ? namedGroup(choir.section) : null,
+        groups: choir.groups.map(namedGroup)
+      })),
+      groups: profile.groups.map(namedGroup),
+      otherGroups: profile.otherGroups.map(namedGroup),
+      positions: profile.positions.map((position) => ({
+        ...position,
+        contextName: groupLabel(position.contextGroupId),
+        groups: position.groups.map((item) => ({ ...item, name: groupLabel(item.id) }))
+      }))
+    }
     return {
-      profile,
+      profile: localizedProfile,
       canMessage,
       messageConversationId,
       canEditProfile: profile.isOwn && !session.session.impersonatedBy

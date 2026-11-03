@@ -730,7 +730,7 @@
       "endDate": "Slutdatum",
       "endMembership": "Avsluta medlemskap",
       "endMembershipTitle": "Avsluta {name}s medlemskap i {group}?",
-      "endsPositions": "Personens poster i gruppen avslutas också: {positions}.",
+      "endsPositions": "Avsluta eventuella beroende posttillsättningar innan du avslutar medlemskapet: {positions}.",
       "endsNoPositions": "Personen har inga poster i gruppen.",
       "endsChoirGroups": "Personens medlemskap och poster i alla grupper i {choir} avslutas också.",
       "changeVoice": "Byt stämma",
@@ -751,31 +751,32 @@
       "electedPostNotice": "I {group} har varje person bara en post, så medlemmar som redan har en visas inte.",
       "endHolding": "Avsluta",
       "endHoldingTitle": "Avsluta {name}s innehav av {position}?",
-      "endHoldingDescription": "Posten blir vakant. Medlemskapet påverkas inte."
+      "endHoldingDescription": "Posten blir vakant. Medlemskap som följer av tillsättningen upphör också; oberoende medlemskap fortsätter."
     },
     "types": {
       "Choir": "Kör",
       "Section": "Stämgrupp",
       "Board": "Styrelse",
       "GigGroup": "Giggrupp",
-      "Gigmästeri": "Gigmästeri",
-      "Sexmästeri": "Sexmästeri",
-      "Roddgrupp": "Roddgrupp",
-      "Festgrupp": "Festgrupp",
-      "Rephelg": "Rephelgsgrupp",
-      "Konsertmästeri": "Konsertmästeri",
-      "Rekryteringskommitté": "Rekryteringskommitté",
-      "Turnékommitté": "Turnékommitté",
-      "Valberedning": "Valberedning",
-      "Webmästeri": "Webmästeri",
-      "Föräldramötet": "Föräldramötet",
-      "Arkivarie": "Arkivarie",
-      "Utantillkommitté": "Utantillkommitté",
-      "Övrig": "Övrig"
+      "GigCommittee": "Gigmästeri",
+      "SocialCommittee": "Sexmästeri",
+      "EquipmentTeam": "Roddgrupp",
+      "PartyTeam": "Festgrupp",
+      "RehearsalWeekendTeam": "Rephelgsgrupp",
+      "ConcertCommittee": "Konsertmästeri",
+      "RecruitmentCommittee": "Rekryteringskommitté",
+      "TourCommittee": "Turnékommitté",
+      "NominationCommittee": "Valberedning",
+      "WebTeam": "Webmästeri",
+      "ParentsMeeting": "Föräldramötet",
+      "Archives": "Arkivariet",
+      "MemorisationCommittee": "Utantillkommitté",
+      "Other": "Övrig"
     },
     "errors": {
       "invalid-date": "Ange ett giltigt datum.",
       "group-not-found": "Gruppen kunde inte hittas.",
+      "annual-group-lifecycle-derived": "Årsgrupper följer sitt verksamhetsår och kan inte arkiveras manuellt.",
       "group-archived": "Gruppen är arkiverad och kan inte längre ändras.",
       "group-name-taken": "Det finns redan en aktiv grupp med det namnet här.",
       "choir-not-found": "Kören kunde inte hittas.",
@@ -803,9 +804,43 @@
       "already-holding-position": "Personen har redan posten.",
       "already-holding-elected-post": "I den här gruppen har en person bara en post, och personen har redan en.",
       "not-holding-position": "Personen har inte posten.",
-      "period-conflict": "Datumet överlappar en tidigare period. Välj ett senare datum.",
+      "period-conflict": "Perioden krockar med en annan post eller ligger utanför gruppens verksamhetsår. Kontrollera datumen.",
       "invalid-input": "Kontrollera formuläret och försök igen.",
-      "unexpected": "Något gick fel. Försök igen."
+      "unexpected": "Något gick fel. Försök igen.",
+      "invalid-group-name": "Ange ett gruppnamn som inte är tomt.",
+      "invalid-group-scope": "Välj en kör för denna grupptyp, eller ta bort kören för en CSK-gemensam typ.",
+      "group-has-participation": "Gruppen har deltagarposter. Hantera medlemskap och posttillsättningar innan typ, kör eller verksamhetsår ändras.",
+      "direct-membership-forbidden": "Medlemskap i denna grupp ges bara genom posttillsättningar.",
+      "membership-dependency": "En beroende posttillsättning eller ett medlemskap måste hanteras före ändringen.",
+      "group-type-taken": "Det finns redan en aktiv grupp av denna typ för kören. Redigera eller arkivera den befintliga gruppen innan en ny skapas.",
+      "annual-group-needs-year": "Denna årsgrupp saknar ett fastställt verksamhetsår. Förbered eller välj en grupp för rätt år, eller fastställ gruppens år innan deltagande läggs till eller korrigeras.",
+      "organisation-year-too-far-ahead": "Årsgrupper kan bara förberedas till och med nästa verksamhetsår.",
+      "group-name-derived": "Gruppens namn härleds från dess typ, verksamhetsår eller kör och kan inte ändras."
+    },
+    "positionLabels": {
+      "Chair": "Ordförande",
+      "ViceChair": "Vice ordförande",
+      "Treasurer": "Kassör",
+      "Secretary": "Sekreterare",
+      "PublicRelationsOfficer": "PR-mästare",
+      "FirstConcertMaster": "1:a konsertmästare",
+      "OrganisationGigCoordinator": "CSK-gigmästare",
+      "SocialCoordinator": "Sexmästare",
+      "DeputySocialCoordinator": "Sexmästarinna",
+      "FinancialOfficer": "Ekonomiskt ansvarig",
+      "Conductor": "Dirigent",
+      "MusicLibrarian": "Notfiskal",
+      "ChoirConcertMaster": "Körens konsertmästare",
+      "ChoirGigCoordinator": "Körens gigmästare",
+      "SectionParent": "Stämförälder",
+      "GigLeader": "Gigledare"
+    },
+    "labels": {
+      "annual": "{type} {year}",
+      "choirTeam": "{choir} · {type}"
+    },
+    "management": {
+      "year": "Verksamhetsår (startår)"
     }
   }
 }

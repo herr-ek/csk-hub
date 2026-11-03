@@ -16,6 +16,7 @@ import {
   rehearsal
 } from "@/core/db/schema/events"
 import { group } from "@/core/db/schema/org-structure"
+import { GroupType } from "@/core/org-structure"
 import { createTestDatabase } from "../../../test/database"
 
 // The constraints and triggers the database enforces by itself for Events, written to directly so
@@ -131,7 +132,10 @@ describe.skipIf(!database)("events schema constraints", () => {
 
     test("rejects the same rule twice, also when one side is empty", async () => {
       const eventId = await newEvent()
-      const [kk] = await db.insert(group).values({ name: "KK targets", type: "GigGroup" }).returning({ id: group.id })
+      const [kk] = await db
+        .insert(group)
+        .values({ name: "KK targets", type: GroupType.GigGroup })
+        .returning({ id: group.id })
       await db.insert(eventTarget).values([
         { eventId, voiceFamily: "B" },
         { eventId, groupId: kk.id },

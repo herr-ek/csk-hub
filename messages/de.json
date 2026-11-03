@@ -730,7 +730,7 @@
       "endDate": "Enddatum",
       "endMembership": "Mitgliedschaft beenden",
       "endMembershipTitle": "Mitgliedschaft von {name} in {group} beenden?",
-      "endsPositions": "Ihre Ämter in dieser Gruppe enden ebenfalls: {positions}.",
+      "endsPositions": "Beende abhängige Amtsbesetzungen, bevor du diese Mitgliedschaft beendest: {positions}.",
       "endsNoPositions": "Die Person hat in dieser Gruppe kein Amt inne.",
       "endsChoirGroups": "Ihre Mitgliedschaften und Ämter in allen Gruppen von {choir} enden ebenfalls.",
       "changeVoice": "Stimme ändern",
@@ -751,31 +751,32 @@
       "electedPostNotice": "In {group} hat jede Person nur ein Amt, daher werden Mitglieder mit einem Amt nicht angezeigt.",
       "endHolding": "Beenden",
       "endHoldingTitle": "Amt {position} von {name} beenden?",
-      "endHoldingDescription": "Das Amt wird unbesetzt. Die Mitgliedschaft bleibt bestehen."
+      "endHoldingDescription": "Das Amt wird vakant. Durch diese Besetzung begründete Mitgliedschaften enden ebenfalls; unabhängige Mitgliedschaften bleiben bestehen."
     },
     "types": {
       "Choir": "Chor",
       "Section": "Stimmgruppe",
       "Board": "Vorstand",
       "GigGroup": "Auftrittsgruppe",
-      "Gigmästeri": "Auftrittsausschuss",
-      "Sexmästeri": "Festausschuss",
-      "Roddgrupp": "Probenaufbau-Team",
-      "Festgrupp": "Festgruppe",
-      "Rephelg": "Probenwochenendgruppe",
-      "Konsertmästeri": "Konzertausschuss",
-      "Rekryteringskommitté": "Rekrutierungsausschuss",
-      "Turnékommitté": "Tourneeausschuss",
-      "Valberedning": "Wahlausschuss",
-      "Webmästeri": "Webausschuss",
-      "Föräldramötet": "Stimmeltern",
-      "Arkivarie": "Archivare",
-      "Utantillkommitté": "Auswendiglern-Ausschuss",
-      "Övrig": "Sonstige"
+      "GigCommittee": "Auftrittsausschuss",
+      "SocialCommittee": "Festausschuss",
+      "EquipmentTeam": "Probenaufbau-Team",
+      "PartyTeam": "Festgruppe",
+      "RehearsalWeekendTeam": "Probenwochenendgruppe",
+      "ConcertCommittee": "Konzertausschuss",
+      "RecruitmentCommittee": "Rekrutierungsausschuss",
+      "TourCommittee": "Tourneeausschuss",
+      "NominationCommittee": "Wahlausschuss",
+      "WebTeam": "Webausschuss",
+      "ParentsMeeting": "Stimmeltern",
+      "Archives": "Archivare",
+      "MemorisationCommittee": "Auswendiglern-Ausschuss",
+      "Other": "Sonstige"
     },
     "errors": {
       "invalid-date": "Gib ein gültiges Datum ein.",
       "group-not-found": "Die Gruppe wurde nicht gefunden.",
+      "annual-group-lifecycle-derived": "Jahresgruppen folgen ihrem Organisationsjahr und können nicht manuell archiviert werden.",
       "group-archived": "Diese Gruppe ist archiviert und kann nicht mehr geändert werden.",
       "group-name-taken": "Hier gibt es bereits eine aktive Gruppe mit diesem Namen.",
       "choir-not-found": "Der Chor wurde nicht gefunden.",
@@ -803,9 +804,43 @@
       "already-holding-position": "Diese Person hat dieses Amt bereits inne.",
       "already-holding-elected-post": "In dieser Gruppe hat eine Person nur ein Amt, und diese Person hat bereits eines.",
       "not-holding-position": "Diese Person hat dieses Amt nicht inne.",
-      "period-conflict": "Das Datum überschneidet sich mit einem früheren Zeitraum. Wähle ein späteres Datum.",
+      "period-conflict": "Der Zeitraum überschneidet sich mit einem anderen Eintrag oder liegt außerhalb des Organisationsjahres der Gruppe. Bitte prüfe die Daten.",
       "invalid-input": "Prüfe das Formular und versuche es erneut.",
-      "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+      "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+      "invalid-group-name": "Gib einen nicht leeren Gruppennamen ein.",
+      "invalid-group-scope": "Wähle für diesen Gruppentyp einen Chor oder entferne den Chor bei einem CSK-weiten Typ.",
+      "group-has-participation": "Diese Gruppe hat Teilnahmeeinträge. Bearbeite Mitgliedschaften und Amtsbesetzungen, bevor du Typ, Chor oder Jahr änderst.",
+      "direct-membership-forbidden": "Die Mitgliedschaft in dieser Gruppe entsteht ausschließlich durch Amtsbesetzungen.",
+      "membership-dependency": "Eine abhängige Amtsbesetzung oder Mitgliedschaft muss vor dieser Änderung bearbeitet werden.",
+      "group-type-taken": "Für diesen Chor besteht bereits eine aktive Gruppe dieses Typs. Bearbeite oder archiviere die bestehende Gruppe, bevor du eine weitere erstellst.",
+      "annual-group-needs-year": "Diese Jahresgruppe hat noch kein festgelegtes Jahr. Bereite eine Gruppe für das gewünschte Jahr vor oder wähle sie aus, oder kläre zuerst das Jahr dieser Gruppe, bevor du die Teilnahme hinzufügst oder korrigierst.",
+      "organisation-year-too-far-ahead": "Jahresgruppen können nur bis zum nächsten Organisationsjahr vorbereitet werden.",
+      "group-name-derived": "Die Bezeichnung dieser Gruppe wird aus Typ, Organisationsjahr oder Chor abgeleitet und kann nicht geändert werden."
+    },
+    "positionLabels": {
+      "Chair": "Vorsitzende:r",
+      "ViceChair": "Stellvertretende:r Vorsitzende:r",
+      "Treasurer": "Schatzmeister:in",
+      "Secretary": "Sekretär:in",
+      "PublicRelationsOfficer": "PR-Beauftragte:r",
+      "FirstConcertMaster": "1. Konzertmeister:in",
+      "OrganisationGigCoordinator": "CSK-Gigmeister:in",
+      "SocialCoordinator": "Festbeauftragte:r",
+      "DeputySocialCoordinator": "Festkomitee-Beauftragte:r",
+      "FinancialOfficer": "Finanzbeauftragte:r",
+      "Conductor": "Dirigent:in",
+      "MusicLibrarian": "Notenwart:in",
+      "ChoirConcertMaster": "Chor-Konzertmeister:in",
+      "ChoirGigCoordinator": "Chor-Gigmeister:in",
+      "SectionParent": "Stimmgruppen-Elternteil",
+      "GigLeader": "Gigleitung"
+    },
+    "labels": {
+      "annual": "{type} {year}",
+      "choirTeam": "{choir} · {type}"
+    },
+    "management": {
+      "year": "Organisationsjahr (Startjahr)"
     }
   }
 }

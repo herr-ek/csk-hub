@@ -28,7 +28,7 @@ in authz when migrating the current Admin guards.
 Features import `@/core/authz`; authorization imports `core/auth`, `core/db` and generic shared
 helpers, never features. Authorization declares minimal attribute types derived from database
 schemas, resolves a fresh session and reloads the current User's role/status. It does not load
-Posts, Groups, Memberships or Position holdings. Features load those facts through trusted server
+Posts, Groups, Memberships or Position appointments. Features load those facts through trusted server
 reads and supply them as context. Organisational reads use org-structure's read helpers and writes
 still go through its commands; document validation also remains feature-owned.
 
@@ -50,7 +50,7 @@ server-side actor/resource diagnostics.
 For several checks in one operation, `forCurrentRequest(tx?)` resolves a single immutable actor
 snapshot. Its `can` and `requirePermission` methods evaluate synchronously without I/O. Use
 `access.actor.userId`, after handling a null actor, when loading actor-specific Memberships and
-Position holdings. Pass raw relationship attributes, including User and Group IDs and period
+Position appointments. Pass raw relationship attributes, including User and Group IDs and period
 fields; policies match the actor and exact Group and decide whether relationships are current.
 There are no standalone Membership/Position fact helpers in authz. The existing org-structure
 helpers `listCurrentGroupsOfUser` and `listCurrentPositionsOfUser` return summaries, not complete
@@ -58,10 +58,10 @@ authz contexts: they omit some required identity/period fields. When adopting Gr
 extend or add focused org-structure read helpers that expose the required attributes; do not
 pass summary rows directly or replace missing facts with precomputed permission booleans.
 
-Position UUIDs identify specific records; mutable display names and environment-specific seed
-UUIDs must not become hardcoded policy identities. Current Group policies require any current
-Position holding in the exact Group. Specific Choir Position grants are deferred, so no
-semantic-key migration is introduced now.
+Positions have fixed semantic codes and appointments identify the concrete Group context.
+Current Group policies require a current appointment in that exact context, together with
+current effective Membership there. Membership granted in a different Group does not imply
+representation authority. Specific Choir Position grants remain deferred.
 
 ## Policies available against today's schema
 
@@ -90,7 +90,7 @@ The Group requests express authority to represent a Group. They are **not** perm
 another author's private Draft, update an arbitrary Post ID, change any Event, or read a
 Conversation. Resource instance policies must verify the resource's owning/organiser Group.
 Choir publishing and Event management stay Admin-only for now. No grant propagates through
-`choirId`, between linked Position holdings, or from the Board to unrelated Groups.
+`choirId`, through appointment-granted Memberships, or from the Board to unrelated Groups.
 
 `post.*` currently operates on the existing personal Post schema. Group attribution, targets and
 recall require the coordinated feature change below. `user.administer` does not replace Better
@@ -295,31 +295,19 @@ Keep field-level rules for Response reasons and Registration answers, and Sectio
 Stämförälder attendance authority, explicit when those features are implemented. Rich text itself
 has no independent protected persistence workflow.
 
-## Future organisational period change: always coordinated
+## Organisational periods and appointments
 
-Today, both org-structure and authz mean **`endDate IS NULL`**. A future start grants current
-status immediately. A future end removes current status immediately. Stage one preserves those
-consequences and adds contract tests; it does not introduce a shared period helper or reinterpret
-dates inside authz alone.
+Org-structure and authz use Stockholm calendar dates with `[startDate, endDate)` periods.
+A prepared future start confers no current status; a future end retains current status until
+that exclusive boundary. The shared `cskToday()` clock keeps both modules on the same date.
+The authorization parity tests cover preparation, dated current terms, expiry and archival.
 
-The agreed future direction is Stockholm calendar dates with `[startDate, endDate)` periods.
-Before adopting it, change the following together:
+The organisation redesign replaces mutable Position records and linked holdings with fixed
+Position codes and contextual appointments. Range exclusions protect overlapping direct
+Memberships, appointment occupancy and Board exclusivity. Features adopting Group policies
+must supply effective Membership periods and appointment context/period attributes from trusted
+org-structure reads, including User identity; summary reads alone remain insufficient.
 
-1. Audit existing Memberships/holdings for overlaps, future dates, zero-length terms and partial
-   linked holdings. Partial unique indexes protect open-ended rows, not effective-date overlap.
-2. Define scheduling and immediate termination consistently, including cascades. Update
-   `membership.ts`, `positions.ts`, `linked-positions.ts`, `lookup.ts` and relevant `structure.ts`
-   constraints; same-user holding checks currently do not exclude every cross-user overlap.
-3. Strengthen transactional/range invariants for one effective holder and elected Position rules.
-   Coordinate with per-user/Group locking instead of assuming the current indexes enforce ranges.
-4. Update `reads.ts`, `ui/detail/query.ts`, `ui/group-summaries.ts`, other organisational consumers,
-   authz relationship policies and fixtures, feature-owned fact reads and relevant schema
-   documentation in one change. Update historical Event audience calculations too: the design
-   schema currently uses an inclusive end date.
-5. Extend parity tests for before/on/after start/end, future handover, same-day replacement,
-   departure cascades, archive behavior and concurrent changes. Update the glossary only when
-   org and authz adopt the new definition together.
-
-Historical Post access for former Choir/Section members, finer Choir Position grants, and a
-persistent identity for linked appointments remain separate investigations. Neither static
-Position names nor the existence of an old Membership should silently grant access meanwhile.
+Historical Post access for former Choir/Section members and finer Choir Position grants remain
+separate investigations. Neither a Position label nor the existence of an old Membership grants
+access meanwhile.

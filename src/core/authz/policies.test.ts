@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test"
+import { cskToday, GroupType, PositionCode, shiftDate } from "@/core/org-structure"
 import type {
   AuthorizationActor,
   GroupAttributes,
   MembershipAttributes,
   PermissionContext,
   PermissionRequest,
-  PositionHoldingAttributes,
+  PositionAppointmentAttributes,
   PostAttributes
 } from "./model"
 import { evaluatePermission } from "./policy-registry"
@@ -23,18 +24,24 @@ function post(state: "draft" | "published" | "discarded", authorId: string | nul
   }
 }
 
-const group: GroupAttributes = { id: "group", type: "Board", active: true }
+const group: GroupAttributes = { id: "group", type: GroupType.Board, active: true }
 const membership: MembershipAttributes = {
   groupId: group.id,
   userId: owner.userId,
   startDate: "2020-01-01",
   endDate: null
 }
-const holding: PositionHoldingAttributes = { ...membership, positionId: "position" }
+const holding: PositionAppointmentAttributes = {
+  userId: owner.userId,
+  contextGroupId: group.id,
+  positionCode: PositionCode.Chair,
+  startDate: membership.startDate,
+  endDate: null
+}
 const groupContext: PermissionContext["group.manageContent"] = {
   group,
   memberships: [membership],
-  positionHoldings: [holding]
+  positionAppointments: [holding]
 }
 
 describe("personal Post policies", () => {
@@ -91,14 +98,14 @@ describe("Group policies", () => {
       expect(evaluatePermission(owner, { action, context: groupContext })).toBe(true)
       expect(evaluatePermission(other, { action, context: groupContext })).toBe(false)
       expect(evaluatePermission(owner, { action, context: { ...groupContext, memberships: [] } })).toBe(false)
-      expect(evaluatePermission(owner, { action, context: { ...groupContext, positionHoldings: [] } })).toBe(false)
+      expect(evaluatePermission(owner, { action, context: { ...groupContext, positionAppointments: [] } })).toBe(false)
       expect(
         evaluatePermission(owner, { action, context: { ...groupContext, group: { ...group, id: "another-group" } } })
       ).toBe(false)
       expect(
         evaluatePermission(owner, {
           action,
-          context: { ...groupContext, positionHoldings: [{ ...holding, userId: other.userId }] }
+          context: { ...groupContext, positionAppointments: [{ ...holding, userId: other.userId }] }
         })
       ).toBe(false)
       expect(
@@ -112,10 +119,10 @@ describe("Group policies", () => {
 
   test("Choir work and Membership/Position administration require explicit Admin authority", () => {
     for (const action of ["group.publishPost", "group.manageContent", "group.manageEvents"] as const) {
-      const context = { ...groupContext, group: { ...group, type: "Choir" as const } }
+      const context = { ...groupContext, group: { ...group, type: GroupType.Choir } }
       expect(evaluatePermission(owner, { action, context })).toBe(false)
       expect(evaluatePermission(admin, { action, context })).toBe(true)
-      expect(evaluatePermission(admin, { action, context: { group, memberships: [], positionHoldings: [] } })).toBe(
+      expect(evaluatePermission(admin, { action, context: { group, memberships: [], positionAppointments: [] } })).toBe(
         true
       )
     }
@@ -139,25 +146,29 @@ describe("Group policies", () => {
     }
   })
 
-  test("periods retain the existing open-ended semantics for future start and end dates", () => {
-    const context = {
-      group,
-      memberships: [{ ...membership, startDate: "2999-01-01" }],
-      positionHoldings: [{ ...holding, startDate: "2999-01-01" }]
+  test("periods exclude prepared and ended participation and include current dated terms", () => {
+    const today = cskToday()
+    const tomorrow = shiftDate(today, 1)
+    for (const field of ["memberships", "positionAppointments"] as const) {
+      const period = field === "memberships" ? membership : holding
+      for (const dates of [
+        { startDate: tomorrow, endDate: null },
+        { startDate: membership.startDate, endDate: today }
+      ]) {
+        expect(
+          evaluatePermission(owner, {
+            action: "group.manageContent",
+            context: { ...groupContext, [field]: [{ ...period, ...dates }] }
+          })
+        ).toBe(false)
+      }
+      expect(
+        evaluatePermission(owner, {
+          action: "group.manageContent",
+          context: { ...groupContext, [field]: [{ ...period, startDate: today, endDate: tomorrow }] }
+        })
+      ).toBe(true)
     }
-    expect(evaluatePermission(owner, { action: "group.manageContent", context })).toBe(true)
-    expect(
-      evaluatePermission(owner, {
-        action: "group.manageContent",
-        context: { ...context, memberships: [{ ...membership, endDate: "2999-02-01" }] }
-      })
-    ).toBe(false)
-    expect(
-      evaluatePermission(owner, {
-        action: "group.manageContent",
-        context: { ...context, positionHoldings: [{ ...holding, endDate: "2999-02-01" }] }
-      })
-    ).toBe(false)
   })
 })
 

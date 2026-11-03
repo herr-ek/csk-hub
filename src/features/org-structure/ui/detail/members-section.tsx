@@ -54,7 +54,7 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
         <CardTitle>{t("membersTitle", { count: detail.members.length })}</CardTitle>
-        {group.active ? <AddMemberDialog detail={detail} today={today} /> : null}
+        {group.active && detail.directMembershipAllowed ? <AddMemberDialog detail={detail} today={today} /> : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         {detail.members.length === 0 ? (
@@ -95,7 +95,7 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
                       {isSection && group.active ? (
                         <ChangeVoiceDialog detail={detail} member={member} today={today} />
                       ) : null}
-                      <EndMembershipDialog detail={detail} member={member} today={today} />
+                      {member.direct ? <EndMembershipDialog detail={detail} member={member} today={today} /> : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -130,7 +130,7 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
                 </TableHeader>
                 <TableBody>
                   {pastMembers.sorted.map((past) => (
-                    <TableRow key={`${past.userId}-${past.startDate}`}>
+                    <TableRow key={past.id}>
                       <TableCell>{past.name}</TableCell>
                       {isSection ? <TableCell>{past.voice}</TableCell> : null}
                       <TableCell>{t("periodValue", { start: past.startDate, end: past.endDate })}</TableCell>

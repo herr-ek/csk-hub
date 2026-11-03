@@ -65,7 +65,7 @@ const ANNOUNCEMENTS = [
   ],
   [
     "Konsertmästeriet söker medhjälpare",
-    "Konsertmästeriet behöver hjälp med planering och praktiska förberedelser. Du kan vara medlem i gruppen utan att inneha en särskild Position.",
+    "Konsertmästeriet behöver hjälp med planering och praktiska förberedelser. Du kan vara medlem i gruppen utan att inneha en särskild post.",
     ["Hjälp till med publikvärdskap.", "Var med och förbered scenen.", "Stäm av arbetsfördelningen före konserten."]
   ],
   [
@@ -79,7 +79,7 @@ const ANNOUNCEMENTS = [
   ],
   [
     "Rekrytering: välkomna nya sångare",
-    "Rekryteringskommittén förbereder information för blivande medlemmar. En Admin bjuder in varje ny User till Hubben och placerar sångaren i kör och sektion.",
+    "Rekryteringskommittén förbereder information för blivande medlemmar. En Admin bjuder in varje ny medlem till Hubben och placerar sångaren i kör och sektion.",
     [
       "Berätta om de tre körernas olika repertoarer.",
       "Hjälp nya sångare att hitta på repetitionen.",
@@ -88,7 +88,7 @@ const ANNOUNCEMENTS = [
   ],
   [
     "Föräldramötet samlar Stämföräldrarna",
-    "Stämföräldrarna från de tolv sektionerna möts för att dela erfarenheter. Det finns en Stämförälder per sektion, även när sektionen sjunger en hel röstfamilj.",
+    "Stämföräldrarna från de tolv sektionerna och årets Sekreterare möts för att dela erfarenheter. Det finns en Stämförälder per sektion, även när sektionen sjunger en hel röstfamilj.",
     ["Ta med frågor från din sektion.", "Dela bra sätt att välkomna nya sångare.", "Stäm av stöd inför nästa konsert."]
   ],
   [
@@ -101,12 +101,12 @@ const ANNOUNCEMENTS = [
     ]
   ],
   [
-    "Arkivet efterlyser gamla konsertprogram",
-    "Arkivgruppen samlar minnen från tidigare konserter. Program, foton och anteckningar hjälper oss att förstå hur föreningens musik och traditioner har vuxit fram.",
+    "Arkivariet efterlyser gamla konsertprogram",
+    "Arkivariet samlar minnen från tidigare konserter. Program, foton och anteckningar hjälper oss att förstå hur föreningens musik och traditioner har vuxit fram.",
     [
       "Skriv vilket år materialet kommer från.",
       "Ange fotograf när det är känt.",
-      "Kontakta arkivgruppen innan du lämnar original."
+      "Kontakta Arkivariet innan du lämnar original."
     ]
   ],
   [
@@ -120,7 +120,7 @@ const ANNOUNCEMENTS = [
   ],
   [
     "Valberedningen berättar om årets arbete",
-    "Valberedningen samlar intresse för föreningens valda Positioner. En Position i Styret är ett organisatoriskt uppdrag och ger inte automatiskt Admin-behörighet i Hubben.",
+    "Valberedningen samlar intresse för föreningens valda poster. En post i Styret är ett organisatoriskt uppdrag och ger inte automatiskt Admin-behörighet i Hubben.",
     [
       "Fundera på vilket arbete du vill bidra med.",
       "Fråga nuvarande innehavare hur uppdraget fungerar.",
@@ -129,12 +129,8 @@ const ANNOUNCEMENTS = [
   ],
   [
     "Tack för jubileumskonserten",
-    "Jubileumskommittén har avslutat sitt uppdrag. Gruppen arkiveras, medan Memberships och Positioner med sina perioder finns kvar som historia.",
-    [
-      "Återlämna lånad utrustning.",
-      "Lämna dokumentation till arkivgruppen.",
-      "Dela erfarenheter med nästa projektgrupp."
-    ]
+    "Jubileumskommittén har avslutat sitt uppdrag. Gruppen är arkiverad och tidigare medlemskap finns kvar som historia.",
+    ["Återlämna lånad utrustning.", "Lämna dokumentation till Arkivariet.", "Dela erfarenheter med nästa projektgrupp."]
   ],
   [
     "Damkörens nya konsertprogram",
@@ -166,7 +162,7 @@ const ANNOUNCEMENTS = [
   ],
   [
     "Webmästeriets tips för Hubben",
-    "På din profilsida ser du körer, grupper och Positioner. Röstförmågor är dina egna uppgifter; den division du är placerad i ändras av en Admin.",
+    "På din profilsida ser du körer, grupper och poster. Röstförmågor är dina egna uppgifter; den division du är placerad i ändras av en Admin.",
     [
       "Uppdatera vilka divisioner du kan sjunga.",
       "Kontrollera att din organisationsinformation stämmer.",
@@ -180,7 +176,7 @@ const ANNOUNCEMENTS = [
   ],
   [
     "Gigmästarna samordnar körernas uppdrag",
-    "Varje kör har en egen Gigmästare som också arbetar i det gemensamma Gigmästeriet. Det är samma namngivna Position i två grupper, med en tydlig köranknytning.",
+    "Varje kör har en egen Gigmästare som också arbetar i det gemensamma Gigmästeriet. En enda utnämning med kören som sammanhang ger medlemskap i årets Gigmästeri; körmedlemskapet är separat.",
     [
       "Kontakta rätt Gigmästare för din kör.",
       "Var tydlig med vilka divisioner du kan täcka.",

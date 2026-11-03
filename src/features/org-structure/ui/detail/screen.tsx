@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
 import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
+import { groupTypeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { GroupHeaderActions } from "./group-header-actions"
@@ -41,8 +42,8 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {group.choir
-                ? t("detail.typeInChoir", { type: types(group.type), choir: group.choir.name })
-                : t("detail.typeCskWide", { type: types(group.type) })}
+                ? t("detail.typeInChoir", { type: types(groupTypeKey(group.type)), choir: group.choir.name })
+                : t("detail.typeCskWide", { type: types(groupTypeKey(group.type)) })}
             </p>
             {detail.sectionVoice ? (
               <div className="mt-2 flex flex-wrap gap-1">

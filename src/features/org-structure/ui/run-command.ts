@@ -5,8 +5,8 @@ import type { z } from "zod"
 import { requireAdmin } from "@/core/auth/permissions.server"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
+import type { OrgStructureResult } from "@/core/org-structure"
 import { getErrorCode, getErrorName } from "@/shared/errors"
-import type { OrgStructureResult } from "../model"
 import type { GroupCommandState } from "./command-state"
 
 /**
