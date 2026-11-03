@@ -10,7 +10,7 @@ import { GroupsOverview } from "./overview"
 import { PrepareYearDialog } from "./PrepareYearDialog"
 import { getGroupsOverview } from "./query"
 
-/** The groups beside the Choirs' Sections, with annual preparation controls. */
+/** The groups beside the Choirs' Sections, with their complete member rosters. */
 export async function GroupsScreen() {
   const [overview, t] = await Promise.all([getGroupsOverview(), getTranslations("Groups")])
   const currentYear = currentOrganisationYear(cskToday())
@@ -30,6 +30,12 @@ export async function GroupsScreen() {
             className="mt-2 inline-block text-sm text-muted-foreground underline underline-offset-4"
           >
             {t("groupsPage.choirsLink")}
+          </Link>
+          <Link
+            href={ROUTES.adminGigGroups}
+            className="mt-2 ml-4 inline-block text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {t("groupsPage.gigGroupsLink")}
           </Link>
         </div>
         <div className="flex flex-wrap gap-2">

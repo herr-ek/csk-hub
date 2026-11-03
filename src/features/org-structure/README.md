@@ -113,3 +113,18 @@ The cutover tests cover refusal with unchanged legacy data/schema/ledger and mig
 organisation followed by repeatable reference seeding with valid annual years. Enum renames
 remain necessary because earlier migrations define the legacy PostgreSQL enum even without rows.
 Reference seeding matches Sections by Choir and Voice and retains stable seed UUID tokens.
+
+## Admin overviews
+
+The Groups overview lists complete effective rosters, including explicitly added members and
+Helpers. Position labels annotate members where applicable; the existing group-detail commands
+remain the place to manage participation. Archived annual Groups are browsed one organisational
+year at a time, newest first, with previous/next controls. Archived Groups without a year remain
+in a separate undated section rather than being assigned an invented year.
+
+The separate Positions page groups holders by their actual responsibility context, not by every
+Group to which a Position grants Membership. Current holders belong to active contexts and have
+a tenure covering today. Year history includes every tenure overlapping the July–June year,
+including archived contexts and fluid responsibilities. The current year's history stops at today,
+so prepared future holders are excluded. A handover lists both people under the same Position;
+a returning holder is listed once with each of their periods.

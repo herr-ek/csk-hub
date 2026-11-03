@@ -1,15 +1,11 @@
 import { afterAll, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
-import { renderToStaticMarkup } from "react-dom/server"
 import * as authz from "@/core/authz"
 import { directMembership, group } from "@/core/db/schema/org-structure"
-import { NextIntlClientProvider } from "@/core/i18n/client"
-import { getMessages } from "@/core/i18n/messages"
 import * as intlServer from "@/core/i18n/server"
 import { GroupType, organisationYearPeriod, PositionCode } from "@/core/org-structure"
 import { createOrgStructureTestDatabase, expectSuccess } from "../test-support"
-import { groupDetailPath } from "./command-state"
-import { GroupsOverview } from "./groups/overview"
+import { groupsForView } from "./groups/group-view"
 
 const database = await createOrgStructureTestDatabase()
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
@@ -22,6 +18,7 @@ mock.module("@/core/i18n/server", () => ({ ...intlServer, getTranslations: async
 const { createGroupAction, renameGroupAction, archiveGroupAction, prepareYearAction, editGroupAction } = await import(
   "./groups/actions"
 )
+const { createGigGroupAction } = await import("./gig-groups/actions")
 const { addMemberAction, endMembershipAction, changeVoiceAction } = await import("./detail/actions")
 const { getGroupDetail } = await import("./detail/query")
 const { getGroupsOverview } = await import("./groups/query")
@@ -72,6 +69,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   test("guards every exported mutation before parsing or changing state", async () => {
     const actions = [
       createGroupAction,
+      createGigGroupAction,
       renameGroupAction,
       archiveGroupAction,
       prepareYearAction,
@@ -155,6 +153,27 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(await listEffectiveMembersAt(t.db, sectionId, "2026-10-01")).toMatchObject([{ userId, voice: "B2" }])
   })
 
+  test("the dedicated gig workflow fixes type and scope despite forged form fields", async () => {
+    expect(
+      await createGigGroupAction(
+        IDLE,
+        form({
+          name: "Dedicated ensemble",
+          type: GroupType.Board,
+          choirId: await t.groupId("KK"),
+          organisationYear: "2099"
+        })
+      )
+    ).toMatchObject({ status: "success" })
+    expect(await named("Dedicated ensemble")).toMatchObject({
+      type: GroupType.GigGroup,
+      choirId: null,
+      organisationYear: null,
+      active: true
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/admin/gig-groups", "page")
+  })
+
   test("creates, renames, archives, and passes typed policy failures through the action boundary", async () => {
     expect(await createGroupAction(IDLE, form({ name: " ", type: GroupType.GigGroup }))).toEqual({
       status: "error",
@@ -177,20 +196,17 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(revalidatePath).toHaveBeenCalled()
   })
 
-  test("next year's prepared Groups appear on the default Groups overview", async () => {
+  test("next year's prepared Groups appear in the future view of the Groups overview", async () => {
     setSystemTime(new Date("2026-11-21T12:00:00Z"))
     expect(await prepareYearAction(IDLE, form({ organisationYear: "2027" }))).toMatchObject({ status: "success" })
     const prepared = await t.db.select().from(group).where(eq(group.organisationYear, 2027))
     expect(prepared.length).toBeGreaterThan(0)
 
     const overview = await getGroupsOverview()
-    const markup = renderToStaticMarkup(
-      <NextIntlClientProvider locale="en" timeZone="Europe/Stockholm" messages={getMessages("en")}>
-        <GroupsOverview overview={overview} />
-      </NextIntlClientProvider>
-    )
-    for (const { id } of prepared) expect(markup).toContain(`href="${groupDetailPath(id)}"`)
-    expect(markup).toContain(getMessages("en").Groups.management.future)
+    const future = groupsForView(overview, "future")
+    const listed = [...future.cskWide, ...future.choirs.flatMap(({ groups }) => groups)].map(({ id }) => id)
+    for (const { id } of prepared) expect(listed).toContain(id)
+    expect(groupsForView(overview, "current").cskWide.map(({ id }) => id)).not.toContain(prepared[0]?.id)
   })
 
   test("prepares annual groups and applies inclusive dates to direct membership actions", async () => {

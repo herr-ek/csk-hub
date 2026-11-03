@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, KeyRound, Music, User, Users } from "lucide-react"
+import { Bell, CalendarDays, Contact, KeyRound, Music, User, Users } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { requirePermission } from "@/core/authz"
@@ -67,6 +67,8 @@ export default async function AdminRoot() {
     },
     { href: ROUTES.adminUsers, title: t("members"), description: t("membersDescription"), icon: User },
     { href: ROUTES.adminOrgStructure, title: t("choirs"), description: t("choirsDescription"), icon: Music },
+    { href: ROUTES.adminPositions, title: t("positions"), description: t("positionsDescription"), icon: Contact },
+    { href: ROUTES.adminGigGroups, title: t("gigGroups"), description: t("gigGroupsDescription"), icon: Music },
     { href: ROUTES.adminOrgStructureGroups, title: t("groups"), description: t("groupsDescription"), icon: Users },
     { href: ROUTES.adminEvents, title: t("events"), description: t("eventsDescription"), icon: CalendarDays },
     {

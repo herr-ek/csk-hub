@@ -1,11 +1,9 @@
 import "server-only"
 
 import { requirePermission } from "@/core/authz"
-
 import { db } from "@/core/db"
 import { section } from "@/core/db/schema/org-structure"
-import { getTranslations } from "@/core/i18n/server"
-import { cskToday, type GroupType, positionCodeKey } from "@/core/org-structure"
+import { cskToday, type GroupType, type PositionCode } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { listAppointmentsForGroups, listEffectiveMembersForGroupsAt } from "../appointments"
 import { listOrganisationGroups } from "../group-management"
@@ -16,39 +14,74 @@ export type GroupSummary = {
   name: string
   type: GroupType
   choirId: string | null
+  organisationYear: number | null
   active: boolean
   phase: "future" | "current" | "completed"
   memberCount: number
   voices: Voice[]
-  holders: { position: string; holder: string }[]
+  members: {
+    userId: string
+    name: string
+    positions: { id: string; positionCode: PositionCode; contextGroupId: string; context: string }[]
+  }[]
 }
 
-/** Keeps the existing overview shape while counting effective dated Memberships. */
+/** Every group, archived ones included, with what the admin overviews show of it, ordered by name. */
 export async function listGroupSummaries(): Promise<GroupSummary[]> {
   await requirePermission({ action: "org.manage" })
+  const labels = await listLocalizedGroupLabels()
   const date = cskToday()
-  const [groups, sections, labels, positionLabel] = await Promise.all([
-    listOrganisationGroups(db, date),
-    db.select().from(section),
-    listLocalizedGroupLabels(),
-    getTranslations("Groups.positionLabels")
+  const [groups, sections] = await Promise.all([listOrganisationGroups(db, date), db.select().from(section)])
+  const [effectiveMembers, appointmentsByGroup] = await Promise.all([
+    listEffectiveMembersForGroupsAt(
+      db,
+      groups.map((row) => row.id),
+      date
+    ),
+    listAppointmentsForGroups(
+      db,
+      groups.map((row) => row.id)
+    )
   ])
-  const ids = groups.map(({ id }) => id)
-  const [members, appointments] = await Promise.all([
-    listEffectiveMembersForGroupsAt(db, ids, date),
-    listAppointmentsForGroups(db, ids)
-  ])
-  return groups.map((row) => ({
-    id: row.id,
-    name: labels.get(row.id) ?? row.id,
-    type: row.type,
-    choirId: row.choirId,
-    active: row.active && row.phase === "current",
-    phase: row.phase,
-    memberCount: members.get(row.id)?.length ?? 0,
-    voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
-    holders: (appointments.get(row.id) ?? [])
-      .filter((entry) => entry.startDate <= date && (entry.endDate === null || entry.endDate > date))
-      .map((entry) => ({ position: positionLabel(positionCodeKey(entry.positionCode)), holder: entry.name }))
-  }))
+  return groups.map((row) => {
+    const members = effectiveMembers.get(row.id) ?? []
+    const appointments = appointmentsByGroup.get(row.id) ?? []
+    const holders = appointments
+      .filter(
+        (appointment) =>
+          appointment.startDate <= date &&
+          (appointment.endDate === null || appointment.endDate > date) &&
+          (appointment.contextGroupId === row.id ||
+            members.some(
+              (member) =>
+                member.userId === appointment.userId &&
+                member.positions.some((position) => position.id === appointment.id)
+            ))
+      )
+      .map((appointment) => ({
+        id: appointment.id,
+        positionCode: appointment.positionCode,
+        userId: appointment.userId,
+        contextGroupId: appointment.contextGroupId,
+        context: labels.get(appointment.contextGroupId) ?? appointment.contextGroupId
+      }))
+    return {
+      id: row.id,
+      name: labels.get(row.id) ?? row.id,
+      type: row.type,
+      choirId: row.choirId,
+      active: row.active,
+      organisationYear: row.organisationYear,
+      phase: row.phase,
+      memberCount: members.length,
+      voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
+      members: members.map((member) => ({
+        userId: member.userId,
+        name: member.name,
+        positions: holders
+          .filter((holder) => holder.userId === member.userId)
+          .map(({ userId: _userId, ...position }) => position)
+      }))
+    }
+  })
 }
