@@ -168,7 +168,9 @@
       "adminUsers": "Medlemmar",
       "adminNotifications": "Notiser",
       "adminOrgStructure": "Körer och stämmor",
-      "adminOrgStructureGroups": "Grupper och poster"
+      "adminOrgStructureGroups": "Grupper",
+      "adminGigGroups": "Giggrupper",
+      "adminPositions": "Poster"
     },
     "members": "Medlemmar"
   },
@@ -232,8 +234,12 @@
     "notificationsDescription": "Skicka pushnotiser till medlemmar.",
     "choirs": "Körer och stämmor",
     "choirsDescription": "Placera sångare i körer och stämgrupper, och byt stämma.",
-    "groups": "Grupper och poster",
-    "groupsDescription": "Styrelsen, kommittéer och andra grupper, med medlemmar och poster."
+    "groups": "Grupper",
+    "groupsDescription": "Styrelsen, kommittéer och andra grupper, med alla sina medlemmar.",
+    "gigGroups": "Giggrupper",
+    "gigGroupsDescription": "Hantera namngivna ensembler, deras medlemmar och gigledare.",
+    "positions": "Poster",
+    "positionsDescription": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår."
   },
   "Members": {
     "title": "Medlemmar",
@@ -656,13 +662,19 @@
     "choirsPage": {
       "title": "Körer och stämmor",
       "description": "Varje kör och dess stämgrupper. Öppna en stämgrupp för att placera sångare eller byta stämma.",
-      "groupsLink": "Grupper och poster",
+      "groupsLink": "Grupper",
       "noChoirs": "Inga körer än."
     },
     "groupsPage": {
-      "title": "Grupper och poster",
-      "description": "Styrelsen, kommittéer och alla andra grupper, och posterna de kan ha.",
-      "choirsLink": "Körer och stämmor"
+      "title": "Grupper",
+      "description": "Styrelsen, kommittéer och andra grupper, med alla sina medlemmar.",
+      "choirsLink": "Körer och stämmor",
+      "viewLabel": "Gruppperiod",
+      "gigGroupsLink": "Giggrupper",
+      "previousYear": "Föregående verksamhetsår",
+      "nextYear": "Nästa verksamhetsår",
+      "undatedArchives": "Övriga arkiverade grupper",
+      "undatedArchivesDescription": "Dessa grupper saknar verksamhetsår och visas separat."
     },
     "saved": "Sparat",
     "saving": "Sparar…",
@@ -829,28 +841,6 @@
       "organisation-year-too-far-ahead": "Årsgrupper kan bara förberedas till och med nästa verksamhetsår.",
       "group-name-derived": "Gruppens namn härleds från dess typ, verksamhetsår, kör eller sektionens stämma och kan inte ändras."
     },
-    "positionLabels": {
-      "Chair": "Ordförande",
-      "ViceChair": "Vice ordförande",
-      "Treasurer": "Kassör",
-      "Secretary": "Sekreterare",
-      "PublicRelationsOfficer": "PR-mästare",
-      "FirstConcertMaster": "1:a konsertmästare",
-      "OrganisationGigCoordinator": "CSK-gigmästare",
-      "SocialCoordinator": "Sexmästare",
-      "DeputySocialCoordinator": "Sexmästarinna",
-      "FinancialOfficer": "Ekonomiskt ansvarig",
-      "Conductor": "Dirigent",
-      "MusicLibrarian": "Notfiskal",
-      "ChoirConcertMaster": "Körens konsertmästare",
-      "ChoirGigCoordinator": "Körens gigmästare",
-      "SectionParent": "Stämförälder",
-      "GigLeader": "Gigledare"
-    },
-    "labels": {
-      "annual": "{type} {year}",
-      "choirTeam": "{choir} · {type}"
-    },
     "management": {
       "prepare": "Förbered årsgrupper",
       "prepareDescription": "Skapa de grupper som behövs för ett verksamhetsår. Befintliga grupper återanvänds; medlemmar och posttillsättningar kopieras aldrig.",
@@ -883,6 +873,51 @@
       "yearRequired": "Välj verksamhetsår för denna årsgrupp.",
       "groupIdentity": "{type} · {year}",
       "derivedName": "Namnet skapas utifrån gruppens typ, verksamhetsår och kör."
+    },
+    "positionLabels": {
+      "Chair": "Ordförande",
+      "ViceChair": "Vice ordförande",
+      "Treasurer": "Kassör",
+      "Secretary": "Sekreterare",
+      "PublicRelationsOfficer": "PR-mästare",
+      "FirstConcertMaster": "1:a konsertmästare",
+      "OrganisationGigCoordinator": "CSK-gigmästare",
+      "SocialCoordinator": "Sexmästare",
+      "DeputySocialCoordinator": "Sexmästarinna",
+      "FinancialOfficer": "Ekonomiskt ansvarig",
+      "Conductor": "Dirigent",
+      "MusicLibrarian": "Notfiskal",
+      "ChoirConcertMaster": "Körens konsertmästare",
+      "ChoirGigCoordinator": "Körens gigmästare",
+      "SectionParent": "Stämförälder",
+      "GigLeader": "Gigledare"
+    },
+    "labels": {
+      "annual": "{type} {year}",
+      "choirTeam": "{choir} · {type}"
+    },
+    "gigGroupsPage": {
+      "title": "Giggrupper",
+      "description": "Hantera namngivna ensembler, deras medlemmar och gigledare.",
+      "create": "Skapa giggrupp"
     }
+  },
+  "PositionsPage": {
+    "title": "Poster",
+    "description": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår.",
+    "period": "Period för poster",
+    "current": "Nuvarande",
+    "history": "Historik",
+    "year": "Verksamhetsår",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Poster som innehas idag i aktiva grupper.",
+    "historyHelp": "Alla som innehaft en post under valt verksamhetsår, inklusive överlämningar och löpande ansvarsuppgifter. Pågående år visas fram till idag.",
+    "empty": "Inga postinnehavare under denna period.",
+    "csk": "CSK-gemensamma poster",
+    "choirs": "Körer",
+    "sections": "Stämföräldrar",
+    "gigs": "Giggrupper",
+    "tenure": "{start} – {end}",
+    "ongoing": "Löpande"
   }
 }

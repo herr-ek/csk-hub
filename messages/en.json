@@ -168,7 +168,9 @@
       "adminUsers": "Members",
       "adminNotifications": "Notifications",
       "adminOrgStructure": "Choirs and voices",
-      "adminOrgStructureGroups": "Groups and positions"
+      "adminOrgStructureGroups": "Groups",
+      "adminGigGroups": "Gig groups",
+      "adminPositions": "Positions"
     },
     "members": "Members"
   },
@@ -232,8 +234,12 @@
     "notificationsDescription": "Send push notifications to members.",
     "choirs": "Choirs and voices",
     "choirsDescription": "Place singers in Choirs and Sections, and change their Voice.",
-    "groups": "Groups and positions",
-    "groupsDescription": "The Board, committees and other groups, with their members and Positions."
+    "groups": "Groups",
+    "groupsDescription": "The Board, committees and other groups, with all their members.",
+    "gigGroups": "Gig groups",
+    "gigGroupsDescription": "Manage named ensembles, their members, and gig leaders.",
+    "positions": "Positions",
+    "positionsDescription": "Current position holders across CSK, with history by organisational year."
   },
   "Members": {
     "title": "Members",
@@ -656,13 +662,19 @@
     "choirsPage": {
       "title": "Choirs and voices",
       "description": "Each Choir and its Sections. Open a Section to place singers or change their Voice.",
-      "groupsLink": "Groups and positions",
+      "groupsLink": "Groups",
       "noChoirs": "No Choirs yet."
     },
     "groupsPage": {
-      "title": "Groups and positions",
-      "description": "The Board, committees and every other group, and the Positions they can have.",
-      "choirsLink": "Choirs and voices"
+      "title": "Groups",
+      "description": "The Board, committees and other groups, with all their members.",
+      "choirsLink": "Choirs and voices",
+      "viewLabel": "Group period",
+      "gigGroupsLink": "Gig groups",
+      "previousYear": "Previous organisational year",
+      "nextYear": "Next organisational year",
+      "undatedArchives": "Other archived groups",
+      "undatedArchivesDescription": "These groups have no organisational year and are listed separately."
     },
     "saved": "Saved",
     "saving": "Saving…",
@@ -829,28 +841,6 @@
       "organisation-year-too-far-ahead": "Annual groups can only be prepared up to the next organisational year.",
       "group-name-derived": "This group’s name is derived from its type, year, choir, or Section Voice and cannot be renamed."
     },
-    "positionLabels": {
-      "Chair": "Chair",
-      "ViceChair": "Vice Chair",
-      "Treasurer": "Treasurer",
-      "Secretary": "Secretary",
-      "PublicRelationsOfficer": "PR Officer",
-      "FirstConcertMaster": "1st Concertmaster",
-      "OrganisationGigCoordinator": "CSK Gigmaster",
-      "SocialCoordinator": "Party Officer",
-      "DeputySocialCoordinator": "Party Committee Officer",
-      "FinancialOfficer": "Financial Officer",
-      "Conductor": "Conductor",
-      "MusicLibrarian": "Music Librarian",
-      "ChoirConcertMaster": "Choir Concertmaster",
-      "ChoirGigCoordinator": "Choir Gigmaster",
-      "SectionParent": "Section Parent",
-      "GigLeader": "Gig Leader"
-    },
-    "labels": {
-      "annual": "{type} {year}",
-      "choirTeam": "{choir} · {type}"
-    },
     "management": {
       "prepare": "Prepare annual Groups",
       "prepareDescription": "Create the required Groups for a year. Existing Groups are reused; members and appointments are never copied.",
@@ -883,6 +873,51 @@
       "yearRequired": "Choose a year for this annual Group.",
       "groupIdentity": "{type} · {year}",
       "derivedName": "The label is generated from the group type, year, and choir."
+    },
+    "positionLabels": {
+      "Chair": "Chair",
+      "ViceChair": "Vice Chair",
+      "Treasurer": "Treasurer",
+      "Secretary": "Secretary",
+      "PublicRelationsOfficer": "PR Officer",
+      "FirstConcertMaster": "1st Concertmaster",
+      "OrganisationGigCoordinator": "CSK Gigmaster",
+      "SocialCoordinator": "Party Officer",
+      "DeputySocialCoordinator": "Party Committee Officer",
+      "FinancialOfficer": "Financial Officer",
+      "Conductor": "Conductor",
+      "MusicLibrarian": "Music Librarian",
+      "ChoirConcertMaster": "Choir Concertmaster",
+      "ChoirGigCoordinator": "Choir Gigmaster",
+      "SectionParent": "Section Parent",
+      "GigLeader": "Gig Leader"
+    },
+    "labels": {
+      "annual": "{type} {year}",
+      "choirTeam": "{choir} · {type}"
+    },
+    "gigGroupsPage": {
+      "title": "Gig groups",
+      "description": "Manage named ensembles, their members, and gig leaders.",
+      "create": "Create gig group"
     }
+  },
+  "PositionsPage": {
+    "title": "Positions",
+    "description": "Current position holders across CSK, with history by organisational year.",
+    "period": "Position period",
+    "current": "Current",
+    "history": "History",
+    "year": "Organisational year",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Positions held today in active groups.",
+    "historyHelp": "Everyone who held a position during the selected year, including handovers and ongoing responsibilities. The current year is shown up to today.",
+    "empty": "No position holders in this period.",
+    "csk": "CSK-wide positions",
+    "choirs": "Choirs",
+    "sections": "Section parents",
+    "gigs": "Gig groups",
+    "tenure": "{start} – {end}",
+    "ongoing": "Ongoing"
   }
 }
