@@ -35,6 +35,7 @@ export {
 export { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
 export { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 export type { OrgStructureDatabase } from "./operation"
+export { listParticipationHistoryOfUser } from "./participation-history"
 export {
   getCurrentPositionHolder,
   listChoirMembersByVoiceFamily,

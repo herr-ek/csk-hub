@@ -156,3 +156,9 @@ a tenure covering today. Year history includes every tenure overlapping the July
 including archived contexts and fluid responsibilities. The current year's history stops at today,
 so prepared future holders are excluded. A handover lists both people under the same Position;
 a returning holder is listed once with each of their periods.
+
+Member careers use `listParticipationHistoryOfUser` through the Members feature's signed-in
+viewer boundary. The read includes started direct participation, responsibility contexts, and
+inferred companion memberships, including archived Groups. It excludes prepared appointments
+and does not duplicate an appointment's own context as another membership record. The public
+career view is read-only; organisation corrections remain on the Admin group screens.

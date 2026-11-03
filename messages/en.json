@@ -241,6 +241,24 @@
     "positions": "Positions",
     "positionsDescription": "Current position holders across CSK, with history by organisational year."
   },
+  "PositionsPage": {
+    "title": "Positions",
+    "description": "Current position holders across CSK, with history by organisational year.",
+    "period": "Position period",
+    "current": "Current",
+    "history": "History",
+    "year": "Organisational year",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Positions held today in active groups.",
+    "historyHelp": "Everyone who held a position during the selected year, including handovers and ongoing responsibilities. The current year is shown up to today.",
+    "empty": "No position holders in this period.",
+    "csk": "CSK-wide positions",
+    "choirs": "Choirs",
+    "sections": "Section parents",
+    "gigs": "Gig groups",
+    "tenure": "{start} – {end}",
+    "ongoing": "Ongoing"
+  },
   "Members": {
     "title": "Members",
     "description": "Manage everyone with access to {appName}.",
@@ -609,6 +627,25 @@
     "savingGroup": "Saving…",
     "groupUpdateFailed": "Unable to update the conversation. Please try again."
   },
+  "MemberCareer": {
+    "title": "Career in CSK",
+    "myTitle": "My career in CSK",
+    "backToProfile": "Back to profile",
+    "range": "{start} to today",
+    "years": "Organisational years",
+    "yearValue": "{start}/{end}",
+    "organisationalYear": "Organisational year",
+    "show": "Show",
+    "allScopes": "All of CSK",
+    "csk": "CSK-wide",
+    "position": "Position",
+    "ongoing": "Ongoing",
+    "period": "{start} – {end}",
+    "throughPosition": "Through {position} in {context}",
+    "archivedGroup": "Archived group",
+    "empty": "No Choir memberships, groups or positions have been recorded for this person yet.",
+    "emptyYear": "No activity recorded in this context for this year."
+  },
   "MemberProfiles": {
     "directoryTitle": "Members",
     "directoryDescription": "Meet the people who make up CSK.",
@@ -640,6 +677,9 @@
     "association": "CSK",
     "username": "@{username}",
     "otherGroups": "Other groups",
+    "career": "Career in CSK",
+    "myCareer": "My career in CSK",
+    "ongoing": "ongoing",
     "sectionVoice": "Section Voice: {voice}",
     "searching": "Searching…",
     "editProfile": "Edit profile",
@@ -901,23 +941,5 @@
       "description": "Manage named ensembles, their members, and gig leaders.",
       "create": "Create gig group"
     }
-  },
-  "PositionsPage": {
-    "title": "Positions",
-    "description": "Current position holders across CSK, with history by organisational year.",
-    "period": "Position period",
-    "current": "Current",
-    "history": "History",
-    "year": "Organisational year",
-    "yearValue": "{start}/{end}",
-    "currentHelp": "Positions held today in active groups.",
-    "historyHelp": "Everyone who held a position during the selected year, including handovers and ongoing responsibilities. The current year is shown up to today.",
-    "empty": "No position holders in this period.",
-    "csk": "CSK-wide positions",
-    "choirs": "Choirs",
-    "sections": "Section parents",
-    "gigs": "Gig groups",
-    "tenure": "{start} – {end}",
-    "ongoing": "Ongoing"
   }
 }

@@ -241,6 +241,24 @@
     "positions": "Ämter",
     "positionsDescription": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr."
   },
+  "PositionsPage": {
+    "title": "Ämter",
+    "description": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr.",
+    "period": "Zeitraum der Ämter",
+    "current": "Aktuell",
+    "history": "Verlauf",
+    "year": "Organisationsjahr",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Heute besetzte Ämter in aktiven Gruppen.",
+    "historyHelp": "Alle Personen, die im gewählten Organisationsjahr ein Amt innehatten, einschließlich Übergaben und laufender Aufgaben. Das aktuelle Jahr wird bis heute angezeigt.",
+    "empty": "Keine Amtsinhaber in diesem Zeitraum.",
+    "csk": "CSK-weite Ämter",
+    "choirs": "Chöre",
+    "sections": "Stimmgruppenbetreuung",
+    "gigs": "Gig-Ensembles",
+    "tenure": "{start} – {end}",
+    "ongoing": "Laufend"
+  },
   "Members": {
     "title": "Mitglieder",
     "description": "Verwalte alle Personen mit Zugriff auf {appName}.",
@@ -609,6 +627,25 @@
     "savingGroup": "Wird gespeichert…",
     "groupUpdateFailed": "Die Unterhaltung konnte nicht aktualisiert werden. Bitte versuche es erneut."
   },
+  "MemberCareer": {
+    "title": "Werdegang bei CSK",
+    "myTitle": "Mein Werdegang bei CSK",
+    "backToProfile": "Zurück zum Profil",
+    "range": "{start} bis heute",
+    "years": "Organisationsjahre",
+    "yearValue": "{start}/{end}",
+    "organisationalYear": "Organisationsjahr",
+    "show": "Anzeigen",
+    "allScopes": "Alle Bereiche",
+    "csk": "CSK-weit",
+    "position": "Amt",
+    "ongoing": "Laufend",
+    "period": "{start} – {end}",
+    "throughPosition": "Durch das Amt {position} in {context}",
+    "archivedGroup": "Archivierte Gruppe",
+    "empty": "Für diese Person sind noch keine Chormitgliedschaften, Gruppen oder Ämter erfasst.",
+    "emptyYear": "Für diesen Bereich ist in diesem Jahr keine Aktivität erfasst."
+  },
   "MemberProfiles": {
     "directoryTitle": "Mitglieder",
     "directoryDescription": "Lerne die Menschen kennen, die CSK ausmachen.",
@@ -640,6 +677,9 @@
     "association": "CSK",
     "username": "@{username}",
     "otherGroups": "Weitere Gruppen",
+    "career": "Werdegang bei CSK",
+    "myCareer": "Mein Werdegang bei CSK",
+    "ongoing": "laufend",
     "sectionVoice": "Stimme der Stimmgruppe: {voice}",
     "searching": "Suche läuft…",
     "editProfile": "Profil bearbeiten",
@@ -901,23 +941,5 @@
       "description": "Benannte Ensembles, ihre Mitglieder und die Ensembleleitung verwalten.",
       "create": "Gig-Ensemble erstellen"
     }
-  },
-  "PositionsPage": {
-    "title": "Ämter",
-    "description": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr.",
-    "period": "Zeitraum der Ämter",
-    "current": "Aktuell",
-    "history": "Verlauf",
-    "year": "Organisationsjahr",
-    "yearValue": "{start}/{end}",
-    "currentHelp": "Heute besetzte Ämter in aktiven Gruppen.",
-    "historyHelp": "Alle Personen, die im gewählten Organisationsjahr ein Amt innehatten, einschließlich Übergaben und laufender Aufgaben. Das aktuelle Jahr wird bis heute angezeigt.",
-    "empty": "Keine Amtsinhaber in diesem Zeitraum.",
-    "csk": "CSK-weite Ämter",
-    "choirs": "Chöre",
-    "sections": "Stimmgruppenbetreuung",
-    "gigs": "Gig-Ensembles",
-    "tenure": "{start} – {end}",
-    "ongoing": "Laufend"
   }
 }
