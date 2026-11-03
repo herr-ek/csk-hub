@@ -241,6 +241,24 @@
     "positions": "Poster",
     "positionsDescription": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår."
   },
+  "PositionsPage": {
+    "title": "Poster",
+    "description": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår.",
+    "period": "Period för poster",
+    "current": "Nuvarande",
+    "history": "Historik",
+    "year": "Verksamhetsår",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Poster som innehas idag i aktiva grupper.",
+    "historyHelp": "Alla som innehaft en post under valt verksamhetsår, inklusive överlämningar och löpande ansvarsuppgifter. Pågående år visas fram till idag.",
+    "empty": "Inga postinnehavare under denna period.",
+    "csk": "CSK-gemensamma poster",
+    "choirs": "Körer",
+    "sections": "Stämföräldrar",
+    "gigs": "Giggrupper",
+    "tenure": "{start} – {end}",
+    "ongoing": "Löpande"
+  },
   "Members": {
     "title": "Medlemmar",
     "description": "Hantera alla som har åtkomst till {appName}.",
@@ -609,6 +627,25 @@
     "savingGroup": "Sparar…",
     "groupUpdateFailed": "Det gick inte att uppdatera konversationen. Försök igen."
   },
+  "MemberCareer": {
+    "title": "Karriär i CSK",
+    "myTitle": "Min karriär i CSK",
+    "backToProfile": "Tillbaka till profilen",
+    "range": "{start} till idag",
+    "years": "Verksamhetsår",
+    "yearValue": "{start}/{end}",
+    "organisationalYear": "Verksamhetsår",
+    "show": "Visa",
+    "allScopes": "Alla sammanhang",
+    "csk": "CSK-gemensamt",
+    "position": "Post",
+    "ongoing": "Löpande",
+    "period": "{start} – {end}",
+    "throughPosition": "Genom posten {position} i {context}",
+    "archivedGroup": "Arkiverad grupp",
+    "empty": "Inga körmedlemskap, grupper eller poster har registrerats för den här personen ännu.",
+    "emptyYear": "Ingen aktivitet registrerad i detta sammanhang under året."
+  },
   "MemberProfiles": {
     "directoryTitle": "Medlemmar",
     "directoryDescription": "Möt människorna som utgör CSK.",
@@ -640,6 +677,9 @@
     "association": "CSK",
     "username": "@{username}",
     "otherGroups": "Övriga grupper",
+    "career": "Karriär i CSK",
+    "myCareer": "Min karriär i CSK",
+    "ongoing": "pågår",
     "sectionVoice": "Stämgruppens stämma: {voice}",
     "searching": "Söker…",
     "editProfile": "Redigera profil",
@@ -901,23 +941,5 @@
       "description": "Hantera namngivna ensembler, deras medlemmar och gigledare.",
       "create": "Skapa giggrupp"
     }
-  },
-  "PositionsPage": {
-    "title": "Poster",
-    "description": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår.",
-    "period": "Period för poster",
-    "current": "Nuvarande",
-    "history": "Historik",
-    "year": "Verksamhetsår",
-    "yearValue": "{start}/{end}",
-    "currentHelp": "Poster som innehas idag i aktiva grupper.",
-    "historyHelp": "Alla som innehaft en post under valt verksamhetsår, inklusive överlämningar och löpande ansvarsuppgifter. Pågående år visas fram till idag.",
-    "empty": "Inga postinnehavare under denna period.",
-    "csk": "CSK-gemensamma poster",
-    "choirs": "Körer",
-    "sections": "Stämföräldrar",
-    "gigs": "Giggrupper",
-    "tenure": "{start} – {end}",
-    "ongoing": "Löpande"
   }
 }

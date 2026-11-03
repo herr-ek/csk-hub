@@ -5,6 +5,7 @@ import {
   isActiveRoute,
   isSafeInternalPath,
   loginPath,
+  memberCareerPath,
   parseSafeInternalPath,
   twoFactorPath
 } from "./navigation-utils"
@@ -47,6 +48,10 @@ describe("active route", () => {
 })
 
 describe("site navigation", () => {
+  test("career links keep opaque member IDs within one segment", () => {
+    expect(memberCareerPath("id/with?query#fragment")).toBe("/members/id%2Fwith%3Fquery%23fragment/career")
+  })
+
   test("encodes opaque Conversation IDs as a single path segment", () => {
     expect(conversationPath("conversation-1")).toBe("/messages/conversation-1")
     expect(conversationPath("id/with?query#fragment")).toBe("/messages/id%2Fwith%3Fquery%23fragment")

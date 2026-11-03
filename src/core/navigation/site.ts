@@ -16,6 +16,7 @@ export const ROUTES = {
   adminPositions: "/admin/positions",
   adminOrgStructureGroups: "/admin/org-structure/groups",
   account: "/me",
+  accountCareer: "/me/career",
   accountEditProfile: "/me/edit",
   messages: "/messages",
   members: "/members",
