@@ -1,7 +1,33 @@
 import { describe, expect, test } from "bun:test"
-import { currentOrganisationYear, isAllowedOrganisationYear, periodsCoverPeriod } from "./dates"
+import {
+  annualAppointmentDefaults,
+  currentOrganisationYear,
+  isAllowedOrganisationYear,
+  periodsCoverPeriod
+} from "./dates"
 
 describe("organisation date helpers", () => {
+  test("annual appointment defaults use an available current year and bound its final day", () => {
+    expect(annualAppointmentDefaults([2027, 2026], "2026-10-21")).toEqual({
+      year: 2026,
+      startDate: "2026-10-21",
+      lastDay: "2027-06-30",
+      min: "2026-07-01",
+      max: "2027-06-30"
+    })
+    expect(annualAppointmentDefaults([2027, 2026], "2027-02-01")).toMatchObject({
+      year: 2026,
+      startDate: "2027-02-01",
+      lastDay: "2027-06-30"
+    })
+    expect(annualAppointmentDefaults([2027, 2026], "2026-06-30")).toMatchObject({
+      year: 2026,
+      startDate: "2026-07-01",
+      min: "2026-07-01",
+      max: "2027-06-30"
+    })
+  })
+
   test("coverage ignores expired prefixes and honors exact exclusive boundaries", () => {
     expect(
       periodsCoverPeriod(

@@ -10,6 +10,7 @@ import {
   appointPosition,
   archiveGroup,
   changeVoice,
+  correctAnnualAppointment,
   createChoir,
   createOrganisationGroup,
   endAppointment,
@@ -267,6 +268,87 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
         .sort()
     ).toEqual([kk.choirId, mk.choirId].sort())
     expect(profile?.groups.find((item) => item.groupId === concert.id)?.positions).toHaveLength(2)
+  })
+
+  test("corrected holder and annual context appear through the same dated profile read", async () => {
+    const predecessor = await member("Predecessor")
+    const successor = await member("Successor")
+    const year = 2500 + Math.floor(Math.random() * 1_000)
+    const yearAfter = year + 1
+    const startDate = `${year}-07-01`
+    const correctionDate = `${yearAfter}-07-01`
+    const readDate = `${yearAfter}-08-01`
+    const endDate = `${yearAfter + 1}-07-01`
+    const board26 = success(
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Board ${year}/${yearAfter} correction`),
+          type: GroupType.Board,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
+    )
+    const board27 = success(
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Board ${yearAfter}/${yearAfter + 1} correction`),
+          type: GroupType.Board,
+          organisationYear: yearAfter
+        },
+        "4000-10-22"
+      )
+    )
+    const sex26 = success(
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Sex ${year}/${yearAfter} correction`),
+          type: GroupType.SocialCommittee,
+          organisationYear: year
+        },
+        "4000-10-22"
+      )
+    )
+    const sex27 = success(
+      await createOrganisationGroup(
+        db,
+        {
+          name: unique(`Sex ${yearAfter}/${yearAfter + 1} correction`),
+          type: GroupType.SocialCommittee,
+          organisationYear: yearAfter
+        },
+        "4000-10-22"
+      )
+    )
+    const appointment = success(
+      await appointPosition(db, {
+        userId: predecessor,
+        positionCode: PositionCode.SocialCoordinator,
+        contextGroupId: board26.id,
+        startDate
+      })
+    )
+    success(
+      await correctAnnualAppointment(db, {
+        appointmentId: appointment.id,
+        userId: successor,
+        positionCode: PositionCode.SocialCoordinator,
+        contextGroupId: board27.id,
+        organisationYear: yearAfter,
+        startDate: correctionDate,
+        endDate
+      })
+    )
+    expect((await getMemberProfile(db, predecessor, predecessor, readDate))?.positions).toEqual([])
+    const corrected = await getMemberProfile(db, successor, successor, readDate)
+    expect(corrected?.positions).toMatchObject([
+      { id: appointment.id, contextGroupId: board27.id, organisationYear: yearAfter }
+    ])
+    expect(corrected?.groups.map((item) => item.groupId).sort()).toEqual([board27.id, sex27.id].sort())
+    expect(corrected?.groups.map((item) => item.groupId)).not.toContain(sex26.id)
   })
 
   test("archiving an ensemble hides its affiliations without ending memberships or leadership", async () => {

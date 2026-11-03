@@ -22,8 +22,8 @@ toward this module; core must not import feature code. Effective participation t
 their Voice shapes from the core database schema without importing the Voice feature.
 
 Annual preparation is limited to the current organisational year and the immediately following
-year. Individual Group creation rejects years beyond that window on the server.
-Historical years remain available for explicit backfilling. The window advances
+year. Individual Group creation and year edits reject years beyond that window on the server.
+Historical years remain available for explicit backfilling and correction. The window advances
 on 1 July in the organisation's calendar time zone. Annual Groups also become current and
 historical from that year automatically; manual archival is reserved for non-annual Groups.
 
