@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
-import { group } from "@/core/db/schema/org-structure"
-import type { GroupType, OrgStructureResult } from "@/core/org-structure"
+import { group, section } from "@/core/db/schema/org-structure"
+import { GroupType, type OrgStructureResult, sectionName } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
 import { createChoir } from "./structure"
@@ -10,35 +11,20 @@ import { createChoir } from "./structure"
  * The structural Choir and Section fixture shared by domain tests.
  */
 const STRUCTURE: {
-  choirs: { name: string; sections: { name: string; voice: Voice }[] }[]
+  choirs: { name: string; sections: { voice: Voice }[] }[]
 } = {
   choirs: [
     {
       name: "MK",
-      sections: [
-        { name: "MKT1", voice: "T1" },
-        { name: "MKT2", voice: "T2" },
-        { name: "MKB1", voice: "B1" },
-        { name: "MKB2", voice: "B2" }
-      ]
+      sections: [{ voice: "T1" }, { voice: "T2" }, { voice: "B1" }, { voice: "B2" }]
     },
     {
       name: "DK",
-      sections: [
-        { name: "DKS1", voice: "S1" },
-        { name: "DKS2", voice: "S2" },
-        { name: "DKA1", voice: "A1" },
-        { name: "DKA2", voice: "A2" }
-      ]
+      sections: [{ voice: "S1" }, { voice: "S2" }, { voice: "A1" }, { voice: "A2" }]
     },
     {
       name: "KK",
-      sections: [
-        { name: "KKS", voice: "S" },
-        { name: "KKA", voice: "A" },
-        { name: "KKT", voice: "T" },
-        { name: "KKB", voice: "B" }
-      ]
+      sections: [{ voice: "S" }, { voice: "A" }, { voice: "T" }, { voice: "B" }]
     }
   ]
 }
@@ -76,10 +62,17 @@ function fixture({ db, drop }: TestDatabase) {
     /** The id of an active group by name, within a Choir when given. */
     async groupId(name: string, choirName?: string) {
       const choirId = choirName ? await this.groupId(choirName) : undefined
-      const [row] = await db
-        .select({ id: group.id })
+      const owningChoir = alias(group, "fixture_owning_choir")
+      const rows = await db
+        .select({ group, choirName: owningChoir.name, sectionVoice: section.voice })
         .from(group)
-        .where(and(eq(group.name, name), eq(group.active, true), choirId ? eq(group.choirId, choirId) : undefined))
+        .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
+        .leftJoin(section, eq(section.groupId, group.id))
+        .where(and(eq(group.active, true), choirId ? eq(group.choirId, choirId) : undefined))
+      const row = rows.find(
+        ({ group: entry, choirName, sectionVoice }) =>
+          (entry.type === GroupType.Section ? sectionName(choirName, sectionVoice) : entry.name) === name
+      )?.group
       if (!row) throw new Error(`No active group named ${name}.`)
       return row.id
     }

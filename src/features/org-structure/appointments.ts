@@ -3,7 +3,7 @@ import "server-only"
 import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
-import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { timeZone } from "@/core/i18n/time-zone"
 import {
   GROUP_POLICIES,
@@ -14,7 +14,8 @@ import {
   organisationYearPeriod,
   POSITION_DEFINITIONS,
   type PositionCode,
-  periodsCoverPeriod
+  periodsCoverPeriod,
+  sectionName
 } from "@/core/org-structure"
 import { appointmentMemberships } from "./appointment-memberships"
 import { cskToday } from "./effective-reads"
@@ -333,6 +334,8 @@ export async function listEffectiveMembersForGroupsAt(
   if (!ids.length) return new Map<string, RosterMember[]>()
   const derivedMembership = appointmentMemberships(database)
   const contextGroup = alias(group, "appointment_context")
+  const contextSection = alias(section, "appointment_context_section")
+  const contextChoir = alias(group, "appointment_context_choir")
   const [direct, grants] = await Promise.all([
     database
       .select({ membership: directMembership, name: user.name, email: user.email })
@@ -351,12 +354,17 @@ export async function listEffectiveMembersForGroupsAt(
         groupId: derivedMembership.groupId,
         name: user.name,
         email: user.email,
-        contextName: contextGroup.name
+        contextName: contextGroup.name,
+        contextType: contextGroup.type,
+        sectionVoice: contextSection.voice,
+        choirName: contextChoir.name
       })
       .from(derivedMembership)
       .innerJoin(positionAppointment, eq(derivedMembership.appointmentId, positionAppointment.id))
       .innerJoin(user, eq(user.id, positionAppointment.userId))
       .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
+      .leftJoin(contextSection, eq(contextSection.groupId, contextGroup.id))
+      .leftJoin(contextChoir, eq(contextChoir.id, contextGroup.choirId))
       .where(
         and(
           inArray(derivedMembership.groupId, ids),
@@ -390,14 +398,14 @@ export async function listEffectiveMembersForGroupsAt(
       source: "direct"
     })
   }
-  for (const { appointment, name, email, contextName, groupId } of grants) {
+  for (const { appointment, name, email, contextName, contextType, sectionVoice, choirName, groupId } of grants) {
     const member = getMember(groupId, appointment.userId, name, email, null)
     if (!member) continue
     member.positions.push({
       id: appointment.id,
       positionCode: appointment.positionCode as PositionCode,
       contextGroupId: appointment.contextGroupId,
-      contextName,
+      contextName: contextType === GroupType.Section ? sectionName(choirName, sectionVoice) : contextName,
       startDate: appointment.startDate as IsoDate,
       endDate: appointment.endDate as IsoDate | null
     })
@@ -443,17 +451,24 @@ export async function listAppointmentsForGroups(
   if (!ids.length) return new Map<string, []>()
   const derivedMembership = appointmentMemberships(database)
   const contextGroup = alias(group, "appointment_context")
+  const contextSection = alias(section, "appointment_context_section")
+  const contextChoir = alias(group, "appointment_context_choir")
   const rows = await database
     .selectDistinct({
       appointment: positionAppointment,
       grantGroupId: derivedMembership.groupId,
       name: user.name,
-      contextName: contextGroup.name
+      contextName: contextGroup.name,
+      contextType: contextGroup.type,
+      sectionVoice: contextSection.voice,
+      choirName: contextChoir.name
     })
     .from(positionAppointment)
     .leftJoin(derivedMembership, eq(derivedMembership.appointmentId, positionAppointment.id))
     .innerJoin(user, eq(user.id, positionAppointment.userId))
     .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
+    .leftJoin(contextSection, eq(contextSection.groupId, contextGroup.id))
+    .leftJoin(contextChoir, eq(contextChoir.id, contextGroup.choirId))
     .where(or(inArray(derivedMembership.groupId, ids), inArray(positionAppointment.contextGroupId, ids)))
     .orderBy(desc(positionAppointment.startDate))
   const byGroup = new Map(ids.map((id) => [id, new Map<string, (typeof rows)[number]>()]))
@@ -467,14 +482,14 @@ export async function listAppointmentsForGroups(
   return new Map(
     [...byGroup].map(([id, appointments]) => [
       id,
-      [...appointments.values()].map(({ appointment, name, contextName }) => ({
+      [...appointments.values()].map(({ appointment, name, contextName, contextType, sectionVoice, choirName }) => ({
         id: appointment.id,
         userId: appointment.userId,
         name,
         positionCode: appointment.positionCode as PositionCode,
         position: appointment.positionCode,
         contextGroupId: appointment.contextGroupId,
-        contextName,
+        contextName: contextType === GroupType.Section ? sectionName(choirName, sectionVoice) : contextName,
         startDate: appointment.startDate as IsoDate,
         endDate: appointment.endDate as IsoDate | null,
         organisationYear: appointment.organisationYear

@@ -1,46 +1,34 @@
 import { Client, type ClientBase } from "pg"
+import type { voice } from "@/core/db/schema/voice"
 import { secureConnection } from "@/core/db/tls"
 import { timeZone } from "@/core/i18n/time-zone"
-import { currentOrganisationYear, GroupType, hasExplicitGroupName } from "@/core/org-structure"
+import { currentOrganisationYear, GroupType, hasExplicitGroupName, sectionName } from "@/core/org-structure"
 import { confirmProductionWrite } from "./guards"
 import { referenceChoirId, referenceContinuingGroupId, referenceSectionId } from "./seed-data"
 import { announce, type Database } from "./target"
+
+type Voice = (typeof voice.enumValues)[number]
 
 /**
  * Fixed Groups every environment shares. Position rules live in the domain catalogue.
  */
 export const REFERENCE_DATA: {
-  choirs: { name: string; sections: { name: string; voice: string }[] }[]
+  choirs: { name: string; sections: { voice: Voice }[] }[]
   continuingGroups: { type: GroupType }[]
   annualGroups(year: number): { type: GroupType; year: number }[]
 } = {
   choirs: [
     {
       name: "MK",
-      sections: [
-        { name: "MKT1", voice: "T1" },
-        { name: "MKT2", voice: "T2" },
-        { name: "MKB1", voice: "B1" },
-        { name: "MKB2", voice: "B2" }
-      ]
+      sections: [{ voice: "T1" }, { voice: "T2" }, { voice: "B1" }, { voice: "B2" }]
     },
     {
       name: "DK",
-      sections: [
-        { name: "DKS1", voice: "S1" },
-        { name: "DKS2", voice: "S2" },
-        { name: "DKA1", voice: "A1" },
-        { name: "DKA2", voice: "A2" }
-      ]
+      sections: [{ voice: "S1" }, { voice: "S2" }, { voice: "A1" }, { voice: "A2" }]
     },
     {
       name: "KK",
-      sections: [
-        { name: "KKS", voice: "S" },
-        { name: "KKA", voice: "A" },
-        { name: "KKT", voice: "T" },
-        { name: "KKB", voice: "B" }
-      ]
+      sections: [{ voice: "S" }, { voice: "A" }, { voice: "T" }, { voice: "B" }]
     }
   ],
   continuingGroups: [{ type: GroupType.ParentsMeeting }],
@@ -110,14 +98,18 @@ export async function insertReferenceData(
         await client.query(`insert into "choir" ("group_id") values ($1)`, [choirId])
         created.push(choir.name)
       }
+      const {
+        rows: [currentChoir]
+      } = await client.query<{ name: string }>(`SELECT name FROM "group" WHERE id = $1`, [choirId])
+      if (!currentChoir) throw new Error("Reference Choir is missing.")
       for (const section of choir.sections) {
-        const sectionSeedId = referenceSectionId(choir.name as "MK" | "DK" | "KK", section.name)
+        const sectionSeedId = referenceSectionId(choir.name as "MK" | "DK" | "KK", section.voice)
         let sectionId = await seededGroupId(client, sectionSeedId, GroupType.Section, choirId)
-        sectionId ??= await activeGroupId(client, section.name, GroupType.Section, choirId)
+        sectionId ??= await activeSectionId(client, choirId, section.voice)
         if (sectionId) continue
-        sectionId = await insertGroup(client, section.name, GroupType.Section, choirId, null, sectionSeedId)
+        sectionId = await insertGroup(client, null, GroupType.Section, choirId, null, sectionSeedId)
         await client.query(`insert into "section" ("group_id", "voice") values ($1, $2)`, [sectionId, section.voice])
-        created.push(section.name)
+        created.push(sectionName(currentChoir.name, section.voice))
       }
     }
 
@@ -195,4 +187,14 @@ async function insertGroup(
   const [row] = rows
   if (!row) throw new Error(`Creating the group ${name} did not return a record.`)
   return row.id
+}
+
+/** Match a Section's structural identity when it predates stable seed UUIDs. */
+async function activeSectionId(client: ClientBase, choirId: string, voice: Voice) {
+  const { rows } = await client.query<{ id: string }>(
+    `SELECT g.id FROM "group" g JOIN section s ON s.group_id = g.id
+     WHERE g.type = 'Section' AND g.choir_id = $1 AND g.active AND s.voice = $2::voice`,
+    [choirId, voice]
+  )
+  return rows[0]?.id
 }

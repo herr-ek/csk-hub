@@ -146,3 +146,10 @@ The `20261102210555_redesign-organisation-appointments` migration drops the old 
 Position catalogue, and holding tables without converting their records. The cutover assumes
 disposable organisation data. For a fresh local example, explicitly run `bun run ops reset`,
 then `bun run ops seed-demo`. Reset refuses production and non-local database targets.
+
+## Section identities
+
+Section names are derived from the current Choir name and the Section Voice; they are never
+seeded as editable names. Reference data matches existing Sections by owning Choir and Voice,
+while retaining the original stable UUID tokens for newly created reference Sections. A Choir
+rename therefore changes Section labels without replacing their identities or participation.

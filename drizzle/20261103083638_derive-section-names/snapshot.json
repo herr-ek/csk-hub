@@ -1,0 +1,40 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "29e2c4bb-64e0-41d9-995b-834139e33f6d",
+  "prevIds": [
+    "9fe0ab82-a163-4ba4-9bc2-1e60e1a6607c"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "group"
+      ],
+      "writes": [
+        "s|ck|public.group.group_name_policy_check"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.type",
+        "n|col|public.group.name",
+        "e|col|public.group.type",
+        "e|col|public.group.name"
+      ],
+      "sqlHash": "f5299be69a766952"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"group\",\"group_name_policy_check\"]",
+      "set": {
+        "value": "\n      CASE WHEN \"type\" IN ('Choir', 'GigGroup', 'Övrig')\n        THEN \"name\" IS NOT NULL AND length(btrim(\"name\")) > 0\n        ELSE \"name\" IS NULL END\n    "
+      }
+    }
+  ]
+}

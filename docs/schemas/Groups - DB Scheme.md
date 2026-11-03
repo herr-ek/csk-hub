@@ -114,14 +114,16 @@ identities; it never copies people or renews appointments.
 | Annual Groups | Null | Localized Group type + organisational year |
 | Choir teams | Null | Owning Choir's explicit name + localized team type |
 | Parents meeting | Null | Localized Group type |
-| Choirs and Sections | Required nonblank name | Their explicit identity, such as MK or KKB |
+| Choirs | Required nonblank name | Their editable individual name, such as MK |
+| Sections | Null | Owning Choir name + Section Voice, such as MK + B1 → MKB1 or KK + B → KKB |
 | Gig groups and Other Groups | Required nonblank name | Their editable individual name |
 
 `group-names.ts` defines `EXPLICIT_GROUP_NAME_TYPES` with enum values. Both application
 validation and the schema check use this list. Renaming a derived-label Group is refused;
 Group creation and edits store null for those types even if an old caller supplies a name.
 Derived names are not copied into storage or used as identity. Renaming a Choir changes its
-teams' displayed labels immediately, without updating team rows.
+Sections' and teams' displayed labels immediately, without updating their rows. A singer's Voice
+division does not determine the Section name: a B2 singer in KK belongs to KKB.
 
 The English enum member names (for example `GroupType.ConcertCommittee` and
 `PositionCode.FirstConcertMaster`) are independent of the retained storage strings.

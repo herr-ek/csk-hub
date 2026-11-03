@@ -32,5 +32,7 @@ Enum member names and translation keys are English; existing stored values are r
 `group-names.ts` owns the enum-based list of explicitly named types, shared by command
 validation and the database constraint. `labels.ts` formats derived labels through a supplied
 intl translator: annual type + year, Choir team type + Choir name, and the parents meeting's
-type label. Only Choirs, Sections, GigGroups, and Other Groups store individual names.
+type label. Only Choirs, GigGroups, and Other Groups store individual names.
+Section names derive from the current owning Choir name and the Section Voice (KK + B → KKB),
+independent of a singer's division. Section rows store no name and cannot be renamed.
 Position labels live exclusively in the locale catalogues.

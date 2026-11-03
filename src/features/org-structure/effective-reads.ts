@@ -9,7 +9,8 @@ import {
   type EffectivePosition,
   GroupType,
   type IsoDate,
-  type PositionCode
+  type PositionCode,
+  sectionName
 } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
 import { appointmentMemberships } from "./appointment-memberships"
@@ -28,6 +29,7 @@ export async function listEffectiveParticipationOfUserAt(
   const derivedMembership = appointmentMemberships(database)
   const owningChoir = alias(group, "effective_owning_choir")
   const contextGroup = alias(group, "effective_appointment_context")
+  const contextSection = alias(section, "effective_context_section")
   const [directRows, grantRows, appointmentRows] = await Promise.all([
     database
       .select({ membership: directMembership, group, sectionVoice: section.voice, choirName: owningChoir.name })
@@ -56,10 +58,16 @@ export async function listEffectiveParticipationOfUserAt(
         )
       ),
     database
-      .select({ appointment: positionAppointment, context: contextGroup, choirName: owningChoir.name })
+      .select({
+        appointment: positionAppointment,
+        context: contextGroup,
+        choirName: owningChoir.name,
+        sectionVoice: contextSection.voice
+      })
       .from(positionAppointment)
       .innerJoin(contextGroup, eq(contextGroup.id, positionAppointment.contextGroupId))
       .leftJoin(owningChoir, eq(owningChoir.id, contextGroup.choirId))
+      .leftJoin(contextSection, eq(contextSection.groupId, contextGroup.id))
       .where(
         and(
           eq(positionAppointment.userId, userId),
@@ -85,7 +93,7 @@ export async function listEffectiveParticipationOfUserAt(
     }
     const created: EffectiveGroup = {
       groupId: row.id,
-      name: row.name,
+      name: row.type === GroupType.Section ? sectionName(choirName, sectionVoice) : row.name,
       type: row.type as GroupType,
       choirId: row.choirId,
       choirName,
@@ -149,7 +157,8 @@ export async function listEffectiveParticipationOfUserAt(
       positionCode: code,
       name: code,
       contextGroupId: row.context.id,
-      contextName: row.context.name,
+      contextName:
+        row.context.type === GroupType.Section ? sectionName(row.choirName, row.sectionVoice) : row.context.name,
       contextType: row.context.type as GroupType,
       contextChoirId: row.context.choirId,
       contextChoirName: row.choirName,
@@ -191,6 +200,7 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
   requireDate(date)
   if (!userIds.length) return []
   const derivedMembership = appointmentMemberships(database)
+  const owningChoir = alias(group, "affiliation_owning_choir")
   const [direct, grants] = await Promise.all([
     database
       .select({
@@ -198,10 +208,14 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
         groupId: group.id,
         name: group.name,
         type: group.type,
-        choirId: group.choirId
+        choirId: group.choirId,
+        choirName: owningChoir.name,
+        sectionVoice: section.voice
       })
       .from(directMembership)
       .innerJoin(group, eq(group.id, directMembership.groupId))
+      .leftJoin(section, eq(section.groupId, group.id))
+      .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
       .where(
         and(
           inArray(directMembership.userId, userIds),
@@ -217,11 +231,15 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
         groupId: group.id,
         name: group.name,
         type: group.type,
-        choirId: group.choirId
+        choirId: group.choirId,
+        choirName: owningChoir.name,
+        sectionVoice: section.voice
       })
       .from(derivedMembership)
       .innerJoin(positionAppointment, eq(positionAppointment.id, derivedMembership.appointmentId))
       .innerJoin(group, eq(group.id, derivedMembership.groupId))
+      .leftJoin(section, eq(section.groupId, group.id))
+      .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
       .where(
         and(
           inArray(positionAppointment.userId, userIds),
@@ -232,7 +250,11 @@ export async function listEffectiveChoirAffiliationsOfUsersAt(
         )
       )
   ])
-  return [...new Map([...direct, ...grants].map((row) => [`${row.userId}:${row.groupId}`, row])).values()]
+  const rows = [...direct, ...grants].map(({ choirName, sectionVoice, ...row }) => ({
+    ...row,
+    name: row.type === GroupType.Section ? sectionName(choirName, sectionVoice) : row.name
+  }))
+  return [...new Map(rows.map((row) => [`${row.userId}:${row.groupId}`, row])).values()]
 }
 
 /** Public current read, using the same dated interpretation as historical lookups. */

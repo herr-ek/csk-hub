@@ -14,7 +14,9 @@ const folder = mkdtempSync(join(tmpdir(), "csk-before-organisation-redesign-"))
 cpSync("drizzle", folder, { recursive: true })
 const redesignFolder = readdirSync(folder).find((name) => name.endsWith("_redesign-organisation-appointments"))
 if (!redesignFolder) throw new Error("Missing organisation redesign migration")
-rmSync(join(folder, redesignFolder), { recursive: true })
+for (const name of readdirSync(folder)) {
+  if (name >= redesignFolder) rmSync(join(folder, name), { recursive: true })
+}
 const database = await createTestDatabase(folder)
 
 afterAll(async () => {

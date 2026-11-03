@@ -16,12 +16,7 @@ describe.skipIf(!database)("Choir and Group structure", () => {
     expect(
       await createChoir(t.db, {
         name,
-        sections: [
-          { name: "Soprano", voice: "S" },
-          { name: "Alto", voice: "A" },
-          { name: "Tenor", voice: "T" },
-          { name: "Bass", voice: "B" }
-        ]
+        sections: [{ voice: "S" }, { voice: "A" }, { voice: "T" }, { voice: "B" }]
       })
     ).toMatchObject({
       success: true,
@@ -39,19 +34,14 @@ describe.skipIf(!database)("Choir and Group structure", () => {
 
   test("invalid or overlapping Section sets leave no Choir behind", async () => {
     const name = uniqueName("Rejected choir")
-    expect(await createChoir(t.db, { name, sections: [{ name: "one", voice: "S" }] })).toEqual({
+    expect(await createChoir(t.db, { name, sections: [{ voice: "S" }] })).toEqual({
       success: false,
       error: "section-count"
     })
     expect(
       await createChoir(t.db, {
         name,
-        sections: [
-          { name: "one", voice: "B" },
-          { name: "two", voice: "B1" },
-          { name: "three", voice: "S" },
-          { name: "four", voice: "A" }
-        ]
+        sections: [{ voice: "B" }, { voice: "B1" }, { voice: "S" }, { voice: "A" }]
       })
     ).toEqual({ success: false, error: "voice-in-several-sections" })
     expect(await t.db.select().from(group).where(eq(group.name, name))).toEqual([])

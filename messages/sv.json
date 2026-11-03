@@ -815,7 +815,7 @@
       "group-type-taken": "Det finns redan en aktiv grupp av denna typ för kören. Redigera eller arkivera den befintliga gruppen innan en ny skapas.",
       "annual-group-needs-year": "Denna årsgrupp saknar ett fastställt verksamhetsår. Förbered eller välj en grupp för rätt år, eller fastställ gruppens år innan deltagande läggs till eller korrigeras.",
       "organisation-year-too-far-ahead": "Årsgrupper kan bara förberedas till och med nästa verksamhetsår.",
-      "group-name-derived": "Gruppens namn härleds från dess typ, verksamhetsår eller kör och kan inte ändras."
+      "group-name-derived": "Gruppens namn härleds från dess typ, verksamhetsår, kör eller sektionens stämma och kan inte ändras."
     },
     "positionLabels": {
       "Chair": "Ordförande",

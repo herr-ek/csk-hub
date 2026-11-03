@@ -33,3 +33,27 @@ for (const [locale, board, team, parents] of [
     ).toContain("Renamed MK")
   })
 }
+
+for (const locale of ["en", "sv", "de"] as const) {
+  test(`${locale} derives Section names from the Choir and Section Voice`, () => {
+    const translate = createTranslator({ locale, messages: getMessages(locale), namespace: "Groups" })
+    for (const [choirName, sectionVoice, expected] of [
+      ["MK", "B1", "MKB1"],
+      ["DK", "A2", "DKA2"],
+      ["KK", "B", "KKB"]
+    ] as const) {
+      expect(
+        formatGroupLabel(
+          { type: GroupType.Section, name: null, organisationYear: null, choirName, sectionVoice },
+          translate
+        )
+      ).toBe(expected)
+    }
+    expect(
+      formatGroupLabel(
+        { type: GroupType.Section, name: null, organisationYear: null, choirName: "Renamed KK", sectionVoice: "B" },
+        translate
+      )
+    ).toBe("Renamed KKB")
+  })
+}

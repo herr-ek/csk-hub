@@ -1,5 +1,6 @@
+import type { voice } from "@/core/db/schema/voice"
 import { GROUP_POLICIES } from "./catalogue"
-import { hasExplicitGroupName } from "./group-names"
+import { hasExplicitGroupName, sectionName } from "./group-names"
 import { GroupType, PositionCode } from "./identifiers"
 
 export type GroupTypeKey = keyof typeof GroupType
@@ -27,6 +28,7 @@ export type GroupLabelInput = {
   name: string | null
   organisationYear: number | null
   choirName?: string | null
+  sectionVoice?: (typeof voice.enumValues)[number] | null
 }
 
 export type GroupLabelTranslator = (
@@ -36,6 +38,7 @@ export type GroupLabelTranslator = (
 
 /** Formats the complete display label with ICU templates in the viewer's locale. */
 export function formatGroupLabel(group: GroupLabelInput, translate: GroupLabelTranslator): string {
+  if (group.type === GroupType.Section) return sectionName(group.choirName, group.sectionVoice)
   if (hasExplicitGroupName(group.type)) return group.name ?? ""
   const type = translate(`types.${groupTypeKey(group.type)}`)
   if (GROUP_POLICIES[group.type].lifetime === "annual") {

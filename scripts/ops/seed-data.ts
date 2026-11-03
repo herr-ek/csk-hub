@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto"
 import type { db } from "@/core/db"
+import type { voice } from "@/core/db/schema/voice"
 import type { GroupType } from "@/core/org-structure"
+import { sectionName } from "@/core/org-structure"
+
+type Voice = (typeof voice.enumValues)[number]
 
 export type SeedDatabase = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
 
@@ -31,8 +35,9 @@ export function referenceChoirId(name: "MK" | "DK" | "KK") {
   return seedId(`reference:choir:${name}`)
 }
 
-export function referenceSectionId(choir: "MK" | "DK" | "KK", section: string) {
-  return seedId(`reference:section:${choir}:${section}`)
+/** Retain the original UUID token, using the immutable Choir code rather than its editable name. */
+export function referenceSectionId(choir: "MK" | "DK" | "KK", voice: Voice) {
+  return seedId(`reference:section:${choir}:${sectionName(choir, voice)}`)
 }
 
 export function referenceContinuingGroupId(type: GroupType) {

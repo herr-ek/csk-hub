@@ -815,7 +815,7 @@
       "group-type-taken": "An active Group of this type already exists for that Choir. Edit or archive the existing Group before creating another.",
       "annual-group-needs-year": "This annual Group has no concrete year. Prepare or select a Group for the intended year, or reconcile this Group’s year before adding or correcting participation.",
       "organisation-year-too-far-ahead": "Annual groups can only be prepared up to the next organisational year.",
-      "group-name-derived": "This group’s label is derived from its type, year, or choir and cannot be renamed."
+      "group-name-derived": "This group’s name is derived from its type, year, choir, or Section Voice and cannot be renamed."
     },
     "positionLabels": {
       "Chair": "Chair",

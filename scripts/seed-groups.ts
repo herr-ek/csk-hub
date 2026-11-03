@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, notExists, or } from "drizzle-orm"
+import { and, asc, count, eq, isNull, notExists, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
@@ -133,7 +133,7 @@ async function sectionSlots(database: Database) {
     .where(
       and(eq(group.active, true), eq(choirGroup.active, true), or(...CHOIRS.map((name) => eq(choirGroup.name, name))))
     )
-    .orderBy(asc(choirGroup.name), asc(group.name))
+    .orderBy(asc(choirGroup.name), asc(sql`${section.voice}::text`))
   if (
     sections.length !== 12 ||
     new Set(sections.map(({ choirId }) => choirId)).size !== 3 ||

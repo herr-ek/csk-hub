@@ -31,6 +31,8 @@ Commands enforce the relationships the database cannot fully express:
   Position in a particular Board at a time. Appointments in distinct contexts may coexist.
 - Taking a Position replaces overlapping Helper participation in its granted Groups. Ending
   the appointment does not silently restore the Helper period.
+- Section names use the owning Choir name and the Section Voice, such as KKB for both B1 and B2
+  singers in KK's B Section. Choir renames change the label without changing Section identities.
 - Group names follow the fixed naming policy. Annual lifecycle follows the year; manual
   archival is for non-annual Groups. Archiving a Choir also archives its Sections.
 
@@ -57,3 +59,8 @@ to retained participation data expecting an automatic conversion.
 
 Database tests create, migrate, and drop disposable PostgreSQL databases using the local
 `POSTGRES_URL`. Skipped database tests do not establish that migrations or constraints work.
+
+The subsequent `derive-section-names` migration clears only redundant Section names and updates
+the naming constraint. It retains Section UUIDs, Voice rows, Choir relationships, Direct Memberships,
+appointments, and historical periods. Reference seeding matches Sections by Choir and Voice and
+retains the existing UUID tokens.

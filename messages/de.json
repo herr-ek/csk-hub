@@ -815,7 +815,7 @@
       "group-type-taken": "Für diesen Chor besteht bereits eine aktive Gruppe dieses Typs. Bearbeite oder archiviere die bestehende Gruppe, bevor du eine weitere erstellst.",
       "annual-group-needs-year": "Diese Jahresgruppe hat noch kein festgelegtes Jahr. Bereite eine Gruppe für das gewünschte Jahr vor oder wähle sie aus, oder kläre zuerst das Jahr dieser Gruppe, bevor du die Teilnahme hinzufügst oder korrigierst.",
       "organisation-year-too-far-ahead": "Jahresgruppen können nur bis zum nächsten Organisationsjahr vorbereitet werden.",
-      "group-name-derived": "Die Bezeichnung dieser Gruppe wird aus Typ, Organisationsjahr oder Chor abgeleitet und kann nicht geändert werden."
+      "group-name-derived": "Die Bezeichnung dieser Gruppe wird aus Typ, Organisationsjahr, Chor oder der Stimme der Sektion abgeleitet und kann nicht geändert werden."
     },
     "positionLabels": {
       "Chair": "Vorsitzende:r",

@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq } from "drizzle-orm"
 import { choir, group, section } from "@/core/db/schema/org-structure"
-import { GROUP_POLICIES, GroupType, hasExplicitGroupName } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, hasExplicitGroupName, sectionName } from "@/core/org-structure"
 import { contains, type Voice } from "@/features/voice/model"
 import { type OrgStructureDatabase, RuleViolation, runOrgStructureCommand } from "./operation"
 
@@ -24,7 +24,7 @@ export function renameGroup(database: OrgStructureDatabase, groupId: string, nam
 
 type CreateChoirInput = {
   name: string
-  sections: { name: string; voice: Voice }[]
+  sections: { voice: Voice }[]
 }
 
 /**
@@ -50,11 +50,11 @@ export function createChoir(database: OrgStructureDatabase, input: CreateChoirIn
     for (const definition of input.sections) {
       const [created] = await tx
         .insert(group)
-        .values({ name: definition.name.trim(), type: GroupType.Section, choirId: choirGroup.id })
+        .values({ type: GroupType.Section, choirId: choirGroup.id })
         .returning({ id: group.id })
       if (!created) throw new Error("Section creation did not return a record.")
       await tx.insert(section).values({ groupId: created.id, voice: definition.voice })
-      sections.push({ id: created.id, name: definition.name.trim(), voice: definition.voice })
+      sections.push({ id: created.id, name: sectionName(input.name.trim(), definition.voice), voice: definition.voice })
     }
 
     return { choirId: choirGroup.id, sections }

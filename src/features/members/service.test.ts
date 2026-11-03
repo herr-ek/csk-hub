@@ -45,7 +45,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     return success(
       await createChoir(db, {
         name: unique(name),
-        sections: voices.map((voice) => ({ name: `${name}${voice}`, voice }))
+        sections: voices.map((voice) => ({ voice }))
       })
     )
   }
@@ -107,7 +107,9 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     expect(profile?.groups).toEqual([])
     const listing = await listMemberDirectory(db, await member(), { query: singerName })
     expect(listing.members[0].choirs).toHaveLength(2)
-    expect(listing.members[0].choirs.find((item) => item.id === kk.choirId)).toMatchObject({ section: "KKB" })
+    expect(listing.members[0].choirs.find((item) => item.id === kk.choirId)).toMatchObject({
+      section: kk.sections.find(({ voice }) => voice === "B")?.name
+    })
     success(await archiveGroup(db, kk.choirId))
     const afterArchive = await getMemberProfile(db, singer, singer)
     expect(afterArchive?.choirs.map((item) => item.groupId)).toEqual([mk.choirId])

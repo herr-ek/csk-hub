@@ -32,6 +32,7 @@ export const group = pgTable(
   "group",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    // Section and other derived Group names are null; see derive-section-names migration.
     name: text("name"),
     type: groupType("type").notNull(),
     // Null means CSK-wide. A Choir group itself is always CSK-wide, and a Section always belongs to one.
@@ -98,7 +99,7 @@ export const choir = pgTable("choir", {
     .references((): AnyPgColumn => group.id, { onDelete: "restrict" })
 })
 
-/** A 1:1 extension of a Section group, which sings exactly one Voice: KKB sings B, MKB1 sings B1. */
+/** A Section's Voice determines its derived name with its Choir: KKB sings B, MKB1 sings B1. */
 export const section = pgTable("section", {
   groupId: uuid("group_id")
     .primaryKey()
