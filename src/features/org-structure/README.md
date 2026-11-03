@@ -141,3 +141,18 @@ for either a B1 or B2 singer in KK's B Section. Choir renames update the labels 
 Section identities. The `derive-section-names` migration clears only redundant Section names;
 UUIDs, Voice rows, Choir relationships, Memberships, appointments, and historical periods survive.
 Reference seeding matches Sections by Choir and Voice and retains the existing UUID tokens.
+
+## Admin overviews
+
+The Groups overview lists complete effective rosters, including explicitly added members and
+Helpers. Position labels annotate members where applicable; the existing group-detail commands
+remain the place to manage participation. Archived annual Groups are browsed one organisational
+year at a time, newest first, with previous/next controls. Archived Groups without a year remain
+in a separate undated section rather than being assigned an invented year.
+
+The separate Positions page groups holders by their actual responsibility context, not by every
+Group to which a Position grants Membership. Current holders belong to active contexts and have
+a tenure covering today. Year history includes every tenure overlapping the July–June year,
+including archived contexts and fluid responsibilities. The current year's history stops at today,
+so prepared future holders are excluded. A handover lists both people under the same Position;
+a returning holder is listed once with each of their periods.

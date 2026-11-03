@@ -168,7 +168,9 @@
       "adminUsers": "Mitglieder",
       "adminNotifications": "Benachrichtigungen",
       "adminOrgStructure": "Chöre und Stimmen",
-      "adminOrgStructureGroups": "Gruppen und Ämter"
+      "adminOrgStructureGroups": "Gruppen",
+      "adminGigGroups": "Gig-Ensembles",
+      "adminPositions": "Ämter"
     },
     "members": "Mitglieder"
   },
@@ -232,8 +234,12 @@
     "notificationsDescription": "Push-Benachrichtigungen an Mitglieder senden.",
     "choirs": "Chöre und Stimmen",
     "choirsDescription": "Sänger in Chöre und Stimmgruppen einteilen und ihre Stimme ändern.",
-    "groups": "Gruppen und Ämter",
-    "groupsDescription": "Vorstand, Ausschüsse und andere Gruppen mit ihren Mitgliedern und Ämtern."
+    "groups": "Gruppen",
+    "groupsDescription": "Vorstand, Ausschüsse und andere Gruppen mit allen ihren Mitgliedern.",
+    "gigGroups": "Gig-Ensembles",
+    "gigGroupsDescription": "Benannte Ensembles, ihre Mitglieder und die Ensembleleitung verwalten.",
+    "positions": "Ämter",
+    "positionsDescription": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr."
   },
   "Members": {
     "title": "Mitglieder",
@@ -656,13 +662,19 @@
     "choirsPage": {
       "title": "Chöre und Stimmen",
       "description": "Jeder Chor mit seinen Stimmgruppen. Öffne eine Stimmgruppe, um Sänger einzuteilen oder ihre Stimme zu ändern.",
-      "groupsLink": "Gruppen und Ämter",
+      "groupsLink": "Gruppen",
       "noChoirs": "Noch keine Chöre."
     },
     "groupsPage": {
-      "title": "Gruppen und Ämter",
-      "description": "Vorstand, Ausschüsse und alle anderen Gruppen sowie die Ämter, die sie haben können.",
-      "choirsLink": "Chöre und Stimmen"
+      "title": "Gruppen",
+      "description": "Vorstand, Ausschüsse und andere Gruppen mit allen ihren Mitgliedern.",
+      "choirsLink": "Chöre und Stimmen",
+      "viewLabel": "Gruppenzeitraum",
+      "gigGroupsLink": "Gig-Ensembles",
+      "previousYear": "Vorheriges Organisationsjahr",
+      "nextYear": "Nächstes Organisationsjahr",
+      "undatedArchives": "Weitere archivierte Gruppen",
+      "undatedArchivesDescription": "Diese Gruppen haben kein Organisationsjahr und werden separat aufgeführt."
     },
     "saved": "Gespeichert",
     "saving": "Speichern…",
@@ -829,28 +841,6 @@
       "organisation-year-too-far-ahead": "Jahresgruppen können nur bis zum nächsten Organisationsjahr vorbereitet werden.",
       "group-name-derived": "Die Bezeichnung dieser Gruppe wird aus Typ, Organisationsjahr, Chor oder der Stimme der Sektion abgeleitet und kann nicht geändert werden."
     },
-    "positionLabels": {
-      "Chair": "Vorsitzende:r",
-      "ViceChair": "Stellvertretende:r Vorsitzende:r",
-      "Treasurer": "Schatzmeister:in",
-      "Secretary": "Sekretär:in",
-      "PublicRelationsOfficer": "PR-Beauftragte:r",
-      "FirstConcertMaster": "1. Konzertmeister:in",
-      "OrganisationGigCoordinator": "CSK-Gigmeister:in",
-      "SocialCoordinator": "Festbeauftragte:r",
-      "DeputySocialCoordinator": "Festkomitee-Beauftragte:r",
-      "FinancialOfficer": "Finanzbeauftragte:r",
-      "Conductor": "Dirigent:in",
-      "MusicLibrarian": "Notenwart:in",
-      "ChoirConcertMaster": "Chor-Konzertmeister:in",
-      "ChoirGigCoordinator": "Chor-Gigmeister:in",
-      "SectionParent": "Stimmgruppen-Elternteil",
-      "GigLeader": "Gigleitung"
-    },
-    "labels": {
-      "annual": "{type} {year}",
-      "choirTeam": "{choir} · {type}"
-    },
     "management": {
       "prepare": "Jahresgruppen vorbereiten",
       "prepareDescription": "Erstelle die erforderlichen Gruppen für ein Jahr. Bestehende Gruppen werden wiederverwendet; Mitglieder und Amtsbesetzungen werden niemals kopiert.",
@@ -883,6 +873,51 @@
       "yearRequired": "Wähle ein Organisationsjahr für diese Jahresgruppe.",
       "groupIdentity": "{type} · {year}",
       "derivedName": "Die Bezeichnung wird aus Gruppentyp, Organisationsjahr und Chor abgeleitet."
+    },
+    "positionLabels": {
+      "Chair": "Vorsitzende:r",
+      "ViceChair": "Stellvertretende:r Vorsitzende:r",
+      "Treasurer": "Schatzmeister:in",
+      "Secretary": "Sekretär:in",
+      "PublicRelationsOfficer": "PR-Beauftragte:r",
+      "FirstConcertMaster": "1. Konzertmeister:in",
+      "OrganisationGigCoordinator": "CSK-Gigmeister:in",
+      "SocialCoordinator": "Festbeauftragte:r",
+      "DeputySocialCoordinator": "Festkomitee-Beauftragte:r",
+      "FinancialOfficer": "Finanzbeauftragte:r",
+      "Conductor": "Dirigent:in",
+      "MusicLibrarian": "Notenwart:in",
+      "ChoirConcertMaster": "Chor-Konzertmeister:in",
+      "ChoirGigCoordinator": "Chor-Gigmeister:in",
+      "SectionParent": "Stimmgruppen-Elternteil",
+      "GigLeader": "Gigleitung"
+    },
+    "labels": {
+      "annual": "{type} {year}",
+      "choirTeam": "{choir} · {type}"
+    },
+    "gigGroupsPage": {
+      "title": "Gig-Ensembles",
+      "description": "Benannte Ensembles, ihre Mitglieder und die Ensembleleitung verwalten.",
+      "create": "Gig-Ensemble erstellen"
     }
+  },
+  "PositionsPage": {
+    "title": "Ämter",
+    "description": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr.",
+    "period": "Zeitraum der Ämter",
+    "current": "Aktuell",
+    "history": "Verlauf",
+    "year": "Organisationsjahr",
+    "yearValue": "{start}/{end}",
+    "currentHelp": "Heute besetzte Ämter in aktiven Gruppen.",
+    "historyHelp": "Alle Personen, die im gewählten Organisationsjahr ein Amt innehatten, einschließlich Übergaben und laufender Aufgaben. Das aktuelle Jahr wird bis heute angezeigt.",
+    "empty": "Keine Amtsinhaber in diesem Zeitraum.",
+    "csk": "CSK-weite Ämter",
+    "choirs": "Chöre",
+    "sections": "Stimmgruppenbetreuung",
+    "gigs": "Gig-Ensembles",
+    "tenure": "{start} – {end}",
+    "ongoing": "Laufend"
   }
 }
