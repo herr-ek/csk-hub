@@ -18,9 +18,10 @@ import {
   sectionName
 } from "@/core/org-structure"
 import { appointmentMemberships } from "./appointment-memberships"
+import { validateUserParticipation } from "./direct-membership"
 import { cskToday } from "./effective-reads"
 import { requireChoirTeamAvailable } from "./group-cardinality"
-import { requireActiveGroup, requireChoir, type requireGroup } from "./lookup"
+import { requireActiveGroup, requireChoir, requireGroup } from "./lookup"
 import {
   lockUser,
   type OrgStructureDatabase,
@@ -283,6 +284,126 @@ export function replaceAppointmentHolder(
   })
 }
 
+/** Cancels a prepared future appointment without rewriting started history. */
+export function cancelPreparedAppointment(
+  database: OrgStructureDatabase,
+  input: { appointmentId: string; today: IsoDate }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const today = requireDate(input.today)
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:appointment:${input.appointmentId}`}))`)
+    const [appointment] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(eq(positionAppointment.id, input.appointmentId))
+    if (!appointment) throw new RuleViolation("not-holding-position")
+    await lockUser(tx, appointment.userId)
+    if (appointment.startDate <= today) throw new RuleViolation("period-conflict")
+    await tx.delete(positionAppointment).where(eq(positionAppointment.id, appointment.id))
+    return { id: appointment.id }
+  })
+}
+
+/** Corrects an existing annual appointment and re-resolves every granted Group atomically. */
+export function correctAnnualAppointment(
+  database: OrgStructureDatabase,
+  input: {
+    appointmentId: string
+    userId: string
+    positionCode: PositionCode
+    contextGroupId: string
+    organisationYear: number
+    startDate: IsoDate
+    endDate: IsoDate
+  }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:appointment:${input.appointmentId}`}))`)
+    const [existing] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(eq(positionAppointment.id, input.appointmentId))
+    if (!existing) throw new RuleViolation("not-holding-position")
+    for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
+    const definition = POSITION_DEFINITIONS[input.positionCode]
+    if (!definition) throw new RuleViolation("position-not-allowed")
+    const context = await requireGroup(tx, input.contextGroupId)
+    if (definition.endPolicy !== "annual" || context.type !== definition.context)
+      throw new RuleViolation("position-not-allowed")
+    const choirScopedAnnual = context.type === GroupType.Choir && definition.prerequisite
+    if (!choirScopedAnnual && context.organisationYear !== input.organisationYear)
+      throw new RuleViolation("period-conflict")
+    const bounds = organisationYearPeriod(input.organisationYear)
+    const startDate = requireDate(input.startDate)
+    const endDate = requireDate(input.endDate)
+    if (startDate < bounds.startDate || endDate > bounds.endDate || endDate <= startDate)
+      throw new RuleViolation("period-conflict")
+    const historical = endDate <= cskToday()
+    if (!context.active && !historical) throw new RuleViolation("group-archived")
+    if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
+    const grantIds = await resolveGrantGroups(tx, definition, context, input.organisationYear, historical)
+    await tx
+      .update(positionAppointment)
+      .set({
+        userId: input.userId,
+        positionCode: input.positionCode,
+        contextGroupId: context.id,
+        organisationYear: input.organisationYear,
+        startDate,
+        endDate
+      })
+      .where(eq(positionAppointment.id, existing.id))
+    await convertHelpers(tx, input.userId, grantIds, startDate, endDate)
+    return { id: existing.id }
+  })
+}
+
+/** Corrects a fluid Position appointment and re-resolves its grants atomically. */
+export function correctFluidAppointment(
+  database: OrgStructureDatabase,
+  input: {
+    appointmentId: string
+    userId: string
+    positionCode: PositionCode
+    contextGroupId: string
+    startDate: IsoDate
+    endDate: IsoDate | null
+  }
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:appointment:${input.appointmentId}`}))`)
+    const [existing] = await tx
+      .select()
+      .from(positionAppointment)
+      .where(eq(positionAppointment.id, input.appointmentId))
+    if (!existing) throw new RuleViolation("not-holding-position")
+    for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
+    const definition = POSITION_DEFINITIONS[input.positionCode]
+    if (definition?.endPolicy !== "fluid") throw new RuleViolation("position-not-allowed")
+    const context = await requireGroup(tx, input.contextGroupId)
+    if (context.type !== definition.context) throw new RuleViolation("position-not-allowed")
+    const startDate = requireDate(input.startDate)
+    const endDate = input.endDate === null ? null : requireDate(input.endDate)
+    if (endDate !== null && endDate <= startDate) throw new RuleViolation("period-conflict")
+    const historical = endDate !== null && endDate <= cskToday()
+    if (!context.active && !historical) throw new RuleViolation("group-archived")
+    await resolveGrantGroups(tx, definition, context, undefined, historical)
+    await tx
+      .update(positionAppointment)
+      .set({
+        userId: input.userId,
+        positionCode: input.positionCode,
+        contextGroupId: context.id,
+        organisationYear: null,
+        startDate,
+        endDate
+      })
+      .where(eq(positionAppointment.id, existing.id))
+    await validateUserParticipation(tx, input.userId)
+    return { id: existing.id }
+  })
+}
+
 /** Dated appointment participation in groups where the fixed definitions grant membership. */
 export async function listAppointmentMembersAt(database: OrgStructureDatabase, groupId: string, date: IsoDate) {
   requireDate(date)
@@ -424,6 +545,32 @@ export async function listEffectiveMembersAt(database: OrgStructureDatabase, gro
 export function listEffectiveMembersCurrent(database: OrgStructureDatabase, groupId: string) {
   const date = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date()) as IsoDate
   return listEffectiveMembersAt(database, groupId, date)
+}
+
+/** Every appointment for a person, including future and historical responsibility contexts. */
+export async function listAppointmentsOfUser(database: OrgStructureDatabase, userId: string) {
+  const context = alias(group, "appointment_context")
+  const owningChoir = alias(group, "user_appointment_choir")
+  const rows = await database
+    .select({ appointment: positionAppointment, context, sectionVoice: section.voice, choirName: owningChoir.name })
+    .from(positionAppointment)
+    .innerJoin(context, eq(context.id, positionAppointment.contextGroupId))
+    .leftJoin(section, eq(section.groupId, context.id))
+    .leftJoin(owningChoir, eq(owningChoir.id, context.choirId))
+    .where(eq(positionAppointment.userId, userId))
+    .orderBy(desc(positionAppointment.startDate))
+  return rows.map(({ appointment, context: row, sectionVoice, choirName }) => ({
+    id: appointment.id,
+    userId,
+    positionCode: appointment.positionCode as PositionCode,
+    contextGroupId: row.id,
+    contextName: row.type === GroupType.Section ? sectionName(choirName, sectionVoice) : row.name,
+    contextType: row.type as GroupType,
+    contextChoirId: row.choirId,
+    organisationYear: appointment.organisationYear,
+    startDate: appointment.startDate as IsoDate,
+    endDate: appointment.endDate as IsoDate | null
+  }))
 }
 
 /** Batched appointment history attached to each Group as context or a granted Membership. */

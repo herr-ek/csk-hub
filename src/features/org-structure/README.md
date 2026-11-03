@@ -1,66 +1,143 @@
-# Organisation structure
+# Organisation structure management
 
-This feature owns Group and participation reads and writes. Fixed definitions and universal
-contracts live in [`@/core/org-structure`](../../core/org-structure/README.md). The domain language
-is in the [glossary](../../../GLOSSARY.md#groups); the [schema guide](../../../docs/schemas/Groups%20-%20DB%20Scheme.md)
-describes the storage. Voice containment belongs to the [Voice feature](../voice/README.md).
+This feature owns the reads, commands, and management UI for Groups, Memberships, and
+appointments. The [core organisation module](../../core/org-structure/README.md) owns the
+fixed catalogues, policies, and universal domain types that these workflows apply. The domain
+language is in the [root glossary](../../../GLOSSARY.md#groups), and the final table layout is described in
+the [Groups database schema](../../../docs/schemas/Groups%20-%20DB%20Scheme.md). Voice families,
+divisions, and containment belong to the separate [Voice feature](../voice/README.md).
 
-## Storage and invariants
+## Domain model
 
-A Group is CSK-wide or belongs directly to one Choir. Annual Groups have separate identities
-for each July–June Organisational year. Other Groups have no automatic annual renewal.
-Direct Membership records independent dated participation, including singer placement and
-Helpers. One Position appointment records a holder, responsibility context, year when annual,
-and tenure. The catalogue determines its companion Memberships; those connections are derived
-by `appointmentMemberships`, never stored as extra Membership rows. Current catalogue rules
-also apply to historical appointments; there are no versioned policy snapshots.
+A Group is either CSK-wide or belongs directly to one Choir. A Choir is itself a CSK-wide Group;
+each Choir has four Sections. Group types and Position codes are fixed in the universal
+`@/core/org-structure` catalogue. Annual Groups are separate concrete identities for
+each Organisational year. Their dates run from 1 July through 30 June. Fluid Groups have no
+automatic annual renewal.
 
-All stored periods include their start and exclude their end. Current reads evaluate those
-periods at today's date, including scheduled end dates and excluding future starts.
+Membership is a person's dated participation in a Group. Direct Membership records an explicit
+period, such as singer placement or Helper participation. A Position appointment is one person's
+tenure in a fixed Position and a specific context Group. Its catalogue definition determines
+which Groups receive dated Membership through it; that set may include the context, other Groups,
+or both. For example, an Ordförande appointment grants its Board context, while Sexmästare in the
+Board grants both the Board and Sexmästeri. Three Choir Konsertmästare can each belong to the same
+year's Konsertmästeri while retaining their own Choir contexts. These Memberships are derived
+from the catalogue, context, and year by one shared query; no grant rows are stored. The current
+catalogue applies to historical appointments too; there are no versioned policy snapshots.
 
-Commands enforce the relationships the database cannot fully express:
+Annual periods use an exclusive 1 July end boundary in stored dates. Admin forms display and
+accept the inclusive last day, 30 June. An annual appointment ending on that boundary is not
+renewed automatically; a continuing holder receives an explicit new appointment for the next
+year. Fluid appointments end only when an Admin changes or ends them.
 
-- A Section's Voice contains the singer's Voice division. Choir participation covers every
-  Section period, with at most one overlapping Section in each Choir.
-- A Position's context has the type fixed by its code. Required companion Groups must exist,
-  and annual companions match the appointment year.
-- Choir, Section, and gig-group appointments require independent direct Membership throughout
-  the tenure. Taking or ending the responsibility preserves that Membership. Ending or changing
-  prerequisite participation is refused if it would invalidate an appointment.
-- One Position has at most one holder in its context on a date. A person holds at most one
-  Position in a particular Board at a time. Appointments in distinct contexts may coexist.
-- Taking a Position replaces overlapping Helper participation in its granted Groups. Ending
-  the appointment does not silently restore the Helper period.
-- Section names use the owning Choir name and the Section Voice, such as KKB for both B1 and B2
-  singers in KK's B Section. Choir renames change the label without changing Section identities.
-- Group names follow the fixed naming policy. Annual lifecycle follows the year; manual
-  archival is for non-annual Groups. Archiving a Choir also archives its Sections.
+## Invariants at the module boundary
 
-## Integration
+Application code writes organisation tables through this feature and uses its focused reads for
+Membership and Position information. The `scripts/ops` seed commands are the deliberate writer
+exception; they create stable local examples and validate the same relationships before writing.
+Database clients may be passed directly or as part of a caller's transaction, so a larger command
+can make its changes atomic.
 
-Application writes go through this server-only feature. Commands accept a database or a caller's
-transaction, use savepoints, and return typed rule violations. Per-user locks serialize changes;
-database range exclusions protect occupancy and overlapping direct periods. Hand-written policy
-functions, triggers, and constraints must remain aligned with the catalogue in later migrations.
-Operational seeds are the deliberate writer exception and must preserve the same invariants.
+The feature protects these relationships:
 
-Use effective participation reads for rosters, profiles, and authorization relationships. Combining
-raw direct Memberships and appointments separately can omit granted Groups or duplicate people.
-Authorization adoption follows the [authorization guide](../../../docs/authorization.md).
+- A Section belongs to one Choir, and a singer has at most one overlapping Section Membership in
+  a Choir. Section Voice must contain the singer's Voice division, and the Choir Membership must
+  cover the Section Membership.
+- A Position's context Group has the type fixed by its Position code. Appointment grant Groups
+  (including the context where defined) and the annual year come from that code; callers do not
+  choose a separate set of Memberships.
+- Choir, Section, and GigGroup appointments require the person's direct Membership in the context
+  for the entire appointment. The appointment does not enrol its holder in that prerequisite
+  Group, and taking or leaving the Position preserves that independent Membership.
+- One User holds at most one Position in a particular Board at a time. A Position has at most one
+  holder in its context at a time. Other appointments may overlap when their contexts differ.
+- A direct Helper period in a group with a formal Position ends when the person takes that
+  Position. Ending the appointment does not silently restore the earlier Helper Membership; an
+  Admin must explicitly add the person again.
+- Board and Föräldramötet do not accept direct Membership. Section Voice is required and valid on
+  Section Membership; other Groups have no singer Voice field.
+- Annual Groups follow their organisational year automatically: future before 1 July, current
+  during that year, historical afterwards. They cannot be manually archived; the shared `active`
+  column stays true under a database constraint and does not determine their currentness.
+- Non-annual Groups are manually archived rather than deleted. Archival removes them from current
+  summaries and prevents new ongoing or future participation, while allowing historical corrections.
+  It preserves every direct Membership and appointment, including open-ended and prepared
+  participation; it does not imply that members left or that a Position ended.
 
-The existing Admin screens support basic Group creation, direct participation, singer placement,
-and appointment assignment/end through this model. There is no runtime editor for formal Positions.
+Appointment creation, correction, handover, and ending update the appointment and any
+affected direct Memberships atomically; derived participation follows those records. A refusal leaves the affected participation unchanged. Commands serialize
+conflicting changes so simultaneous appointments cannot bypass the same holder or prerequisite
+rules.
 
-## Migration and verification
+Features adopting `core/authz` must load trusted effective Membership and Position appointment
+attributes through this module; authz does not query the organisation tables. Group policy
+adoption needs focused attribute projections, and its definition of current participation must
+match this module. See the [authorization guide](../../../docs/authorization.md) for the adoption contract.
 
-The redesign migration drops the legacy participation and Position tables without converting their
-records. Its cutover assumes disposable organisation data and a fresh reset/reseed. Do not apply it
-to retained participation data expecting an automatic conversion.
+## Public interface
 
-Database tests create, migrate, and drop disposable PostgreSQL databases using the local
-`POSTGRES_URL`. Skipped database tests do not establish that migrations or constraints work.
+Import commands and reads from `@/features/org-structure`; fixed definitions and universal types
+come from `@/core/org-structure`. The public interface is server-only.
 
-The subsequent `derive-section-names` migration clears only redundant Section names and updates
-the naming constraint. It retains Section UUIDs, Voice rows, Choir relationships, Direct Memberships,
-appointments, and historical periods. Reference seeding matches Sections by Choir and Voice and
-retains the existing UUID tokens.
+Group workflows use `createOrganisationGroup`, `prepareOrganisationYear`,
+`listOrganisationGroups`, and `updateOrganisationGroup`. Preparing a year creates its concrete
+annual Groups without copying Members or appointments.
+
+Direct Membership workflows use `addDirectMembership`, `changeDirectMembership`,
+`correctDirectMembership`, `endDirectMembership`, `listDirectMemberships`,
+`listDirectMembershipsOfUser`, and `listDirectMembersAt`. Singer placement commands
+`startMembership`, `placeSinger`, `placeSingerInSection`, `changeVoice`, and `endMembership` use
+the same direct Membership rules and preserve the explicit Section Voice.
+
+Position workflows use `appointPosition`, `replaceAppointmentHolder`, `endAppointment`,
+`cancelPreparedAppointment`, `correctAnnualAppointment`, and `correctFluidAppointment`. The
+catalogue fixes each appointment's context type, prerequisite, grants, and annual or fluid end
+policy. Each correction command validates the selected Position's policy and recomputes the
+appointment's required target Groups. Effective reads derive participation from the updated appointment.
+
+Use effective reads whenever a caller needs Group participation, rather than adding the direct
+and appointed sides independently:
+
+- `listEffectiveMembersAt`, `listEffectiveMembersCurrent`, and
+  `listEffectiveMembersForGroupsAt` return one Membership per User and retain the appointments
+  and context that provide Position membership.
+- `listEffectiveParticipationOfUserAt` and `listEffectiveParticipationOfUserCurrent` show a
+  person's Memberships and appointments together.
+- `listEffectiveGroupsOfUserAt` shows the Groups a person belongs to on a date.
+- `listEffectiveChoirAffiliationsOfUsersAt` provides dated Choir and Section summaries for
+  multiple people.
+
+Historical and future records are evaluated against the date supplied to the read. “Current”
+reads use the same effective rules at today's date rather than equating a null end with permanent
+participation.
+
+## Fixed catalogue
+
+The catalogue contains Ordförande, Vice Ordförande, Kassör, Sekreterare, PR-mästare,
+1:a Konsertmästare, CSK Gigmästare, Sexmästare, Sexmästarinna, Ekonomiskt Ansvarig, Dirigent,
+Notfiskal, Choir Konsertmästare, Choir Gigmästare, Stämförälder, and Gigledare. Position identifiers and the rules that give them meaning are code-controlled; labels are
+translated using English intl keys. There is no runtime editor for creating
+another formal Position. Groups such as Valberedningen, Webmästeriet, Arkivet, and
+Utantillkommittén use direct Memberships where no formal Position was agreed.
+
+## Database tests
+
+The organisation tests use a freshly migrated disposable PostgreSQL database created from the
+local `POSTGRES_URL`, then drop it. A skipped database test is not evidence that a migration or
+constraint works; run the relevant suite with local PostgreSQL available when changing this
+feature.
+
+
+## Group labels
+
+Annual Groups, Sections, Choir teams, and the parents meeting store no name. The core naming policy
+and database check enforce this; rename commands refuse derived names. Choirs, GigGroups, and Other Groups keep explicit names. Presentation reads use
+`listLocalizedGroupLabels` for a viewer-localized label, including context choices and member
+profiles. The formatter includes the annual year or owning Choir exactly once. Domain reads
+remain locale-independent and expose nullable explicit names alongside stable identities.
+
+Section names derive from the current owning Choir name and the Section Voice, such as KKB
+for either a B1 or B2 singer in KK's B Section. Choir renames update the labels without changing
+Section identities. The `derive-section-names` migration clears only redundant Section names;
+UUIDs, Voice rows, Choir relationships, Memberships, appointments, and historical periods survive.
+Reference seeding matches Sections by Choir and Voice and retains the existing UUID tokens.

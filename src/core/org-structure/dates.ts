@@ -1,4 +1,5 @@
 import { timeZone } from "@/core/i18n/time-zone"
+import { organisationYearPeriod } from "./catalogue"
 import type { IsoDate } from "./index"
 
 /** Converts a validated calendar date by whole days in UTC, independent of daylight saving time. */
@@ -22,6 +23,24 @@ export function periodsCoverPeriod(
     if (target.endDate !== null && coveredUntil >= target.endDate) return true
   }
   return target.endDate !== null && coveredUntil !== null && coveredUntil >= target.endDate
+}
+
+/** Current or next prepared year selected for an annual appointment form, with an in-year date range. */
+export function annualAppointmentDefaults(availableYears: readonly number[], today: IsoDate) {
+  const year = currentOrganisationYear(today)
+  const nextPreparedYear = availableYears
+    .filter((availableYear) => availableYear > year)
+    .sort((left, right) => left - right)[0]
+  const selectedYear = availableYears.includes(year) ? year : (nextPreparedYear ?? availableYears[0])
+  if (selectedYear === undefined) return null
+  const period = organisationYearPeriod(selectedYear)
+  return {
+    year: selectedYear,
+    startDate: today >= period.startDate && today < period.endDate ? today : period.startDate,
+    lastDay: shiftDate(period.endDate, -1),
+    min: period.startDate,
+    max: shiftDate(period.endDate, -1)
+  }
 }
 
 /** The organisational year containing an already validated calendar date (July–June). */

@@ -2,11 +2,15 @@ import "server-only"
 
 export {
   appointPosition,
+  cancelPreparedAppointment,
+  correctAnnualAppointment,
+  correctFluidAppointment,
   createOrganisationGroup,
   endAppointment,
   listAppointmentMembersAt,
   listAppointmentsForGroup,
   listAppointmentsForGroups,
+  listAppointmentsOfUser,
   listEffectiveMembersAt,
   listEffectiveMembersCurrent,
   listEffectiveMembersForGroupsAt,
@@ -15,9 +19,11 @@ export {
 export {
   addDirectMembership,
   changeDirectMembership,
+  correctDirectMembership,
   endDirectMembership,
   listDirectMembersAt,
-  listDirectMemberships
+  listDirectMemberships,
+  listDirectMembershipsOfUser
 } from "./direct-membership"
 export {
   cskToday,
@@ -26,7 +32,7 @@ export {
   listEffectiveParticipationOfUserAt,
   listEffectiveParticipationOfUserCurrent
 } from "./effective-reads"
-export { listOrganisationGroups } from "./group-management"
+export { listOrganisationGroups, prepareOrganisationYear, updateOrganisationGroup } from "./group-management"
 export { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 export type { OrgStructureDatabase } from "./operation"
 export {
