@@ -274,7 +274,9 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     const ensemble = success(
       await createOrganisationGroup(db, { name: unique("Retired ensemble"), type: GroupType.GigGroup })
     )
-    success(await addDirectMembership(db, { userId: singer, groupId: ensemble.id, startDate: "2020-01-01" }))
+    success(
+      await addDirectMembership(db, { userId: singer, groupId: ensemble.id, startDate: "2020-01-01", voice: "B1" })
+    )
     success(
       await appointPosition(db, {
         userId: singer,

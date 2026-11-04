@@ -788,6 +788,7 @@
       "not-a-member": "Personen är inte nuvarande medlem i gruppen.",
       "not-a-choir-member": "Bara nuvarande medlemmar i kören kan gå med i dess grupper.",
       "section-requires-placement": "Lägg till sångare i en stämgrupp med en stämma.",
+      "invalid-membership-voice": "Välj en giltig stämma för gruppen. Stämgrupper och giggrupper kräver en stämma; andra grupper använder ingen.",
       "voice-not-sung-in-choir": "Ingen stämgrupp i kören sjunger den stämman.",
       "voice-not-sung-in-section": "Stämgruppen sjunger inte den stämman.",
       "already-in-section": "Personen sjunger redan i en annan stämgrupp i kören. Byt stämma i stället.",

@@ -788,6 +788,7 @@
       "not-a-member": "Diese Person ist kein aktuelles Mitglied der Gruppe.",
       "not-a-choir-member": "Nur aktuelle Mitglieder des Chors können seinen Gruppen beitreten.",
       "section-requires-placement": "Füge Sänger einer Stimmgruppe mit einer Stimme hinzu.",
+      "invalid-membership-voice": "Wähle eine gültige Stimme für diese Gruppe. Stimmgruppen und Auftrittsgruppen benötigen eine Stimme; andere Gruppen verwenden keine.",
       "voice-not-sung-in-choir": "Keine Stimmgruppe dieses Chors singt diese Stimme.",
       "voice-not-sung-in-section": "Diese Stimmgruppe singt diese Stimme nicht.",
       "already-in-section": "Diese Person singt bereits in einer anderen Stimmgruppe dieses Chors. Ändere stattdessen ihre Stimme.",

@@ -788,6 +788,7 @@
       "not-a-member": "This person is not a current member of the group.",
       "not-a-choir-member": "Only current members of the Choir can join its groups.",
       "section-requires-placement": "Add singers to a Section with a Voice.",
+      "invalid-membership-voice": "Choose a valid Voice for this Group. Sections and gig groups require a Voice; other Groups do not use one.",
       "voice-not-sung-in-choir": "No Section in this Choir sings that Voice.",
       "voice-not-sung-in-section": "This Section does not sing that Voice.",
       "already-in-section": "This person already sings in another Section of this Choir. Change their Voice instead.",

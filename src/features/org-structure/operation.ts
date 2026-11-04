@@ -38,7 +38,7 @@ const CONSTRAINT_VIOLATIONS: Record<string, OrgStructureViolation> = {
   direct_membership_period_check: "period-conflict",
   direct_membership_annual_check: "period-conflict",
   direct_membership_policy_check: "position-not-allowed",
-  direct_membership_voice_check: "voice-not-sung-in-section",
+  direct_membership_voice_check: "invalid-membership-voice",
   group_name_policy_check: "invalid-group-name",
   group_name_choir_active_unique: "group-name-taken"
 }

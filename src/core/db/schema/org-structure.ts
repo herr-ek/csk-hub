@@ -120,6 +120,7 @@ export const directMembership = pgTable(
       .references(() => group.id, { onDelete: "restrict" }),
     startDate: date("start_date").notNull(),
     endDate: date("end_date"),
+    // Required for Sections and gig groups; null elsewhere, enforced by the policy trigger.
     voice: voiceDivision("voice")
   },
   (table) => [

@@ -8,9 +8,9 @@ import { addDirectMembership, changeDirectMembership, validateUserParticipation 
 import type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 import { lockUser, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
-type StartMembershipInput = { userId: string; groupId: string; startDate: IsoDate }
+type StartMembershipInput = { userId: string; groupId: string; startDate: IsoDate; voice?: VoiceDivision }
 
-/** Adds direct participation where the fixed Group policy allows it. */
+/** Adds direct participation where allowed; gig groups require their own Voice division. */
 export function startMembership(database: OrgStructureDatabase, input: StartMembershipInput) {
   return runOrgStructureCommand(database, async (tx) => {
     await lockUser(tx, input.userId)

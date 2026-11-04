@@ -77,7 +77,7 @@ parent Board above Board 26/27 and Board 27/28.
 | `Roddgrupp` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
 | `Festgrupp` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
 | `Rephelg` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
-| `GigGroup` | CSK-wide | Fluid | Yes | Multiple |
+| `GigGroup` | CSK-wide | Fluid | Singers with a Voice division | Multiple |
 | `Övrig` | CSK-wide | Fluid | Yes; no Positions | Multiple |
 
 These are the values of the native PostgreSQL `group_type` enum, defined from the core
@@ -185,7 +185,10 @@ voice_capability (
 
 ### What each participation record owns
 
-A direct Membership owns its person, Group, period, and optional singer Voice. Its UUID stays
+A direct Membership owns its person, Group, period, and singer Voice where applicable.
+Voice is required for Section and gig-group Memberships and forbidden elsewhere. Every gig-group
+member is a singer; their gig Voice is independent of their Section placement. A gig Voice is
+membership metadata: editing it retains the membership UUID and dates. Its UUID stays
 stable when an Admin corrects an erroneous record. An ordinary change instead closes the old
 period and opens a successor, preserving history.
 
@@ -331,7 +334,7 @@ The database checks important local invariants; it is not a complete substitute 
 | One person's periods in the same Group cannot overlap, including finite historical/future periods. | DB: `direct_membership_overlap_excl` |
 | Board and Föräldramötet reject direct Membership. | Trigger: `direct_membership_policy_check` |
 | Annual direct Membership fits its Group's year and has a finite end. | Trigger: `direct_membership_annual_check` |
-| Voice exists exactly on Section Membership and fits the Section Voice. | Trigger: `direct_membership_voice_check`; domain restricts it to divisions |
+| Voice exists exactly on Section and gig-group Memberships; Section Voices must contain the singer division. | Trigger: `direct_membership_voice_check`; domain restricts it to divisions |
 | Choir-scoped participation is covered by Choir Membership. | App: dated participation validation |
 | A singer has at most one overlapping Section Membership per Choir. | App: dated placement validation under the User lock |
 | Multiple Choirs are allowed, each with independent placement and Voice. | App: singer placement commands |
@@ -599,7 +602,7 @@ erDiagram
         uuid group_id FK
         date start_date
         date end_date "exclusive; null = open"
-        voice_division voice "Section only"
+        voice_division voice "Required for Section and GigGroup; null elsewhere"
     }
     position_appointment {
         uuid id PK

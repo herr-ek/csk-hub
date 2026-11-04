@@ -1,7 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { GroupType } from "@/core/org-structure"
 import { createOrganisationGroup } from "./appointments"
-import { addDirectMembership, listDirectMembersAt, listDirectMemberships } from "./direct-membership"
+import {
+  addDirectMembership,
+  changeDirectMembership,
+  listDirectMembersAt,
+  listDirectMemberships
+} from "./direct-membership"
 import { endMembership, placeSingerInSection } from "./membership"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
@@ -9,6 +14,63 @@ const database = await createOrgStructureTestDatabase()
 describe.skipIf(!database)("dated direct Membership", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
+  test("gig membership requires its own Voice division, independent of Section placement", async () => {
+    const groupId = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Voiced gig", type: GroupType.GigGroup })
+    ).id
+    const userId = await t.user()
+    expectSuccess(
+      await placeSingerInSection(t.db, {
+        userId,
+        sectionId: await t.groupId("KKB"),
+        voice: "B2",
+        startDate: "2026-09-01"
+      })
+    )
+    expect(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" })).toEqual({
+      success: false,
+      error: "invalid-membership-voice"
+    })
+    expectSuccess(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01", voice: "B1" }))
+    expect(await listDirectMembersAt(t.db, groupId, "2026-10-01")).toMatchObject([{ userId, voice: "B1" }])
+    expect(await listDirectMembersAt(t.db, await t.groupId("KKB"), "2026-10-01")).toMatchObject([
+      { userId, voice: "B2" }
+    ])
+  })
+
+  test("gig Voice edits preserve the membership ID, join date, and scheduled end", async () => {
+    const gigId = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Membership metadata gig",
+        type: GroupType.GigGroup
+      })
+    ).id
+    const groupId = gigId
+    const userId = await t.user()
+    const membership = expectSuccess(
+      await addDirectMembership(t.db, {
+        userId,
+        groupId,
+        voice: "B1",
+        startDate: "2026-09-01",
+        endDate: "2027-01-01"
+      })
+    )
+    const [before] = (await listDirectMemberships(t.db, groupId)).filter((row) => row.id === membership.id)
+    expectSuccess(
+      await changeDirectMembership(t.db, {
+        membershipId: membership.id,
+        groupId,
+        voice: "B2",
+        date: "2026-10-01",
+        endDate: "2027-01-01"
+      })
+    )
+    expect((await listDirectMemberships(t.db, groupId)).filter((row) => row.userId === userId)).toEqual([
+      { ...before, voice: "B2" }
+    ])
+  })
+
   test("a September Helper belongs to that concrete year through June, never July", async () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(

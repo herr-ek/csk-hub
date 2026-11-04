@@ -79,8 +79,8 @@ _Avoid_: Team, role, Conversation
 
 **Voice**:
 A line someone sings, at either granularity: a Voice family or a Voice division, such as B
-or B1. A Voice belongs to a Section and a singer's Section Membership; it is never a group
-of people.
+or B1. A Voice belongs to a Section or a singer's participation in a Section or gig group; it
+is never a group of people.
 _Avoid_: Stämma (as a group), part
 
 **Voice family**:
@@ -90,7 +90,7 @@ _Avoid_: Part, Section
 
 **Voice division**:
 S1, S2, A1, A2, T1, T2, B1 or B2: a Voice when its family splits, as B1 in TTBB. A singer's
-Voice in a Section, and what they can sing, are recorded in divisions only; someone who can sing
+Voice in a Section or gig group, and what they can sing, are recorded in divisions only; someone who can sing
 B can sing B1 and B2.
 _Avoid_: Part, sub-voice
 
@@ -180,6 +180,11 @@ change the context.
 A person with a Position appointment; replacing them transfers the places in Groups that
 come through that appointment to their successor.
 _Avoid_: Officer, role owner
+
+**Gig group**:
+An ensemble of singers assembled for gigs, potentially from several Choirs. Every member has
+a Voice division in that ensemble, independent of their Section placement.
+_Avoid_: Gig event, committee
 
 **Gigledare**:
 A member of a gig group responsible for leading it, through a Position appointment.

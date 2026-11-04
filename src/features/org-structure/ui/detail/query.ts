@@ -144,3 +144,9 @@ export async function getChoirIdOf(groupId: string) {
     .where(and(eq(group.id, groupId), isNotNull(group.choirId)))
   return row?.choirId ?? null
 }
+
+/** Identifies the Group policy before dispatching the existing membership form. */
+export async function getGroupTypeOf(groupId: string) {
+  const [row] = await db.select({ type: group.type }).from(group).where(eq(group.id, groupId))
+  return row?.type ?? null
+}

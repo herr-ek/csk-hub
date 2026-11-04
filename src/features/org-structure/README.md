@@ -20,7 +20,9 @@ periods at today's date, including scheduled end dates and excluding future star
 
 Commands enforce the relationships the database cannot fully express:
 
-- A Section's Voice contains the singer's Voice division. Choir participation covers every
+- Section and gig-group Memberships require a Voice division; all other direct Memberships
+  have none. A gig Voice is independent of Section placement. Gig Voice edits
+  update membership metadata without changing its identity or dates. A Section's Voice contains the singer's Voice division. Choir participation covers every
   Section period, with at most one overlapping Section in each Choir.
 - A Position's context has the type fixed by its code. Required companion Groups must exist,
   and annual companions match the appointment year.

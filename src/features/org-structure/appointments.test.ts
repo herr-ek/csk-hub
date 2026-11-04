@@ -588,7 +588,9 @@ describe.skipIf(!database)("appointment foundation", () => {
       await createOrganisationGroup(t.db, { name: uniqueName("Gig"), type: GroupType.GigGroup }, "4000-10-22")
     )
     const gigSinger = await t.user()
-    expectSuccess(await addDirectMembership(t.db, { userId: gigSinger, groupId: gigGroup.id, startDate: "2054-01-01" }))
+    expectSuccess(
+      await addDirectMembership(t.db, { userId: gigSinger, groupId: gigGroup.id, startDate: "2054-01-01", voice: "B1" })
+    )
     const leader = expectSuccess(
       await appointPosition(t.db, {
         userId: gigSinger,
@@ -739,8 +741,8 @@ describe.skipIf(!database)("appointment foundation", () => {
     ).id
     const userId = await t.user()
     await t.db.insert(directMembership).values([
-      { userId, groupId, startDate: "2038-07-01", endDate: "2039-01-01" },
-      { userId, groupId, startDate: "2039-01-01", endDate: null }
+      { userId, groupId, startDate: "2038-07-01", endDate: "2039-01-01", voice: "B1" },
+      { userId, groupId, startDate: "2039-01-01", endDate: null, voice: "B1" }
     ])
     expectSuccess(
       await appointPosition(t.db, {
@@ -752,8 +754,8 @@ describe.skipIf(!database)("appointment foundation", () => {
     )
     const otherUser = await t.user()
     await t.db.insert(directMembership).values([
-      { userId: otherUser, groupId, startDate: "2038-07-01", endDate: "2039-01-01" },
-      { userId: otherUser, groupId, startDate: "2039-01-02", endDate: null }
+      { userId: otherUser, groupId, startDate: "2038-07-01", endDate: "2039-01-01", voice: "B1" },
+      { userId: otherUser, groupId, startDate: "2039-01-02", endDate: null, voice: "B1" }
     ])
     expect(
       await appointPosition(t.db, {

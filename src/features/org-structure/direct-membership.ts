@@ -12,7 +12,7 @@ import {
   type PositionCode,
   periodsCoverPeriod
 } from "@/core/org-structure"
-import { contains, type VoiceDivision } from "@/features/voice/model"
+import { contains, isVoiceDivision, type VoiceDivision } from "@/features/voice/model"
 import { appointmentMemberships } from "./appointment-memberships"
 import { cskToday } from "./effective-reads"
 import { requireActiveGroup, requireGroup } from "./lookup"
@@ -35,6 +35,7 @@ type MembershipInput = {
 }
 
 /** Adds a dated direct member or Helper. Annual end defaults to 1 July (exclusive).
+ * Sections and gig groups require a Voice division; other Groups forbid one.
  * Section placement creates independent Choir participation when missing. Board/Föräldramötet refuse additions.
  */
 export function addDirectMembership(database: OrgStructureDatabase, input: MembershipInput) {
@@ -75,8 +76,8 @@ export async function listDirectMembersAt(database: OrgStructureDatabase, groupI
   )
 }
 
-/** Ordinary change from an effective date: closes the previous period and opens its successor.
- * Use correctDirectMembership instead when fixing an erroneous historical record.
+/** Voice-only edits in a gig group retain the membership identity and dates.
+ * Other changes close the previous period at `date` and open its successor.
  */
 export function changeDirectMembership(
   database: OrgStructureDatabase,
@@ -91,6 +92,21 @@ export function changeDirectMembership(
   return runOrgStructureCommand(database, async (tx) => {
     const current = await membershipForEdit(tx, input.membershipId)
     const date = requireDate(input.date)
+    const editsGigVoice =
+      input.groupId === current.groupId &&
+      input.endDate === current.endDate &&
+      (await requireGroup(tx, current.groupId)).type === GroupType.GigGroup
+    if (editsGigVoice) {
+      const values = await membershipValues(tx, {
+        userId: current.userId,
+        groupId: current.groupId,
+        startDate: current.startDate,
+        endDate: current.endDate,
+        voice: input.voice
+      })
+      await tx.update(directMembership).set({ voice: values.voice }).where(eq(directMembership.id, current.id))
+      return { id: current.id }
+    }
     if (date <= current.startDate || (current.endDate !== null && date >= current.endDate))
       throw new RuleViolation("period-conflict")
     await requireAllowedMembershipTransfer(tx, current.groupId, input.groupId)
@@ -157,7 +173,9 @@ async function membershipValues(tx: OrgStructureTransaction, input: MembershipIn
   if (target.type === GroupType.Section) {
     const [sung] = await tx.select().from(section).where(eq(section.groupId, target.id))
     if (!voice || !sung || !contains(sung.voice, voice)) throw new RuleViolation("voice-not-sung-in-section")
-  } else if (voice !== null) throw new RuleViolation("voice-not-sung-in-section")
+  } else if (target.type === GroupType.GigGroup) {
+    if (!isVoiceDivision(voice)) throw new RuleViolation("invalid-membership-voice")
+  } else if (voice !== null) throw new RuleViolation("invalid-membership-voice")
   return { userId: input.userId, groupId: input.groupId, startDate, endDate, voice }
 }
 

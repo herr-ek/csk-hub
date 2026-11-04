@@ -103,6 +103,29 @@ describe.skipIf(!database)("existing Admin actions on the appointment model", ()
     ).toMatchObject([{ endDate: `${year}-10-01` }])
   })
 
+  test("gig additions require a Voice without changing Section participation", async () => {
+    const groupId = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Action gig",
+        type: GroupType.GigGroup
+      })
+    ).id
+    const userId = await t.user()
+    const sectionId = await t.groupId("KKB")
+    expect(
+      await addMemberAction(IDLE, form({ groupId: sectionId, userId, voice: "B2", startDate: "2026-08-01" }))
+    ).toMatchObject({ status: "success" })
+    expect(await addMemberAction(IDLE, form({ groupId, userId, startDate: "2026-09-01" }))).toEqual({
+      status: "error",
+      error: "invalid-membership-voice"
+    })
+    expect(await addMemberAction(IDLE, form({ groupId, userId, voice: "B1", startDate: "2026-09-01" }))).toMatchObject({
+      status: "success"
+    })
+    expect(await listEffectiveMembersAt(t.db, groupId, "2026-10-01")).toMatchObject([{ userId, voice: "B1" }])
+    expect(await listEffectiveMembersAt(t.db, sectionId, "2026-10-01")).toMatchObject([{ userId, voice: "B2" }])
+  })
+
   test("singer placement and ending use direct periods with inclusive form end dates", async () => {
     const sectionId = await t.groupId("MKB1", "MK")
     const userId = await t.user()

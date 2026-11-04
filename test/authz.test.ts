@@ -145,7 +145,9 @@ describe.skipIf(!database)("authorization server enforcement", () => {
     const today = cskToday()
     const tomorrow = shiftDate(today, 1)
     const yesterday = shiftDate(today, -1)
-    await t.db.insert(directMembership).values({ userId: holder.id, groupId: g.id, startDate: "2999-01-01" })
+    await t.db
+      .insert(directMembership)
+      .values({ userId: holder.id, groupId: g.id, startDate: "2999-01-01", voice: "B1" })
     await t.db.insert(positionAppointment).values({
       userId: holder.id,
       contextGroupId: g.id,

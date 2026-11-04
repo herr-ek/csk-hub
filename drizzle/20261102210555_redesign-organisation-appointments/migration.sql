@@ -128,7 +128,7 @@ BEGIN
       OR NEW.end_date > make_date(target.organisation_year + 1, 7, 1)) THEN
     RAISE check_violation USING CONSTRAINT = 'direct_membership_annual_check';
   END IF;
-  IF (target.type = 'Section') <> (NEW.voice IS NOT NULL) THEN
+  IF (target.type IN ('Section', 'GigGroup')) <> (NEW.voice IS NOT NULL) THEN
     RAISE check_violation USING CONSTRAINT = 'direct_membership_voice_check';
   END IF;
   IF target.type = 'Section' THEN

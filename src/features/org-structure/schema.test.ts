@@ -49,6 +49,41 @@ describe.skipIf(!database)("final organisation schema", () => {
     ).rejects.toMatchObject({ cause: { constraint: "direct_membership_overlap_excl" } })
   })
 
+  test("gig Voice divisions are required by storage and other non-Section Groups reject them", async () => {
+    const groupId = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Schema gig", type: GroupType.GigGroup })
+    ).id
+    const userId = await t.user()
+    await expect(
+      t.db.insert(directMembership).values({ userId, groupId, startDate: "2026-09-01" }).execute()
+    ).rejects.toMatchObject({ cause: { constraint: "direct_membership_voice_check" } })
+    await expect(
+      t.db
+        .insert(directMembership)
+        .values({
+          userId,
+          groupId,
+          startDate: "2026-09-01",
+          voice: "B1"
+        })
+        .execute()
+    ).resolves.toBeDefined()
+    await expect(
+      t.db.update(directMembership).set({ voice: null }).where(sql`group_id = ${groupId}`).execute()
+    ).rejects.toMatchObject({ cause: { constraint: "direct_membership_voice_check" } })
+    await expect(
+      t.db
+        .insert(directMembership)
+        .values({
+          userId,
+          groupId: await t.groupId("KK"),
+          startDate: "2026-09-01",
+          voice: "B1"
+        })
+        .execute()
+    ).rejects.toMatchObject({ cause: { constraint: "direct_membership_voice_check" } })
+  })
+
   test("appointments reject unknown Position codes and annual dates outside their Group year", async () => {
     const boardId = expectSuccess(
       await createOrganisationGroup(
