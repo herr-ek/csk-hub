@@ -17,7 +17,7 @@ function checkInterface(
 ) {
   access.can({ action: "post.create" })
   access.requirePermission({ action: "post.update", context: { post } })
-  access.can({ action: "group.manageContent", context: { group, memberships: [], positionHoldings: [] } })
+  access.can({ action: "group.manageContent", context: { group, memberships: [], positionAppointments: [] } })
   access.can({ action: "group.manageMemberships", context: { group } })
 
   // @ts-expect-error The Post context is required.

@@ -3,10 +3,12 @@ import "server-only"
 import { and, asc, count, eq, ilike, isNull, ne, or } from "drizzle-orm"
 import type { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
+import type { IsoDate } from "@/core/org-structure"
+import { GroupType } from "@/core/org-structure"
 import {
-  listCurrentChoirAffiliationsOfUsers,
-  listCurrentGroupsOfUser,
-  listCurrentPositionsOfUser
+  cskToday,
+  listEffectiveChoirAffiliationsOfUsersAt,
+  listEffectiveParticipationOfUserAt
 } from "@/features/org-structure"
 import { listVoiceCapabilities } from "@/features/voice"
 import { buildAffiliations } from "./affiliations"
@@ -33,7 +35,12 @@ export async function requireActiveViewer(database: MemberDatabase, viewerId: st
 }
 
 /** Reads the current database state and returns email only to the profile's owner. */
-export async function getMemberProfile(database: MemberDatabase, viewerId: string, memberId: string) {
+export async function getMemberProfile(
+  database: MemberDatabase,
+  viewerId: string,
+  memberId: string,
+  date: IsoDate = cskToday()
+) {
   await requireActiveViewer(database, viewerId)
   const [member] = await database
     .select({ id: user.id, name: user.name, username: user.username, image: user.image, email: user.email })
@@ -41,9 +48,8 @@ export async function getMemberProfile(database: MemberDatabase, viewerId: strin
     .where(and(eq(user.id, memberId), activeUser()))
     .limit(1)
   if (!member) return null
-  const [memberships, holdings, capabilities] = await Promise.all([
-    listCurrentGroupsOfUser(database, memberId),
-    listCurrentPositionsOfUser(database, memberId),
+  const [participation, capabilities] = await Promise.all([
+    listEffectiveParticipationOfUserAt(database, memberId, date),
     listVoiceCapabilities(database, memberId)
   ])
   return {
@@ -51,7 +57,7 @@ export async function getMemberProfile(database: MemberDatabase, viewerId: strin
     isOwn: viewerId === memberId,
     email: viewerId === memberId ? member.email : null,
     capabilities,
-    ...buildAffiliations(memberships, holdings)
+    ...buildAffiliations(participation.groups, participation.positions)
   }
 }
 
@@ -80,10 +86,8 @@ export async function listMemberDirectory(
     .orderBy(asc(user.name), asc(user.username), asc(user.id))
     .limit(DIRECTORY_PAGE_SIZE)
     .offset((page - 1) * DIRECTORY_PAGE_SIZE)
-  const memberships = await listCurrentChoirAffiliationsOfUsers(
-    database,
-    members.map((member) => member.id)
-  )
+  const ids = members.map((member) => member.id)
+  const memberships = await listEffectiveChoirAffiliationsOfUsersAt(database, ids, cskToday())
   return {
     query,
     page,
@@ -92,14 +96,16 @@ export async function listMemberDirectory(
     members: members.map((member) => ({
       ...member,
       choirs: memberships
-        .filter((membership) => membership.userId === member.id && membership.type === "Choir")
+        .filter((membership) => membership.userId === member.id && membership.type === GroupType.Choir)
         .map((choir) => ({
           id: choir.groupId,
-          name: choir.name,
+          name: choir.name ?? choir.groupId,
           section:
             memberships.find(
               (membership) =>
-                membership.userId === member.id && membership.type === "Section" && membership.choirId === choir.groupId
+                membership.userId === member.id &&
+                membership.type === GroupType.Section &&
+                membership.choirId === choir.groupId
             )?.name ?? null
         }))
     }))

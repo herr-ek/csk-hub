@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
-import { compareVoices, type Voice } from "@/features/voice/model"
+import { compareVoices, VOICE_DIVISIONS, type Voice } from "@/features/voice/model"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -45,8 +45,9 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
   const t = useTranslations("Groups.detail")
   const { group } = detail
   const isSection = group.type === "Section"
-  // A Section shows the Voice each member sings in it; a Choir the Voice from their Section.
-  const showsVoice = isSection || group.type === "Choir"
+  const isGigGroup = group.type === "GigGroup"
+  // Choirs show the Section Voice assignment; Sections and gig groups show their own.
+  const showsVoice = isSection || isGigGroup || group.type === "Choir"
   const members = useSortedRows(detail.members, MEMBER_ORDER, "member", MEMBER_MISSING)
   const pastMembers = useSortedRows(detail.pastMembers, PAST_MEMBER_ORDER, "member", PAST_MEMBER_MISSING)
 
@@ -54,7 +55,7 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
         <CardTitle>{t("membersTitle", { count: detail.members.length })}</CardTitle>
-        {group.active ? <AddMemberDialog detail={detail} today={today} /> : null}
+        {group.active && detail.directMembershipAllowed ? <AddMemberDialog detail={detail} today={today} /> : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         {detail.members.length === 0 ? (
@@ -95,7 +96,7 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
                       {isSection && group.active ? (
                         <ChangeVoiceDialog detail={detail} member={member} today={today} />
                       ) : null}
-                      <EndMembershipDialog detail={detail} member={member} today={today} />
+                      {member.direct ? <EndMembershipDialog detail={detail} member={member} today={today} /> : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -118,7 +119,7 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
                     <SortableHead column="member" sort={pastMembers.sort} onSort={pastMembers.sortBy}>
                       {t("member")}
                     </SortableHead>
-                    {isSection ? (
+                    {isSection || isGigGroup ? (
                       <SortableHead column="voice" sort={pastMembers.sort} onSort={pastMembers.sortBy}>
                         {t("voice")}
                       </SortableHead>
@@ -130,9 +131,9 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
                 </TableHeader>
                 <TableBody>
                   {pastMembers.sorted.map((past) => (
-                    <TableRow key={`${past.userId}-${past.startDate}`}>
+                    <TableRow key={past.id}>
                       <TableCell>{past.name}</TableCell>
-                      {isSection ? <TableCell>{past.voice}</TableCell> : null}
+                      {isSection || isGigGroup ? <TableCell>{past.voice}</TableCell> : null}
                       <TableCell>{t("periodValue", { start: past.startDate, end: past.endDate })}</TableCell>
                     </TableRow>
                   ))}
@@ -179,12 +180,15 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
           }))}
         />
       )}
-      {isSection ? (
+      {isSection || group.type === "GigGroup" ? (
         <SelectField
           label={t("voice")}
           name="voice"
           required
-          options={detail.sectionVoices.map((voice) => ({ value: voice, label: voice }))}
+          options={(isSection ? detail.sectionVoices : VOICE_DIVISIONS).map((voice) => ({
+            value: voice,
+            label: voice
+          }))}
         />
       ) : null}
       <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />

@@ -1,200 +1,139 @@
 import "server-only"
 
-import { and, asc, desc, eq, exists, isNotNull, isNull, notExists, or } from "drizzle-orm"
-import { alias } from "drizzle-orm/pg-core"
+import { and, asc, eq, gt, isNotNull, isNull, lte, or } from "drizzle-orm"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
+import { directMembership, group, section } from "@/core/db/schema/org-structure"
+import { getTranslations } from "@/core/i18n/server"
 import {
-  group,
-  groupMember,
-  groupTypePosition,
-  position,
-  positionGroup,
-  positionHolder,
-  section
-} from "@/core/db/schema/org-structure"
+  cskToday,
+  currentOrganisationYear,
+  GROUP_POLICIES,
+  GroupType,
+  type IsoDate,
+  POSITION_DEFINITIONS,
+  type PositionCode,
+  positionCodeKey,
+  shiftDate
+} from "@/core/org-structure"
 import { compareVoices, divisionsOf, isVoiceDivision, type Voice, type VoiceDivision } from "@/features/voice/model"
-import type { GroupType, IsoDate } from "../../model"
+import { listAppointmentsForGroup, listEffectiveMembersAt } from "../../appointments"
+import { listDirectMemberships } from "../../direct-membership"
+import { listOrganisationGroups } from "../../group-management"
+import { listLocalizedGroupLabels } from "../group-labels"
 
-/** The Voices a singer can have in a Section singing `voice`: the division itself, or the family's divisions. */
 const voicesWithin = (voice: Voice): VoiceDivision[] => (isVoiceDivision(voice) ? [voice] : divisionsOf(voice))
-
 export type GroupDetail = NonNullable<Awaited<ReturnType<typeof getGroupDetail>>>
 
-/** Everything the group detail page shows and offers, or null when there is no such group. */
-export async function getGroupDetail(groupId: string) {
-  const choirGroup = alias(group, "choir_group")
-  const [row] = await db
-    .select({
-      id: group.id,
-      name: group.name,
-      type: group.type,
-      active: group.active,
-      choirId: group.choirId,
-      choirName: choirGroup.name
-    })
-    .from(group)
-    .leftJoin(choirGroup, eq(choirGroup.id, group.choirId))
-    .where(eq(group.id, groupId))
-  if (!row) return null
-  const choirMember = alias(groupMember, "choir_member")
-
-  const [memberships, holdings, allowed, [sectionRow], choirVoices, candidates, singers] = await Promise.all([
-    db
-      .select({
-        userId: groupMember.userId,
-        name: user.name,
-        email: user.email,
-        startDate: groupMember.startDate,
-        endDate: groupMember.endDate,
-        voice: groupMember.voice
-      })
-      .from(groupMember)
-      .innerJoin(user, eq(user.id, groupMember.userId))
-      .where(eq(groupMember.groupId, groupId))
-      .orderBy(asc(user.name), desc(groupMember.startDate)),
-    db
-      .select({
-        positionId: positionHolder.positionId,
-        position: position.name,
-        userId: positionHolder.userId,
-        name: user.name,
-        startDate: positionHolder.startDate,
-        endDate: positionHolder.endDate
-      })
-      .from(positionHolder)
-      .innerJoin(position, eq(position.id, positionHolder.positionId))
-      .innerJoin(user, eq(user.id, positionHolder.userId))
-      .where(eq(positionHolder.groupId, groupId))
-      .orderBy(desc(positionHolder.startDate)),
-    // The Positions the group's type allows, but not those limited to other groups.
-    db
-      .select({ id: position.id, name: position.name })
-      .from(groupTypePosition)
-      .innerJoin(position, eq(position.id, groupTypePosition.positionId))
-      .where(
-        and(
-          eq(groupTypePosition.type, row.type),
-          or(
-            notExists(db.select().from(positionGroup).where(eq(positionGroup.positionId, position.id))),
-            exists(
-              db
-                .select()
-                .from(positionGroup)
-                .where(and(eq(positionGroup.positionId, position.id), eq(positionGroup.groupId, groupId)))
-            )
-          )
-        )
-      )
-      .orderBy(asc(position.name)),
-    db.select({ voice: section.voice }).from(section).where(eq(section.groupId, groupId)),
-    row.choirId ? choirVoicesOf(row.choirId) : Promise.resolve([]),
-    // Active Users who are not current members, for the add-member picker. A Choir's group other
-    // than a Section takes only current members of the Choir; placing a singer in a Section is
-    // how they join it.
+/** Adapts dated participation to the existing Group detail screen. */
+export async function getGroupDetail(groupId: string, date: IsoDate = cskToday()) {
+  const [groups, labels, positions, memberships, appointments, members, candidates, sections] = await Promise.all([
+    listOrganisationGroups(db, date),
+    listLocalizedGroupLabels(),
+    getTranslations("Groups.positionLabels"),
+    listDirectMemberships(db, groupId),
+    listAppointmentsForGroup(db, groupId),
+    listEffectiveMembersAt(db, groupId, date),
     db
       .select({ id: user.id, name: user.name, email: user.email })
       .from(user)
-      .where(
-        and(
-          or(isNull(user.banned), eq(user.banned, false)),
-          notExists(
-            db
-              .select()
-              .from(groupMember)
-              .where(
-                and(eq(groupMember.userId, user.id), eq(groupMember.groupId, groupId), isNull(groupMember.endDate))
-              )
-          ),
-          row.choirId && row.type !== "Section"
-            ? exists(
-                db
-                  .select()
-                  .from(choirMember)
-                  .where(
-                    and(
-                      eq(choirMember.userId, user.id),
-                      eq(choirMember.groupId, row.choirId),
-                      isNull(choirMember.endDate)
-                    )
-                  )
-              )
-            : undefined
-        )
-      )
+      .where(or(isNull(user.banned), eq(user.banned, false)))
       .orderBy(asc(user.name)),
-    // On a Choir's page, each member's Voice comes from their current Section Membership in it.
-    row.type === "Choir"
-      ? db
-          .select({ userId: groupMember.userId, voice: groupMember.voice })
-          .from(groupMember)
-          .innerJoin(group, eq(group.id, groupMember.groupId))
-          .where(and(eq(group.choirId, groupId), eq(group.type, "Section"), isNull(groupMember.endDate)))
-      : Promise.resolve([])
+    db.select().from(section)
   ])
-  const singerVoices = new Map(singers.map(({ userId, voice }) => [userId, voice]))
-
-  const current = holdings.filter(({ endDate }) => endDate === null)
+  const row = groups.find(({ id }) => id === groupId)
+  if (!row) return null
+  const current = appointments.filter(
+    (entry) => entry.startDate <= date && (entry.endDate === null || entry.endDate > date)
+  )
+  const label = (code: PositionCode) => positions(positionCodeKey(code))
+  const sectionVoice = sections.find(({ groupId: id }) => id === groupId)?.voice ?? null
+  const choirId = row.type === GroupType.Choir ? row.id : row.choirId
+  const choirSections = groups.filter(
+    (entry) => entry.choirId === choirId && entry.type === GroupType.Section && entry.active
+  )
+  const choirVoices = sections
+    .filter((entry) => choirSections.some(({ id }) => id === entry.groupId))
+    .flatMap(({ voice }) => voicesWithin(voice))
+    .sort(compareVoices)
+  const singers =
+    row.type === GroupType.Choir
+      ? await db
+          .select({ userId: directMembership.userId, voice: directMembership.voice })
+          .from(directMembership)
+          .innerJoin(group, eq(group.id, directMembership.groupId))
+          .where(
+            and(
+              eq(group.choirId, groupId),
+              eq(group.type, GroupType.Section),
+              lte(directMembership.startDate, date),
+              or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
+            )
+          )
+      : []
+  const choirMembers = row.choirId ? await listEffectiveMembersAt(db, row.choirId, date) : []
   return {
     group: {
       id: row.id,
-      name: row.name,
-      type: row.type as GroupType,
-      active: row.active,
-      choir: row.choirId ? { id: row.choirId, name: row.choirName as string } : null
+      name: labels.get(row.id) ?? row.id,
+      type: row.type,
+      active: row.active && row.phase === "current",
+      organisationYear: row.organisationYear,
+      choir: row.choirId ? { id: row.choirId, name: labels.get(row.choirId) ?? row.choirId } : null
     },
-    /** The Section's own Voice, or null for any other group. */
-    sectionVoice: sectionRow?.voice ?? null,
-    /** The Voices a singer in this Section can have. */
-    sectionVoices: sectionRow ? voicesWithin(sectionRow.voice) : [],
+    sectionVoice,
+    sectionVoices: sectionVoice ? voicesWithin(sectionVoice) : [],
     choirVoices,
-    members: memberships
-      .filter(({ endDate }) => endDate === null)
-      .map((member) => ({
-        userId: member.userId,
-        name: member.name,
-        email: member.email,
-        startDate: member.startDate as IsoDate,
-        voice: member.voice ?? singerVoices.get(member.userId) ?? null,
-        positions: current.filter(({ userId }) => userId === member.userId).map(({ position }) => position)
+    members: members.map((member) => ({
+      userId: member.userId,
+      name: member.name,
+      email: member.email,
+      startDate: [...member.memberships, ...member.positions].map(({ startDate }) => startDate).sort()[0] ?? date,
+      voice: (member.voice ??
+        singers.find(({ userId }) => userId === member.userId)?.voice ??
+        null) as VoiceDivision | null,
+      direct: member.memberships.length > 0,
+      positions: current.filter(({ userId }) => userId === member.userId).map(({ positionCode }) => label(positionCode))
+    })),
+    pastMembers: [
+      ...memberships,
+      ...appointments
+        .filter((entry) => (POSITION_DEFINITIONS[entry.positionCode].grants as readonly GroupType[]).includes(row.type))
+        .map((entry) => ({ ...entry, voice: null }))
+    ]
+      .filter((entry) => entry.endDate !== null && entry.endDate <= date)
+      .map((entry) => ({ ...entry, endDate: shiftDate(entry.endDate as IsoDate, -1) })),
+    positions: (Object.entries(POSITION_DEFINITIONS) as [PositionCode, (typeof POSITION_DEFINITIONS)[PositionCode]][])
+      .filter(([, definition]) => definition.context === row.type)
+      .map(([code, definition]) => {
+        const holder = current.find((entry) => entry.contextGroupId === groupId && entry.positionCode === code)
+        return {
+          id: code,
+          name: label(code),
+          prerequisite: definition.prerequisite,
+          organisationYear:
+            definition.endPolicy === "annual" ? (row.organisationYear ?? currentOrganisationYear(date)) : null,
+          holder: holder
+            ? { appointmentId: holder.id, userId: holder.userId, name: holder.name, startDate: holder.startDate }
+            : null
+        }
+      }),
+    pastHolders: appointments
+      .filter((entry) => entry.contextGroupId === groupId && entry.endDate !== null && entry.endDate <= date)
+      .map((entry) => ({
+        position: label(entry.positionCode),
+        name: entry.name,
+        startDate: entry.startDate,
+        endDate: shiftDate(entry.endDate as IsoDate, -1)
       })),
-    pastMembers: memberships
-      .filter(({ endDate }) => endDate !== null)
-      .map(({ userId, name, startDate, endDate, voice }) => ({
-        userId,
-        name,
-        startDate,
-        endDate: endDate as IsoDate,
-        voice
-      })),
-    positions: allowed.map(({ id, name }) => {
-      const holder = current.find(({ positionId }) => positionId === id)
-      return {
-        id,
-        name,
-        holder: holder ? { userId: holder.userId, name: holder.name, startDate: holder.startDate } : null
-      }
-    }),
-    pastHolders: holdings
-      .filter(({ endDate }) => endDate !== null)
-      .map(({ position, name, startDate, endDate }) => ({
-        position,
-        name,
-        startDate,
-        endDate: endDate as IsoDate
-      })),
-    candidates
+    candidates: candidates.filter(
+      ({ id }) =>
+        !members.some(({ userId }) => userId === id) &&
+        (!row.choirId || row.type === GroupType.Section || choirMembers.some(({ userId }) => userId === id))
+    ),
+    appointmentCandidates: candidates,
+    directMembershipAllowed: GROUP_POLICIES[row.type].directMembership !== "no"
   }
-}
-
-/** Every Voice a singer can have in the Choir's active Sections, for changing a singer's Voice or Section. */
-async function choirVoicesOf(choirId: string): Promise<VoiceDivision[]> {
-  const rows = await db
-    .select({ voice: section.voice })
-    .from(section)
-    .innerJoin(group, eq(group.id, section.groupId))
-    .where(and(eq(group.choirId, choirId), eq(group.type, "Section"), eq(group.active, true)))
-  return rows.flatMap(({ voice }) => voicesWithin(voice)).sort(compareVoices)
 }
 
 /** The Choir a group belongs to, for commands that are addressed by Choir. */
@@ -204,4 +143,10 @@ export async function getChoirIdOf(groupId: string) {
     .from(group)
     .where(and(eq(group.id, groupId), isNotNull(group.choirId)))
   return row?.choirId ?? null
+}
+
+/** Identifies the Group policy before dispatching the existing membership form. */
+export async function getGroupTypeOf(groupId: string) {
+  const [row] = await db.select({ type: group.type }).from(group).where(eq(group.id, groupId))
+  return row?.type ?? null
 }

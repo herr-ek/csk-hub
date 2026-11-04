@@ -1,11 +1,14 @@
 import "server-only"
 
-import { asc, count, eq, isNull } from "drizzle-orm"
+import { io } from "next/cache"
 import { db } from "@/core/db"
-import { user } from "@/core/db/schema/auth"
-import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
+import { section } from "@/core/db/schema/org-structure"
+import { getTranslations } from "@/core/i18n/server"
+import { cskToday, type GroupType, positionCodeKey } from "@/core/org-structure"
 import type { Voice } from "@/features/voice/model"
-import type { GroupType } from "../model"
+import { listAppointmentsForGroups, listEffectiveMembersForGroupsAt } from "../appointments"
+import { listOrganisationGroups } from "../group-management"
+import { listLocalizedGroupLabels } from "./group-labels"
 
 export type GroupSummary = {
   id: string
@@ -18,34 +21,33 @@ export type GroupSummary = {
   holders: { position: string; holder: string }[]
 }
 
-/** Every group, archived ones included, with what the admin overviews show of it, ordered by name. */
+/** Keeps the existing overview shape while counting effective dated Memberships. */
 export async function listGroupSummaries(): Promise<GroupSummary[]> {
-  const [groups, counts, sections, holders] = await Promise.all([
-    db.select().from(group).orderBy(asc(group.name)),
-    db
-      .select({ groupId: groupMember.groupId, members: count() })
-      .from(groupMember)
-      .where(isNull(groupMember.endDate))
-      .groupBy(groupMember.groupId),
+  await io()
+  const date = cskToday()
+  const [groups, sections, labels, positionLabel] = await Promise.all([
+    listOrganisationGroups(db, date),
     db.select().from(section),
-    db
-      .select({ groupId: positionHolder.groupId, position: position.name, holder: user.name })
-      .from(positionHolder)
-      .innerJoin(position, eq(position.id, positionHolder.positionId))
-      .innerJoin(user, eq(user.id, positionHolder.userId))
-      .where(isNull(positionHolder.endDate))
-      .orderBy(asc(position.name))
+    listLocalizedGroupLabels(),
+    getTranslations("Groups.positionLabels")
   ])
-
-  const memberCounts = new Map(counts.map(({ groupId, members }) => [groupId, members]))
-  return groups.map((row) => ({
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    choirId: row.choirId,
-    active: row.active,
-    memberCount: memberCounts.get(row.id) ?? 0,
-    voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
-    holders: holders.filter(({ groupId }) => groupId === row.id).map(({ position, holder }) => ({ position, holder }))
-  }))
+  const ids = groups.map(({ id }) => id)
+  const [members, appointments] = await Promise.all([
+    listEffectiveMembersForGroupsAt(db, ids, date),
+    listAppointmentsForGroups(db, ids)
+  ])
+  return groups
+    .filter((row) => row.phase !== "future")
+    .map((row) => ({
+      id: row.id,
+      name: labels.get(row.id) ?? row.id,
+      type: row.type,
+      choirId: row.choirId,
+      active: row.active && row.phase === "current",
+      memberCount: members.get(row.id)?.length ?? 0,
+      voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
+      holders: (appointments.get(row.id) ?? [])
+        .filter((entry) => entry.startDate <= date && (entry.endDate === null || entry.endDate > date))
+        .map((entry) => ({ position: positionLabel(positionCodeKey(entry.positionCode)), holder: entry.name }))
+    }))
 }

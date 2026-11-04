@@ -2,22 +2,23 @@
 
 import { z } from "zod"
 import { db } from "@/core/db"
+import { GroupType, shiftDate } from "@/core/org-structure"
+import { endAppointment, replaceAppointmentHolder } from "../../appointments"
 import { changeVoice, endMembership, placeSingerInSection, startMembership } from "../../membership"
-import { endPositionHolding, replacePositionHolder } from "../../positions"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"
-import { getChoirIdOf } from "./query"
+import { getChoirIdOf, getGroupTypeOf } from "./query"
 
 const addMemberSchema = z.object({
   groupId: fields.id,
   userId: fields.userId,
   startDate: fields.date,
-  // Present for a Section, where it decides the singer's Voice.
+  // Required for Sections and gig groups; the domain command checks the actual Group type.
   voice: fields.voice.optional()
 })
 
-/** Adds a member; in a Section, places them as a singer with the chosen Voice. */
+/** Adds direct participation with a required Voice for Sections and gig groups. */
 export async function addMemberAction(_state: GroupCommandState, formData: FormData) {
   return runGroupCommand(
     "add-member",
@@ -28,15 +29,17 @@ export async function addMemberAction(_state: GroupCommandState, formData: FormD
       startDate: value(formData, "startDate"),
       voice: value(formData, "voice")
     },
-    (input) =>
-      input.voice
-        ? placeSingerInSection(db, {
-            userId: input.userId,
-            sectionId: input.groupId,
-            voice: input.voice,
-            startDate: input.startDate
-          })
-        : startMembership(db, { userId: input.userId, groupId: input.groupId, startDate: input.startDate })
+    async (input) => {
+      if (input.voice && (await getGroupTypeOf(input.groupId)) !== GroupType.GigGroup) {
+        return placeSingerInSection(db, {
+          userId: input.userId,
+          sectionId: input.groupId,
+          voice: input.voice,
+          startDate: input.startDate
+        })
+      }
+      return startMembership(db, input)
+    }
   )
 }
 
@@ -47,7 +50,7 @@ export async function endMembershipAction(_state: GroupCommandState, formData: F
     "end-membership",
     endMembershipSchema,
     { groupId: value(formData, "groupId"), userId: value(formData, "userId"), endDate: value(formData, "endDate") },
-    (input) => endMembership(db, input)
+    (input) => endMembership(db, { ...input, endDate: shiftDate(input.endDate, 1) })
   )
 }
 
@@ -79,9 +82,10 @@ export async function changeVoiceAction(_state: GroupCommandState, formData: For
 
 const assignHolderSchema = z.object({
   groupId: fields.id,
-  positionId: fields.id,
+  positionId: fields.positionCode,
   userId: fields.userId,
-  startDate: fields.date
+  startDate: fields.date,
+  organisationYear: z.coerce.number().int().min(1000).max(9998).optional()
 })
 
 /** Gives a Position to a member, ending any current holder's holding on the same day. */
@@ -92,17 +96,23 @@ export async function assignHolderAction(_state: GroupCommandState, formData: Fo
     {
       groupId: value(formData, "groupId"),
       positionId: value(formData, "positionId"),
+      organisationYear: value(formData, "organisationYear"),
       userId: value(formData, "userId"),
       startDate: value(formData, "startDate")
     },
-    (input) => replacePositionHolder(db, input)
+    (input) =>
+      replaceAppointmentHolder(db, {
+        contextGroupId: input.groupId,
+        positionCode: input.positionId,
+        userId: input.userId,
+        startDate: input.startDate,
+        organisationYear: input.organisationYear
+      })
   )
 }
 
 const endHoldingSchema = z.object({
-  groupId: fields.id,
-  positionId: fields.id,
-  userId: fields.userId,
+  appointmentId: fields.id,
   endDate: fields.date
 })
 
@@ -111,11 +121,9 @@ export async function endHoldingAction(_state: GroupCommandState, formData: Form
     "end-holding",
     endHoldingSchema,
     {
-      groupId: value(formData, "groupId"),
-      positionId: value(formData, "positionId"),
-      userId: value(formData, "userId"),
+      appointmentId: value(formData, "appointmentId"),
       endDate: value(formData, "endDate")
     },
-    (input) => endPositionHolding(db, input)
+    (input) => endAppointment(db, { ...input, endDate: shiftDate(input.endDate, 1) })
   )
 }

@@ -1,260 +1,145 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
-import { and, eq, isNull } from "drizzle-orm"
-import { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
-import { createOrgStructureTestDatabase } from "../test-support"
-
-// The admin Server Actions against a real, throwaway database: only the Admin guard and cache
-// revalidation are replaced, so typed failures travel the whole way from the module.
+import { and, eq } from "drizzle-orm"
+import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import {
+  cskToday,
+  currentOrganisationYear,
+  GroupType,
+  organisationYearPeriod,
+  PositionCode
+} from "@/core/org-structure"
+import { createOrganisationGroup, listEffectiveMembersAt } from "../appointments"
+import { createOrgStructureTestDatabase, expectSuccess } from "../test-support"
 
 const database = await createOrgStructureTestDatabase()
-
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
 const revalidatePath = mock(() => undefined)
-
 mock.module("@/core/db", () => ({ db: database?.db }))
 mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
-
 const { createGroupAction, renameGroupAction, archiveGroupAction } = await import("./groups/actions")
 const { addMemberAction, endMembershipAction, changeVoiceAction, assignHolderAction, endHoldingAction } = await import(
   "./detail/actions"
 )
-const { createPositionAction, updatePositionAction } = await import("./catalogue/actions")
-
 const IDLE = { status: "idle" } as const
-
-function form(values: Record<string, string | string[]>) {
+function form(values: Record<string, string>) {
   const data = new FormData()
-  for (const [key, value] of Object.entries(values)) {
-    for (const item of Array.isArray(value) ? value : [value]) data.append(key, item)
-  }
+  for (const [key, value] of Object.entries(values)) data.set(key, value)
   return data
 }
 
-describe.skipIf(!database)("admin groups Server Actions", () => {
-  const t = database as NonNullable<typeof database>
-  afterAll(() => t.drop())
-
+describe.skipIf(!database)("existing Admin actions on the appointment model", () => {
+  if (!database) return
+  const t = database
+  afterAll(t.drop)
   beforeEach(() => {
-    requireAdmin.mockClear()
-    requireAdmin.mockImplementation(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
+    requireAdmin.mockReset().mockResolvedValue({ state: "authenticated", userId: "admin-1" })
     revalidatePath.mockClear()
   })
 
-  async function groupNamed(name: string) {
-    const [row] = await t.db.select().from(group).where(eq(group.name, name))
-    return row
-  }
-
-  describe("the Admin guard", () => {
-    test("refuses a non-Admin before validating or writing anything", async () => {
-      const denied = new Error("denied")
-      requireAdmin.mockImplementation(async () => {
-        throw denied
-      })
-
-      await expect(createGroupAction(IDLE, form({ name: "Smygkommittén", type: "Valberedning" }))).rejects.toBe(denied)
-      await expect(addMemberAction(IDLE, form({ groupId: "not-a-uuid" }))).rejects.toBe(denied)
-      await expect(createPositionAction(IDLE, form({ name: "Smygpost" }))).rejects.toBe(denied)
-
-      expect(await groupNamed("Smygkommittén")).toBeUndefined()
-      expect(revalidatePath).not.toHaveBeenCalled()
-    })
-
-    test("guards every action", async () => {
-      const actions = [
-        createGroupAction,
-        renameGroupAction,
-        archiveGroupAction,
-        addMemberAction,
-        endMembershipAction,
-        changeVoiceAction,
-        assignHolderAction,
-        endHoldingAction,
-        createPositionAction,
-        updatePositionAction
-      ]
-      for (const action of actions) await action(IDLE, form({}))
-      expect(requireAdmin).toHaveBeenCalledTimes(actions.length)
-    })
+  test("every retained action authorizes before parsing or writing", async () => {
+    const denied = new Error("denied")
+    requireAdmin.mockRejectedValue(denied)
+    for (const action of [
+      createGroupAction,
+      renameGroupAction,
+      archiveGroupAction,
+      addMemberAction,
+      endMembershipAction,
+      changeVoiceAction,
+      assignHolderAction,
+      endHoldingAction
+    ])
+      await expect(action(IDLE, form({}))).rejects.toBe(denied)
+    expect(await t.db.select().from(group)).toHaveLength(15)
+    expect(revalidatePath).not.toHaveBeenCalled()
   })
 
-  describe("structure", () => {
-    test("creates, renames and archives a group, revalidating the admin pages", async () => {
-      const created = await createGroupAction(
+  test("creates annual identities and refuses direct Board membership", async () => {
+    const year = currentOrganisationYear(cskToday())
+    expect(
+      await createGroupAction(IDLE, form({ type: GroupType.Board, organisationYear: String(year) }))
+    ).toMatchObject({ status: "success" })
+    const [board] = await t.db
+      .select()
+      .from(group)
+      .where(and(eq(group.type, GroupType.Board), eq(group.organisationYear, year)))
+    if (!board) throw new Error("Missing Board")
+    expect(board.name).toBeNull()
+    expect(
+      await addMemberAction(
         IDLE,
-        form({ name: "KK roddgrupp", type: "Roddgrupp", choirId: await t.groupId("KK") })
+        form({ groupId: board.id, userId: await t.user(), startDate: organisationYearPeriod(year).startDate })
       )
-      expect(created).toMatchObject({ status: "success" })
-      expect(revalidatePath).toHaveBeenCalledWith("/admin/org-structure", "layout")
-      const row = await groupNamed("KK roddgrupp")
-      expect(row?.choirId).toBe(await t.groupId("KK"))
-
-      expect(await renameGroupAction(IDLE, form({ groupId: row?.id as string, name: "KK rodd" }))).toMatchObject({
-        status: "success"
-      })
-      expect(await archiveGroupAction(IDLE, form({ groupId: row?.id as string }))).toMatchObject({ status: "success" })
-      expect((await groupNamed("KK rodd"))?.active).toBe(false)
-    })
-
-    test("passes a module violation through as a typed failure", async () => {
-      expect(await createGroupAction(IDLE, form({ name: "Styret", type: "Board" }))).toEqual({
-        status: "error",
-        error: "group-name-taken"
-      })
-      expect(await archiveGroupAction(IDLE, form({ groupId: await t.groupId("KKB") }))).toEqual({
-        status: "error",
-        error: "section-archived-with-choir"
-      })
-      expect(revalidatePath).not.toHaveBeenCalled()
-    })
-
-    test("refuses Choir and Section types and malformed input as invalid input", async () => {
-      expect(await createGroupAction(IDLE, form({ name: "Ny kör", type: "Choir" }))).toEqual({
-        status: "error",
-        error: "invalid-input"
-      })
-      expect(await renameGroupAction(IDLE, form({ groupId: "nope", name: "X" }))).toEqual({
-        status: "error",
-        error: "invalid-input"
-      })
-    })
+    ).toEqual({ status: "error", error: "direct-membership-forbidden" })
+    expect(await t.db.select().from(directMembership).where(eq(directMembership.groupId, board.id))).toEqual([])
   })
 
-  describe("members", () => {
-    test("adds a singer to a Section with a Voice, which makes them a Choir member", async () => {
-      const userId = await t.user()
-      const kkb = await t.groupId("KKB")
-      expect(
-        await addMemberAction(IDLE, form({ groupId: kkb, userId, voice: "B2", startDate: "2025-08-25" }))
-      ).toMatchObject({ status: "success" })
-
-      const memberships = await t.db
-        .select({ groupId: groupMember.groupId, voice: groupMember.voice })
-        .from(groupMember)
-        .where(eq(groupMember.userId, userId))
-      expect(memberships).toEqual(
-        expect.arrayContaining([
-          { groupId: kkb, voice: "B2" },
-          { groupId: await t.groupId("KK"), voice: null }
-        ])
+  test("the retained appointment form derives both rosters and ending it removes both grants", async () => {
+    const year = currentOrganisationYear(cskToday())
+    const startDate = organisationYearPeriod(year).startDate
+    const [board] = await t.db.select().from(group).where(eq(group.type, GroupType.Board))
+    if (!board) throw new Error("Missing Board")
+    const social = expectSuccess(
+      await createOrganisationGroup(t.db, { type: GroupType.SocialCommittee, organisationYear: year })
+    )
+    const userId = await t.user()
+    expect(
+      await assignHolderAction(
+        IDLE,
+        form({ groupId: board.id, positionId: PositionCode.SocialCoordinator, userId, startDate })
       )
-    })
+    ).toMatchObject({ status: "success" })
+    for (const id of [board.id, social.id])
+      expect(await listEffectiveMembersAt(t.db, id, startDate)).toMatchObject([{ userId }])
+    const [appointment] = await t.db.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))
+    if (!appointment) throw new Error("Missing appointment")
+    expect(
+      await endHoldingAction(IDLE, form({ appointmentId: appointment.id, endDate: `${year}-09-30` }))
+    ).toMatchObject({ status: "success" })
+    for (const id of [board.id, social.id]) expect(await listEffectiveMembersAt(t.db, id, `${year}-10-01`)).toEqual([])
+    expect(
+      await t.db.select().from(positionAppointment).where(eq(positionAppointment.id, appointment.id))
+    ).toMatchObject([{ endDate: `${year}-10-01` }])
+  })
 
-    test("refuses a Voice the Section does not sing", async () => {
-      const userId = await t.user()
-      expect(
-        await addMemberAction(
-          IDLE,
-          form({ groupId: await t.groupId("KKB"), userId, voice: "T1", startDate: "2025-08-25" })
-        )
-      ).toEqual({ status: "error", error: "voice-not-sung-in-section" })
-    })
-
-    test("changes a Voice by ending the old row, and ends Positions with the Membership", async () => {
-      const userId = await t.user()
-      const [mk, mkb2] = [await t.groupId("MK"), await t.groupId("MKB2")]
-      await addMemberAction(IDLE, form({ groupId: mkb2, userId, voice: "B2", startDate: "2024-08-25" }))
-      expect(
-        await changeVoiceAction(IDLE, form({ groupId: mkb2, userId, voice: "B1", date: "2025-08-25" }))
-      ).toMatchObject({ status: "success" })
-      const rows = await t.db
-        .select({ endDate: groupMember.endDate })
-        .from(groupMember)
-        .where(and(eq(groupMember.userId, userId), eq(groupMember.groupId, mkb2)))
-      expect(rows).toEqual([{ endDate: "2025-08-25" }])
-
-      const notfiskal = await t.positionId("Notfiskal")
-      await assignHolderAction(IDLE, form({ groupId: mk, positionId: notfiskal, userId, startDate: "2025-09-01" }))
-      expect(await endMembershipAction(IDLE, form({ groupId: mk, userId, endDate: "2026-06-30" }))).toMatchObject({
-        status: "success"
+  test("gig additions require a Voice without changing Section participation", async () => {
+    const groupId = expectSuccess(
+      await createOrganisationGroup(t.db, {
+        name: "Action gig",
+        type: GroupType.GigGroup
       })
-      const holdings = await t.db
+    ).id
+    const userId = await t.user()
+    const sectionId = await t.groupId("KKB")
+    expect(
+      await addMemberAction(IDLE, form({ groupId: sectionId, userId, voice: "B2", startDate: "2026-08-01" }))
+    ).toMatchObject({ status: "success" })
+    expect(await addMemberAction(IDLE, form({ groupId, userId, startDate: "2026-09-01" }))).toEqual({
+      status: "error",
+      error: "invalid-membership-voice"
+    })
+    expect(await addMemberAction(IDLE, form({ groupId, userId, voice: "B1", startDate: "2026-09-01" }))).toMatchObject({
+      status: "success"
+    })
+    expect(await listEffectiveMembersAt(t.db, groupId, "2026-10-01")).toMatchObject([{ userId, voice: "B1" }])
+    expect(await listEffectiveMembersAt(t.db, sectionId, "2026-10-01")).toMatchObject([{ userId, voice: "B2" }])
+  })
+
+  test("singer placement and ending use direct periods with inclusive form end dates", async () => {
+    const sectionId = await t.groupId("MKB1", "MK")
+    const userId = await t.user()
+    expect(
+      await addMemberAction(IDLE, form({ groupId: sectionId, userId, voice: "B1", startDate: "2026-08-01" }))
+    ).toMatchObject({ status: "success" })
+    expect(await endMembershipAction(IDLE, form({ groupId: sectionId, userId, endDate: "2026-09-30" }))).toMatchObject({
+      status: "success"
+    })
+    expect(
+      await t.db
         .select()
-        .from(positionHolder)
-        .where(and(eq(positionHolder.userId, userId), isNull(positionHolder.endDate)))
-      expect(holdings).toEqual([])
-    })
-
-    test("refuses to change the Voice of someone who does not sing in the Choir", async () => {
-      expect(
-        await changeVoiceAction(
-          IDLE,
-          form({ groupId: await t.groupId("DKS1"), userId: await t.user(), voice: "S2", date: "2025-08-25" })
-        )
-      ).toEqual({ status: "error", error: "not-a-singer" })
-    })
-  })
-
-  describe("Positions", () => {
-    test("assigns, replaces and ends a holder, only among current members", async () => {
-      const dk = await t.groupId("DK")
-      const conductor = await t.positionId("Dirigent")
-      const [first, second, outsider] = [await t.user(), await t.user(), await t.user()]
-      for (const userId of [first, second]) {
-        await addMemberAction(IDLE, form({ groupId: dk, userId, startDate: "2025-01-01" }))
-      }
-
-      expect(
-        await assignHolderAction(
-          IDLE,
-          form({ groupId: dk, positionId: conductor, userId: outsider, startDate: "2025-02-01" })
-        )
-      ).toEqual({ status: "error", error: "not-a-member" })
-      await assignHolderAction(
-        IDLE,
-        form({ groupId: dk, positionId: conductor, userId: first, startDate: "2025-02-01" })
-      )
-      await assignHolderAction(
-        IDLE,
-        form({ groupId: dk, positionId: conductor, userId: second, startDate: "2025-08-01" })
-      )
-      expect(
-        await endHoldingAction(
-          IDLE,
-          form({ groupId: dk, positionId: conductor, userId: second, endDate: "2026-01-01" })
-        )
-      ).toMatchObject({ status: "success" })
-
-      const holdings = await t.db
-        .select({ userId: positionHolder.userId, startDate: positionHolder.startDate, endDate: positionHolder.endDate })
-        .from(positionHolder)
-        .where(and(eq(positionHolder.groupId, dk), eq(positionHolder.positionId, conductor)))
-        .orderBy(positionHolder.startDate)
-      expect(holdings).toEqual([
-        { userId: first, startDate: "2025-02-01", endDate: "2025-08-01" },
-        { userId: second, startDate: "2025-08-01", endDate: "2026-01-01" }
-      ])
-    })
-
-    test("refuses a Position the group type does not allow", async () => {
-      const userId = await t.user()
-      const styret = await t.groupId("Styret")
-      await addMemberAction(IDLE, form({ groupId: styret, userId, startDate: "2025-01-01" }))
-      expect(
-        await assignHolderAction(
-          IDLE,
-          form({ groupId: styret, positionId: await t.positionId("Dirigent"), userId, startDate: "2025-01-01" })
-        )
-      ).toEqual({ status: "error", error: "position-not-allowed" })
-    })
-
-    test("creates and edits Positions in the catalogue", async () => {
-      expect(await createPositionAction(IDLE, form({ name: "Kassör", groupTypes: ["Board"] }))).toMatchObject({
-        status: "success"
-      })
-      expect(await createPositionAction(IDLE, form({ name: "Kassör", groupTypes: [] }))).toEqual({
-        status: "error",
-        error: "position-name-taken"
-      })
-      const kassor = await t.positionId("Kassör")
-      expect(
-        await updatePositionAction(
-          IDLE,
-          form({ positionId: kassor, name: "Skattmästare", groupTypes: ["Board", "Valberedning"] })
-        )
-      ).toMatchObject({ status: "success" })
-      expect(await t.positionId("Skattmästare")).toBe(kassor)
-    })
+        .from(directMembership)
+        .where(and(eq(directMembership.userId, userId), eq(directMembership.groupId, sectionId)))
+    ).toMatchObject([{ startDate: "2026-08-01", endDate: "2026-10-01", voice: "B1" }])
   })
 })

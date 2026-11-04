@@ -50,7 +50,7 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
 - `reference-data` against production also requires typing `prod`. It is allowed there
   because every environment needs the same org structure (the Choirs, their Sections,
   Styret, the Gigmästeri and the Position catalogue), and it fabricates no people. It only creates what
-  is missing, matching existing groups and Positions by name, in one transaction.
+  is missing, matching existing Group identities, in one transaction.
 - `reset` refuses outright with `--prod`, and refuses any `POSTGRES_URL` that is not a
   local database. Locally it asks before erasing; `--yes` skips the question, and without a
   terminal it refuses instead of waiting. It drops the `public` and `drizzle` schemas, runs
@@ -83,7 +83,7 @@ TLS verification follows the shared policy in `src/core/db/tls.ts`; see
 ## Local demo data
 
 After `bun run ops migrate`, run `bun run ops seed-demo`. It creates the shared reference
-data if needed, then seeds people, placements, group history and Posts in one transaction.
+data if needed, then seeds people, placements and Posts in one transaction.
 It never resets the database. The individual seed commands remain available; run
 `reference-data`, `seed-users`, `seed-groups`, then `seed-posts` for the same dataset.
 
@@ -97,20 +97,15 @@ On an empty database the demo contains:
   the seed balances around existing placements rather than moving anyone.
 - Varied Choir join dates from 2021–2025, Section and division changes, independent
   self-reported Voice capabilities, and some Users who have declared none.
-- CSK-wide and Choir-owned committees, gig groups, roddgrupper, festgrupper and rephelgsgrupper,
-  with helpers, former members, rejoins and Position handovers. Six additional groups are
-  archived, including an old Board and completed concert/rephelg projects.
-- Choir Dirigenter, Notfiskaler, Konsertmästare and Gigmästare; a Stämförälder for each
-  Section; a current Board with one elected Position per member. Board offices are linked
-  to their responsibility groups, and each Choir's Gigmästare also serves in the Gigmästeri,
-  respecting the Position catalogue's Group limits. Some singers hold multiple non-Board Positions.
+- Fixed annual Groups for the current and following Organisational year, the continuing
+  Föräldramötet, and example Choir teams, a gig group, and a project group. Formal Positions
+  are code-controlled definitions; the basic seed leaves appointments for Admins to assign.
 - 24 fictional Swedish Posts with paragraphs, headings, lists, emphasis and blockquotes,
   published by the example Admins between August 2025 and October 2026. They use the editor's
   document format and appear in the shared News feed. Their event details are demo content.
 
 Stable identities make these seeds repeatable: they insert missing fixtures and keep existing
-passwords, profile edits and Post edits. A conflicting existing Position assignment fails the
-demo transaction rather than displacing its holder. Direct scripts also enforce the local-only
+passwords, profile edits and Post edits. Direct scripts also enforce the local-only
 database guard. To return to the original demo after editing it, deliberately run
 `bun run ops reset`, then `bun run ops seed-demo`.
 
@@ -144,3 +139,17 @@ The first v1 `bun run ops migrate` upgrades the database ledger, adding `name` a
 check can read both ledger versions without writing to either: v1 uses folder
 names, while a legacy ledger is matched by SQL hash. Test the ledger upgrade on a
 local copy before using the normal guarded production migration command.
+
+## Organisation model cutover
+
+The `20261102210555_redesign-organisation-appointments` migration drops the old Membership,
+Position catalogue, and holding tables without converting their records. The cutover assumes
+disposable organisation data. For a fresh local example, explicitly run `bun run ops reset`,
+then `bun run ops seed-demo`. Reset refuses production and non-local database targets.
+
+## Section identities
+
+Section names are derived from the current Choir name and the Section Voice; they are never
+seeded as editable names. Reference data matches existing Sections by owning Choir and Voice,
+while retaining the original stable UUID tokens for newly created reference Sections. A Choir
+rename therefore changes Section labels without replacing their identities or participation.

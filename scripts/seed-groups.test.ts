@@ -2,7 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq, isNull } from "drizzle-orm"
 import { Client } from "pg"
 import { user } from "@/core/db/schema/auth"
-import { group, groupMember } from "@/core/db/schema/org-structure"
+import { directMembership, group } from "@/core/db/schema/org-structure"
+import { GroupType } from "@/core/org-structure"
 import { createTestDatabase } from "../test/database"
 import { insertReferenceData } from "./ops/reference-data"
 import { seedGroups } from "./seed-groups"
@@ -32,17 +33,16 @@ describe.skipIf(!database)("seedGroups", () => {
     const users = [await newUser(), await newUser()]
 
     const { created, placed } = await seedGroups(t.db)
-    expect(created).toContain("Sexmästeri")
     expect(created).toContain("KK roddgrupp")
     expect(placed).toBe(2)
 
     for (const userId of users) {
       const rows = await t.db
-        .select({ type: group.type, voice: groupMember.voice })
-        .from(groupMember)
-        .innerJoin(group, eq(group.id, groupMember.groupId))
-        .where(and(eq(groupMember.userId, userId), isNull(groupMember.endDate)))
-      expect(rows.map(({ type }) => type).sort()).toEqual(["Choir", "Section"])
+        .select({ type: group.type, voice: directMembership.voice })
+        .from(directMembership)
+        .innerJoin(group, eq(group.id, directMembership.groupId))
+        .where(and(eq(directMembership.userId, userId), isNull(directMembership.endDate)))
+      expect(rows.map(({ type }) => type).sort()).toEqual([GroupType.Choir, GroupType.Section])
       // Every seeded singer gets a division, even in a Section that sings a whole family.
       expect(rows.find(({ type }) => type === "Section")?.voice).toMatch(/^[SATB][12]$/)
     }

@@ -3,7 +3,8 @@ import { eq, sql } from "drizzle-orm"
 import { AuthorizationDeniedError, createAuthorization } from "@/core/authz/authorization"
 import type { AuthorizationSession, PermissionContext, PermissionRequest } from "@/core/authz/model"
 import { user } from "@/core/db/schema/auth"
-import { group, groupMember, position, positionHolder } from "@/core/db/schema/org-structure"
+import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import { cskToday, GroupType, PositionCode, shiftDate } from "@/core/org-structure"
 import { listCurrentGroupsOfUser, listCurrentPositionsOfUser } from "@/features/org-structure"
 import { createTestDatabase } from "./database"
 
@@ -140,19 +141,29 @@ describe.skipIf(!database)("authorization server enforcement", () => {
 
   test("supplied relationship periods agree with organisational reads for future dates and archived Groups", async () => {
     const holder = await actor()
-    const [g] = await t.db.insert(group).values({ name: crypto.randomUUID(), type: "GigGroup" }).returning()
-    const [p] = await t.db.insert(position).values({ name: crypto.randomUUID() }).returning()
-    await t.db.insert(groupMember).values({ userId: holder.id, groupId: g.id, startDate: "2999-01-01" })
+    const [g] = await t.db.insert(group).values({ name: crypto.randomUUID(), type: GroupType.GigGroup }).returning()
+    const today = cskToday()
+    const tomorrow = shiftDate(today, 1)
+    const yesterday = shiftDate(today, -1)
     await t.db
-      .insert(positionHolder)
-      .values({ userId: holder.id, groupId: g.id, positionId: p.id, startDate: "2999-01-01" })
+      .insert(directMembership)
+      .values({ userId: holder.id, groupId: g.id, startDate: "2999-01-01", voice: "B1" })
+    await t.db.insert(positionAppointment).values({
+      userId: holder.id,
+      contextGroupId: g.id,
+      positionCode: PositionCode.GigLeader,
+      startDate: "2999-01-01"
+    })
 
     async function check(expectedCurrent: boolean, expectedAllowed: boolean) {
       const [resource] = await t.db.select().from(group).where(eq(group.id, g.id))
       const context: PermissionContext["group.manageContent"] = {
         group: resource,
-        memberships: await t.db.select().from(groupMember).where(eq(groupMember.userId, holder.id)),
-        positionHoldings: await t.db.select().from(positionHolder).where(eq(positionHolder.userId, holder.id))
+        memberships: await t.db.select().from(directMembership).where(eq(directMembership.userId, holder.id)),
+        positionAppointments: await t.db
+          .select()
+          .from(positionAppointment)
+          .where(eq(positionAppointment.userId, holder.id))
       }
       expect((await listCurrentGroupsOfUser(t.db, holder.id)).some((row) => row.groupId === g.id)).toBe(expectedCurrent)
       expect((await listCurrentPositionsOfUser(t.db, holder.id)).some((row) => row.groupId === g.id)).toBe(
@@ -161,12 +172,21 @@ describe.skipIf(!database)("authorization server enforcement", () => {
       expect(await holder.access.can({ action: "group.manageContent", context })).toBe(expectedAllowed)
     }
 
+    await check(false, false)
+    await t.db.update(directMembership).set({ startDate: yesterday }).where(eq(directMembership.userId, holder.id))
+    await t.db
+      .update(positionAppointment)
+      .set({ startDate: yesterday })
+      .where(eq(positionAppointment.userId, holder.id))
     await check(true, true)
     await t.db.update(group).set({ active: false }).where(eq(group.id, g.id))
     await check(true, false)
     await t.db.update(group).set({ active: true }).where(eq(group.id, g.id))
-    await t.db.update(groupMember).set({ endDate: "2999-02-01" }).where(eq(groupMember.userId, holder.id))
-    await t.db.update(positionHolder).set({ endDate: "2999-02-01" }).where(eq(positionHolder.userId, holder.id))
+    await t.db.update(directMembership).set({ endDate: tomorrow }).where(eq(directMembership.userId, holder.id))
+    await t.db.update(positionAppointment).set({ endDate: tomorrow }).where(eq(positionAppointment.userId, holder.id))
+    await check(true, true)
+    await t.db.update(directMembership).set({ endDate: today }).where(eq(directMembership.userId, holder.id))
+    await t.db.update(positionAppointment).set({ endDate: today }).where(eq(positionAppointment.userId, holder.id))
     await check(false, false)
   })
 })
