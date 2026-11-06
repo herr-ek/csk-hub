@@ -1,16 +1,21 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
 import { i18n, locales } from "@better-auth/i18n"
+import { oauthProvider } from "@better-auth/oauth-provider"
 import { passkey } from "@better-auth/passkey"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
-import { admin, emailOTP, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
+import { admin, emailOTP, jwt, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
 import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
 import { getBaseURL } from "./base-url"
-import { createOidcPlugins } from "./oidc/provider"
+import { validateOidcIssuer, validateOidcRedirectUri } from "./oidc/config"
+import { createHubOidcPolicy } from "./oidc/hub-policy"
 import { adminPluginOptions } from "./permissions"
+
+validateOidcIssuer(env.OIDC_ISSUER, env.ENVIRONMENT)
+const hubOidc = createHubOidcPolicy()
 
 const issuerOrigin = new URL(env.OIDC_ISSUER).origin
 const deploymentOrigin =
@@ -82,7 +87,27 @@ export const authOptions = {
   },
   plugins: [
     ...authPlugins,
-    ...createOidcPlugins({ database: db, issuer: env.OIDC_ISSUER, environment: env.ENVIRONMENT }),
+    hubOidc.plugin,
+    jwt({
+      jwt: { issuer: env.OIDC_ISSUER },
+      jwks: { keyPairConfig: { alg: "RS256" }, rotationInterval: 60 * 60 * 24 * 30, gracePeriod: 60 * 60 * 24 },
+      disableSettingJwtHeader: true
+    }),
+    oauthProvider({
+      loginPage: "/login",
+      consentPage: "/oidc/consent",
+      scopes: ["openid", "profile"],
+      grantTypes: ["authorization_code"],
+      allowDynamicClientRegistration: false,
+      allowUnauthenticatedClientRegistration: false,
+      validateRedirectUri: (uri, registered) => validateOidcRedirectUri(uri, registered, env.ENVIRONMENT),
+      signup: { page: "/activate", shouldRedirect: hubOidc.requiresActivation },
+      clientPrivileges: hubOidc.activeAdmin,
+      resourcePrivileges: hubOidc.activeAdmin,
+      customAccessTokenClaims: hubOidc.checkTokenUser,
+      customIdTokenClaims: hubOidc.checkTokenUser,
+      customUserInfoClaims: hubOidc.checkUserInfo
+    }),
     ...(isProduction ? [] : [testUtils()]),
     nextCookies()
   ]

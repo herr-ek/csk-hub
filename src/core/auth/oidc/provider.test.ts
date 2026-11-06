@@ -1,15 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
+import { oauthProvider } from "@better-auth/oauth-provider"
 import { betterAuth } from "better-auth"
-import { admin, emailOTP, magicLink, twoFactor } from "better-auth/plugins"
+import { admin, emailOTP, jwt, magicLink, twoFactor } from "better-auth/plugins"
 import { eq } from "drizzle-orm"
 import { createLocalJWKSet, decodeProtectedHeader, jwtVerify } from "jose"
 import * as oidc from "openid-client"
 import * as schema from "@/core/db/schema/auth"
 import { createTestDatabase } from "../../../../test/database"
 import { createOidcClientHandler } from "./clients.server"
+import { validateOidcRedirectUri } from "./config"
 import { getVerifiedConsentQuery } from "./consent.server"
-import { createOidcPlugins } from "./provider"
+import { createHubOidcPolicy } from "./hub-policy"
 import { resumeOidcRequest } from "./resume.server"
 
 const database = await createTestDatabase()
@@ -30,6 +32,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
   const issuer = `${origin}/api/auth`
   const deliveries = new Map<string, string>()
   function makeAuth() {
+    const hubOidc = createHubOidcPolicy()
     return betterAuth({
       baseURL: origin,
       secret: "oidc-integration-test-secret-at-least-32-characters",
@@ -59,7 +62,27 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
             deliveries.set(email, url)
           }
         }),
-        ...createOidcPlugins({ database: t.db, issuer, environment: "test" })
+        hubOidc.plugin,
+        jwt({
+          jwt: { issuer },
+          jwks: { keyPairConfig: { alg: "RS256" }, rotationInterval: 60 * 60 * 24 * 30, gracePeriod: 60 * 60 * 24 },
+          disableSettingJwtHeader: true
+        }),
+        oauthProvider({
+          loginPage: "/login",
+          consentPage: "/oidc/consent",
+          scopes: ["openid", "profile"],
+          grantTypes: ["authorization_code"],
+          allowDynamicClientRegistration: false,
+          allowUnauthenticatedClientRegistration: false,
+          validateRedirectUri: (uri, registered) => validateOidcRedirectUri(uri, registered, "test"),
+          signup: { page: "/activate", shouldRedirect: hubOidc.requiresActivation },
+          clientPrivileges: hubOidc.activeAdmin,
+          resourcePrivileges: hubOidc.activeAdmin,
+          customAccessTokenClaims: hubOidc.checkTokenUser,
+          customIdTokenClaims: hubOidc.checkTokenUser,
+          customUserInfoClaims: hubOidc.checkUserInfo
+        })
       ]
     })
   }
