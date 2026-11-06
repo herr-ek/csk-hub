@@ -109,7 +109,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       body: {
         client_name: "Website",
         redirect_uris: [callback],
-        scope: "openid profile",
+        scope: "openid profile csk:website",
         token_endpoint_auth_method: "client_secret_basic",
         grant_types: ["authorization_code"],
         skip_consent: true,
@@ -129,14 +129,14 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     )
   }
 
-  async function authorize(cookie = userCookie, registered = client) {
+  async function authorize(cookie = userCookie, registered = client, scope = "openid profile") {
     const config = await configFor(registered)
     const verifier = oidc.randomPKCECodeVerifier()
     const state = oidc.randomState()
     const nonce = oidc.randomNonce()
     const url = oidc.buildAuthorizationUrl(config, {
       redirect_uri: callback,
-      scope: "openid profile",
+      scope,
       response_type: "code",
       state,
       nonce,
@@ -169,7 +169,86 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     expect(tokens.refresh_token).toBeUndefined()
     const identity = await oidc.fetchUserInfo(flow.config, tokens.access_token, userId)
     expect(identity).toMatchObject({ sub: userId, name: "Singer" })
+    expect(identity).not.toHaveProperty("https://chalmerssangkor.se/claims/authorization")
     await expect(exchange(flow)).rejects.toThrow()
+  })
+
+  test("website UserInfo returns current exact grants and private no-store headers", async () => {
+    const flow = await authorize(adminCookie, client, "openid profile csk:website")
+    const tokens = await exchange(flow)
+    await t.db.update(schema.user).set({ role: "user,admin" }).where(eq(schema.user.id, adminId))
+    try {
+      const metadata = await flow.config.serverMetadata()
+      if (!metadata.userinfo_endpoint) throw new Error("UserInfo endpoint is missing from discovery")
+      const response = await fetch(metadata.userinfo_endpoint, {
+        headers: { Authorization: `Bearer ${tokens.access_token}` }
+      })
+      const identity = await response.json()
+      const claim = identity["https://chalmerssangkor.se/claims/authorization"] as
+        | { version?: unknown; application?: unknown; checked_at?: unknown; permissions?: unknown }
+        | undefined
+      if (!claim) throw new Error("website authorization claim is missing")
+      expect(response.headers.get("cache-control")).toBe("private, no-store")
+      expect(claim).toMatchObject({
+        version: 1,
+        application: "chalmerssangkor.se",
+        permissions: [
+          "website.access",
+          "front-page.manage",
+          "banner.manage",
+          "choir.manage",
+          "concert.manage",
+          "recruitment.manage",
+          "contacts.manage",
+          "faq.manage",
+          "media.upload",
+          "media.manage"
+        ]
+      })
+      expect(Number.isInteger(claim.checked_at)).toBe(true)
+      expect(identity.sub).toBe(adminId)
+      await t.db.update(schema.user).set({ role: "administrator" }).where(eq(schema.user.id, adminId))
+      const updated = await oidc.fetchUserInfo(flow.config, tokens.access_token, adminId)
+      const updatedClaim = updated["https://chalmerssangkor.se/claims/authorization"] as
+        | { permissions?: unknown }
+        | undefined
+      expect(updatedClaim?.permissions).toEqual([])
+    } finally {
+      await t.db.update(schema.user).set({ role: "admin" }).where(eq(schema.user.id, adminId))
+    }
+  })
+
+  test("ordinary Users receive no website grants and client scopes stay isolated", async () => {
+    const websiteFlow = await authorize(userCookie, client, "openid profile csk:website")
+    const websiteTokens = await exchange(websiteFlow)
+    const ordinary = await oidc.fetchUserInfo(websiteFlow.config, websiteTokens.access_token, userId)
+    const ordinaryClaim = ordinary["https://chalmerssangkor.se/claims/authorization"] as
+      | { permissions?: unknown }
+      | undefined
+    expect(ordinaryClaim?.permissions).toEqual([])
+
+    const second = await auth.api.adminCreateOAuthClient({
+      headers: new Headers({ cookie: adminCookie }),
+      body: {
+        client_name: "Other application",
+        redirect_uris: [callback],
+        scope: "openid profile",
+        token_endpoint_auth_method: "client_secret_basic"
+      }
+    })
+    const secondFlow = await authorize(userCookie, second, "openid profile")
+    expect(secondFlow.location.pathname).toBe("/oidc/consent")
+    const consent = await fetch(`${issuer}/oauth2/consent`, {
+      method: "POST",
+      headers: { Origin: origin, cookie: userCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ accept: true, oauth_query: secondFlow.location.search.slice(1) })
+    })
+    expect(consent.status).toBe(200)
+    const consentResult = await consent.json()
+    secondFlow.location = new URL(consentResult.url)
+    const secondTokens = await exchange(secondFlow)
+    const other = await oidc.fetchUserInfo(secondFlow.config, secondTokens.access_token, userId)
+    expect(other).not.toHaveProperty("https://chalmerssangkor.se/claims/authorization")
   })
 
   test("ordinary Users and public requests cannot register or manage clients", async () => {
@@ -711,7 +790,9 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       issuer,
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code"],
-      code_challenge_methods_supported: ["S256"]
+      code_challenge_methods_supported: ["S256"],
+      scopes_supported: ["openid", "profile", "csk:website"],
+      claims_supported: expect.arrayContaining(["https://chalmerssangkor.se/claims/authorization"])
     })
   })
 })

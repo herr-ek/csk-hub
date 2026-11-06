@@ -9,7 +9,9 @@ const registration = z
   .object({
     client_name: z.string().min(1).max(100),
     redirect_uris: callbacks,
-    scope: z.enum(["openid", "openid profile"]).default("openid profile"),
+    scope: z
+      .enum(["openid", "openid profile", "openid csk:website", "openid profile csk:website"])
+      .default("openid profile"),
     skip_consent: z.boolean().default(false)
   })
   .strict()
@@ -20,7 +22,7 @@ const update = z
       .object({
         client_name: z.string().min(1).max(100).optional(),
         redirect_uris: callbacks.optional(),
-        scope: z.enum(["openid", "openid profile"]).optional(),
+        scope: z.enum(["openid", "openid profile", "openid csk:website", "openid profile csk:website"]).optional(),
         skip_consent: z.boolean().optional(),
         disabled: z.boolean().optional()
       })

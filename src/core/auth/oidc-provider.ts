@@ -6,8 +6,9 @@ import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "
 import { jwt } from "better-auth/plugins"
 import { and, eq, gt, isNotNull } from "drizzle-orm"
 import type { db } from "@/core/db"
-import { account, oauthAccessToken, session, user } from "@/core/db/schema/auth"
+import { account, oauthAccessToken, oauthClient, session, user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
+import { getWebsitePermissions, WEBSITE_AUTHORIZATION_CLAIM, WEBSITE_SCOPE } from "./oidc-website-policy"
 
 type ProviderOptions = {
   database: typeof db
@@ -59,6 +60,12 @@ export function createOidcPlugins({ database, issuer, environment }: ProviderOpt
     hooks: {
       before: [
         {
+          matcher: (ctx) => ctx.path === "/oauth2/userinfo",
+          handler: createAuthMiddleware(async (ctx) => {
+            ctx.setHeader("Cache-Control", "private, no-store")
+          })
+        },
+        {
           matcher: (ctx) => ctx.path === "/sign-in/magic-link" && !!ctx.body?.oauth_query,
           handler: createAuthMiddleware(async (ctx) => {
             const callback = `${url.origin}/api/oidc/resume?${ctx.body.oauth_query}`
@@ -91,6 +98,12 @@ export function createOidcPlugins({ database, issuer, environment }: ProviderOpt
       ],
       after: [
         {
+          matcher: (ctx) => ctx.path === "/oauth2/userinfo",
+          handler: createAuthMiddleware(async (ctx) => {
+            ctx.setHeader("Cache-Control", "private, no-store")
+          })
+        },
+        {
           matcher: (ctx) => ctx.path === "/oauth2/client/rotate-secret",
           handler: createAuthMiddleware(async (ctx) => {
             const result = ctx.context.returned
@@ -121,8 +134,12 @@ export function createOidcPlugins({ database, issuer, environment }: ProviderOpt
     oauthProvider({
       loginPage: "/login",
       consentPage: "/oidc/consent",
-      scopes: ["openid", "profile"],
+      scopes: ["openid", "profile", WEBSITE_SCOPE],
       grantTypes: ["authorization_code"],
+      advertisedMetadata: {
+        scopes_supported: ["openid", "profile", WEBSITE_SCOPE],
+        claims_supported: ["sub", "iss", "aud", "exp", "iat", "sid", "scope", "azp", WEBSITE_AUTHORIZATION_CLAIM]
+      },
       validateRedirectUri: (redirectUri, registered) => {
         const callback = new URL(redirectUri)
         const local = environment === "development" || environment === "test"
@@ -166,15 +183,28 @@ export function createOidcPlugins({ database, issuer, environment }: ProviderOpt
         await currentUser(identity.id)
         return {}
       },
-      customUserInfoClaims: async ({ user: identity, jwt: token }) => {
-        await currentUser(identity.id)
+      customUserInfoClaims: async ({ user: identity, scopes, jwt: token }) => {
+        const current = await currentUser(identity.id)
         if (typeof token.sid !== "string") throw new APIError("UNAUTHORIZED", { error: "invalid_token" })
         const [originating] = await database
           .select()
           .from(session)
           .where(and(eq(session.id, token.sid), eq(session.userId, identity.id), gt(session.expiresAt, new Date())))
         if (!originating || originating.impersonatedBy) throw new APIError("UNAUTHORIZED", { error: "invalid_token" })
-        return {}
+        if (!scopes.includes(WEBSITE_SCOPE) || typeof token.client_id !== "string") return {}
+        const [client] = await database
+          .select({ scopes: oauthClient.scopes })
+          .from(oauthClient)
+          .where(and(eq(oauthClient.clientId, token.client_id), eq(oauthClient.disabled, false)))
+        if (!client?.scopes?.includes(WEBSITE_SCOPE)) return {}
+        return {
+          [WEBSITE_AUTHORIZATION_CLAIM]: {
+            version: 1,
+            application: "chalmerssangkor.se",
+            checked_at: Math.floor(Date.now() / 1000),
+            permissions: getWebsitePermissions(current.role, !current.banned)
+          }
+        }
       }
     })
   ] as const

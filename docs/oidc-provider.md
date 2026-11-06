@@ -3,8 +3,8 @@
 Hub provides confidential authorization-code OIDC using Better Auth 1.7.18. Clients
 use S256 PKCE and `client_secret_basic`. The identity key is `(iss, sub)`; `sub` is
 the permanent Hub User ID. Never key accounts by name or email, or recycle User IDs.
-This delivery supports `openid` and `profile`. Website permission scopes and claims
-are delivered separately; identity alone grants no application administration.
+This delivery supports `openid`, `profile` and the website-specific
+`csk:website` scope. Identity alone grants no application permissions.
 
 ## Configure a deployment
 
@@ -66,7 +66,7 @@ Create body (substitute the real, exact callback):
 {
   "client_name": "Application name",
   "redirect_uris": ["https://application.example/callback/"],
-  "scope": "openid profile",
+  "scope": "openid profile csk:website",
   "skip_consent": false
 }
 ```
@@ -134,6 +134,44 @@ through cached cookies, old codes or stored opaque tokens. All impersonated
 sessions are rejected, so support cannot export the support actor's authority.
 An already issued ID token remains a signed historical authentication statement;
 clients must use the current UserInfo/access-token boundary for ongoing access.
+
+## Website authorization contract
+
+The website client is registered with the allowed scope `openid profile
+csk:website`; other clients should only receive the scopes they need. A website
+authorization request uses `openid profile csk:website`, S256 PKCE, state and
+nonce, and the exact callback stored on the client. The opaque access token is
+bound to the Hub session and expires after one hour by default. It has no API
+resource audience and no refresh token. After expiry, start a new authorization
+code flow; an existing Hub browser session may complete it without another
+credential prompt.
+
+Authenticated UserInfo includes
+`https://chalmerssangkor.se/claims/authorization` only when both the current
+token and its registered client allow `csk:website`. Version 1 returns
+`application: "chalmerssangkor.se"`, `version: 1`, an authoritative Unix-seconds
+`checked_at`, and `permissions`. Active Admins receive the complete website
+permission set; other active Users receive an empty array. UserInfo reloads
+current User status, roles and session on every lookup. Its response is private
+and `no-store`; failures reject the lookup.
+
+Consumers may reuse successful authorization facts for strictly less than 300
+seconds. At the 300-second boundary, check UserInfo again before another
+protected operation. Shorten that interval to the access token or session expiry
+when either occurs first. A failed lookup does not renew freshness; after expiry,
+begin a new OIDC flow instead of extending old grants from a cookie.
+
+The HTTP integration contract can be exercised with the repository's real
+provider harness and conventional `openid-client` setup:
+
+```sh
+docker compose up -d postgres
+bun --env-file=.env test src/core/auth/oidc-provider.test.ts
+```
+
+The suite uses a disposable migrated PostgreSQL database and covers identity,
+website scope/client isolation, exact current grants and role withdrawal through
+the real UserInfo endpoint.
 
 ## Signing keys and diagnostics
 
