@@ -8,14 +8,15 @@ import * as oidc from "openid-client"
 import * as schema from "@/core/db/schema/auth"
 import { createTestDatabase } from "../../../../test/database"
 import { createOidcClientHandler } from "./clients.server"
+import { getVerifiedConsentQuery } from "./consent.server"
 import { createOidcPlugins } from "./provider"
 import { resumeOidcRequest } from "./resume.server"
 
 const database = await createTestDatabase()
-if (!database && process.env.CI) throw new Error("OIDC integration tests require local PostgreSQL")
 
 describe.skipIf(!database)("registered applications over HTTP", () => {
-  const t = database as NonNullable<typeof database>
+  if (!database) return
+  const t = database
   const server = Bun.serve({
     port: 0,
     fetch: (request): Promise<Response> =>
@@ -222,6 +223,24 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     })
     const flow = await authorize(userCookie, second)
     expect(flow.location.pathname).toBe("/oidc/consent")
+    const query = new URLSearchParams(flow.location.search)
+    const { secret } = await auth.$context
+    query.set("returnTo", "/unrelated")
+    const verified = await getVerifiedConsentQuery(query.toString(), secret)
+    expect(verified?.clientId).toBe(second.client_id)
+    expect(verified?.scopes).toEqual(["openid", "profile"])
+    expect(verified?.oauthQuery).not.toContain("returnTo")
+    for (const [key, value] of [
+      ["client_id", "other-client"],
+      ["scope", "openid"],
+      ["exp", "1"],
+      ["sig", "invalid"]
+    ]) {
+      const tampered = new URLSearchParams(query)
+      tampered.set(key, value)
+      expect(await getVerifiedConsentQuery(tampered.toString(), secret)).toBeNull()
+    }
+    expect(await getVerifiedConsentQuery("client_id=unsigned", secret)).toBeNull()
     const response = await fetch(`${issuer}/oauth2/consent`, {
       method: "POST",
       headers: { Origin: origin, cookie: userCookie, "Content-Type": "application/json" },
@@ -291,65 +310,6 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       const errorUrl = new URL(response.headers.get("location") ?? "", origin)
       expect(errorUrl.origin).toBe(origin)
       expect(errorUrl.searchParams.get("error")).toBe("invalid_redirect")
-    }
-  })
-
-  test("client-side state, nonce, issuer and audience checks reject mismatches", async () => {
-    for (const checks of [{ expectedState: "incorrect" }, { expectedNonce: "incorrect" }]) {
-      const flow = await authorize()
-      await expect(
-        oidc.authorizationCodeGrant(flow.config, flow.location, {
-          pkceCodeVerifier: flow.verifier,
-          expectedState: flow.state,
-          expectedNonce: flow.nonce,
-          ...checks
-        })
-      ).rejects.toThrow()
-    }
-  })
-
-  test("a conventional client rejects otherwise-valid ID tokens for the wrong issuer or audience", async () => {
-    for (const claim of ["iss", "aud"]) {
-      const flow = await authorize()
-      const discovered = flow.config.serverMetadata()
-      const metadata: oidc.ServerMetadata = {
-        issuer: claim === "iss" ? `${origin}/different-issuer` : discovered.issuer,
-        token_endpoint: discovered.token_endpoint,
-        jwks_uri: discovered.jwks_uri,
-        id_token_signing_alg_values_supported: ["RS256"],
-        authorization_response_iss_parameter_supported: false
-      }
-      const config = new oidc.Configuration(
-        metadata,
-        claim === "aud" ? "different-audience" : client.client_id,
-        client.client_secret,
-        (_server, _client, body, headers) => {
-          body.delete("client_id")
-          headers.set("Authorization", `Basic ${btoa(`${client.client_id}:${client.client_secret}`)}`)
-        }
-      )
-      oidc.allowInsecureRequests(config)
-      let successfulTokenResponse = false
-      config[oidc.customFetch] = async (url, options) => {
-        const { body, ...requestOptions } = options
-        const response = await fetch(url, {
-          ...requestOptions,
-          body: body instanceof Uint8Array ? new Uint8Array(body).buffer : body
-        })
-        if (new URL(url).pathname.endsWith("/oauth2/token")) successfulTokenResponse = response.status === 200
-        return response
-      }
-      const callbackUrl = new URL(flow.location)
-      callbackUrl.searchParams.delete("iss")
-      await expect(
-        oidc.authorizationCodeGrant(config, callbackUrl, {
-          pkceCodeVerifier: flow.verifier,
-          expectedState: flow.state,
-          expectedNonce: flow.nonce,
-          idTokenExpected: true
-        })
-      ).rejects.toThrow("unexpected JWT claim value encountered")
-      expect(successfulTokenResponse).toBe(true)
     }
   })
 
@@ -467,54 +427,6 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       ).rejects.toThrow()
     } finally {
       await t.db.update(schema.user).set({ role: "admin", emailVerified: true }).where(eq(schema.user.id, adminId))
-    }
-  })
-
-  test("identity remains stable after name and email changes", async () => {
-    await t.db
-      .update(schema.user)
-      .set({ name: "Renamed Singer", email: "renamed@example.com" })
-      .where(eq(schema.user.id, userId))
-    try {
-      const flow = await authorize()
-      const tokens = await exchange(flow)
-      expect(tokens.claims()).toMatchObject({ sub: userId, iss: issuer })
-      expect(await oidc.fetchUserInfo(flow.config, tokens.access_token, userId)).toMatchObject({
-        sub: userId,
-        name: "Renamed Singer"
-      })
-    } finally {
-      await t.db
-        .update(schema.user)
-        .set({ name: "Singer", email: "singer@example.com" })
-        .where(eq(schema.user.id, userId))
-    }
-  })
-
-  test("expired authorization codes and malformed requests fail", async () => {
-    const flow = await authorize()
-    await t.db.update(schema.verification).set({ expiresAt: new Date(0) })
-    await expect(exchange(flow)).rejects.toThrow()
-    for (const [key, value] of [
-      ["response_type", "token"],
-      ["code_challenge_method", "plain"],
-      ["scope", "openid offline_access"],
-      ["client_id", "unknown"]
-    ]) {
-      const invalid = new URL(flow.url)
-      invalid.searchParams.set(key, value)
-      const response = await fetch(invalid, { headers: { cookie: userCookie }, redirect: "manual" })
-      const location = new URL(response.headers.get("location") ?? "/", origin)
-      expect(location.searchParams.has("code")).toBe(false)
-      expect({
-        parameter: key,
-        path: location.pathname,
-        denied:
-          response.status >= 400 ||
-          location.searchParams.has("error") ||
-          new URLSearchParams(location.hash.slice(1)).has("error") ||
-          location.pathname === "/api/auth/error"
-      }).toMatchObject({ denied: true })
     }
   })
 

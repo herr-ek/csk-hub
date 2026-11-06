@@ -15,8 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "ops": "bun run scripts/ops/index.ts",
     "pr": "bun tst && bun lint && bun run build",
-    "fallow": "bunx fallow",
-    "test:e2e": "playwright test"
+    "fallow": "bunx fallow"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -77,7 +76,6 @@
     "@biomejs/biome": "2.5.13",
     "@clack/prompts": "^1.8.1",
     "@happy-dom/global-registrator": "^20.14.5",
-    "@playwright/test": "^1.65.0",
     "@tailwindcss/postcss": "^4",
     "@types/bun": "^1.4.2",
     "@types/node": "^26.5.1",

@@ -14,8 +14,6 @@ type Credentials = { client_id: string; client_secret: string }
 export function HubClientRegistrationForm() {
   const t = useTranslations("HubClients")
   const id = useId()
-  const [profile, setProfile] = useState(true)
-  const [skipConsent, setSkipConsent] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<"invalid" | "denied" | "unavailable">()
   const [credentials, setCredentials] = useState<Credentials>()
@@ -35,8 +33,8 @@ export function HubClientRegistrationForm() {
             .split(/\r?\n/)
             .map((url) => url.trim())
             .filter(Boolean),
-          scope: profile ? "openid profile" : "openid",
-          skip_consent: skipConsent
+          scope: data.has("profile") ? "openid profile" : "openid",
+          skip_consent: data.has("skipConsent")
         })
       })
       if (!response.ok) {
@@ -87,8 +85,6 @@ export function HubClientRegistrationForm() {
           variant="outline"
           onClick={() => {
             setCredentials(undefined)
-            setProfile(true)
-            setSkipConsent(false)
           }}
         >
           {t("done")}
@@ -115,12 +111,12 @@ export function HubClientRegistrationForm() {
           </p>
         </div>
         <Label className="leading-normal">
-          <Checkbox checked={profile} onCheckedChange={setProfile} />
+          <Checkbox name="profile" defaultChecked />
           {t("profile")}
         </Label>
         <div className="space-y-2">
           <Label className="leading-normal">
-            <Checkbox checked={skipConsent} onCheckedChange={setSkipConsent} />
+            <Checkbox name="skipConsent" />
             {t("skipConsent")}
           </Label>
           <p className="text-sm text-muted-foreground">{t("skipConsentHelp")}</p>

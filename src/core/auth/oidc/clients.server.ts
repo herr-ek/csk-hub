@@ -9,22 +9,14 @@ const registration = z
   .object({
     client_name: z.string().min(1).max(100),
     redirect_uris: callbacks,
-    scope: z.enum(["openid", "openid profile"]).default("openid profile"),
-    skip_consent: z.boolean().default(false)
+    scope: z.enum(["openid", "openid profile"]).optional(),
+    skip_consent: z.boolean().optional()
   })
   .strict()
 const update = z
   .object({
     client_id: z.string().min(1),
-    update: z
-      .object({
-        client_name: z.string().min(1).max(100).optional(),
-        redirect_uris: callbacks.optional(),
-        scope: z.enum(["openid", "openid profile"]).optional(),
-        skip_consent: z.boolean().optional(),
-        disabled: z.boolean().optional()
-      })
-      .strict()
+    update: registration.partial().extend({ disabled: z.boolean().optional() })
   })
   .strict()
 
@@ -48,6 +40,8 @@ export function createOidcClientHandler(provider: {
         result = await provider.api.adminCreateOAuthClient({
           headers,
           body: {
+            scope: "openid profile",
+            skip_consent: false,
             ...registration.parse(await request.json()),
             token_endpoint_auth_method: "client_secret_basic",
             grant_types: ["authorization_code"],
