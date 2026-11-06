@@ -35,10 +35,10 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Generate disposable notification keys
         run: |
-          bun -e 'const { publicKey, privateKey } = require("web-push").generateVAPIDKeys(); require("node:fs").appendFileSync(process.env.GITHUB_ENV, "NEXT_PUBLIC_VAPID_PUBLIC_KEY=" + publicKey + "\nVAPID_PRIVATE_KEY=" + privateKey + "\n")'
+          bun -e 'const { publicKey, privateKey } = require("web-push").generateVAPIDKeys(); console.log("::add-mask::" + privateKey); require("node:fs").appendFileSync(process.env.GITHUB_ENV, "NEXT_PUBLIC_VAPID_PUBLIC_KEY=" + publicKey + "\nVAPID_PRIVATE_KEY=" + privateKey + "\n")'
       - run: bun run typecheck
       - run: bun run lint
-      - run: bun tst
+      - run: bun test --isolate --dots
       - run: bun x playwright install --with-deps chromium
       - run: bun run test:e2e
       - run: bun run build
