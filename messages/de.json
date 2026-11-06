@@ -816,5 +816,27 @@
     "allow": "Erlauben",
     "deny": "Abbrechen",
     "error": "Die Anfrage konnte nicht abgeschlossen werden. Kehre zur Anwendung zurück und versuche es erneut."
+  },
+  "HubClients": {
+    "title": "Hub-Anwendung registrieren",
+    "description": "Ermögliche einer anderen Anwendung die Anmeldung über Hub.",
+    "name": "Anwendungsname",
+    "callbacks": "Callback-URLs",
+    "callbacksHelp": "Eine exakte HTTPS-URL pro Zeile, höchstens 10. Einen abschließenden Schrägstrich angeben, falls die Anwendung ihn verwendet.",
+    "profile": "Zugriff auf Name und Profil erlauben",
+    "skipConsent": "Zustimmungsseite überspringen",
+    "skipConsentHelp": "Nur für eine vertrauenswürdige Anwendung aktivieren. Andere Anwendungen sollten die Zustimmung des Benutzers einholen.",
+    "register": "Anwendung registrieren",
+    "registering": "Wird registriert…",
+    "registered": "Anwendung registriert",
+    "saveSecret": "Speichere Client-ID und Client-Geheimnis jetzt im serverseitigen Geheimnisspeicher der Anwendung. Das Geheimnis wird nur hier angezeigt und verschwindet beim Verlassen der Seite oder Schließen des Ergebnisses.",
+    "clientId": "Client-ID",
+    "clientSecret": "Client-Geheimnis",
+    "done": "Ich habe die Zugangsdaten gespeichert",
+    "errors": {
+      "invalid": "Name und Callback-URLs prüfen. Höchstens 10 exakte HTTPS-URLs angeben.",
+      "denied": "Die Registrierung erfordert eine aktive Admin-Sitzung ohne Identitätsübernahme. Erneut anmelden und versuchen.",
+      "unavailable": "Die Registrierung konnte nicht bestätigt werden. Prüfe vor einem erneuten Versuch die registrierten Anwendungen, um Duplikate zu vermeiden."
+    }
   }
 }

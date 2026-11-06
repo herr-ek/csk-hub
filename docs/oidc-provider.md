@@ -47,6 +47,14 @@ responses use `Cache-Control: no-store`.
 
 ## Administrator workflow
 
+On the Admin page, use “Register a Hub application” to enter the application name
+and exact callback URLs (one per line). Profile access is optional. Leave consent
+enabled unless the application is explicitly trusted. After registration, save the
+client ID and one-time secret in the application's server secret store before
+leaving the page or dismissing the result. Registration uses the authenticated
+administrator endpoint described below; current active Admin authority is checked
+on the server.
+
 Sign into Hub as an active Admin. Impersonation is not allowed for provider
 administration or authorization. The JSON endpoints below accept the Hub browser
 session; mutations also require an `Origin` header equal to the Hub origin. Use the
