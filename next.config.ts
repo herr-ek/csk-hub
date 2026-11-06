@@ -42,7 +42,8 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   logging: {
-    browserToTerminal: true
+    browserToTerminal: true,
+    incomingRequests: { ignore: [/\/api\/auth/, /\/api\/oidc/, /\/(login|two-factor|activate|oidc)(\?|\/|$)/] }
   },
   cacheComponents: true,
   partialPrefetching: true,

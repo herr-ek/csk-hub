@@ -1,0 +1,43 @@
+name: Verify
+on:
+  pull_request:
+  push:
+    branches: [master]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: csk_hub
+          POSTGRES_PASSWORD: csk_hub
+          POSTGRES_DB: csk_hub
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CI: "true"
+      ENVIRONMENT: test
+      POSTGRES_URL: postgresql://csk_hub:csk_hub@localhost:5432/csk_hub
+      BETTER_AUTH_URL: http://localhost:3000
+      OIDC_ISSUER: http://localhost:3000/api/auth
+      BETTER_AUTH_SECRET: ci-test-secret-for-disposable-environments-only
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ci-placeholder
+      VAPID_PRIVATE_KEY: ci-placeholder
+      EMAIL_MODE: log
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun tst
+      - run: bun x playwright install --with-deps chromium
+      - run: bun run test:e2e
+      - run: bun run build

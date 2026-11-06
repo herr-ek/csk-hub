@@ -69,7 +69,11 @@ export async function getRouteAccessDecision(
 
   // 1. Logged in users go to their landing page instead of authentication entry pages.
   // A reset token remains accessible because it authorizes the reset workflow itself.
-  if (session && isAuthEntryRoute(pathname, requestedPath))
+  if (
+    session &&
+    isAuthEntryRoute(pathname, requestedPath) &&
+    !new URL(requestedPath, "http://csk-hub.local").searchParams.has("sig")
+  )
     return { kind: "redirect", location: getPostLoginPath(session.user.role) }
 
   // 2. Public pages are always allowed

@@ -65,6 +65,10 @@ export function useTwoFactorForm() {
         return
       }
 
+      if (result.redirectTo) {
+        window.location.assign(result.redirectTo)
+        return
+      }
       router.replace(getPostLoginPath(result.role, returnTo))
     } finally {
       setPending(false)

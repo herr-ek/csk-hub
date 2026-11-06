@@ -807,5 +807,14 @@
       "invalid-input": "Prüfe das Formular und versuche es erneut.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
     }
+  },
+  "Oidc": {
+    "title": "Anwendung verbinden",
+    "description": "{application} möchte auf deine Hub-Identität zugreifen.",
+    "identity": "Deine dauerhafte Hub-Identität",
+    "profile": "Dein Name und Profilbild",
+    "allow": "Erlauben",
+    "deny": "Abbrechen",
+    "error": "Die Anfrage konnte nicht abgeschlossen werden. Kehre zur Anwendung zurück und versuche es erneut."
   }
 }

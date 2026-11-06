@@ -48,6 +48,11 @@ export async function activateAccount(_state: ActivationState, formData: FormDat
       }
     })
 
+    const oauthQuery = formData.get("oauth_query")
+    if (typeof oauthQuery === "string" && oauthQuery) {
+      return { status: "success", redirectTo: `/api/oidc/resume?${oauthQuery}` }
+    }
+
     // Better Auth's magic-link verification creates the session before redirecting here.
     return { status: "success", redirectTo: ROUTES.home }
   } catch (error) {

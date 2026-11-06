@@ -807,5 +807,14 @@
       "invalid-input": "Kontrollera formuläret och försök igen.",
       "unexpected": "Något gick fel. Försök igen."
     }
+  },
+  "Oidc": {
+    "title": "Anslut en applikation",
+    "description": "{application} begär tillgång till din Hub-identitet.",
+    "identity": "Din beständiga Hub-identitet",
+    "profile": "Ditt namn och din profilbild",
+    "allow": "Tillåt",
+    "deny": "Avbryt",
+    "error": "Begäran kunde inte slutföras. Återgå till applikationen och försök igen."
   }
 }

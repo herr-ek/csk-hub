@@ -9,7 +9,13 @@ import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
 import { getBaseURL } from "./base-url"
+import { createOidcPlugins } from "./oidc-provider"
 import { adminPluginOptions } from "./permissions"
+
+const issuerOrigin = new URL(env.OIDC_ISSUER).origin
+const deploymentOrigin =
+  env.ENVIRONMENT === "preview" ? `https://${env.VERCEL_URL}` : new URL(env.BETTER_AUTH_URL).origin
+if (issuerOrigin !== deploymentOrigin) throw new Error("OIDC_ISSUER must belong to this deployment")
 
 const authPlugins = [
   username(),
@@ -52,6 +58,7 @@ const authPlugins = [
 
 export const authOptions = {
   appName: app.name,
+  disabledPaths: ["/token"],
   baseURL: getBaseURL(env),
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -73,7 +80,12 @@ export const authOptions = {
       maxAge: 300 // 5 minutes
     }
   },
-  plugins: [...authPlugins, ...(isProduction ? [] : [testUtils()]), nextCookies()]
+  plugins: [
+    ...authPlugins,
+    ...createOidcPlugins({ database: db, issuer: env.OIDC_ISSUER, environment: env.ENVIRONMENT }),
+    ...(isProduction ? [] : [testUtils()]),
+    nextCookies()
+  ]
 } satisfies BetterAuthOptions
 
 export const auth = betterAuth(authOptions)

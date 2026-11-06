@@ -807,5 +807,14 @@
       "invalid-input": "Check the form and try again.",
       "unexpected": "Something went wrong. Please try again."
     }
+  },
+  "Oidc": {
+    "title": "Connect an application",
+    "description": "{application} requests access to your Hub identity.",
+    "identity": "Your stable Hub identity",
+    "profile": "Your name and profile picture",
+    "allow": "Allow",
+    "deny": "Cancel",
+    "error": "The request could not be completed. Return to the application and try again."
   }
 }
