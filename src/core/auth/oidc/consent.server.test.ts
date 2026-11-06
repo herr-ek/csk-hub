@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { makeSignature } from "better-auth/crypto"
-import { getVerifiedConsentQuery } from "./oidc-consent.server"
+import { getVerifiedConsentQuery } from "./consent.server"
 
 const secret = "consent-verification-test-secret-at-least-32-characters"
 

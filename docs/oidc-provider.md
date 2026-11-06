@@ -154,7 +154,7 @@ production authentication mail must use SMTP and private delivery.
 
 ## Verification
 
-`bun test src/core/auth/oidc-provider.test.ts` runs against a disposable, fully
+`bun test src/core/auth/oidc/provider.test.ts` runs against a disposable, fully
 migrated local PostgreSQL database. CI requires it and cannot count a missing
 database as a successful skipped suite. `bun run test:e2e` launches a separate
 migrated database, Next.js and a disposable HTTPS callback server. Install Chromium

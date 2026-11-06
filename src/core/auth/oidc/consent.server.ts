@@ -1,7 +1,7 @@
 import "server-only"
 
 import { verifyOAuthQueryParams } from "@better-auth/oauth-provider"
-import { getAuthorizationQuery } from "./oidc-continuation"
+import { getAuthorizationQuery } from "./continuation"
 
 /** Verify signature and expiry before displaying consent. Use the current provider secret;
  * callers must separately resolve the client with the current request's session.

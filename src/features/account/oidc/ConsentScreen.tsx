@@ -2,7 +2,7 @@ import { APIError } from "better-auth/api"
 import { io } from "next/cache"
 import { headers } from "next/headers"
 import { auth } from "@/core/auth/auth"
-import { getVerifiedConsentQuery } from "@/core/auth/oidc-consent.server"
+import { getVerifiedConsentQuery } from "@/core/auth/oidc/consent.server"
 import { getTranslations } from "@/core/i18n/server"
 import { ConsentForm } from "./ConsentForm"
 

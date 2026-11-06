@@ -1,6 +1,6 @@
 import "server-only"
 
-import type { auth } from "./auth"
+import type { auth } from "../auth"
 
 /** Resume a signed request after asynchronous sign-in, retaining required activation. */
 export async function resumeOidcRequest(request: Request, provider: Pick<typeof auth, "handler">) {

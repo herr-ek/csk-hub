@@ -2,7 +2,7 @@ import "server-only"
 
 import { APIError } from "better-auth/api"
 import { z } from "zod"
-import type { auth } from "./auth"
+import type { auth } from "../auth"
 
 const callbacks = z.array(z.url()).min(1).max(10)
 const registration = z

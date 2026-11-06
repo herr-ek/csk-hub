@@ -9,7 +9,7 @@ import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
 import { getBaseURL } from "./base-url"
-import { createOidcPlugins } from "./oidc-provider"
+import { createOidcPlugins } from "./oidc/provider"
 import { adminPluginOptions } from "./permissions"
 
 const issuerOrigin = new URL(env.OIDC_ISSUER).origin

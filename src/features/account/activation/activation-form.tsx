@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useActionState, useEffect } from "react"
-import { getAuthorizationQuery } from "@/core/auth/oidc-continuation"
+import { getAuthorizationQuery } from "@/core/auth/oidc/continuation"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { InputField } from "@/shared/forms/fields"

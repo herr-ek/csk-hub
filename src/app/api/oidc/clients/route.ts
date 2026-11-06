@@ -1,5 +1,5 @@
 import { auth } from "@/core/auth"
-import { createOidcClientHandler } from "@/core/auth/oidc-clients.server"
+import { createOidcClientHandler } from "@/core/auth/oidc/clients.server"
 
 const handleOidcClients = createOidcClientHandler(auth)
 

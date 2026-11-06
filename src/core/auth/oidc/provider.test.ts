@@ -6,10 +6,10 @@ import { eq } from "drizzle-orm"
 import { createLocalJWKSet, decodeProtectedHeader, jwtVerify } from "jose"
 import * as oidc from "openid-client"
 import * as schema from "@/core/db/schema/auth"
-import { createTestDatabase } from "../../../test/database"
-import { createOidcClientHandler } from "./oidc-clients.server"
-import { createOidcPlugins } from "./oidc-provider"
-import { resumeOidcRequest } from "./oidc-resume.server"
+import { createTestDatabase } from "../../../../test/database"
+import { createOidcClientHandler } from "./clients.server"
+import { createOidcPlugins } from "./provider"
+import { resumeOidcRequest } from "./resume.server"
 
 const database = await createTestDatabase()
 if (!database && process.env.CI) throw new Error("OIDC integration tests require local PostgreSQL")
