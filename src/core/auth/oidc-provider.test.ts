@@ -34,6 +34,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       secret: "oidc-integration-test-secret-at-least-32-characters",
       database: drizzleAdapter(t.db, { provider: "pg", schema }),
       emailAndPassword: { enabled: true },
+      advanced: { disableOriginCheck: false, disableCSRFCheck: false },
       session: { cookieCache: { enabled: true, maxAge: 300 } },
       plugins: [
         admin(),
@@ -77,7 +78,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
   async function signIn(email: string) {
     const response = await fetch(`${issuer}/sign-in/email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { Origin: origin, "Content-Type": "application/json" },
       body: JSON.stringify({ email, password: "oidc-test-password" })
     })
     expect(response.status).toBe(200)
@@ -147,6 +148,14 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     return { config, verifier, state, nonce, location: new URL(response.headers.get("location") ?? "", origin), url }
   }
 
+  async function exchange(flow: Awaited<ReturnType<typeof authorize>>) {
+    return oidc.authorizationCodeGrant(flow.config, flow.location, {
+      pkceCodeVerifier: flow.verifier,
+      expectedState: flow.state,
+      expectedNonce: flow.nonce
+    })
+  }
+
   test("a conventional confidential client verifies identity and reads matching UserInfo", async () => {
     const flow = await authorize()
     expect(flow.location.origin).toBe("https://client.example.com")
@@ -160,13 +169,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     expect(tokens.refresh_token).toBeUndefined()
     const identity = await oidc.fetchUserInfo(flow.config, tokens.access_token, userId)
     expect(identity).toMatchObject({ sub: userId, name: "Singer" })
-    await expect(
-      oidc.authorizationCodeGrant(flow.config, flow.location, {
-        pkceCodeVerifier: flow.verifier,
-        expectedState: flow.state,
-        expectedNonce: flow.nonce
-      })
-    ).rejects.toThrow()
+    await expect(exchange(flow)).rejects.toThrow()
   })
 
   test("ordinary Users and public requests cannot register or manage clients", async () => {
@@ -180,7 +183,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       ]) {
         const response = await fetch(`${issuer}${path}`, {
           method: "POST",
-          headers: { cookie, "Content-Type": "application/json" },
+          headers: { Origin: origin, cookie, "Content-Type": "application/json" },
           body: JSON.stringify({
             client_id: client.client_id,
             redirect_uris: [callback],
@@ -221,7 +224,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     expect(flow.location.pathname).toBe("/oidc/consent")
     const response = await fetch(`${issuer}/oauth2/consent`, {
       method: "POST",
-      headers: { cookie: userCookie, "Content-Type": "application/json" },
+      headers: { Origin: origin, cookie: userCookie, "Content-Type": "application/json" },
       body: JSON.stringify({ accept: true, oauth_query: flow.location.search.slice(1) })
     })
     expect(response.status).toBe(200)
@@ -240,7 +243,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     expect(flow.location.pathname).toBe("/login")
     const response = await fetch(`${issuer}/sign-in/email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { Origin: origin, "Content-Type": "application/json" },
       body: JSON.stringify({
         email: "singer@example.com",
         password: "oidc-test-password",
@@ -303,35 +306,56 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
         })
       ).rejects.toThrow()
     }
-    const flow = await authorize()
-    const incorrectAudience = new oidc.Configuration(
-      flow.config.serverMetadata(),
-      "other-client",
-      client.client_secret,
-      oidc.ClientSecretBasic(client.client_secret ?? "")
-    )
-    oidc.allowInsecureRequests(incorrectAudience)
-    await expect(
-      oidc.authorizationCodeGrant(incorrectAudience, flow.location, {
-        pkceCodeVerifier: flow.verifier,
-        expectedState: flow.state,
-        expectedNonce: flow.nonce
-      })
-    ).rejects.toThrow()
-    await expect(
-      oidc.discovery(new URL(`${origin}/other-issuer`), client.client_id, undefined, undefined, {
-        execute: [oidc.allowInsecureRequests]
-      })
-    ).rejects.toThrow()
+  })
+
+  test("a conventional client rejects otherwise-valid ID tokens for the wrong issuer or audience", async () => {
+    for (const claim of ["iss", "aud"]) {
+      const flow = await authorize()
+      const discovered = flow.config.serverMetadata()
+      const metadata: oidc.ServerMetadata = {
+        issuer: claim === "iss" ? `${origin}/different-issuer` : discovered.issuer,
+        token_endpoint: discovered.token_endpoint,
+        jwks_uri: discovered.jwks_uri,
+        id_token_signing_alg_values_supported: ["RS256"],
+        authorization_response_iss_parameter_supported: false
+      }
+      const config = new oidc.Configuration(
+        metadata,
+        claim === "aud" ? "different-audience" : client.client_id,
+        client.client_secret,
+        (_server, _client, body, headers) => {
+          body.delete("client_id")
+          headers.set("Authorization", `Basic ${btoa(`${client.client_id}:${client.client_secret}`)}`)
+        }
+      )
+      oidc.allowInsecureRequests(config)
+      let successfulTokenResponse = false
+      config[oidc.customFetch] = async (url, options) => {
+        const { body, ...requestOptions } = options
+        const response = await fetch(url, {
+          ...requestOptions,
+          body: body instanceof Uint8Array ? new Uint8Array(body).buffer : body
+        })
+        if (new URL(url).pathname.endsWith("/oauth2/token")) successfulTokenResponse = response.status === 200
+        return response
+      }
+      const callbackUrl = new URL(flow.location)
+      callbackUrl.searchParams.delete("iss")
+      await expect(
+        oidc.authorizationCodeGrant(config, callbackUrl, {
+          pkceCodeVerifier: flow.verifier,
+          expectedState: flow.state,
+          expectedNonce: flow.nonce,
+          idTokenExpected: true
+        })
+      ).rejects.toThrow("unexpected JWT claim value encountered")
+      expect(successfulTokenResponse).toBe(true)
+    }
   })
 
   test("revoking a client token leaves the Hub browser session usable", async () => {
     const flow = await authorize()
-    const tokens = await oidc.authorizationCodeGrant(flow.config, flow.location, {
-      pkceCodeVerifier: flow.verifier,
-      expectedState: flow.state,
-      expectedNonce: flow.nonce
-    })
+    const tokens = await exchange(flow)
     await oidc.tokenRevocation(flow.config, tokens.access_token)
     await expect(oidc.fetchUserInfo(flow.config, tokens.access_token, userId)).rejects.toThrow()
     const response = await fetch(`${issuer}/get-session`, { headers: { cookie: userCookie } })
@@ -340,11 +364,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
 
   test("a disabled client cannot exchange a code or use an issued token", async () => {
     const issued = await authorize()
-    const tokens = await oidc.authorizationCodeGrant(issued.config, issued.location, {
-      pkceCodeVerifier: issued.verifier,
-      expectedState: issued.state,
-      expectedNonce: issued.nonce
-    })
+    const tokens = await exchange(issued)
     const pending = await authorize()
     await auth.api.adminUpdateOAuthClient({
       headers: new Headers({ cookie: adminCookie }),
@@ -352,13 +372,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     })
     try {
       await expect(oidc.fetchUserInfo(issued.config, tokens.access_token, userId)).rejects.toThrow()
-      await expect(
-        oidc.authorizationCodeGrant(pending.config, pending.location, {
-          pkceCodeVerifier: pending.verifier,
-          expectedState: pending.state,
-          expectedNonce: pending.nonce
-        })
-      ).rejects.toThrow()
+      await expect(exchange(pending)).rejects.toThrow()
     } finally {
       await auth.api.adminUpdateOAuthClient({
         headers: new Headers({ cookie: adminCookie }),
@@ -369,24 +383,14 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
 
   test("inactive Users cannot issue or use tokens despite a cached cookie", async () => {
     const issued = await authorize()
-    const tokens = await oidc.authorizationCodeGrant(issued.config, issued.location, {
-      pkceCodeVerifier: issued.verifier,
-      expectedState: issued.state,
-      expectedNonce: issued.nonce
-    })
+    const tokens = await exchange(issued)
     const pending = await authorize()
     await t.db.update(schema.user).set({ banned: true }).where(eq(schema.user.id, userId))
     try {
       const response = await fetch(pending.url, { headers: { cookie: userCookie }, redirect: "manual" })
       expect(response.status).toBe(403)
       await expect(oidc.fetchUserInfo(issued.config, tokens.access_token, userId)).rejects.toThrow()
-      await expect(
-        oidc.authorizationCodeGrant(pending.config, pending.location, {
-          pkceCodeVerifier: pending.verifier,
-          expectedState: pending.state,
-          expectedNonce: pending.nonce
-        })
-      ).rejects.toThrow()
+      await expect(exchange(pending)).rejects.toThrow()
     } finally {
       await t.db.update(schema.user).set({ banned: false }).where(eq(schema.user.id, userId))
     }
@@ -473,11 +477,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       .where(eq(schema.user.id, userId))
     try {
       const flow = await authorize()
-      const tokens = await oidc.authorizationCodeGrant(flow.config, flow.location, {
-        pkceCodeVerifier: flow.verifier,
-        expectedState: flow.state,
-        expectedNonce: flow.nonce
-      })
+      const tokens = await exchange(flow)
       expect(tokens.claims()).toMatchObject({ sub: userId, iss: issuer })
       expect(await oidc.fetchUserInfo(flow.config, tokens.access_token, userId)).toMatchObject({
         sub: userId,
@@ -494,13 +494,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
   test("expired authorization codes and malformed requests fail", async () => {
     const flow = await authorize()
     await t.db.update(schema.verification).set({ expiresAt: new Date(0) })
-    await expect(
-      oidc.authorizationCodeGrant(flow.config, flow.location, {
-        pkceCodeVerifier: flow.verifier,
-        expectedState: flow.state,
-        expectedNonce: flow.nonce
-      })
-    ).rejects.toThrow()
+    await expect(exchange(flow)).rejects.toThrow()
     for (const [key, value] of [
       ["response_type", "token"],
       ["code_challenge_method", "plain"],
@@ -530,22 +524,12 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       const person = await auth.api.signUpEmail({ body: { name: "Temporary", email, password: "oidc-test-password" } })
       const cookie = await signIn(email)
       const issued = await authorize(cookie)
-      const tokens = await oidc.authorizationCodeGrant(issued.config, issued.location, {
-        pkceCodeVerifier: issued.verifier,
-        expectedState: issued.state,
-        expectedNonce: issued.nonce
-      })
+      const tokens = await exchange(issued)
       const pending = await authorize(cookie)
       if (erase) await t.db.delete(schema.user).where(eq(schema.user.id, person.user.id))
       else await t.db.delete(schema.session).where(eq(schema.session.userId, person.user.id))
       await expect(oidc.fetchUserInfo(issued.config, tokens.access_token, person.user.id)).rejects.toThrow()
-      await expect(
-        oidc.authorizationCodeGrant(pending.config, pending.location, {
-          pkceCodeVerifier: pending.verifier,
-          expectedState: pending.state,
-          expectedNonce: pending.nonce
-        })
-      ).rejects.toThrow()
+      await expect(exchange(pending)).rejects.toThrow()
       const response = await fetch(pending.url, { headers: { cookie }, redirect: "manual" })
       expect(response.status).toBe(401)
     }
@@ -561,7 +545,7 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
   async function postAuth(path: string, body: unknown, cookie = "") {
     return fetch(`${issuer}${path}`, {
       method: "POST",
-      headers: { cookie, "Content-Type": "application/json" },
+      headers: { Origin: origin, cookie, "Content-Type": "application/json" },
       body: JSON.stringify(body),
       redirect: "manual"
     })
@@ -662,29 +646,17 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
 
   test("signing keys survive restart and rotate with verification overlap", async () => {
     const first = await authorize()
-    const tokens = await oidc.authorizationCodeGrant(first.config, first.location, {
-      pkceCodeVerifier: first.verifier,
-      expectedState: first.state,
-      expectedNonce: first.nonce
-    })
+    const tokens = await exchange(first)
     const originalKey = decodeProtectedHeader(tokens.id_token ?? "").kid
     auth = makeAuth()
     const restarted = await authorize()
-    const afterRestart = await oidc.authorizationCodeGrant(restarted.config, restarted.location, {
-      pkceCodeVerifier: restarted.verifier,
-      expectedState: restarted.state,
-      expectedNonce: restarted.nonce
-    })
+    const afterRestart = await exchange(restarted)
     expect(decodeProtectedHeader(afterRestart.id_token ?? "").kid).toBe(originalKey)
     // Arrange the scheduled rotation boundary without waiting thirty days.
     await t.db.update(schema.jwks).set({ expiresAt: new Date(Date.now() - 1000) })
     auth = makeAuth()
     const rotated = await authorize()
-    const afterRotation = await oidc.authorizationCodeGrant(rotated.config, rotated.location, {
-      pkceCodeVerifier: rotated.verifier,
-      expectedState: rotated.state,
-      expectedNonce: rotated.nonce
-    })
+    const afterRotation = await exchange(rotated)
     expect(decodeProtectedHeader(afterRotation.id_token ?? "").kid).not.toBe(originalKey)
     const publicKeys = await (await fetch(`${issuer}/jwks`)).json()
     const keys = createLocalJWKSet(publicKeys)
@@ -699,25 +671,18 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
       headers: new Headers({ cookie: adminCookie }),
       body: { redirect_uris: [callback], skip_consent: true }
     })
+    const issued = await authorize(userCookie, managed)
+    const tokens = await exchange(issued)
     const flow = await authorize(userCookie, managed)
     const rotated = await auth.api.rotateClientSecret({
       headers: new Headers({ cookie: adminCookie }),
       body: { client_id: managed.client_id }
     })
-    await expect(
-      oidc.authorizationCodeGrant(flow.config, flow.location, {
-        pkceCodeVerifier: flow.verifier,
-        expectedState: flow.state,
-        expectedNonce: flow.nonce
-      })
-    ).rejects.toThrow()
+    await expect(exchange(flow)).rejects.toThrow()
+    await expect(oidc.fetchUserInfo(issued.config, tokens.access_token, userId)).rejects.toThrow()
     const next = await authorize(userCookie, { ...managed, client_secret: rotated.client_secret })
-    const tokens = await oidc.authorizationCodeGrant(next.config, next.location, {
-      pkceCodeVerifier: next.verifier,
-      expectedState: next.state,
-      expectedNonce: next.nonce
-    })
-    expect(tokens.claims()?.sub).toBe(userId)
+    const nextTokens = await exchange(next)
+    expect(nextTokens.claims()?.sub).toBe(userId)
   })
 
   test("impersonated sessions cannot export an identity or manage trusted clients", async () => {

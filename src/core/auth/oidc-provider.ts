@@ -6,7 +6,7 @@ import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "
 import { jwt } from "better-auth/plugins"
 import { and, eq, gt, isNotNull } from "drizzle-orm"
 import type { db } from "@/core/db"
-import { account, session, user } from "@/core/db/schema/auth"
+import { account, oauthAccessToken, session, user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
 
 type ProviderOptions = {
@@ -28,7 +28,12 @@ export function createOidcPlugins({ database, issuer, environment }: ProviderOpt
     url.hash ||
     url.username ||
     url.password ||
-    (environment !== "development" && environment !== "test" && url.protocol !== "https:")
+    (url.protocol !== "https:" &&
+      !(
+        url.protocol === "http:" &&
+        (environment === "development" || environment === "test") &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+      ))
   ) {
     throw new Error("OIDC issuer must be an explicit deployment URL ending in /api/auth")
   }
@@ -81,6 +86,25 @@ export function createOidcPlugins({ database, issuer, environment }: ProviderOpt
               if (fresh.session.impersonatedBy) throw new APIError("FORBIDDEN", { error: "access_denied" })
             }
             ctx.context.session = fresh
+          })
+        }
+      ],
+      after: [
+        {
+          matcher: (ctx) => ctx.path === "/oauth2/client/rotate-secret",
+          handler: createAuthMiddleware(async (ctx) => {
+            const result = ctx.context.returned
+            if (
+              result &&
+              typeof result === "object" &&
+              "client_secret" in result &&
+              typeof ctx.body?.client_id === "string"
+            ) {
+              await database
+                .update(oauthAccessToken)
+                .set({ revoked: new Date() })
+                .where(eq(oauthAccessToken.clientId, ctx.body.client_id))
+            }
           })
         }
       ]

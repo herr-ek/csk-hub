@@ -106,8 +106,8 @@ Update body:
 Rotation body is `{"client_id":"REGISTERED_CLIENT_ID"}`. Rotation immediately
 invalidates the old client secret; coordinate the application's secret change and
 expect a brief exchange failure during cutover. Previously issued identity tokens
-remain verifiable until expiry. Rotation does not revoke already-issued access
-tokens; disable the client first when responding to compromise. Disabled clients
+remain verifiable until expiry. Rotation revokes already-issued opaque access tokens, including their UserInfo
+access; disable the client first when responding to compromise. Disabled clients
 cannot issue credentials or use UserInfo/introspection with existing opaque tokens.
 Re-enabling is an explicit Admin update. Revoking an application access token at
 the discovery revocation endpoint leaves the Hub browser session intact.
