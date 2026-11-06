@@ -23,8 +23,6 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3000
       OIDC_ISSUER: http://localhost:3000/api/auth
       BETTER_AUTH_SECRET: ci-test-secret-for-disposable-environments-only
-      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ci-placeholder
-      VAPID_PRIVATE_KEY: ci-placeholder
       EMAIL_MODE: log
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +33,9 @@ jobs:
         with:
           node-version: 24
       - run: bun install --frozen-lockfile
+      - name: Generate disposable notification keys
+        run: |
+          bun -e 'const { publicKey, privateKey } = require("web-push").generateVAPIDKeys(); require("node:fs").appendFileSync(process.env.GITHUB_ENV, "NEXT_PUBLIC_VAPID_PUBLIC_KEY=" + publicKey + "\nVAPID_PRIVATE_KEY=" + privateKey + "\n")'
       - run: bun run typecheck
       - run: bun run lint
       - run: bun tst
