@@ -21,6 +21,12 @@ beforeEach(() => {
 })
 
 describe("two-factor verification", () => {
+  test("leaves the completed challenge's provider redirect to Better Auth", async () => {
+    const response = { error: null, data: { redirect: true } }
+    verifyOtp.mockResolvedValue(response)
+    expect(await verifyTwoFactorMethod("otp", "123456", false)).toEqual({ success: true, redirecting: true })
+  })
+
   test("keeps supported methods and ignores unknown methods", () => {
     expect(getAvailableMethods(["totp", "sms", "otp", "backup"])).toEqual(["totp", "otp"])
   })

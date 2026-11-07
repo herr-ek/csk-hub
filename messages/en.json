@@ -807,5 +807,36 @@
       "invalid-input": "Check the form and try again.",
       "unexpected": "Something went wrong. Please try again."
     }
+  },
+  "Oidc": {
+    "title": "Connect an application",
+    "description": "{application} requests access to your Hub identity.",
+    "identity": "Your stable Hub identity",
+    "profile": "Your name and profile picture",
+    "allow": "Allow",
+    "deny": "Cancel",
+    "error": "The request could not be completed. Return to the application and try again."
+  },
+  "HubClients": {
+    "title": "Register a Hub application",
+    "description": "Let another application sign its users in through Hub.",
+    "name": "Application name",
+    "callbacks": "Callback URLs",
+    "callbacksHelp": "One exact HTTPS URL per line, up to 10. Include the trailing slash if the application uses one.",
+    "profile": "Allow access to name and profile",
+    "skipConsent": "Skip the consent screen",
+    "skipConsentHelp": "Enable only for a trusted application. Other applications should ask the user to approve access.",
+    "register": "Register application",
+    "registering": "Registering…",
+    "registered": "Application registered",
+    "saveSecret": "Save the client ID and secret in the application’s server secret store now. The secret is shown only here and will disappear when you leave or dismiss this result.",
+    "clientId": "Client ID",
+    "clientSecret": "Client secret",
+    "done": "I have saved the credentials",
+    "errors": {
+      "invalid": "Check the name and callback URLs. Use at most 10 exact HTTPS URLs.",
+      "denied": "Registration requires an active Admin session without impersonation. Sign in again and retry.",
+      "unavailable": "Registration could not be confirmed. Check your registered applications before retrying to avoid duplicates."
+    }
   }
 }

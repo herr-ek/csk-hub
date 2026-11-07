@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { requireAdmin } from "@/core/auth/permissions.server"
 import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
+import { HubClientsRegistration } from "@/features/hub-clients"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 
@@ -48,10 +49,13 @@ async function AdminResources({ resources }: { resources: AdminResource[] }) {
   await requireAdmin()
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {resources.map((resource) => (
-        <AdminResourceCard key={resource.href} resource={resource} />
-      ))}
+    <div className="space-y-10">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {resources.map((resource) => (
+          <AdminResourceCard key={resource.href} resource={resource} />
+        ))}
+      </div>
+      <HubClientsRegistration />
     </div>
   )
 }

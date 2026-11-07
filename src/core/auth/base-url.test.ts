@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth"
 import { memoryAdapter } from "better-auth/adapters/memory"
 import { magicLink } from "better-auth/plugins"
 import { getBaseURL } from "./base-url"
+import { getOidcIssuer } from "./oidc/config"
 
 const deploymentHost = "csk-hub-abc123-team.vercel.app"
 const branchHost = "csk-hub-git-auth-fix-team.vercel.app"
@@ -85,6 +86,14 @@ describe("auth base URL", () => {
     expect(() => getBaseURL({ ENVIRONMENT: "preview", BETTER_AUTH_URL: productionOrigin })).toThrow(
       "VERCEL_URL is required for preview deployments"
     )
+  })
+
+  test("derives stable issuers, including when a preview uses a branch alias", () => {
+    for (const { environment, origin } of scenarios) {
+      const expectedOrigin = environment.ENVIRONMENT === "preview" ? `https://${deploymentHost}` : origin
+      expect(getOidcIssuer(environment)).toBe(`${expectedOrigin}/api/auth`)
+    }
+    expect(() => getOidcIssuer({ ENVIRONMENT: "production", BETTER_AUTH_URL: "http://localhost:3000" })).toThrow()
   })
 
   for (const { name, environment, origin } of scenarios) {

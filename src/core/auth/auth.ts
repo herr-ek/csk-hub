@@ -1,15 +1,21 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
 import { i18n, locales } from "@better-auth/i18n"
+import { oauthProvider } from "@better-auth/oauth-provider"
 import { passkey } from "@better-auth/passkey"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
-import { admin, emailOTP, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
+import { admin, emailOTP, jwt, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
 import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
 import { getBaseURL } from "./base-url"
+import { getOidcIssuer, validateOidcRedirectUri } from "./oidc/config"
+import { createHubOidcPolicy } from "./oidc/hub-policy"
 import { adminPluginOptions } from "./permissions"
+
+const issuer = getOidcIssuer(env)
+const hubOidc = createHubOidcPolicy()
 
 const authPlugins = [
   username(),
@@ -52,6 +58,7 @@ const authPlugins = [
 
 export const authOptions = {
   appName: app.name,
+  disabledPaths: ["/token"],
   baseURL: getBaseURL(env),
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -73,7 +80,30 @@ export const authOptions = {
       maxAge: 300 // 5 minutes
     }
   },
-  plugins: [...authPlugins, ...(isProduction ? [] : [testUtils()]), nextCookies()]
+  plugins: [
+    ...authPlugins,
+    hubOidc.plugin,
+    jwt({
+      jwt: { issuer },
+      jwks: { keyPairConfig: { alg: "RS256" }, rotationInterval: 60 * 60 * 24 * 30, gracePeriod: 60 * 60 * 24 },
+      disableSettingJwtHeader: true
+    }),
+    oauthProvider({
+      loginPage: "/login",
+      consentPage: "/oidc/consent",
+      scopes: ["openid", "profile"],
+      grantTypes: ["authorization_code"],
+      validateRedirectUri: (uri, registered) => validateOidcRedirectUri(uri, registered, env.ENVIRONMENT),
+      signup: { page: "/activate", shouldRedirect: hubOidc.requiresActivation },
+      clientPrivileges: hubOidc.activeAdmin,
+      resourcePrivileges: hubOidc.activeAdmin,
+      customAccessTokenClaims: hubOidc.checkTokenUser,
+      customIdTokenClaims: hubOidc.checkTokenUser,
+      customUserInfoClaims: hubOidc.checkUserInfo
+    }),
+    ...(isProduction ? [] : [testUtils()]),
+    nextCookies()
+  ]
 } satisfies BetterAuthOptions
 
 export const auth = betterAuth(authOptions)

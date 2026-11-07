@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useActionState, useEffect } from "react"
+import { getAuthorizationQuery } from "@/core/auth/oidc/continuation"
 import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { InputField } from "@/shared/forms/fields"
@@ -20,8 +21,11 @@ export function ActivationForm() {
     (state.status === "error" && state.kind === "invalid-link") || searchParams.get("error") === "INVALID_TOKEN"
 
   useEffect(() => {
-    if (state.status === "success") router.replace(state.redirectTo)
-  }, [router, state])
+    if (state.status === "success") {
+      if (getAuthorizationQuery(searchParams.toString())) window.location.assign(state.redirectTo)
+      else router.replace(state.redirectTo)
+    }
+  }, [router, state, searchParams])
 
   if (state.status === "success")
     return (
@@ -51,6 +55,7 @@ export function ActivationForm() {
         </div>
       ) : (
         <form action={action} className="space-y-4">
+          <input type="hidden" name="oauth_query" value={getAuthorizationQuery(searchParams.toString()) ?? ""} />
           <FieldGroup>
             <InputField
               label={t("password")}

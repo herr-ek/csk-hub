@@ -807,5 +807,36 @@
       "invalid-input": "Kontrollera formuläret och försök igen.",
       "unexpected": "Något gick fel. Försök igen."
     }
+  },
+  "Oidc": {
+    "title": "Anslut en applikation",
+    "description": "{application} begär tillgång till din Hub-identitet.",
+    "identity": "Din beständiga Hub-identitet",
+    "profile": "Ditt namn och din profilbild",
+    "allow": "Tillåt",
+    "deny": "Avbryt",
+    "error": "Begäran kunde inte slutföras. Återgå till applikationen och försök igen."
+  },
+  "HubClients": {
+    "title": "Registrera en Hub-applikation",
+    "description": "Låt en annan applikation använda Hub för inloggning.",
+    "name": "Applikationsnamn",
+    "callbacks": "Callback-URL:er",
+    "callbacksHelp": "En exakt HTTPS-URL per rad, högst 10. Ta med avslutande snedstreck om applikationen använder det.",
+    "profile": "Tillåt åtkomst till namn och profil",
+    "skipConsent": "Hoppa över samtyckesskärmen",
+    "skipConsentHelp": "Aktivera endast för en betrodd applikation. Andra applikationer bör be användaren att godkänna åtkomsten.",
+    "register": "Registrera applikation",
+    "registering": "Registrerar…",
+    "registered": "Applikationen har registrerats",
+    "saveSecret": "Spara klient-ID och klienthemlighet i applikationens hemlighetslagring på servern nu. Hemligheten visas bara här och försvinner när du lämnar sidan eller stänger resultatet.",
+    "clientId": "Klient-ID",
+    "clientSecret": "Klienthemlighet",
+    "done": "Jag har sparat uppgifterna",
+    "errors": {
+      "invalid": "Kontrollera namnet och callback-URL:erna. Använd högst 10 exakta HTTPS-URL:er.",
+      "denied": "Registrering kräver en aktiv administratörssession utan impersonering. Logga in igen och försök på nytt.",
+      "unavailable": "Registreringen kunde inte bekräftas. Kontrollera dina registrerade applikationer innan du försöker igen för att undvika dubbletter."
+    }
   }
 }

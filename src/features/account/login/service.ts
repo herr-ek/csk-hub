@@ -10,7 +10,7 @@ export type UsernamePasswordSignInInput = Omit<EmailPasswordSignInInput, "email"
 export type IdentifierPasswordSignInInput = Omit<EmailPasswordSignInInput, "email"> & { identifier: string }
 
 export type LoginResult =
-  | { success: true; role?: string | null }
+  | { success: true; role?: string | null; redirecting?: boolean }
   | { success: false; error: "invalidCredentials" | "unavailable" | "passkeyFailed" | "passkeyUnavailable" }
   | { success: false; requiresTwoFactor: true; methods: string[] }
 
@@ -53,7 +53,11 @@ export async function signInWithEmailPassword(input: EmailPasswordSignInInput): 
       }
     }
 
-    return { success: true, role: result.data.user?.role }
+    return {
+      success: true,
+      role: result.data.user?.role,
+      ...("redirect" in result.data && result.data.redirect === true ? { redirecting: true } : {})
+    }
   } catch {
     return {
       success: false,
@@ -85,7 +89,11 @@ export async function signInWithUsernamePassword(input: UsernamePasswordSignInIn
       }
     }
 
-    return { success: true, role: result.data.user?.role }
+    return {
+      success: true,
+      role: result.data.user?.role,
+      ...("redirect" in result.data && result.data.redirect === true ? { redirecting: true } : {})
+    }
   } catch {
     return {
       success: false,
@@ -111,8 +119,12 @@ export async function signInWithPasskey(): Promise<LoginResult> {
       }
     }
 
-    const role = (result.data.user as { role?: string }).role
-    return { success: true, role }
+    const role = (result.data.user as { role?: string } | undefined)?.role
+    return {
+      success: true,
+      role,
+      ...("redirect" in result.data && result.data.redirect === true ? { redirecting: true } : {})
+    }
   } catch {
     return {
       success: false,

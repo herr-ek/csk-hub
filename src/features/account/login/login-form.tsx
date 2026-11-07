@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import type z from "zod"
+import { withAuthorizationQuery } from "@/core/auth/oidc/continuation"
 import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
@@ -28,13 +29,15 @@ export function LoginForm() {
   function completeSignIn(result: LoginResult) {
     if (!result.success) {
       if ("requiresTwoFactor" in result) {
-        router.replace(twoFactorPath(result.methods, returnTo))
+        router.replace(withAuthorizationQuery(twoFactorPath(result.methods, returnTo), searchParams.toString()))
         return
       }
       setFormError(t(`errors.${result.error}`))
       return
     }
 
+    // Better Auth's client follows provider redirects; preserve ordinary Hub navigation below.
+    if (result.redirecting) return
     router.replace(getPostLoginPath(result.role, returnTo))
   }
 
