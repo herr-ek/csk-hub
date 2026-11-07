@@ -1,23 +1,23 @@
+import { getBaseURL } from "../base-url"
+
 type Environment = "development" | "test" | "preview" | "production"
 
-/** Reject an issuer that cannot identify this provider's auth routes securely. */
-export function validateOidcIssuer(issuer: string, environment: Environment) {
-  const url = new URL(issuer)
+/** Stable issuer from the configured auth origin. Previews use the deployment fallback,
+ * so accessing a branch alias cannot change the provider's identity.
+ */
+export function getOidcIssuer(environment: Parameters<typeof getBaseURL>[0]) {
+  const baseURL = getBaseURL(environment)
+  const url = new URL("/api/auth", typeof baseURL === "string" ? baseURL : baseURL.fallback)
+  const local = environment.ENVIRONMENT === "development" || environment.ENVIRONMENT === "test"
   if (
-    url.pathname !== "/api/auth" ||
-    url.search ||
-    url.hash ||
     url.username ||
     url.password ||
     (url.protocol !== "https:" &&
-      !(
-        url.protocol === "http:" &&
-        (environment === "development" || environment === "test") &&
-        ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
-      ))
+      !(local && url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
   ) {
-    throw new Error("OIDC issuer must be an explicit deployment URL ending in /api/auth")
+    throw new Error("The auth origin must use HTTPS, or loopback HTTP in development/test")
   }
+  return url.toString()
 }
 
 /** Callbacks match exactly; local HTTP is permitted only in development and tests. */

@@ -12,7 +12,6 @@ const envSchema = z
     POSTGRES_URL: z.string(),
 
     BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
-    OIDC_ISSUER: z.url().default("http://localhost:3000/api/auth"),
     BETTER_AUTH_SECRET: z.string(),
 
     EMAIL_MODE: z.enum(["log", "smtp"]).default("log"),

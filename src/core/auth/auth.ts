@@ -10,17 +10,12 @@ import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
 import { getBaseURL } from "./base-url"
-import { validateOidcIssuer, validateOidcRedirectUri } from "./oidc/config"
+import { getOidcIssuer, validateOidcRedirectUri } from "./oidc/config"
 import { createHubOidcPolicy } from "./oidc/hub-policy"
 import { adminPluginOptions } from "./permissions"
 
-validateOidcIssuer(env.OIDC_ISSUER, env.ENVIRONMENT)
+const issuer = getOidcIssuer(env)
 const hubOidc = createHubOidcPolicy()
-
-const issuerOrigin = new URL(env.OIDC_ISSUER).origin
-const deploymentOrigin =
-  env.ENVIRONMENT === "preview" ? `https://${env.VERCEL_URL}` : new URL(env.BETTER_AUTH_URL).origin
-if (issuerOrigin !== deploymentOrigin) throw new Error("OIDC_ISSUER must belong to this deployment")
 
 const authPlugins = [
   username(),
@@ -89,7 +84,7 @@ export const authOptions = {
     ...authPlugins,
     hubOidc.plugin,
     jwt({
-      jwt: { issuer: env.OIDC_ISSUER },
+      jwt: { issuer },
       jwks: { keyPairConfig: { alg: "RS256" }, rotationInterval: 60 * 60 * 24 * 30, gracePeriod: 60 * 60 * 24 },
       disableSettingJwtHeader: true
     }),

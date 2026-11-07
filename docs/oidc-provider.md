@@ -8,9 +8,10 @@ User ID.
 
 ## Deployment
 
-- Set `BETTER_AUTH_URL` to the deployment origin and `OIDC_ISSUER` to that origin
-  plus `/api/auth`, without a trailing slash. Production and preview require HTTPS;
-  previews must use their exact `VERCEL_URL` origin.
+- Set `BETTER_AUTH_URL` to the deployment origin. The issuer is derived as
+  `{origin}/api/auth`; previews use their exact `VERCEL_URL` origin, including when
+  visited through a branch alias. Production and preview require HTTPS. Keep the
+  configured production origin stable: changing it changes the provider identity.
 - Keep databases, clients, callbacks and secrets separate between deployments.
 - Preserve `BETTER_AUTH_SECRET`: it encrypts persisted signing keys and signs
   authorization continuations. Back it up with the database. Changing it requires
