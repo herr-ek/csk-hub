@@ -3,7 +3,7 @@ import "server-only"
 import type { AuthContext } from "@better-auth/core"
 import type { BetterAuthPlugin } from "better-auth"
 import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api"
-import type { account, session, user } from "@/core/db/schema/auth"
+import type { account, session } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
 
 /**
@@ -14,50 +14,23 @@ import { hasAdminRole } from "@/shared/roles"
 export function createHubOidcPolicy() {
   let context: AuthContext
 
-  async function currentUser(userId: string) {
-    const current = await context.adapter.findOne<typeof user.$inferSelect>({
-      model: "user",
-      where: [{ field: "id", value: userId }]
-    })
-    if (!current || current.banned) throw new APIError("FORBIDDEN", { error: "access_denied" })
-    return current
+  function checkActiveUser(user: { id: string; banned?: unknown } | null | undefined) {
+    if (!user || user.banned) throw new APIError("FORBIDDEN", { error: "access_denied" })
+    return {}
   }
 
-  async function currentSession(sessionId: string, userId: string, error = "login_required") {
-    const stored = await context.adapter.findOne<typeof session.$inferSelect>({
-      model: "session",
-      where: [
-        { field: "id", value: sessionId },
-        { field: "userId", value: userId }
-      ]
-    })
-    if (!stored || stored.expiresAt <= new Date() || stored.impersonatedBy) {
-      throw new APIError("UNAUTHORIZED", { error })
-    }
-    return stored
-  }
-
-  async function activeAdmin({ session, user }: { session?: { id: string }; user?: { id: string } }) {
-    if (!session || !user) return false
-    try {
-      await currentSession(session.id, user.id)
-      return hasAdminRole((await currentUser(user.id)).role)
-    } catch (error) {
-      if (error instanceof APIError) return false
-      throw error
-    }
-  }
-
-  async function requiresActivation({
-    user,
-    session
+  // The before hook below replaces cached session data before these privilege callbacks run.
+  function activeAdmin({
+    session,
+    user
   }: {
-    user: { id: string }
-    session: { id: string; impersonatedBy?: unknown }
+    session?: { id: string; impersonatedBy?: unknown }
+    user?: { id: string; role?: unknown; banned?: unknown }
   }) {
-    if (session.impersonatedBy) throw new APIError("FORBIDDEN", { error: "access_denied" })
-    await currentUser(user.id)
-    await currentSession(session.id, user.id)
+    return !!session && !!user && !session.impersonatedBy && !user.banned && hasAdminRole(user.role)
+  }
+
+  async function requiresActivation({ user }: { user: { id: string } }) {
     const accounts = await context.adapter.findMany<typeof account.$inferSelect>({
       model: "account",
       where: [
@@ -68,16 +41,19 @@ export function createHubOidcPolicy() {
     return !accounts.some((account) => typeof account.password === "string")
   }
 
-  async function checkTokenUser({ user }: { user?: { id: string } | null }) {
-    if (!user) throw new APIError("FORBIDDEN", { error: "access_denied" })
-    await currentUser(user.id)
-    return {}
+  // Better Auth reloads the User before issuing or validating opaque tokens.
+  function checkTokenUser({ user }: { user?: { id: string; banned?: unknown } | null }) {
+    return checkActiveUser(user)
   }
 
-  async function checkUserInfo({ user, jwt }: { user: { id: string }; jwt: Record<string, unknown> }) {
-    await currentUser(user.id)
+  async function checkUserInfo({ jwt }: { jwt: Record<string, unknown> }) {
     if (typeof jwt.sid !== "string") throw new APIError("UNAUTHORIZED", { error: "invalid_token" })
-    await currentSession(jwt.sid, user.id, "invalid_token")
+    // Token validation already checks session existence and expiry; Hub additionally forbids impersonation.
+    const originating = await context.adapter.findOne<typeof session.$inferSelect>({
+      model: "session",
+      where: [{ field: "id", value: jwt.sid }]
+    })
+    if (originating?.impersonatedBy) throw new APIError("FORBIDDEN", { error: "access_denied" })
     return {}
   }
 
@@ -112,7 +88,7 @@ export function createHubOidcPolicy() {
               throw new APIError("UNAUTHORIZED", { error: "login_required" })
             }
             if (fresh) {
-              await currentUser(fresh.user.id)
+              checkActiveUser(fresh.user)
               if (fresh.session.impersonatedBy) throw new APIError("FORBIDDEN", { error: "access_denied" })
             }
             ctx.context.session = fresh
