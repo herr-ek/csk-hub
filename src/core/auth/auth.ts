@@ -93,8 +93,6 @@ export const authOptions = {
       consentPage: "/oidc/consent",
       scopes: ["openid", "profile"],
       grantTypes: ["authorization_code"],
-      allowDynamicClientRegistration: false,
-      allowUnauthenticatedClientRegistration: false,
       validateRedirectUri: (uri, registered) => validateOidcRedirectUri(uri, registered, env.ENVIRONMENT),
       signup: { page: "/activate", shouldRedirect: hubOidc.requiresActivation },
       clientPrivileges: hubOidc.activeAdmin,

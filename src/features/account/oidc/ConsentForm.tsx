@@ -21,12 +21,10 @@ export function ConsentForm({
   async function consent(accept: boolean) {
     setPending(true)
     const result = await authClient.oauth2.consent({ accept, oauth_query: oauthQuery })
-    if (result.error || !result.data?.url) {
+    if (result.error) {
       setError(true)
       setPending(false)
-      return
     }
-    window.location.assign(result.data.url)
   }
 
   return (

@@ -36,10 +36,8 @@ export function LoginForm() {
       return
     }
 
-    if (result.redirectTo) {
-      window.location.assign(result.redirectTo)
-      return
-    }
+    // Better Auth's client follows provider redirects; preserve ordinary Hub navigation below.
+    if (result.redirecting) return
     router.replace(getPostLoginPath(result.role, returnTo))
   }
 

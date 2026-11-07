@@ -42,12 +42,7 @@ export function createOidcClientHandler(provider: {
           body: {
             scope: "openid profile",
             skip_consent: false,
-            ...registration.parse(await request.json()),
-            token_endpoint_auth_method: "client_secret_basic",
-            grant_types: ["authorization_code"],
-            response_types: ["code"],
-            require_pkce: true,
-            subject_type: "public"
+            ...registration.parse(await request.json())
           }
         })
       } else if (request.method === "PATCH") {

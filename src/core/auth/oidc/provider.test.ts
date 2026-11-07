@@ -73,8 +73,6 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
           consentPage: "/oidc/consent",
           scopes: ["openid", "profile"],
           grantTypes: ["authorization_code"],
-          allowDynamicClientRegistration: false,
-          allowUnauthenticatedClientRegistration: false,
           validateRedirectUri: (uri, registered) => validateOidcRedirectUri(uri, registered, "test"),
           signup: { page: "/activate", shouldRedirect: hubOidc.requiresActivation },
           clientPrivileges: hubOidc.activeAdmin,
@@ -388,7 +386,16 @@ describe.skipIf(!database)("registered applications over HTTP", () => {
     })
     expect(response.status).toBe(200)
     const managed = await response.json()
-    expect(managed).toMatchObject({ token_endpoint_auth_method: "client_secret_basic", require_pkce: true })
+    expect(managed).toMatchObject({
+      token_endpoint_auth_method: "client_secret_basic",
+      grant_types: ["authorization_code"],
+      response_types: ["code"]
+    })
+    const withoutPkce = (await authorize(userCookie, managed)).url
+    withoutPkce.searchParams.delete("code_challenge")
+    withoutPkce.searchParams.delete("code_challenge_method")
+    const rejected = await fetch(withoutPkce, { headers: { cookie: userCookie }, redirect: "manual" })
+    expect(new URL(rejected.headers.get("location") ?? "", origin).searchParams.get("error")).toBe("invalid_request")
     expect(typeof managed.client_secret).toBe("string")
     const listed = await fetch(`${origin}/api/oidc/clients`, { headers })
     expect(listed.status).toBe(200)

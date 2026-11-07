@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test"
 type MockSignInResponse = {
   data: {
     user?: { id: string; role?: string }
+    redirect?: boolean
     twoFactorRedirect?: boolean
     twoFactorMethods?: unknown
   } | null
@@ -40,6 +41,23 @@ beforeEach(() => {
 })
 
 describe("login service", () => {
+  test("leaves provider redirects to Better Auth instead of ordinary Hub navigation", async () => {
+    const response = { data: { redirect: true }, error: null }
+    signInEmail.mockResolvedValue(response)
+    signInUsername.mockResolvedValue(response)
+    signInPasskey.mockResolvedValue(response)
+    const input = { password: "password", rememberMe: false }
+    expect(await signInWithEmailPassword({ ...input, email: "user@example.com" })).toMatchObject({
+      success: true,
+      redirecting: true
+    })
+    expect(await signInWithUsernamePassword({ ...input, username: "user" })).toMatchObject({
+      success: true,
+      redirecting: true
+    })
+    expect(await signInWithPasskey()).toMatchObject({ success: true, redirecting: true })
+  })
+
   test("signs in with a username when the identifier is not an email", async () => {
     signInUsername.mockResolvedValue({ data: { user: { id: "user-1", role: "user" } }, error: null })
 

@@ -2,7 +2,7 @@ import { authClient } from "@/core/auth/auth-client"
 
 export type TwoFactorMethod = "otp" | "totp" | "backup"
 type OperationFailure = { success: false; error: "sendFailed" | "verifyFailed" } | { success: false; unavailable: true }
-export type TwoFactorOperationResult = { success: true; role?: string; redirectTo?: string } | OperationFailure
+export type TwoFactorOperationResult = { success: true; role?: string; redirecting?: boolean } | OperationFailure
 
 export function getAvailableMethods(methods: string[]): Exclude<TwoFactorMethod, "backup">[] {
   return methods.filter((method): method is "otp" | "totp" => method === "otp" || method === "totp")
@@ -33,9 +33,8 @@ export async function verifyTwoFactorMethod(
     if (result.error) return { success: false, error: "verifyFailed" }
 
     const role = result.data?.user?.role
-    const redirectTo =
-      result.data && "url" in result.data && typeof result.data.url === "string" ? result.data.url : undefined
-    return { success: true, ...(role ? { role } : {}), ...(redirectTo ? { redirectTo } : {}) }
+    const redirecting = result.data && "redirect" in result.data && result.data.redirect === true
+    return { success: true, ...(role ? { role } : {}), ...(redirecting ? { redirecting: true } : {}) }
   } catch {
     return { success: false, unavailable: true }
   }
