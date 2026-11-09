@@ -46,3 +46,5 @@ next-env.d.ts
 /.claude/
 
 /.vscode/
+# deployed stack secrets
+stack.env

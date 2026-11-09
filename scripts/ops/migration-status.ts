@@ -1,14 +1,12 @@
 import { fileURLToPath } from "node:url"
 import { readMigrationFiles } from "drizzle-orm/migrator"
 import { Client } from "pg"
-import { secureConnection } from "@/core/db/tls"
 import { type Database, databaseFor, type Target } from "./target"
 
 /**
  * Compares the migration files on disk against the ledger a database has actually
  * applied. This is a *ledger* comparison, not a schema diff: it answers "is this database
- * behind the code?" and deliberately does not detect a column altered by hand in the
- * Supabase dashboard.
+ * behind the code?" and deliberately does not detect a column altered by hand.
  */
 
 export type TargetStatus =
@@ -16,7 +14,8 @@ export type TargetStatus =
   | { kind: "unreachable"; host: string; reason: string }
   | { kind: "ok"; host: string; applied: string[]; pending: string[] }
 
-const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../drizzle", import.meta.url))
+/** The repository's `drizzle/` folder. Also right for the bundled CLI in the migrate image. */
+export const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../drizzle", import.meta.url))
 
 /** Read the ordered local migrations using the same parser and SQL hashes as Drizzle. */
 export function readMigrations() {
@@ -44,7 +43,7 @@ export async function statusOf(
   const { host } = database
   const entries = readMigrations()
   const client = new Client({
-    ...secureConnection(database.url),
+    connectionString: database.url,
     connectionTimeoutMillis: timeout,
     query_timeout: timeout
   })

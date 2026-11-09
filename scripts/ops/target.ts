@@ -38,19 +38,6 @@ export function databaseFor(target: Target): Database | undefined {
 }
 
 /**
- * The database a production deployment will run against: the POSTGRES_URL Vercel injects
- * into the build, which is the app's own connection string rather than POSTGRES_URL_PROD.
- */
-export function deploymentDatabase(
-  environment: Record<string, string | undefined> = process.env
-): Database | undefined {
-  const url = environment.POSTGRES_URL
-  if (!url) return undefined
-
-  return { target: "prod", url, host: describeHost(url) }
-}
-
-/**
  * The configured database for a target. Misconfiguration is a message to read, not a
  * stack trace to decipher.
  */
@@ -61,8 +48,8 @@ export function databaseOrExit(target: Target): Database {
   console.error(`✖ ${VARIABLE[target]} is not set.`)
   console.error(
     target === "prod"
-      ? "  Set it to the direct (non-pooling) Supabase connection string — port 5432, not the\n  transaction pooler on 6543, which cannot run migrations."
-      : '  Copy it from .env.example — with `docker compose up -d` the value is:\n  POSTGRES_URL="postgresql://csk_hub:csk_hub@localhost:5433/csk_hub"'
+      ? "  Set it to the production database, reached through an SSH tunnel to the host. Inside the\n  stack's containers, run the command without --prod: POSTGRES_URL already points at it."
+      : '  Copy it from .env.example — with `docker compose -f docker-compose.dev.yml up -d` the value is:\n  POSTGRES_URL="postgresql://csk_hub:csk_hub@localhost:5433/csk_hub"'
   )
   process.exit(1)
 }

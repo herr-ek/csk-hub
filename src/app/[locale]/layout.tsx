@@ -1,4 +1,3 @@
-import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
@@ -106,7 +105,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </LocalizedFormProvider>
           </UiLabelsProvider>
         </NextIntlClientProvider>
-        <Analytics />
       </body>
     </html>
   )

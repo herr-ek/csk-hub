@@ -1,0 +1,72 @@
+# Builds the app and migrate images from the Dockerfile and publishes them to GHCR, where the
+# Portainer stack (docker-compose.yml) pulls them. See docs/deployment.md.
+
+name: Publish images
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-images
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: app
+            image: ghcr.io/herr-ek/csk-hub
+          - target: migrate
+            image: ghcr.io/herr-ek/csk-hub-migrate
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+  # Optional: tell Portainer to redeploy the stack once both images are published. Set the
+  # PORTAINER_WEBHOOK_URL repository secret to the stack's webhook URL to turn it on.
+  redeploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the Portainer stack webhook
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+        run: |
+          if [ -z "$PORTAINER_WEBHOOK_URL" ]; then
+            echo "PORTAINER_WEBHOOK_URL is not set; skipping the redeploy."
+            exit 0
+          fi
+          curl -fsS -X POST "$PORTAINER_WEBHOOK_URL"

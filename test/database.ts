@@ -3,8 +3,8 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import { Client } from "pg"
 import type { db as applicationDb } from "@/core/db"
+import { isLocalDatabase } from "@/core/db/connection"
 import * as authSchema from "@/core/db/schema/auth"
-import { isLocalDatabase } from "@/core/db/tls"
 
 export type TestDatabase = {
   /** Typed as the application client, so modules that take one accept it. */

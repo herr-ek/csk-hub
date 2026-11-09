@@ -8,7 +8,6 @@ import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
-import { getBaseURL } from "./base-url"
 import { adminPluginOptions } from "./permissions"
 
 const authPlugins = [
@@ -52,7 +51,7 @@ const authPlugins = [
 
 export const authOptions = {
   appName: app.name,
-  baseURL: getBaseURL(env),
+  baseURL: env.BETTER_AUTH_URL,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema

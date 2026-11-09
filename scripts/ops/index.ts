@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process"
 import { parseArgs } from "node:util"
 import { intro, isCancel, log, outro, select, spinner, text } from "@clack/prompts"
+import { isLocalDatabase } from "@/core/db/connection"
 import { openStudio, runMigrations } from "./drizzle-kit"
 import { grantAdmin } from "./grant-admin"
 import { statusFor, type TargetStatus } from "./migration-status"
@@ -93,6 +94,12 @@ async function run(choice: Command): Promise<number> {
       return 1
     }
     const database = databaseOrExit("local")
+    // The seed scripts check this themselves, but only after loading the whole application;
+    // refusing here keeps the message clear where they cannot load, such as the migrate image.
+    if (!isLocalDatabase(database.url)) {
+      log.error("Seeding is local-only and needs POSTGRES_URL to point at a local database.")
+      return 1
+    }
     const seed = spawnSync("bun", SEED_SCRIPTS[choice], { stdio: "inherit", env: childEnvironment(database) })
     return seed.status ?? 1
   }

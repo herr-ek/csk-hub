@@ -1,5 +1,4 @@
 import { Client, type ClientBase } from "pg"
-import { secureConnection } from "@/core/db/tls"
 import { confirmProductionWrite } from "./guards"
 import { announce, type Database } from "./target"
 
@@ -82,7 +81,7 @@ export async function createReferenceData(
 
   if (!(await confirmProductionWrite("Create the reference data", database, { skip: skipConfirmation }))) return 1
 
-  const client = new Client(secureConnection(database.url))
+  const client = new Client({ connectionString: database.url })
 
   try {
     await client.connect()
