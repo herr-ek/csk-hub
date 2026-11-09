@@ -1,4 +1,5 @@
 import { getRequestSession } from "@/core/auth/session.server"
+import { env } from "@/core/config/env"
 import { AccountSettingsTabs } from "./account-settings-tabs"
 import { PushNotificationSettings } from "./notifications"
 import { LanguageSettings, ProfileSettings } from "./profile"
@@ -30,7 +31,7 @@ export async function AccountSettings() {
           />
         </>
       }
-      notifications={<PushNotificationSettings />}
+      notifications={<PushNotificationSettings vapidPublicKey={env.VAPID_PUBLIC_KEY} />}
     />
   )
 }

@@ -20,7 +20,7 @@ const SOCKET_IDLE_TIMEOUT_MS = 7_000
 const REQUEST_DEADLINE_MS = 10_000
 const BOOKKEEPING_DEADLINE_MS = 2_000
 
-webpush.setVapidDetails(`mailto:${env.CONTACT_EMAIL}`, env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
+webpush.setVapidDetails(`mailto:${env.CONTACT_EMAIL}`, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
 
 class PushDeliveryDeadlineError extends Error {
   constructor() {

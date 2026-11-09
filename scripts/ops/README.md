@@ -31,8 +31,8 @@ bun run ops reference-data --prod       # the shared org structure, in productio
 This directory is the only code that chooses a database. Local, from `POSTGRES_URL`, is
 the default. Production is reached only with `--prod`, which reads `POSTGRES_URL_PROD`.
 
-`POSTGRES_URL_PROD` belongs only in a maintainer's own untracked `.env`. It must be the
-direct Supabase connection on port 5432, not the transaction pooler. Without it, the
+`POSTGRES_URL_PROD` belongs only in a maintainer's own untracked `.env`. The stack's
+database publishes no port, so this needs an SSH tunnel to the host. Without it, the
 status reports production as `not configured` and carries on.
 
 When the CLI launches drizzle-kit or a seed script, it passes the selected URL to the
@@ -58,27 +58,22 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
 - Seeding refuses outright and exits non-zero with `--prod`. The seed scripts also refuse
   any `POSTGRES_URL` that is not a local database, including when run by hand.
 
-## Production build check
+## The deployed stack
 
-The `prebuild` hook in `package.json` runs `scripts/ops/pre-build.ts`, so `bun run build`
-checks the migrations before `next build`. On a production build (`VERCEL_ENV=production`)
-it compares the migrations on disk with the ledger of the database the deployment will use
-(the `POSTGRES_URL` Vercel injects), the same comparison `status` makes. If any migration is
-pending, the build fails and lists them. Preview and local builds skip the check.
+The stack's `migrate` service runs `deploy.ts` on every deploy, before the app starts: it
+applies pending migrations with drizzle-orm's migrator, as the test databases do, then creates
+any missing reference data. Production migrations therefore need no manual step.
 
-Vercel runs the project's `build` script, which triggers the hook. A Build Command override
-in the Vercel dashboard must stay `bun run build`; a direct `next build` would skip it.
+The migrate image holds `index.ts` and `deploy.ts`, each bundled with `bun build`, plus the
+`drizzle/` folder, and nothing else (see the `Dockerfile`). Bundling inlines whatever they
+import, so an import that validates the application's environment on load (`@/core/config/env`)
+or needs a native module would break the image. drizzle-kit is not in the image, so
+`migrate` and `studio` stop with an error there. Seeding refuses before it loads the application. To run other
+commands against production, open a shell in a `migrate` container and run the CLI there
+**without** `--prod`. Its `POSTGRES_URL` already points at the stack's database. See
+[docs/deployment.md](../../docs/deployment.md#operations).
 
-The check fails closed: the build stops if `POSTGRES_URL` is unset, or if connecting or
-reading the ledger takes longer than 10 seconds. It keeps no state, so after a failed build
-you can apply the migrations and redeploy the same commit:
-
-```bash
-bun run ops migrate --prod   # then "Redeploy" the failed deployment in Vercel, or push again
-```
-
-TLS verification follows the shared policy in `src/core/db/tls.ts`; see
-`src/core/db/README.md`.
+Connections follow the connection string's own `sslmode`; see `src/core/db/README.md`.
 
 ## Local demo data
 

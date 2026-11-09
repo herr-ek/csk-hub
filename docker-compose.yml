@@ -1,15 +1,68 @@
+# The deployed CSK Hub stack, run and managed by Portainer. See docs/deployment.md.
+#
+# Portainer either builds both images from this repository (`build:`) or pulls the ones
+# .github/workflows/publish-images.yml publishes to GHCR (`image:`). Every value comes from the
+# stack's environment variables; stack.env.example lists them. For local development use
+# docker-compose.dev.yml instead.
+
 services:
-  postgres:
+  db:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: csk_hub
-      POSTGRES_PASSWORD: csk_hub
       POSTGRES_DB: csk_hub
-    ports:
-      - "5433:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U csk_hub -d csk_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published port: only the stack's own services reach the database.
+
+  # Runs to completion on every deploy, before the app starts: pending migrations, then the
+  # shared reference data. Both are no-ops when there is nothing to do.
+  migrate:
+    image: ghcr.io/herr-ek/csk-hub-migrate:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      target: migrate
+    restart: "no"
+    environment:
+      POSTGRES_URL: postgresql://csk_hub:${POSTGRES_PASSWORD}@db:5432/csk_hub
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    image: ghcr.io/herr-ek/csk-hub:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      POSTGRES_URL: postgresql://csk_hub:${POSTGRES_PASSWORD}@db:5432/csk_hub
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?Set BETTER_AUTH_URL to the public https origin}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
+      EMAIL_MODE: ${EMAIL_MODE:-smtp}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?Set VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?Set VAPID_PRIVATE_KEY}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-webmaster@choir.chs.chalmers.se}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
-  postgres_data:
+  db_data:

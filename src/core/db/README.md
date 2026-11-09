@@ -1,44 +1,31 @@
 # Database
 
-The application's database client (`index.ts`), Drizzle schemas (`schema/`) and the TLS
-policy for reaching a managed database (`tls.ts`).
+The application's database client (`index.ts`), Drizzle schemas (`schema/`) and
+`connection.ts`, which says whether a connection string points at a local database.
 
 ## The application contract
 
-The application consumes one variable: `POSTGRES_URL`. Locally it comes from `.env` and
-points at the Docker container; on Vercel it is the connection string the platform
-injects. Application code never chooses between local and production and never reads
-`POSTGRES_URL_PROD` — that choice belongs to the ops CLI in `scripts/ops`.
+The application consumes one variable: `POSTGRES_URL`.
+- Locally it comes from `.env` and points at the container in `docker-compose.dev.yml`.
+- In the deployed stack, `docker-compose.yml` sets it to the stack's own `db` service.
 
-## Verified TLS
+Application code never chooses between local and production, and never reads
+`POSTGRES_URL_PROD`. That choice belongs to the ops CLI in `scripts/ops`.
 
-`tls.ts` answers one question: how is a connection string dialled securely? Every
-non-local connection — the deployed app, `drizzle.config.ts` and the ops CLI alike — is
-verified against the Supabase root CA with `rejectUnauthorized: true`. There is
-deliberately no switch to skip verification.
+## TLS
 
-Any `sslmode` in the connection string is removed before connecting, because `pg` lets
-it override explicit `ssl` options, which would silently discard the CA.
+Every client passes the connection string to `pg` unchanged: the application, `drizzle.config.ts`,
+the ops CLI and the test harness. The URL's own `sslmode` therefore decides TLS:
 
-### The committed CA
+- No `sslmode` connects in plaintext. This is right for the development container and for the
+  stack's `db`, which is reachable only on the stack's private network and publishes no port.
+- `sslmode=verify-full` verifies the server against the system trust store. Use it if the
+  database ever moves to a separate host.
 
-`certs/supabase-root-2021.ts` holds Supabase's root certificate. Supabase signs its
-database certificates with this root rather than a public CA, so no system trust store
-contains it. It is public trust material, identical for every Supabase project, and is
-committed rather than kept in `.env`.
+There is no TLS code of our own. Any change of policy is made in the connection string.
 
-It is a TypeScript module rather than a `.crt` file so that nothing reads the filesystem
-at runtime. It travels with the import graph into the Next.js server bundle and into
-drizzle-kit's bundled config, with no file-tracing configuration.
+## Local-only guards
 
-- Provenance: downloaded from the Supabase dashboard (Database settings → SSL
-  Configuration).
-- Subject: `CN=Supabase Root 2021 CA, O=Supabase Inc`.
-- Expires: 26 April 2031. Replace it before then.
-
-## Direct versus pooled connections
-
-Supabase exposes a transaction pooler on port 6543 and a direct connection on port 5432.
-The deployed app can use the pooled string Vercel injects. Migrations cannot run through
-the transaction pooler, so the production URL the ops CLI uses (`POSTGRES_URL_PROD`) must
-be the direct connection.
+`isLocalDatabase()` treats only `localhost`, `127.0.0.1` and `[::1]` as local. Seeding, `reset`
+and the throwaway test databases refuse anything else, including the stack's `db` host, so none
+of them can run against the deployed database.
