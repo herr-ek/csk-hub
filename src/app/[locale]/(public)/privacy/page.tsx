@@ -21,10 +21,6 @@ export default async function PrivacyPage() {
         <p>{t("dataBody")}</p>
       </section>
       <section className="space-y-2">
-        <h2 className="font-semibold">{t("idTitle")}</h2>
-        <p>{t("idBody")}</p>
-      </section>
-      <section className="space-y-2">
         <h2 className="font-semibold">{t("technicalTitle")}</h2>
         <p>{t("technicalBody")}</p>
       </section>
@@ -34,6 +30,11 @@ export default async function PrivacyPage() {
         <a href={`mailto:${app.contactEmail}`} className="break-all underline underline-offset-4">
           {app.contactEmail}
         </a>
+      </section>
+      <section className="space-y-2">
+        <h2 className="font-semibold">{t("idTitle")}</h2>
+        <p>{t("idBody")}</p>
+        <p>{t("appSession")}</p>
       </section>
     </article>
   )
