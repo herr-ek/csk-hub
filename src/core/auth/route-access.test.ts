@@ -32,6 +32,20 @@ describe("route access", () => {
     await expect(getRouteAccessDecision("/me", userSession)).resolves.toEqual({ kind: "allow" })
   })
 
+  test("keeps privacy and support public for visitors and signed-in users", async () => {
+    for (const path of ["/privacy", "/support"]) {
+      for (const session of [null, userSession, adminSession]) {
+        await expect(getRouteAccessDecision(path, session)).resolves.toEqual({ kind: "allow" })
+      }
+    }
+    expect(requireAdmin).not.toHaveBeenCalled()
+    expect(requireCurrentUserPermission).not.toHaveBeenCalled()
+    await expect(getRouteAccessDecision("/support/private", null)).resolves.toEqual({
+      kind: "redirect",
+      location: "/login?returnTo=%2Fsupport%2Fprivate"
+    })
+  })
+
   test("keeps impersonated sessions out of messaging routes", async () => {
     await expect(getRouteAccessDecision("/messages", impersonatingSession)).resolves.toEqual({ kind: "forbidden" })
     await expect(getRouteAccessDecision("/messages/conversation-1", impersonatingSession)).resolves.toEqual({
