@@ -5,8 +5,8 @@ and relationship attributes. Features supply facts from trusted server reads; au
 owns the decisions. Better Auth retains authentication and its native account permissions.
 The module never imports features and does not load their resources itself.
 
-This module is not yet adopted by production features. Feature guards, routes and UI behavior
-still use their existing authorization. See the [adoption guide](../../../docs/authorization.md)
+The member-ID API uses this module for fresh issuance and Admin verification checks. Other
+feature guards, routes and UI behavior still use their existing authorization. See the [adoption guide](../../../docs/authorization.md)
 for the current migration points and future capabilities; this README owns the module interface
 and policy registration workflow.
 
@@ -16,7 +16,7 @@ and policy registration workflow.
 | --- | --- |
 | `README.md` | Calling the module and adding policies |
 | `model.ts` | The action catalogue, required resource facts and policy types |
-| `post-policies.ts`, `group-policies.ts`, `member-policies.ts`, `admin-policies.ts` | The permission rules for each subject |
+| `post-policies.ts`, `group-policies.ts`, `member-policies.ts`, `member-id-policies.ts`, `admin-policies.ts` | The permission rules for each subject |
 | `policy-registry.ts` | Static registration and pure policy evaluation |
 | `authorization.ts` | Fresh actor resolution, operation snapshots and denial errors |
 | `index.ts` | Production wiring and the application entrypoint |
