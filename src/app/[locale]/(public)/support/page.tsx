@@ -13,7 +13,7 @@ export default async function SupportPage() {
   const t = await getTranslations("Public.info")
 
   return (
-    <article className="space-y-6 text-sm leading-relaxed">
+    <article className="relative left-1/2 w-[min(56rem,calc(100vw-2rem))] -translate-x-1/2 space-y-6 text-sm leading-relaxed">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">{t("supportTitle")}</h1>
         <p>{t("supportIntro")}</p>
