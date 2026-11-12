@@ -8,6 +8,26 @@
     "description": "Chalmers Sångkörs digitala nav"
   },
   "Public": {
+    "info": {
+      "privacyTitle": "Integritetspolicy",
+      "supportTitle": "Support",
+      "privacyIntro": "Den här policyn beskriver hur CSK Hub, Chalmers Sångkörs digitala tjänst, hanterar dina uppgifter.",
+      "dataTitle": "Medlemsuppgifter",
+      "dataBody": "Hub använder ditt namn, din e-postadress, ditt användarnamn, din profilbild, din kontostatus och dina körtillhörigheter för att hantera ditt konto och medlemskap i kören. Även innehåll som du delar, till exempel inlägg och meddelanden, samt dina inställningar lagras. Tillgången till medlemsuppgifter beror på roll och behörighet.",
+      "idTitle": "iPhone-appen",
+      "idBody": "Appen använder ditt Hub-konto för att visa en tillfällig QR-kod. När en administratör verifierar den visas ditt namn, din profilbild om sådan finns, din kontostatus och dina nuvarande körtillhörigheter. Kameran används för att läsa QR-koder; bilder och video från kameran laddas inte upp.",
+      "appSession": "Appen lagrar sin inloggningssession i iOS-nyckelringen.",
+      "technicalTitle": "Inloggning och tjänsteleverantörer",
+      "technicalBody": "Hub använder kakor för inloggning och inställningar. Sessionsuppgifter kan innehålla din IP-adress och information om webbläsare eller enhet för kontosäkerhet. Leverantörer av webbhotell, databas och e-post behandlar uppgifter för att driva tjänsten. Webbplatsen använder Vercel Web Analytics för att förstå hur webbplatsen används.",
+      "contactTitle": "Kontakt",
+      "privacyContact": "Mejla oss om du har frågor om dina uppgifter eller vill begära tillgång, rättelse eller radering. Konto- och köruppgifter sparas så länge de behövs för att driva tjänsten och hantera körmedlemskap. Kontakta oss om just dina uppgifter.",
+      "supportIntro": "Behöver du hjälp med CSK Hub? Kontakta oss via e-post.",
+      "supportDetails": "Berätta vad du försökte göra, vad som gick fel och vilken enhet eller appversion du använder. Skicka aldrig ditt lösenord, dina tvåfaktorskoder eller din medlems-QR-kod.",
+      "loginHelpTitle": "Problem med inloggningen?",
+      "loginHelpBody": "Använd ditt befintliga Hub-konto. Om du har glömt lösenordet kan du begära återställning nedan. Mejla oss vid problem med kontoåtkomst eller tvåfaktorsautentisering.",
+      "resetPassword": "Återställ lösenord",
+      "signIn": "Logga in på Hub"
+    },
     "activation": {
       "pageTitle": "Aktivera ditt konto",
       "title": "Aktivera ditt CSK-konto",
