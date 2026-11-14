@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
 import { FieldDescription } from "@/shared/ui/base/field"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/base/table"
-import { CommandDialog } from "../command-dialog"
+import { GroupCommandDialog } from "../group-command-dialog"
 import { SortableHead, useSortedRows } from "../sortable-table"
 import { addMemberAction, changeVoiceAction, endMembershipAction } from "./actions"
 import type { GroupDetail } from "./query"
@@ -152,7 +152,7 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
   const isSection = group.type === "Section"
 
   return (
-    <CommandDialog
+    <GroupCommandDialog
       trigger={<Button type="button">{t("addMember")}</Button>}
       title={t("addMemberTitle", { name: group.name })}
       description={
@@ -188,7 +188,7 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
         />
       ) : null}
       <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
-    </CommandDialog>
+    </GroupCommandDialog>
   )
 }
 
@@ -197,7 +197,7 @@ function EndMembershipDialog({ detail, member, today }: { detail: GroupDetail; m
   const { group } = detail
 
   return (
-    <CommandDialog
+    <GroupCommandDialog
       trigger={
         <Button type="button" variant="ghost" size="sm">
           {t("endMembership")}
@@ -221,7 +221,7 @@ function EndMembershipDialog({ detail, member, today }: { detail: GroupDetail; m
       <input type="hidden" name="groupId" value={group.id} />
       <input type="hidden" name="userId" value={member.userId} />
       <InputField label={t("endDate")} name="endDate" defaultValue={today} type="date" required />
-    </CommandDialog>
+    </GroupCommandDialog>
   )
 }
 
@@ -235,7 +235,7 @@ function ChangeVoiceDialog({ detail, member, today }: { detail: GroupDetail; mem
   ]
 
   return (
-    <CommandDialog
+    <GroupCommandDialog
       trigger={
         <Button type="button" variant="ghost" size="sm">
           {t("changeVoice")}
@@ -255,6 +255,6 @@ function ChangeVoiceDialog({ detail, member, today }: { detail: GroupDetail; mem
         options={voices.map((voice) => ({ value: voice, label: voice }))}
       />
       <InputField label={t("changeDate")} name="date" defaultValue={today} type="date" required />
-    </CommandDialog>
+    </GroupCommandDialog>
   )
 }

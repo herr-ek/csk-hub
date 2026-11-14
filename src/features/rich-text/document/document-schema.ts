@@ -15,6 +15,9 @@ export type DocumentSchema = {
   extensions: Extensions
   /** The heading levels allowed, in ascending order; empty when headings are not. */
   headingLevels: readonly HeadingLevel[]
+  /** The node and mark types a document may contain, by name. */
+  nodeTypes: ReadonlySet<string>
+  markTypes: ReadonlySet<string>
   /** A stored document from an untrusted value, or null when there is no document in it. */
   normalize: (value: unknown) => RichTextDocument | null
   /** The same, from the JSON string a form submits. */
@@ -160,11 +163,14 @@ function createNormalizer(schema: Schema, headingLevels: readonly HeadingLevel[]
 export function createDocumentSchema(features: readonly Extensions[]): DocumentSchema {
   const extensions = [...baseFeatures, ...features.flat()]
   const headingLevels = configuredHeadingLevels(extensions)
-  const normalize = createNormalizer(getSchema(extensions), headingLevels)
+  const schema = getSchema(extensions)
+  const normalize = createNormalizer(schema, headingLevels)
 
   return {
     extensions,
     headingLevels,
+    nodeTypes: new Set(Object.keys(schema.nodes)),
+    markTypes: new Set(Object.keys(schema.marks)),
     normalize,
     parse: (json) => {
       try {

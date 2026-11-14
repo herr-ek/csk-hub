@@ -105,10 +105,10 @@ bun run ops seed-demo
 
 This creates the reference data, 100 singers split evenly across the three Choirs and their
 Sections, active and archived groups, dated Memberships and Position handovers, Voice
-capabilities, and 24 published example Posts. It is safe to repeat and preserves existing
-credentials and edited Posts. Existing Users are retained, so a populated database can have
-more than 100 Users. The individual `seed-users`, `seed-groups` and `seed-posts` commands are
-also available; see [local demo data](scripts/ops/README.md#local-demo-data).
+capabilities, 24 published example Posts and example Events from the coming week on. It is
+safe to repeat and preserves existing credentials and edited Posts. Existing Users are
+retained, so a populated database can have more than 100 Users. The individual `seed-users`, `seed-groups`, `seed-posts` and `seed-events`
+commands are also available; see [local demo data](scripts/ops/README.md#local-demo-data).
 
 ## Routes
 

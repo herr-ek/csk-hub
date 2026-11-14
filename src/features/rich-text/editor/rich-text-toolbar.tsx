@@ -204,7 +204,9 @@ export function RichTextToolbar({
   controls: string
 }) {
   const t = useTranslations("RichText.editor")
-  const { nodes, marks } = editor.schema
+  // From the document schema rather than the editor's: React can pause between the surface's
+  // check that the editor is alive and this render, and Tiptap may destroy it in that pause.
+  const { nodeTypes: nodes, markTypes: marks } = schema
   // The toolbar re-renders on every selection change; the selector keeps that to what it shows.
   const state = useEditorState({
     editor,
@@ -246,9 +248,9 @@ export function RichTextToolbar({
         </ToolbarGroup>
       ) : null}
 
-      {marks.bold || marks.italic || marks.link ? (
+      {marks.has("bold") || marks.has("italic") || marks.has("link") ? (
         <ToolbarGroup>
-          {marks.bold ? (
+          {marks.has("bold") ? (
             <ToolbarToggle
               label={t("bold")}
               pressed={state.bold}
@@ -257,7 +259,7 @@ export function RichTextToolbar({
               <BoldIcon />
             </ToolbarToggle>
           ) : null}
-          {marks.italic ? (
+          {marks.has("italic") ? (
             <ToolbarToggle
               label={t("italic")}
               pressed={state.italic}
@@ -266,13 +268,13 @@ export function RichTextToolbar({
               <ItalicIcon />
             </ToolbarToggle>
           ) : null}
-          {marks.link ? <LinkControl editor={editor} active={state.link} href={state.linkHref} /> : null}
+          {marks.has("link") ? <LinkControl editor={editor} active={state.link} href={state.linkHref} /> : null}
         </ToolbarGroup>
       ) : null}
 
-      {nodes.bulletList || nodes.orderedList || nodes.blockquote ? (
+      {nodes.has("bulletList") || nodes.has("orderedList") || nodes.has("blockquote") ? (
         <ToolbarGroup>
-          {nodes.bulletList ? (
+          {nodes.has("bulletList") ? (
             <ToolbarToggle
               label={t("bulletList")}
               pressed={state.bulletList}
@@ -281,7 +283,7 @@ export function RichTextToolbar({
               <ListIcon />
             </ToolbarToggle>
           ) : null}
-          {nodes.orderedList ? (
+          {nodes.has("orderedList") ? (
             <ToolbarToggle
               label={t("orderedList")}
               pressed={state.orderedList}
@@ -290,7 +292,7 @@ export function RichTextToolbar({
               <ListOrderedIcon />
             </ToolbarToggle>
           ) : null}
-          {nodes.blockquote ? (
+          {nodes.has("blockquote") ? (
             <ToolbarToggle
               label={t("quote")}
               pressed={state.blockquote}
@@ -302,9 +304,9 @@ export function RichTextToolbar({
         </ToolbarGroup>
       ) : null}
 
-      {nodes.table || nodes.horizontalRule ? (
+      {nodes.has("table") || nodes.has("horizontalRule") ? (
         <ToolbarGroup>
-          {nodes.table ? (
+          {nodes.has("table") ? (
             <ToolbarAction
               label={t("table")}
               onAction={() => editor.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run()}
@@ -312,7 +314,7 @@ export function RichTextToolbar({
               <TableIcon />
             </ToolbarAction>
           ) : null}
-          {nodes.horizontalRule ? (
+          {nodes.has("horizontalRule") ? (
             <ToolbarAction label={t("divider")} onAction={() => editor.chain().focus().setHorizontalRule().run()}>
               <MinusIcon />
             </ToolbarAction>

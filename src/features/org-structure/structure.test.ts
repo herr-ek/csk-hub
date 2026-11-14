@@ -4,6 +4,7 @@ import { choir, group, groupTypePosition, position, positionGroup, section } fro
 import type { Voice } from "@/features/voice/model"
 import { startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
+import { listActiveGroups, listGroupNames, lockGroupForReference } from "./reads"
 import {
   archiveGroup,
   createChoir,
@@ -289,6 +290,44 @@ describe.skipIf(!database)("groups structure", () => {
       expectSuccess(
         await startPositionHolding(t.db, { userId: inMk, groupId: mk, positionId: id, startDate: "2025-02-01" })
       )
+    })
+  })
+
+  describe("reads for features that refer to groups", () => {
+    async function activeAndArchived() {
+      const active = expectSuccess(await createGroup(t.db, { name: uniqueName("Gigmästeri"), type: "Board" }))
+      const archived = expectSuccess(await createGroup(t.db, { name: uniqueName("Sexmästeri"), type: "Board" }))
+      expectSuccess(await archiveGroup(t.db, archived.id))
+      return { active: active.id, archived: archived.id }
+    }
+
+    test("lists active groups, and archived ones only when asked to keep them", async () => {
+      const { active, archived } = await activeAndArchived()
+
+      const ids = (rows: { id: string }[]) => rows.map(({ id }) => id)
+      expect(ids(await listActiveGroups(t.db))).toContain(active)
+      expect(ids(await listActiveGroups(t.db))).not.toContain(archived)
+      const kept = await listActiveGroups(t.db, [archived])
+      expect(kept.find(({ id }) => id === archived)).toMatchObject({ type: "Board", active: false })
+    })
+
+    test("names the given groups, archived or not", async () => {
+      const { active, archived } = await activeAndArchived()
+      const names = await listGroupNames(t.db, [active, archived, active])
+      expect(names.map(({ id }) => id).sort()).toEqual([active, archived].sort())
+      expect(await listGroupNames(t.db, [])).toEqual([])
+    })
+
+    test("reports whether a group can be referred to, inside the caller's transaction", async () => {
+      const { active, archived } = await activeAndArchived()
+      const found = await t.db.transaction(async (tx) => ({
+        active: await lockGroupForReference(tx, active),
+        archived: await lockGroupForReference(tx, archived),
+        missing: await lockGroupForReference(tx, crypto.randomUUID())
+      }))
+      expect(found.active).toEqual({ active: true })
+      expect(found.archived).toEqual({ active: false })
+      expect(found.missing).toBeNull()
     })
   })
 })

@@ -3,15 +3,18 @@ import "server-only"
 export { endLinkedPosition, startLinkedPosition } from "./linked-positions"
 export { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 export type { GroupType, IsoDate, OrgStructureResult, OrgStructureViolation } from "./model"
-export type { OrgStructureDatabase } from "./operation"
+export type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 export { endPositionHolding, replacePositionHolder, startPositionHolding } from "./positions"
 export {
   getCurrentPositionHolder,
+  listActiveGroups,
   listChoirMembersByVoiceFamily,
   listCurrentChoirAffiliationsOfUsers,
   listCurrentGroupMembers,
   listCurrentGroupsOfUser,
-  listCurrentPositionsOfUser
+  listCurrentPositionsOfUser,
+  listGroupNames,
+  lockGroupForReference
 } from "./reads"
 export {
   allowPositionInGroupTypes,
