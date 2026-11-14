@@ -21,6 +21,18 @@ describe("Stockholm time", () => {
     expect(isIsoDate("2026-13-01")).toBe(false)
   })
 
+  test("refuses a time the clock skips when it springs forward", () => {
+    expect(stockholmInstant("2027-03-28T02:30")).toBeNull()
+    expect(stockholmInstant("2027-03-28T02:00")).toBeNull()
+    expect(stockholmInstant("2027-03-28T01:59")?.toISOString()).toBe("2027-03-28T00:59:00.000Z")
+    expect(stockholmInstant("2027-03-28T03:00")?.toISOString()).toBe("2027-03-28T01:00:00.000Z")
+  })
+
+  test("accepts a time the clock repeats in autumn", () => {
+    const instant = stockholmInstant("2026-10-25T02:30")
+    expect(instant && stockholmLocalDateTime(instant)).toBe("2026-10-25T02:30")
+  })
+
   test("round-trips an instant to its Stockholm date and wall clock", () => {
     const instant = new Date("2026-12-25T23:30:00Z")
     expect(stockholmDate(instant)).toBe("2026-12-26")

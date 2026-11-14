@@ -3,7 +3,7 @@ import "server-only"
 import { eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
 import { event, eventDetail, eventTarget, gig, location, rehearsal, socialEvent } from "@/core/db/schema/events"
-import { group } from "@/core/db/schema/org-structure"
+import { lockGroupForReference } from "@/features/org-structure"
 import type { VoiceFamily } from "@/features/voice/model"
 import { eventDocument } from "./event-document"
 import {
@@ -119,6 +119,7 @@ type CurrentReferences = { locationId: string | null; organiserGroupId: string |
 /** The Event row's columns from the input, after checking what the database cannot. */
 async function eventValues(tx: EventsTransaction, input: EventInput, current: CurrentReferences | undefined) {
   const { startsAt, endsAt } = scheduleInstants(input.schedule)
+  if (!isValidInstant(input.callTime) || !isValidInstant(input.respondBy)) throw new RuleViolation("invalid-date")
   const locationId = input.locationId ?? null
   const organiserGroupId = input.organiserGroupId ?? null
 
@@ -164,11 +165,14 @@ function hasWords(value: unknown): boolean {
   return Array.isArray(node.content) && node.content.some(hasWords)
 }
 
+/** Absent, or a real instant rather than an invalid `Date`. */
+function isValidInstant(instant: Date | null | undefined) {
+  return instant == null || !Number.isNaN(instant.getTime())
+}
+
 function scheduleInstants(schedule: EventSchedule) {
   if (!schedule.allDay) {
-    if (Number.isNaN(schedule.startsAt.getTime()) || Number.isNaN(schedule.endsAt.getTime())) {
-      throw new RuleViolation("invalid-date")
-    }
+    if (!isValidInstant(schedule.startsAt) || !isValidInstant(schedule.endsAt)) throw new RuleViolation("invalid-date")
     return { startsAt: schedule.startsAt, endsAt: schedule.endsAt }
   }
   const startsAt = stockholmInstant(schedule.firstDay)
@@ -251,7 +255,7 @@ async function requireGroup(
   alreadyUsed: boolean,
   violations: { missing: EventViolation; archived: EventViolation }
 ) {
-  const [row] = await tx.select({ active: group.active }).from(group).where(eq(group.id, groupId)).for("share")
+  const row = await lockGroupForReference(tx, groupId)
   if (!row) throw new RuleViolation(violations.missing)
   if (!row.active && !alreadyUsed) throw new RuleViolation(violations.archived)
 }

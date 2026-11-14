@@ -46,7 +46,7 @@ export function readEventForm(formData: FormData) {
     schedule: allDay
       ? { allDay, firstDay: value(formData, "firstDay"), lastDay: value(formData, "lastDay") }
       : { allDay, startsAt: value(formData, "startsAt"), endsAt: value(formData, "endsAt") },
-    callTime: allDay ? undefined : value(formData, "callTime"),
+    callTime: value(formData, "callTime"),
     respondBy: value(formData, "respondBy"),
     participationMode: value(formData, "participationMode"),
     locationId: value(formData, "locationId"),
@@ -67,10 +67,12 @@ export function readEventForm(formData: FormData) {
   }
 }
 
+// A well-formed time Stockholm's clock skips, such as 02:30 when it springs forward, becomes an
+// invalid instant, which the module refuses as `invalid-date`.
 const instant = z
   .string()
   .refine(isLocalDateTime)
-  .transform((local) => stockholmInstant(local) as Date)
+  .transform((local) => stockholmInstant(local) ?? new Date(Number.NaN))
 const date = z.string().refine(isIsoDate)
 const optionalText = (max: number) => z.string().max(max).optional()
 const optionalId = z.string().min(1).max(SHORT_TEXT_MAX_LENGTH).optional()

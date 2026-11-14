@@ -198,6 +198,10 @@ describe.skipIf(!database)("Events commands", () => {
           createdBy: null
         })
       ).toEqual({ success: false, error: "invalid-date" })
+      expect(await createEvent(t.db, { ...eventInput({ callTime: new Date(Number.NaN) }), createdBy: null })).toEqual({
+        success: false,
+        error: "invalid-date"
+      })
       expect(await createEvent(t.db, { ...eventInput({ callTime: later }), createdBy: null })).toEqual({
         success: false,
         error: "call-time-after-start"

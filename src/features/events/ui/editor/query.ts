@@ -4,7 +4,7 @@ import { type AnyColumn, asc, eq, inArray, isNull, or } from "drizzle-orm"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { event, eventDetail, eventTarget, gig, location, rehearsal, socialEvent } from "@/core/db/schema/events"
-import { group } from "@/core/db/schema/org-structure"
+import { listActiveGroups } from "@/features/org-structure"
 import type { GroupType } from "@/features/org-structure/model"
 import type { RichTextDocument } from "@/features/rich-text"
 import { getEventDeletionImpact } from "../../lifecycle"
@@ -62,10 +62,7 @@ export async function getEventFormOptions(
       .from(location)
       .where(or(eq(location.active, true), keep(location.id, kept.locationIds)))
       .orderBy(asc(location.name)),
-    db
-      .select({ id: group.id, name: group.name, type: group.type, active: group.active })
-      .from(group)
-      .where(or(eq(group.active, true), keep(group.id, kept.groupIds))),
+    listActiveGroups(db, kept.groupIds),
     db
       .select({ id: user.id, name: user.name, email: user.email })
       .from(user)

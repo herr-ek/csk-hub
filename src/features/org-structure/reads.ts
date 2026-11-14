@@ -1,10 +1,10 @@
 import "server-only"
 
-import { and, asc, eq, inArray, isNull } from "drizzle-orm"
+import { and, asc, eq, inArray, isNull, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
-import type { OrgStructureDatabase } from "./operation"
+import type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 
 /** The current members of a group, with the Voice each sings when the group is a Section. */
 export function listCurrentGroupMembers(database: OrgStructureDatabase, groupId: string) {
@@ -106,4 +106,34 @@ export function listChoirMembersByVoiceFamily(database: OrgStructureDatabase, ch
       )
     )
     .orderBy(asc(groupMember.userId))
+}
+
+/**
+ * Every active group, plus the given ones even if archived, for a picker that must keep a group
+ * it already shows. Unordered; the caller decides how to present them.
+ */
+export function listActiveGroups(database: OrgStructureDatabase, alsoGroupIds: string[] = []) {
+  return database
+    .select({ id: group.id, name: group.name, type: group.type, active: group.active })
+    .from(group)
+    .where(or(eq(group.active, true), alsoGroupIds.length > 0 ? inArray(group.id, alsoGroupIds) : undefined))
+}
+
+/** The names of the given groups, archived or not, for showing what refers to them. */
+export async function listGroupNames(database: OrgStructureDatabase, groupIds: string[]) {
+  if (groupIds.length === 0) return []
+  return database
+    .select({ id: group.id, name: group.name })
+    .from(group)
+    .where(inArray(group.id, [...new Set(groupIds)]))
+}
+
+/**
+ * Whether a group exists and is active, for another feature's command about to refer to it. The
+ * group stays locked against concurrent archiving until the caller's transaction ends. Null when
+ * there is no such group.
+ */
+export async function lockGroupForReference(tx: OrgStructureTransaction, groupId: string) {
+  const [row] = await tx.select({ active: group.active }).from(group).where(eq(group.id, groupId)).for("share")
+  return row ?? null
 }

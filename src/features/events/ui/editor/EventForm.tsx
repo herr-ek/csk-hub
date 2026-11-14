@@ -277,17 +277,15 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
                 </>
               )}
             </div>
-            {allDay ? null : (
-              <InputField
-                label={t("callTime")}
-                description={t("callTimeDescription")}
-                name="callTime"
-                type="datetime-local"
-                defaultValue={initial.callTime}
-                invalid={Boolean(errorFor("callTime"))}
-                error={errorFor("callTime")}
-              />
-            )}
+            <InputField
+              label={t("callTime")}
+              description={t("callTimeDescription")}
+              name="callTime"
+              type="datetime-local"
+              defaultValue={initial.callTime}
+              invalid={Boolean(errorFor("callTime"))}
+              error={errorFor("callTime")}
+            />
           </FieldGroup>
         </CardContent>
       </Card>

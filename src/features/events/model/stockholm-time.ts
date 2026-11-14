@@ -41,12 +41,19 @@ function offsetAt(instant: number) {
   return Date.UTC(year, month - 1, day, hour, minute, second) - Math.floor(instant / 1000) * 1000
 }
 
-/** The instant Stockholm's wall clock shows the given time. */
-function fromWallClock(year: number, month: number, day: number, hour: number, minute: number): Date {
+/**
+ * The instant Stockholm's wall clock shows the given time, or null for a time the clock skips
+ * when it springs forward, such as 02:30 on the last Sunday in March.
+ */
+function fromWallClock(year: number, month: number, day: number, hour: number, minute: number): Date | null {
   const asUtc = Date.UTC(year, month - 1, day, hour, minute)
   // The offset near the answer, then again at the answer, which settles it across a DST change.
   const first = asUtc - offsetAt(asUtc)
-  return new Date(asUtc - offsetAt(first))
+  const instant = new Date(asUtc - offsetAt(first))
+  const shown = wallClockParts(instant)
+  const exists =
+    shown.year === year && shown.month === month && shown.day === day && shown.hour === hour && shown.minute === minute
+  return exists ? instant : null
 }
 
 function isRealDate(year: number, month: number, day: number) {
@@ -71,7 +78,7 @@ export function isLocalDateTime(value: string): value is LocalDateTime {
 
 /**
  * The instant of a Stockholm date and wall-clock time: a `LocalDateTime`, or a date alone for
- * its midnight. Null when the value is not a real date or time.
+ * its midnight. Null when the value is not a real date or time, or a time Stockholm skips.
  */
 export function stockholmInstant(value: IsoDate | LocalDateTime): Date | null {
   if (isIsoDate(value)) {
