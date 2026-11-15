@@ -144,9 +144,19 @@ describe("notification actions without a translation context", () => {
     )
   })
 
+  test("delivery sends a link as its normalized path", async () => {
+    subscriptions = [activeSubscription]
+    await delivery.sendToUser("user-1", { body: "Hello", url: "/news/../news/post-1" })
+    expect(sendNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      JSON.stringify({ title: "CSK Hub", body: "Hello", url: "/news/post-1" }),
+      expect.anything()
+    )
+  })
+
   test("delivery refuses a link that leaves the app", async () => {
     subscriptions = [activeSubscription]
-    for (const url of ["https://example.test", "//example.test/news", "news"]) {
+    for (const url of ["https://example.test", "//example.test/news", "/\\example.test/news", "news"]) {
       await expect(delivery.sendToUser("user-1", { body: "Hello", url })).rejects.toThrow("same-origin path")
     }
     expect(sendNotification).not.toHaveBeenCalled()

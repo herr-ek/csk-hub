@@ -16,7 +16,9 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close()
-  const url = new URL(event.notification.data?.url || "/", self.location.origin).href
+  // The server only sends internal paths; still refuse anything that resolves off this origin.
+  const target = new URL(event.notification.data?.url || "/", self.location.origin)
+  const url = target.origin === self.location.origin ? target.href : new URL("/", self.location.origin).href
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       // Bring an open app window to the notification's page rather than opening another.

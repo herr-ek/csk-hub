@@ -8,6 +8,7 @@ import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
+import { parseSafeInternalPath } from "@/core/navigation/navigation-utils"
 import { InvalidNotificationSubscriptionError, parseNotificationSubscription } from "./subscription-validation"
 import type {
   NotificationDeliveryDiagnostics,
@@ -87,12 +88,13 @@ async function deliverOne(stored: StoredSubscription, payload: string) {
   return { accepted: category === undefined, category, bookkeepingFailed }
 }
 
-/** A notification may only lead into this app; a protocol-relative `//host` path would leave it. */
+/** A notification may only lead into this app, so its url is sent as a normalized internal path. */
 function toPayload({ body, url, tag }: PushNotification) {
-  if (url !== undefined && (!url.startsWith("/") || url.startsWith("//"))) {
+  const path = url === undefined ? undefined : parseSafeInternalPath(url)
+  if (url !== undefined && path === undefined) {
     throw new Error(`A push notification url must be a same-origin path, not ${url}`)
   }
-  return JSON.stringify({ title: app.name, body, url, tag })
+  return JSON.stringify({ title: app.name, body, url: path, tag })
 }
 
 async function sendToSubscriptions(
