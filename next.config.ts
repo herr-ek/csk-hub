@@ -39,7 +39,8 @@ const headers = async () => [
 ]
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // A self-contained server for the Docker image; see Dockerfile.
+  output: "standalone",
   reactCompiler: true,
   logging: {
     browserToTerminal: true

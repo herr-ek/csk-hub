@@ -1,5 +1,5 @@
 import { isCancel, text } from "@clack/prompts"
-import { isLocalDatabase } from "@/core/db/tls"
+import { isLocalDatabase } from "@/core/db/connection"
 import type { Database } from "./target"
 
 /**

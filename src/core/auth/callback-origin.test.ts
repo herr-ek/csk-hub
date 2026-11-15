@@ -2,45 +2,20 @@ import { describe, expect, test } from "bun:test"
 import { betterAuth } from "better-auth"
 import { memoryAdapter } from "better-auth/adapters/memory"
 import { magicLink } from "better-auth/plugins"
-import { getBaseURL } from "./base-url"
 
-const deploymentHost = "csk-hub-abc123-team.vercel.app"
-const branchHost = "csk-hub-git-auth-fix-team.vercel.app"
-const productionOrigin = "https://choir.example.test"
-const previewEnvironment = {
-  ENVIRONMENT: "preview" as const,
-  BETTER_AUTH_URL: productionOrigin,
-  VERCEL_URL: deploymentHost,
-  VERCEL_BRANCH_URL: branchHost
-}
+const unrelatedHost = "unrelated-review-tenant.example"
 
+// Better Auth is configured with the one origin in BETTER_AUTH_URL; these cases pin down that
+// email links and callbacks can never point anywhere else.
 const scenarios = [
-  {
-    name: "production",
-    environment: { ...previewEnvironment, ENVIRONMENT: "production" as const },
-    origin: productionOrigin
-  },
-  { name: "preview deployment", environment: previewEnvironment, origin: `https://${deploymentHost}` },
-  { name: "preview branch", environment: previewEnvironment, origin: `https://${branchHost}` },
-  {
-    name: "preview without branch alias",
-    environment: { ...previewEnvironment, VERCEL_BRANCH_URL: undefined },
-    origin: `https://${deploymentHost}`
-  },
-  {
-    name: "development",
-    environment: {
-      ENVIRONMENT: "development" as const,
-      BETTER_AUTH_URL: "http://localhost:3000"
-    },
-    origin: "http://localhost:3000"
-  }
+  { name: "production", origin: "https://choir.example.test" },
+  { name: "development", origin: "http://localhost:3000" }
 ]
 
-async function createFixture(environment: Parameters<typeof getBaseURL>[0], origin: string) {
+async function createFixture(origin: string) {
   const sent = { resetURL: "", magicURL: "" }
   const auth = betterAuth({
-    baseURL: getBaseURL(environment),
+    baseURL: origin,
     secret: "auth-002-disposable-regression-test-secret",
     database: memoryAdapter({ user: [], session: [], account: [], verification: [] }),
     logger: { disabled: true },
@@ -81,21 +56,15 @@ async function createFixture(environment: Parameters<typeof getBaseURL>[0], orig
 }
 
 describe("auth base URL", () => {
-  test("requires the deployment hostname in previews", () => {
-    expect(() => getBaseURL({ ENVIRONMENT: "preview", BETTER_AUTH_URL: productionOrigin })).toThrow(
-      "VERCEL_URL is required for preview deployments"
-    )
-  })
-
-  for (const { name, environment, origin } of scenarios) {
+  for (const { name, origin } of scenarios) {
     describe(name, () => {
       test("rejects unrelated callbacks before issuing email links", async () => {
-        const { post, sent } = await createFixture(environment, origin)
+        const { post, sent } = await createFixture(origin)
         const callbacks = [
-          "https://unrelated-review-tenant.vercel.app/collect",
-          `https://${deploymentHost}.attacker.example/collect`,
-          `https://${deploymentHost}@unrelated-review-tenant.vercel.app/collect`,
-          "//unrelated-review-tenant.vercel.app/collect"
+          `https://${unrelatedHost}/collect`,
+          `${origin}.attacker.example/collect`,
+          `${origin}@${unrelatedHost}/collect`,
+          `//${unrelatedHost}/collect`
         ]
 
         for (const callback of callbacks) {
@@ -108,14 +77,14 @@ describe("auth base URL", () => {
       })
 
       test("preserves local and exact-origin callbacks and rejects tampered verification links", async () => {
-        const { auth, post, sent } = await createFixture(environment, origin)
+        const { auth, post, sent } = await createFixture(origin)
 
         for (const prefix of ["", origin]) {
           expect((await post("/request-password-reset", { redirectTo: `${prefix}/reset-password` })).status).toBe(200)
           const resetURL = new URL(sent.resetURL)
           expect(resetURL.origin).toBe(origin)
 
-          resetURL.searchParams.set("callbackURL", "https://unrelated-review-tenant.vercel.app/collect")
+          resetURL.searchParams.set("callbackURL", `https://${unrelatedHost}/collect`)
           const blockedReset = await auth.handler(new Request(resetURL))
           expect(blockedReset.status).toBe(403)
           expect(blockedReset.headers.get("location")).toBeNull()
@@ -130,7 +99,7 @@ describe("auth base URL", () => {
           expect((await post("/sign-in/magic-link", { callbackURL: `${prefix}/activate` })).status).toBe(200)
           const magicURL = new URL(sent.magicURL)
           expect(magicURL.origin).toBe(origin)
-          magicURL.searchParams.set("callbackURL", "https://unrelated-review-tenant.vercel.app/collect")
+          magicURL.searchParams.set("callbackURL", `https://${unrelatedHost}/collect`)
           const blockedMagic = await auth.handler(new Request(magicURL))
           expect(blockedMagic.status).toBe(403)
           expect(blockedMagic.headers.get("location")).toBeNull()
@@ -142,16 +111,14 @@ describe("auth base URL", () => {
         }
       })
 
-      test("enforces auth request origins and excludes other environments", async () => {
-        const { post, context } = await createFixture(environment, origin)
+      test("enforces auth request origins and excludes other origins", async () => {
+        const { post, context } = await createFixture(origin)
         expect(context.isTrustedOrigin(origin)).toBe(true)
-        expect(context.isTrustedOrigin("https://unrelated-review-tenant.vercel.app")).toBe(false)
-        if (environment.ENVIRONMENT === "preview") {
-          expect(context.isTrustedOrigin(productionOrigin)).toBe(false)
-          expect(context.isTrustedOrigin(`http://${deploymentHost}`)).toBe(false)
-        } else {
-          expect(context.isTrustedOrigin(`https://${deploymentHost}`)).toBe(false)
-        }
+        expect(context.isTrustedOrigin(`https://${unrelatedHost}`)).toBe(false)
+        const otherScheme = origin.startsWith("https:")
+          ? origin.replace("https:", "http:")
+          : origin.replace("http:", "https:")
+        expect(context.isTrustedOrigin(otherScheme)).toBe(false)
         const allowed = await post(
           "/request-password-reset",
           { redirectTo: "/reset-password" },
@@ -165,7 +132,7 @@ describe("auth base URL", () => {
           "/request-password-reset",
           { redirectTo: "/reset-password" },
           {
-            origin: "https://unrelated-review-tenant.vercel.app",
+            origin: `https://${unrelatedHost}`,
             cookie: "auth-origin-test=1"
           }
         )

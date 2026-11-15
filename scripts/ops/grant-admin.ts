@@ -1,5 +1,4 @@
 import { Client } from "pg"
-import { secureConnection } from "@/core/db/tls"
 import { ADMIN_ROLE, parseRoles } from "@/shared/roles"
 import { confirmProductionWrite } from "./guards"
 import { announce, type Database } from "./target"
@@ -20,7 +19,7 @@ export async function grantAdmin(
 
   if (!(await confirmProductionWrite(`Grant admin to ${email}`, database, { skip: skipConfirmation }))) return 1
 
-  const client = new Client(secureConnection(database.url))
+  const client = new Client({ connectionString: database.url })
 
   try {
     await client.connect()

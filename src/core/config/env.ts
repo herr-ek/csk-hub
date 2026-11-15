@@ -1,13 +1,8 @@
 import { z } from "zod"
 
-const environment = process.env.ENVIRONMENT ?? process.env.VERCEL_ENV
-
 const envSchema = z
   .object({
-    ENVIRONMENT: z.enum(["development", "test", "preview", "production"]).default("development"),
-    VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
-    VERCEL_URL: z.string().min(1).optional(),
-    VERCEL_BRANCH_URL: z.string().min(1).optional(),
+    ENVIRONMENT: z.enum(["development", "test", "production"]).default("development"),
 
     POSTGRES_URL: z.string(),
 
@@ -24,7 +19,7 @@ const envSchema = z
     LOG_DATABASE: z.enum(["true", "false"]).default("false"),
 
     // TODO: Validate these more precisely
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string(),
+    VAPID_PUBLIC_KEY: z.string(),
     VAPID_PRIVATE_KEY: z.string(),
     CONTACT_EMAIL: z.email().default("webmaster@choir.chs.chalmers.se")
   })
@@ -49,13 +44,17 @@ const envSchema = z
     }
   })
 
-const parsed = envSchema.safeParse({ ...process.env, ENVIRONMENT: environment })
+// An empty variable counts as unset, so a blank entry in the stack's environment falls back to
+// the default or to "not configured" instead of failing validation.
+const setVariables = Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== ""))
+
+const parsed = envSchema.safeParse(setVariables)
 if (!parsed.success) {
   console.error("❌ Invalid environment variables:", JSON.stringify(z.treeifyError(parsed.error), null, 2))
   process.exit(1)
 }
 
 const env = parsed.data
-const isProduction = env.VERCEL_ENV === "production"
+const isProduction = env.ENVIRONMENT === "production"
 
 export { env, isProduction }

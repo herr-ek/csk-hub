@@ -1,6 +1,6 @@
 import { confirm, isCancel } from "@clack/prompts"
 import { Client } from "pg"
-import { isLocalDatabase, secureConnection } from "@/core/db/tls"
+import { isLocalDatabase } from "@/core/db/connection"
 import { runMigrations } from "./drizzle-kit"
 import { createReferenceData } from "./reference-data"
 import type { Database } from "./target"
@@ -25,7 +25,7 @@ export async function resetLocalDatabase(
 
   if (!(await confirmReset(database, { skip: skipConfirmation }))) return 1
 
-  const client = new Client(secureConnection(database.url))
+  const client = new Client({ connectionString: database.url })
   try {
     await client.connect()
     // Dropping the schemas rather than the database needs no CREATEDB privilege, and takes the

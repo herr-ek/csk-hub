@@ -51,7 +51,7 @@ Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
    ```
 
    Put the generated value in `BETTER_AUTH_SECRET`. `POSTGRES_URL` already
-   points at the PostgreSQL container defined in `docker-compose.yml`, and
+   points at the PostgreSQL container defined in `docker-compose.dev.yml`, and
    `EMAIL_MODE=log` writes auth emails to the server log during local
    development. Leave `POSTGRES_URL_PROD` blank unless you administer
    production.
@@ -59,8 +59,10 @@ Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
 3. Start PostgreSQL:
 
    ```bash
-   docker compose up -d
+   docker compose -f docker-compose.dev.yml up -d
    ```
+
+   The root `docker-compose.yml` is the deployed stack, not the development database.
 
 4. Apply the existing database migrations:
 
@@ -162,15 +164,12 @@ Email delivery is controlled by `EMAIL_MODE`:
 - `smtp` sends through Gmail SMTP. Configure `SMTP_HOST` (`smtp.gmail.com`),
   `SMTP_PORT` (`587`), `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`.
 
-## Web Analytics
+## Deployment
 
-Vercel Web Analytics tracks page views through the shared root layout using
-`@vercel/analytics/next`. Enable Web Analytics in the Vercel project's Analytics
-tab, then deploy the app to start collecting data. No environment variables are
-required. Local development uses the SDK's debug mode without sending analytics.
-
-The proxy excludes `/_vercel/*` so analytics requests bypass authentication and
-locale redirects.
+The application is deployed as a Docker Compose stack (`docker-compose.yml`) on
+GUD's Portainer host: the app, its own PostgreSQL, and a `migrate` service that
+applies migrations before each start. Images are published to GHCR on every push
+to `master`. See [`docs/deployment.md`](docs/deployment.md).
 
 ## Checks and useful commands
 

@@ -11,7 +11,10 @@ export async function runMigrations(database: Database, { skipConfirmation }: { 
 
   if (!(await confirmProductionWrite("Run migrations", database, { skip: skipConfirmation }))) return 1
 
-  const result = spawnSync("bunx", ["drizzle-kit", "migrate"], { stdio: "inherit", env: childEnvironment(database) })
+  const result = spawnSync("bunx", ["--no-install", "drizzle-kit", "migrate"], {
+    stdio: "inherit",
+    env: childEnvironment(database)
+  })
 
   return result.status ?? 1
 }
@@ -20,7 +23,10 @@ export async function runMigrations(database: Database, { skipConfirmation }: { 
 export function openStudio(database: Database): number {
   announce(database)
 
-  const result = spawnSync("bunx", ["drizzle-kit", "studio"], { stdio: "inherit", env: childEnvironment(database) })
+  const result = spawnSync("bunx", ["--no-install", "drizzle-kit", "studio"], {
+    stdio: "inherit",
+    env: childEnvironment(database)
+  })
 
   return result.status ?? 1
 }

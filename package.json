@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "bun run scripts/ops/pre-build.ts",
     "build": "next build",
     "start": "next start",
     "tst": "bun test --dots",
@@ -42,7 +41,6 @@
     "@tiptap/pm": "3.31.3",
     "@tiptap/react": "3.31.3",
     "@tiptap/static-renderer": "3.31.3",
-    "@vercel/analytics": "^2.0.1",
     "@wrksz/themes": "^1.2.0",
     "better-auth": "^1.7.4",
     "class-variance-authority": "^0.7.1",
@@ -57,6 +55,7 @@
     "next-intl": "^4.14.4",
     "nodemailer": "^10.0.9",
     "papaparse": "^5.7.0",
+    "pg": "^8.22.0",
     "react": "19.3.0",
     "react-day-picker": "^10.0.1",
     "react-dom": "19.3.0",

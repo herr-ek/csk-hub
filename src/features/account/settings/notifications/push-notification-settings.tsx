@@ -21,7 +21,8 @@ function vapidKeyToUint8Array(base64String: string) {
   return Uint8Array.from(rawData, (character) => character.charCodeAt(0))
 }
 
-export function PushNotificationSettings() {
+/** `vapidPublicKey` is read from the server environment at request time, so one build serves any deployment. */
+export function PushNotificationSettings({ vapidPublicKey }: { vapidPublicKey: string }) {
   const t = useTranslations("PushNotifications")
   const [isSupported, setIsSupported] = useState(false)
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
@@ -78,7 +79,6 @@ export function PushNotificationSettings() {
 
   async function subscribeToPush() {
     if (isPending) return
-    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     if (!subscription && !vapidPublicKey) {
       setError(t("notConfigured"))
       return

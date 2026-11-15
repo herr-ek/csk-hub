@@ -1,0 +1,19 @@
+# Local development only: the PostgreSQL that `.env.example` points at.
+#   docker compose -f docker-compose.dev.yml up -d
+# The deployed stack is docker-compose.yml.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: csk_hub
+      POSTGRES_PASSWORD: csk_hub
+      POSTGRES_DB: csk_hub
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
