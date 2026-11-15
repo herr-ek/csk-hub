@@ -12,6 +12,7 @@ import { MobileNavigation } from "./MobileNavigation"
 import { NavLinks } from "./NavLinks"
 import { RefreshOnReturn } from "./RefreshOnReturn"
 import { UnreadBadge, UnreadIndicator } from "./UnreadBadge"
+import type { UnreadSources } from "./unread-sources"
 
 export type NavigationRoute = {
   id: NavigationRouteId
@@ -45,16 +46,16 @@ export type NavigationConfig = {
 
 export interface AppNavigationTemplateProps {
   config: NavigationConfig | null
+  unreadSources?: UnreadSources
 }
-export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
+export function AppNavigationTemplate({ config, unreadSources = {} }: AppNavigationTemplateProps) {
   const t = useTranslations("Navigation")
-  // Features subscribe to a destination's badge through `registerUnreadSource`.
   const items = getNavigationItems(config, t).map((item) => ({
     id: item.id,
     href: ROUTES[item.id],
     label: item.label,
     // Only render unread badge when not in suspense fallback.
-    badge: config ? <UnreadBadge route={item.id} /> : undefined
+    badge: config ? <UnreadBadge count={unreadSources[item.id]} /> : undefined
   }))
   const isImpersonating = Boolean(config?.impersonatingUserName)
 
@@ -73,7 +74,7 @@ export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
             </nav>
             {config ? (
               <div className="md:hidden">
-                <MobileNavigation items={items} indicator={<UnreadIndicator />} />
+                <MobileNavigation items={items} indicator={<UnreadIndicator counts={Object.values(unreadSources)} />} />
               </div>
             ) : null}
             {config ? <AccountMenu user={config.user} isImpersonating={isImpersonating} /> : null}
@@ -90,19 +91,25 @@ export function AppNavigationTemplate({ config }: AppNavigationTemplateProps) {
   )
 }
 
-export function AppNavigation() {
+export interface AppNavigationProps {
+  /** The unread counts the app layout composes from its features, shown beside their links. */
+  unreadSources: UnreadSources
+}
+
+export function AppNavigation({ unreadSources }: AppNavigationProps) {
   return (
     <Suspense fallback={<AppNavigationTemplate config={null} />}>
-      <RuntimeAppNavigation />
+      <RuntimeAppNavigation unreadSources={unreadSources} />
     </Suspense>
   )
 }
 
-export async function RuntimeAppNavigation() {
+export async function RuntimeAppNavigation({ unreadSources }: AppNavigationProps) {
   const session = await getRequestSession()
   const isAdmin = await isUserAdmin(session)
   return (
     <AppNavigationTemplate
+      unreadSources={unreadSources}
       config={
         session
           ? {

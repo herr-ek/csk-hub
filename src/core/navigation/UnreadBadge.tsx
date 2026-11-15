@@ -2,17 +2,16 @@ import { Suspense } from "react"
 import { getRequestSession } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { Badge } from "@/shared/ui/base/badge"
-import type { NavigationRouteId } from "./site"
-import { getUnreadSource, listUnreadSources } from "./unread-sources"
+import type { UnreadCount } from "./unread-sources"
 
 type UnreadBadgeProps = {
-  route: NavigationRouteId
+  /** The destination's unread count; without one the badge renders nothing. */
+  count: UnreadCount | undefined
   /** `secondary` for placing the badge on a primary-coloured control. */
   variant?: "default" | "secondary"
 }
 
-async function UnreadCountBadge({ route, variant }: UnreadBadgeProps) {
-  const count = getUnreadSource(route)
+async function UnreadCountBadge({ count, variant }: UnreadBadgeProps) {
   if (!count) return null
   const session = await getRequestSession()
   if (!session) return null
@@ -32,7 +31,7 @@ async function UnreadCountBadge({ route, variant }: UnreadBadgeProps) {
 
 /**
  * The signed-in User's unread count at a destination, for placing inside a link to it.
- * Renders nothing when no feature registered a count there, when there is nothing unread,
+ * Renders nothing when the destination has no count, when there is nothing unread,
  * while loading, or without a session.
  */
 export function UnreadBadge(props: UnreadBadgeProps) {
@@ -43,12 +42,17 @@ export function UnreadBadge(props: UnreadBadgeProps) {
   )
 }
 
-async function AnyUnreadDot() {
+type UnreadIndicatorProps = {
+  /** Every destination's unread count. */
+  counts: UnreadCount[]
+}
+
+async function AnyUnreadDot({ counts: sources }: UnreadIndicatorProps) {
   const session = await getRequestSession()
   if (!session) return null
 
   const [counts, t] = await Promise.all([
-    Promise.all(listUnreadSources().map((count) => count(session.user.id))),
+    Promise.all(sources.map((count) => count(session.user.id))),
     getTranslations("Navigation")
   ])
   if (!counts.some((unread) => unread > 0)) return null
@@ -65,10 +69,10 @@ async function AnyUnreadDot() {
  * A dot for a control that hides the navigation links, such as the mobile menu button,
  * shown while anything at any destination is unread. Position the control `relative`.
  */
-export function UnreadIndicator() {
+export function UnreadIndicator(props: UnreadIndicatorProps) {
   return (
     <Suspense fallback={null}>
-      <AnyUnreadDot />
+      <AnyUnreadDot {...props} />
     </Suspense>
   )
 }
