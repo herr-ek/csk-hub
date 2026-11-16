@@ -76,14 +76,12 @@ describe("message Server Actions", () => {
   })
 
   test("advances a viewer's cursor only when the loaded Conversation explicitly marks its newest sequence", async () => {
-    getSession.mockResolvedValue({ session: { impersonatedBy: null } })
     await markConversationReadAction("conversation-1", 4, "verified-token")
 
     expect(markConversationRead).toHaveBeenCalledWith("conversation-1", 4, "verified-token")
   })
 
   test("refreshes the unread badge only when the cursor moved", async () => {
-    getSession.mockResolvedValue({ session: { impersonatedBy: null } })
     await markConversationReadAction("conversation-1", 4, "verified-token")
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(revalidatePath).toHaveBeenCalledWith("/[locale]/(app)/messages", "page")
@@ -103,10 +101,12 @@ describe("message Server Actions", () => {
     expect(scheduleActivityDispatch).not.toHaveBeenCalled()
   })
 
-  test("does not advance a User's read cursor during impersonation or without a session", async () => {
-    await markConversationReadAction("conversation-1", 4, "verified-token")
-    getSession.mockResolvedValue({ session: { impersonatedBy: "admin-1" } })
-    await markConversationReadAction("conversation-1", 4, "verified-token")
-    expect(markConversationRead).not.toHaveBeenCalled()
+  test("a denied read-marker command schedules no activity or refresh", async () => {
+    markConversationRead.mockRejectedValueOnce(new AuthorizationDeniedError({ action: "app.access" }, null))
+    await expect(markConversationReadAction("conversation-1", 4, "verified-token")).rejects.toBeInstanceOf(
+      AuthorizationDeniedError
+    )
+    expect(scheduleActivityDispatch).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
   })
 })

@@ -57,6 +57,12 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         if (!current) throw new Error("Authentication required")
         return current.userId
       },
+      getFreshRequestSession: async () => {
+        const current = identity.getStore()
+        return current
+          ? { user: { id: current.userId }, session: { id: current.sessionId, impersonatedBy: null } }
+          : null
+      },
       getRequestSession: async () => {
         const current = identity.getStore()
         return current
