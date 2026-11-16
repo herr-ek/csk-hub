@@ -82,6 +82,8 @@ These are implemented module policies; production features still use their legac
 | `group.publishPost`, `group.manageContent`, `group.manageEvents` | Admin, or a current Position holder with current Membership in that exact active non-Choir Group |
 | `group.manageMemberships`, `group.managePositions` | Admin, for an existing active Group |
 | `org.manage`, `user.administer`, `notification.broadcast`, `admin.access` | Explicit Admin grants; feature-specific safeguards still apply |
+| `memberId.issue` | Active Users outside support impersonation may present their own temporary ID |
+| `memberId.verify` | Active Admins outside support impersonation may verify a temporary ID |
 | `member.read` | Active Users may read other active Users' shared profiles |
 | `member.readEmail` | The profile owner only; Admin has no shared-profile email bypass |
 | `member.editProfile` | The profile owner, outside support impersonation |

@@ -1,5 +1,6 @@
 import { adminPolicies } from "./admin-policies"
 import { groupPolicies } from "./group-policies"
+import { memberIdPolicies } from "./member-id-policies"
 import { memberPolicies } from "./member-policies"
 import type {
   AuthorizationActor,
@@ -15,6 +16,7 @@ const policies: AuthorizationPolicies = {
   ...postPolicies,
   ...groupPolicies,
   ...memberPolicies,
+  ...memberIdPolicies,
   ...adminPolicies
 }
 
