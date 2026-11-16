@@ -231,9 +231,6 @@ The following policies are registered in `core/authz/event-policies.ts`:
 | `event.delete` | Event managers; the existing confirmation includes the deletion impact |
 | `event.administer` | Admin-only shared Location catalogue and Admin route access |
 | `event.view` | Admin/current manager, or a non-Draft Event's audience under the time rules below |
-| `event.readResponseReason`, `event.readRegistrationAnswers` | The submitting member, Admin, or current Event manager; record must belong to the Event |
-| `event.readAttendance` | The member, Admin, current Event manager, or eligible current Stämförälder |
-| `event.recordAttendance` | Admin/current manager or eligible current Stämförälder, for an audience member of a Published Event |
 
 Management covers Draft, Published and Cancelled Events. `createdBy`, audience Targets, Choir
 ownership and links to another Group confer no management authority. Choir organisers, missing
@@ -276,6 +273,19 @@ Checks use the Stockholm date of the start instant. The schema cannot distinguis
 before versus after an Event start on the same calendar day. This change does not invent
 timestamp precision or alter global organisational period semantics.
 
+`calendar/query.ts` provides fresh protected collection/detail entrypoints using the same
+`event.view` policy. Actor relationship locks serialize with departure, and Event shared locks
+protect Targets/start/status. Low-level calendar queries accept trusted server actor facts
+for composition/testing, never browser authority.
+
+### Deferred participation workflows
+
+Responses, Registrations and Attendance have no application workflows yet. Their policies and
+unused data-access operations are deliberately deferred. This PR adds no Position-code schema,
+migration or seeding changes; stable Position identity belongs to its separate PR.
+
+The following agreed rules are future-work requirements, not registered permission grants:
+
 Response comments/reasons and registration comments/answers, including withdrawn registrations
 and every answer kind, are accessible only to the submitting member, Admin and **current** Event
 managers. Audience Membership and Section-parent attendance authority expose none of these fields.
@@ -288,23 +298,6 @@ editor must hold that Section's Stämförälder Position now. The holding must h
 remain open, and the Section must remain active. Holding the Position at Event time is
 insufficient. Recording/correction requires a Published Event and an audience subject.
 Existing records remain readable after cancellation but cannot then be changed.
-
-`position.code = stamforalder` provides stable identity independent of editable names and
-environment-specific IDs. The additive migration binds the canonical Stämförälder catalogue
-entry once; reference-data seeding retains its code after renaming. A legacy entry renamed
-before migration stays unprivileged until explicitly bound; unknown labels never grant rights.
-
-`calendar/query.ts` provides fresh protected collection/detail entrypoints using the same
-`event.view` policy. Actor relationship locks serialize with departure, and Event shared locks
-protect Targets/start/status. Low-level calendar queries accept trusted server actor facts
-for composition/testing, never browser authority.
-
-`participation-access.ts` protects response details, registration answers, attendance reads
-and recording/correction. It derives the actor, reads actual participant ownership and loads
-dated subject Memberships/coded holdings through org-structure inside the transaction. Record
-reads lock Event then record. Attendance writes derive `recordedBy` and upsert the existing row.
-Related User advisory locks are sorted before Group/Event locks. Full Response/Registration/
-Attendance form UIs remain feature work; the protected data operations are implemented.
 
 The Events scheme's former broader Choir/subgroup/Target management examples are reconciled
 with the exact-organiser rule. Choir-organised and organiser-less Events remain Admin-only.

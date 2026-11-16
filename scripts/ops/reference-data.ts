@@ -12,7 +12,7 @@ import { announce, type Database } from "./target"
 export const REFERENCE_DATA: {
   choirs: { name: string; sections: { name: string; voice: string }[] }[]
   groups: { name: string; type: string }[]
-  positions: { name: string; code?: string; groupTypes: string[]; groups?: string[] }[]
+  positions: { name: string; groupTypes: string[]; groups?: string[] }[]
 } = {
   choirs: [
     {
@@ -63,7 +63,7 @@ export const REFERENCE_DATA: {
     { name: "Gigmästare MK", groupTypes: ["Choir", "Gigmästeri"], groups: ["MK", "Gigmästeri"] },
     { name: "Gigmästare DK", groupTypes: ["Choir", "Gigmästeri"], groups: ["DK", "Gigmästeri"] },
     { name: "Gigmästare KK", groupTypes: ["Choir", "Gigmästeri"], groups: ["KK", "Gigmästeri"] },
-    { name: "Stämförälder", code: "stamforalder", groupTypes: ["Section", "Föräldramötet"] },
+    { name: "Stämförälder", groupTypes: ["Section", "Föräldramötet"] },
     { name: "Ekonomiskt Ansvarig", groupTypes: ["Turnékommitté"] }
   ]
 }
@@ -100,8 +100,7 @@ export async function createReferenceData(
 
 /**
  * Insert the missing reference data in one transaction and return the names of what was created.
- * Existing active groups match by name. Positions prefer a stable code when present, otherwise
- * their name; existing names are retained.
+ * Existing active groups and Positions are matched by name and left as they are.
  */
 export async function insertReferenceData(client: ClientBase): Promise<string[]> {
   const created: string[] = []
@@ -129,36 +128,26 @@ export async function insertReferenceData(client: ClientBase): Promise<string[]>
     }
 
     for (const position of REFERENCE_DATA.positions) {
-      const { rows: existing } = await client.query<{ id: string }>(
-        "select id from position where ($1::text is not null and code = $1) or name = $2 order by (code = $1) desc nulls last limit 1",
-        [position.code ?? null, position.name]
+      const { rowCount } = await client.query(
+        `insert into "position" ("name") values ($1) on conflict ("name") do nothing`,
+        [position.name]
       )
-      let positionId = existing[0]?.id
-      if (!positionId) {
-        const { rows } = await client.query<{ id: string }>(
-          "insert into position (name, code) values ($1, $2) on conflict (name) do update set code = coalesce(position.code, excluded.code) returning id",
-          [position.name, position.code ?? null]
-        )
-        positionId = rows[0].id
-        created.push(position.name)
-      } else if (position.code) {
-        await client.query("update position set code = $1 where id = $2 and code is null", [position.code, positionId])
-      }
+      if (rowCount) created.push(position.name)
       for (const type of position.groupTypes) {
         await client.query(
           `insert into "group_type_position" ("type", "position_id")
-           values ($1, $2)
+           select $1, "id" from "position" where "name" = $2
            on conflict do nothing`,
-          [type, positionId]
+          [type, position.name]
         )
       }
       for (const groupName of position.groups ?? []) {
         const { rowCount: matched } = await client.query(
           `insert into "position_group" ("position_id", "group_id")
-           select $1, g."id" from "group" g
-           where g."name" = $2 and g."active" and g."choir_id" is null
+           select p."id", g."id" from "position" p, "group" g
+           where p."name" = $1 and g."name" = $2 and g."active" and g."choir_id" is null
            on conflict do nothing`,
-          [positionId, groupName]
+          [position.name, groupName]
         )
         // Nothing inserted is either an existing limit or a missing group; only the second is wrong.
         if (!matched && !(await activeCskWideGroupExists(client, groupName))) {

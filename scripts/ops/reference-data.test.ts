@@ -75,13 +75,4 @@ describe.skipIf(!database)("reference data", () => {
       REFERENCE_DATA.choirs.length + sections.length + REFERENCE_DATA.groups.length
     )
   })
-  test("the Section-parent policy code survives renaming and reseeding without a duplicate Position", async () => {
-    const [original] = await t.db.select().from(position).where(eq(position.code, "stamforalder"))
-    expect(original).toBeDefined()
-    await t.db.update(position).set({ name: "Renamed Section parent" }).where(eq(position.id, original.id))
-    expect(await withClient(insertReferenceData)).toEqual([])
-    const matches = await t.db.select().from(position).where(eq(position.code, "stamforalder"))
-    expect(matches).toMatchObject([{ id: original.id, name: "Renamed Section parent" }])
-    expect(await t.db.select().from(position).where(eq(position.name, "Stämförälder"))).toEqual([])
-  })
 })

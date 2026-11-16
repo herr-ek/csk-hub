@@ -134,18 +134,7 @@ For multi-day Events too, Membership is evaluated at Event start. Before start, 
 stop granting access immediately; from start onward, historical Membership preserves viewing after
 departure. Membership dates retain inclusive boundaries and Stockholm calendar-day precision.
 
-`getResponseDetails` and `getRegistrationDetails` authorize actual record ownership and current
-Event management before returning reasons/comments or registration answers/choices. Only the
-submitting member, Admin or current Event manager can read these fields. A Section-parent
-attendance grant does not include them.
-
-`getAttendance` and `recordAttendance` enforce the attendance policies. The member can read their
-own record. Admin/current managers can read and record/correct attendance; current Stämföräldrar
-can do so only for Rehearsals and Concerts, for subjects in their Section at Event start.
-Gigs are excluded. Recording requires Published status and an audience subject. Missing rows
-stay "not recorded". Corrections keep the row and derive the recorder from fresh identity.
-
-The Section-parent grant uses `position.code`, never the editable name or a fixed UUID.
-Subject/actor relationship locks precede Group/Event/record locks; related User locks are sorted.
-Forbidden private reads return null; unauthorized attendance writes throw a server-side
-authorization error. See the authorization guide for the complete agreed rules and date precision.
+Response, Registration and Attendance policies and operations are deferred until those workflows
+exist. The agreed privacy and Section-parent scope remain future-work requirements in the
+[authorization guide](../../../docs/authorization.md#deferred-participation-workflows). This PR
+adds no Position-code migration; that work belongs to the separate Position-code PR.

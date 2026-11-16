@@ -8,7 +8,7 @@ type VoiceFamily = Extract<(typeof voice.enumValues)[number], "S" | "A" | "T" | 
 type IsoDate = string
 const eventDay = new Intl.DateTimeFormat("sv-SE", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" })
 /** Calendar-day precision of stored organisational Memberships. */
-export function eventMembershipDate(instant: Date): string {
+function eventMembershipDate(instant: Date): string {
   return eventDay.format(instant)
 }
 

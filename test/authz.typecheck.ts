@@ -29,10 +29,6 @@ function checkInterface(
   // @ts-expect-error Updates require proposed organiser facts as well as the existing Event.
   access.can({ action: "event.update", context: { ...organiser, event } })
 
-  // @ts-expect-error Private reads require an actual participant record bound to the Event.
-  access.can({ action: "event.readResponseReason", context: { ...organiser, event } })
-  // @ts-expect-error Attendance cannot be authorised with a precomputed role flag.
-  access.can({ action: "event.recordAttendance", context: { event, isSectionParent: true } })
   // @ts-expect-error Audience viewing requires time, Targets and dated Membership facts.
   access.can({ action: "event.view", context: { ...organiser, event } })
 

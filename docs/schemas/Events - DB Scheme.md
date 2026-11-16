@@ -306,7 +306,7 @@ scope(g):  g IS NULL                          -> all sections
 - [app] Each occurrence has its own responses, registrations, attendance, status and edits.
 - [app] "Edit all following" is done by the app at edit time: it copies the change onto the chosen occurrences. The series stores no template.
 
-**Responses**
+**Responses (future application workflow)**
 
 - [trigger/app] Only audience members respond, and only to Published events in a response mode.
 - [trigger/app] In `ResponseRequiredStrict`: `answer <> Maybe`, and `answer = No` needs exactly one of `absenceReasonId` / `reasonText`.
@@ -316,7 +316,7 @@ scope(g):  g IS NULL                          -> all sections
 - [app] **Visibility**: the answer itself is visible to the audience. `comment`, `absenceReasonId` and `reasonText` are visible only to the singer, Admins and current Event managers.
 - [app] A response is kept when the singer later leaves (Inactive User).
 
-**Registrations**
+**Registrations (future application workflow)**
 
 - [trigger/app] Only audience members register, and only to Published events in `Registration` mode.
 - [trigger/app] An answer's question belongs to the registration's event.
@@ -328,7 +328,7 @@ scope(g):  g IS NULL                          -> all sections
 - [app] **Visibility**: who is registered is visible to the audience. `comment` and the answers are visible only to the registrant, Admins and current Event managers.
 - [app] Registration answers can be sensitive (dietary requirements, allergies). Clear them when no longer needed (retention rule not decided).
 
-**Attendance**
+**Attendance (future application workflow)**
 
 - [app] **No row = not recorded**. It never means Absent.
 - [app] Rows are recorded for audience members of Published events. A Cancelled event gets no attendance.

@@ -9,7 +9,8 @@ Stages one through three are implemented: personal Posts, Members, Messaging, ac
 administrative workflows (including Events and Locations), routes and navigation use these policies. Better Auth no longer carries
 application Post grants; the legacy application permission guards have been removed. Group-authored
 Posts, Post audience targets and Recalled Group Posts remain unimplemented.
-Event audience visibility, participant field privacy and Section-scoped attendance are implemented.
+Event audience visibility is implemented. Participant field privacy and Section-scoped attendance
+remain deferred until those workflows exist.
 Event management uses organiser-bound `event.*` policies; `event.administer` remains Admin-only
 for Locations and Admin routes. See the adoption guide for the explicit policy list.
 
@@ -97,7 +98,7 @@ Policies are ordinary synchronous TypeScript functions with boolean expressions:
 
 - `app-policies.ts`: baseline application access for active Users.
 - `post-policies.ts`: personal Post creation, reading and lifecycle permissions.
-- `event-policies.ts`: organiser management, audience viewing, private participant reads and scoped attendance.
+- `event-policies.ts`: organiser management and audience viewing.
 - `event-audience.ts`: shared start-time audience and future-departure rules.
 - `group-policies.ts`: exact-Group representation and administration.
 - `member-policies.ts`: shared profiles, private email and self-profile edits.
@@ -171,7 +172,6 @@ through `bun run typecheck`.
 Production wiring supplies the application database and `getFreshRequestSession`. Never use
 the factory to accept browser-supplied identity.
 
-Event contexts require trusted resource/participant ownership, dated audience/Section Memberships,
-a server clock and coded Position holdings. Attendance scope uses the subject's Section at Event
-start and the editor's current holding. Private reason/registration policies never inherit
-Section-parent attendance authority. See the adoption guide for the full rules and date precision.
+Event viewing contexts require trusted resource facts, dated audience Memberships and a server
+clock. Response/Registration privacy and Section-parent attendance rules are documented as future
+workflow requirements; their policies and unused data-access helpers are not registered here.

@@ -36,15 +36,6 @@ type EventViewContext = Omit<EventContext, "event"> &
     audienceMemberships: readonly AudienceMembership[]
     now: Date
   }>
-type EventPrivateContext = EventContext & Readonly<{ record: { eventId: string; userId: string | null } | null }>
-type EventAttendanceContext = Omit<EventViewContext, "audienceMemberships"> &
-  Readonly<{
-    record: { eventId: string; userId: string | null } | null
-    subjectMemberships: readonly AudienceMembership[]
-    sections: readonly GroupAttributes[]
-    sectionHoldings: readonly (PositionHoldingAttributes & { positionCode: string | null })[]
-  }>
-
 type MemberContext = Readonly<{ member: MemberAttributes | null }>
 
 /**
@@ -74,10 +65,6 @@ export type PermissionContext = {
   "event.create": GroupWorkContext
   "event.read": EventContext
   "event.view": EventViewContext
-  "event.readResponseReason": EventPrivateContext
-  "event.readRegistrationAnswers": EventPrivateContext
-  "event.readAttendance": EventAttendanceContext
-  "event.recordAttendance": EventAttendanceContext
   "event.update": EventContext & Readonly<{ proposedOrganiser: GroupWorkContext }>
   "event.changeStatus": EventContext
   "event.delete": EventContext
