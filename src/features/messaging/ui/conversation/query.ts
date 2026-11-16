@@ -79,9 +79,8 @@ async function getDirectConversationPage(conversationId: string, beforeSequence?
 
 /** Keep the viewer's departure cutoff stable while loading their timeline window. */
 async function getGroupConversationPage(conversationId: string, beforeSequence?: number) {
-  const { userId } = await requirePermission({ action: "app.access" })
   return db.transaction(async (tx) => {
-    await requirePermission({ action: "app.access" }, tx)
+    const { userId } = await requirePermission({ action: "app.access" }, tx)
     const [membership] = await tx
       .select({
         name: groupConversation.name,

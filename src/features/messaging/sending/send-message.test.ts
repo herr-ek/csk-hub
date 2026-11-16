@@ -30,6 +30,8 @@ describe("sendMessage", () => {
       sendMessage({ conversationId: "conversation-1", text: "Hello", idempotencyKey: "request-1" })
     ).rejects.toMatchObject({ kind: "conversation-recipient-inactive" })
 
+    expect(requirePermission).toHaveBeenCalledTimes(1)
+    expect(requirePermission).toHaveBeenCalledWith({ action: "app.access" }, tx)
     expect(appendMessage).not.toHaveBeenCalled()
   })
 })

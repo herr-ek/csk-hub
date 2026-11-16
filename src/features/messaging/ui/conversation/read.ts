@@ -13,13 +13,11 @@ import { verifiesReadToken } from "./read-token"
 
 /** Advances the signed-in User's read cursor; resolves whether it moved. */
 export async function markConversationRead(conversationId: string, sequence: number, token: string): Promise<boolean> {
-  const { userId } = await requirePermission({ action: "app.access" })
-
-  if (!Number.isInteger(sequence) || sequence < 1 || !verifiesReadToken(token, conversationId, userId, sequence))
-    throw new MessagingAccessError("read-position-invalid")
-
   return db.transaction(async (tx) => {
-    await requirePermission({ action: "app.access" }, tx)
+    const { userId } = await requirePermission({ action: "app.access" }, tx)
+    if (!Number.isInteger(sequence) || sequence < 1 || !verifiesReadToken(token, conversationId, userId, sequence))
+      throw new MessagingAccessError("read-position-invalid")
+
     // Conversation kind is immutable; resolving it must not contend with sends.
     const [target] = await tx
       .select({ kind: conversation.kind })
