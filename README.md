@@ -35,6 +35,10 @@ Implemented User workflows include:
 
 ## Local development
 
+Live Conversations, unread badges and notification fallback use optional standard
+SSE/Redis infrastructure. See [real-time setup](src/core/realtime/README.md) for Redis
+configuration and best-effort delivery through Next.js `after()`, with no separate worker.
+
 Prerequisites: [Bun](https://bun.sh/), Docker, and OpenSSL.
 
 1. Install dependencies:

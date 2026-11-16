@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import {
   createPostCommand,
   discardDraftCommand,
@@ -63,7 +64,8 @@ async function submitPost(
   return { savedId: result.postId }
 }
 
-function revalidatePost(postId: string) {
+function revalidatePost(postId: string, publishedChanged: boolean) {
+  if (publishedChanged) scheduleActivityDispatch()
   revalidatePath(ROUTES.news)
   revalidatePath(newsPostPath(postId))
 }
@@ -74,7 +76,7 @@ export async function createPost(_state: PostFormState, formData: FormData): Pro
   const result = await submitPost(formData, (content) => createPostCommand(content, publish))
   if ("state" in result) return result.state
 
-  revalidatePost(result.savedId)
+  revalidatePost(result.savedId, publish)
   redirect(publish ? newsPostPath(result.savedId) : newsPostEditPath(result.savedId))
 }
 
@@ -87,7 +89,7 @@ export async function saveDraft(postId: string, _state: PostFormState, formData:
   const result = await submitPost(formData, (content) => saveDraftCommand(postId, content, publish))
   if ("state" in result) return result.state
 
-  revalidatePost(result.savedId)
+  revalidatePost(result.savedId, publish)
   redirect(publish ? newsPostPath(result.savedId) : newsPostEditPath(result.savedId))
 }
 
@@ -100,7 +102,7 @@ export async function editPublishedPost(
   const result = await submitPost(formData, (content) => editPublishedPostCommand(postId, content))
   if ("state" in result) return result.state
 
-  revalidatePost(result.savedId)
+  revalidatePost(result.savedId, true)
   redirect(newsPostPath(result.savedId))
 }
 
@@ -122,7 +124,7 @@ async function runCommand<Success extends object>(
   if (result.status === "failed") return { status: "error", error: failed }
   if (result.status === "unavailable") return { status: "error", error: "postUnavailable" }
 
-  revalidatePost(postId)
+  revalidatePost(postId, command === "unpublish")
   redirect(destination(result))
 }
 

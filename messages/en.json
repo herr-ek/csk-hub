@@ -488,11 +488,13 @@
     "settingsTitle": "Push notifications",
     "settingsDescription": "Receive updates from CSK Hub, even when the app is not open.",
     "managementTitle": "Notifications",
-    "managementDescription": "Send test push notifications to subscribed members.",
+    "managementDescription": "Send notifications to members.",
     "broadcastTitle": "Broadcast to all",
-    "broadcastDescription": "Send immediately to every active push subscription.",
+    "broadcastDescription": "Notify all eligible members.",
     "selectedTitle": "Send to selected users",
-    "selectedDescription": "Only users with at least one active subscription are listed.",
+    "selectedDescription": "Find recipients by name or email.",
+    "selectedPushDescription": "Find members with active push subscriptions by name or email.",
+    "noPushRecipients": "No members with active push subscriptions found.",
     "enabled": "Push notifications are enabled on this device.",
     "disabled": "Push notifications are disabled on this device.",
     "unsupportedSubscription": "This browser’s push subscription is no longer supported. Remove it before enabling notifications again.",
@@ -513,9 +515,9 @@
     "testMessagePlaceholder": "Enter a test message",
     "messagePlaceholder": "Enter the notification message",
     "searchPlaceholder": "Search by name or email",
-    "searchLabel": "Search subscribed users",
+    "searchLabel": "Search users",
     "searching": "Searching…",
-    "noSubscribedUsers": "No subscribed users found",
+    "noRecipientsFound": "No users found",
     "notSupported": "Push notifications are not supported in this browser.",
     "deviceEnableFailed": "The app could not enable push notifications on this device.",
     "notConfigured": "Push notifications are not configured yet.",
@@ -534,7 +536,8 @@
     "userRequired": "Select at least one user first.",
     "noActiveSubscriptions": "No active notification subscriptions.",
     "deliveryFailed": "Failed to send notification.",
-    "noRecipients": "No recipients selected."
+    "noRecipients": "No recipients selected.",
+    "queued": "Notifications queued for {count, plural, one {# member} other {# members}}."
   },
   "RichText": {
     "editor": {
@@ -1077,5 +1080,10 @@
         "edit": "Edit Event"
       }
     }
+  },
+  "Realtime": {
+    "newMessage": "New Message",
+    "notification": "Notification",
+    "open": "Open"
   }
 }

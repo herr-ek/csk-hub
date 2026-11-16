@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
+const scheduleActivityDispatch = mock()
+mock.module("@/features/messaging/activity", () => ({ scheduleActivityDispatch }))
+
 const POST_ID = "11111111-1111-4111-8111-111111111111"
 
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
@@ -51,6 +54,7 @@ function postFormData({ title = TITLE, body = BODY, intent }: { title?: string; 
 }
 
 beforeEach(() => {
+  scheduleActivityDispatch.mockClear()
   for (const fn of [requireAdmin, revalidatePath, redirect, loggerError]) fn.mockClear()
   requireAdmin.mockResolvedValue({ state: "authenticated", userId: "admin-1" })
   createPost.mockReset()
@@ -74,6 +78,7 @@ describe("writing a new Post", () => {
     expect(requireAdmin).toHaveBeenCalledWith()
     expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: true })
     expect(revalidatePath).toHaveBeenCalledWith("/news")
+    expect(scheduleActivityDispatch).toHaveBeenCalledTimes(1)
   })
 
   test("keeps it as a draft and opens it for further writing", async () => {
@@ -82,6 +87,7 @@ describe("writing a new Post", () => {
     )
 
     expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: false })
+    expect(scheduleActivityDispatch).not.toHaveBeenCalled()
   })
 
   test("publishes only when Publish was pressed, never by default", async () => {
@@ -291,6 +297,7 @@ describe("discarding a draft", () => {
     expect(requireAdmin).toHaveBeenCalledWith()
     expect(discardDraft).toHaveBeenCalledWith({ postId: POST_ID, authorId: "admin-1" })
     expect(revalidatePath).toHaveBeenCalledWith("/news")
+    expect(scheduleActivityDispatch).not.toHaveBeenCalled()
   })
 
   test("refuses a non-admin User", async () => {

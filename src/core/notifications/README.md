@@ -1,5 +1,12 @@
 # Push notifications
 
+Messages use the shared [live-delivery workflow](../realtime/README.md) when Redis is
+configured: visible feedback is attempted first, followed by best-effort Web Push fallback.
+Admin broadcasts retain direct bulk Web Push and separately queue in-app feedback when
+Redis is configured; they never enqueue a second push. Settings delivery tests also call
+the immediate low-level push capability. A successful push result means provider acceptance,
+while queued in-app feedback does not imply a successful push.
+
 `@/core/notifications` is the server-only capability for storing web-push subscriptions and delivering a push message. Feature modules own their own authorization, recipient selection, and UI; this module owns the subscription records and the web-push provider interaction.
 
 ## Prerequisites

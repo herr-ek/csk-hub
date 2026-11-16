@@ -4,7 +4,9 @@ const markConversationRead = mock(async () => true)
 const getSession = mock(async () => null as null | { session: { impersonatedBy: string | null } })
 const revalidatePath = mock()
 const refresh = mock()
-const sendMessage = mock(async () => ({ conversationId: "conversation-1" }))
+const sendMessage = mock(async () => ({ conversationId: "conversation-1", created: true }))
+const scheduleActivityDispatch = mock()
+mock.module("@/features/messaging/activity", () => ({ scheduleActivityDispatch }))
 
 mock.module("./read", () => ({ markConversationRead }))
 mock.module("@/core/auth/session.server", () => ({
@@ -23,7 +25,10 @@ beforeEach(() => {
   getSession.mockResolvedValue(null)
   revalidatePath.mockClear()
   refresh.mockClear()
-  sendMessage.mockClear()
+  sendMessage.mockReset().mockResolvedValue({ conversationId: "conversation-1", created: true })
+  scheduleActivityDispatch.mockClear()
+  markConversationRead.mockReset()
+  markConversationRead.mockResolvedValue(true)
 })
 
 describe("message Server Actions", () => {
@@ -93,12 +98,14 @@ describe("message Server Actions", () => {
   })
 
   test("advances a viewer's cursor only when the loaded Conversation explicitly marks its newest sequence", async () => {
+    getSession.mockResolvedValue({ session: { impersonatedBy: null } })
     await markConversationReadAction("conversation-1", 4, "verified-token")
 
     expect(markConversationRead).toHaveBeenCalledWith("conversation-1", 4, "verified-token")
   })
 
   test("refreshes the unread badge only when the cursor moved", async () => {
+    getSession.mockResolvedValue({ session: { impersonatedBy: null } })
     await markConversationReadAction("conversation-1", 4, "verified-token")
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(revalidatePath).toHaveBeenCalledWith("/[locale]/(app)/messages", "page")
@@ -106,5 +113,22 @@ describe("message Server Actions", () => {
     markConversationRead.mockResolvedValueOnce(false)
     await markConversationReadAction("conversation-1", 4, "verified-token")
     expect(refresh).toHaveBeenCalledTimes(1)
+    expect(scheduleActivityDispatch).toHaveBeenCalledTimes(1)
+  })
+
+  test("an exact send retry schedules no new delivery loop", async () => {
+    sendMessage.mockResolvedValueOnce({ conversationId: "conversation-1", created: false })
+    const data = new FormData()
+    data.set("conversationId", "conversation-1")
+    data.set("text", "Retry")
+    await sendMessageAction({ status: "idle" }, data)
+    expect(scheduleActivityDispatch).not.toHaveBeenCalled()
+  })
+
+  test("does not advance a User's read cursor during impersonation or without a session", async () => {
+    await markConversationReadAction("conversation-1", 4, "verified-token")
+    getSession.mockResolvedValue({ session: { impersonatedBy: "admin-1" } })
+    await markConversationReadAction("conversation-1", 4, "verified-token")
+    expect(markConversationRead).not.toHaveBeenCalled()
   })
 })

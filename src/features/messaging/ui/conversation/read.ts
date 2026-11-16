@@ -4,6 +4,8 @@ import { and, eq, lt } from "drizzle-orm"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { db } from "@/core/db"
 import { conversation, conversationReadState, directConversation, groupMembership } from "@/core/db/schema/messaging"
+import { queueActivity } from "@/core/realtime/outbox"
+import { acknowledgeConversationActivity } from "../../activity"
 import { canViewGroupSequence } from "../../group-conversations/access"
 import { getDirectCounterpartId } from "../../model/direct-conversation"
 import { MessagingAccessError } from "../../model/messaging-error"
@@ -52,6 +54,8 @@ export async function markConversationRead(conversationId: string, sequence: num
         )
       )
       .returning({ lastReadSequence: conversationReadState.lastReadSequence })
+    await acknowledgeConversationActivity(tx, userId, conversationId, sequence)
+    if (moved.length) await queueActivity(tx, [userId], { kind: "unread.changed" })
     return moved.length > 0
   })
 }

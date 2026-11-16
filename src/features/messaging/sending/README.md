@@ -87,6 +87,8 @@ use the same Conversation lock, so a concurrent departure and send have one unam
   scan is needed, and committed sequences stay contiguous.
 - Message insertion and the sender's `conversation_read_state` update occur in the same transaction.
   A failure in either rolls back both.
+- With realtime configured, recipient activity and notification intents are also written in that
+  transaction. Redis publication occurs only after commit, with retries from the durable outbox.
 - Only a newly created Message advances the read cursor. An idempotent retry returns the original
   result without allocating another sequence.
 

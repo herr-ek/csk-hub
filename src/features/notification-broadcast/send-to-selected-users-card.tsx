@@ -16,20 +16,21 @@ import {
   ComboboxValue
 } from "@/shared/ui/base/combobox"
 import { Textarea } from "@/shared/ui/base/textarea"
-import { searchUsersWithSubscriptions, sendTestNotificationToUsers } from "./actions"
+import { searchNotificationUsers, sendTestNotificationToUsers } from "./actions"
 import { type NotificationFeedback, NotificationFeedbackMessage } from "./notification-feedback"
 
-type SubscribedUser = Awaited<ReturnType<typeof searchUsersWithSubscriptions>>[number]
+type NotificationRecipient = Awaited<ReturnType<typeof searchNotificationUsers>>["users"][number]
 
 export function SendToSelectedUsersCard() {
   const t = useTranslations("PushNotifications")
   const [message, setMessage] = useState("")
   const [feedback, setFeedback] = useState<NotificationFeedback | null>(null)
   const [search, setSearch] = useState("")
-  const [users, setUsers] = useState<SubscribedUser[]>([])
-  const [knownUsers, setKnownUsers] = useState<SubscribedUser[]>([])
+  const [users, setUsers] = useState<NotificationRecipient[]>([])
+  const [knownUsers, setKnownUsers] = useState<NotificationRecipient[]>([])
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [requiresPush, setRequiresPush] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -37,12 +38,13 @@ export function SendToSelectedUsersCard() {
     const timer = setTimeout(async () => {
       setIsSearching(true)
       try {
-        const result = await searchUsersWithSubscriptions(search)
+        const result = await searchNotificationUsers(search)
         if (!cancelled) {
-          setUsers(result)
+          setRequiresPush(result.requiresPush)
+          setUsers(result.users)
           setKnownUsers((current) => {
             const usersById = new Map(current.map((user) => [user.id, user]))
-            for (const user of result) usersById.set(user.id, user)
+            for (const user of result.users) usersById.set(user.id, user)
             return [...usersById.values()]
           })
         }
@@ -66,11 +68,13 @@ export function SendToSelectedUsersCard() {
         setFeedback({
           success: result.success,
           message: result.success
-            ? t("sentToSelected", {
-                accepted: result.accepted,
-                attempted: result.accepted + result.failed,
-                failed: result.failed
-              })
+            ? result.delivery === "queued"
+              ? t("queued", { count: result.queued })
+              : t("sentToSelected", {
+                  accepted: result.accepted,
+                  attempted: result.accepted + result.failed,
+                  failed: result.failed
+                })
             : t(result.error)
         })
         if (result.success) setMessage("")
@@ -84,7 +88,7 @@ export function SendToSelectedUsersCard() {
     <Card>
       <CardHeader>
         <CardTitle>{t("selectedTitle")}</CardTitle>
-        <CardDescription>{t("selectedDescription")}</CardDescription>
+        <CardDescription>{t(requiresPush ? "selectedPushDescription" : "selectedDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <Combobox
@@ -116,7 +120,9 @@ export function SendToSelectedUsersCard() {
           </ComboboxChips>
           <ComboboxContent>
             <ComboboxList>
-              <ComboboxEmpty>{isSearching ? t("searching") : t("noSubscribedUsers")}</ComboboxEmpty>
+              <ComboboxEmpty>
+                {isSearching ? t("searching") : t(requiresPush ? "noPushRecipients" : "noRecipientsFound")}
+              </ComboboxEmpty>
               {users.map((user) => (
                 <ComboboxItem key={user.id} value={user.id}>
                   <span>{user.name}</span>
