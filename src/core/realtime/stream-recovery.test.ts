@@ -47,6 +47,7 @@ if (!process.env.CSK_STREAM_RECOVERY_TEST) {
       const destroy = mock()
       connect.mockResolvedValueOnce({
         withCommandOptions: () => ({
+          xRange: async () => [],
           xRevRange: async () => {
             throw new Error("Connection lost")
           }

@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq, isNull, lt, lte, or, type SQL, sql } from "drizzle-orm"
+import { and, eq, inArray, isNull, lt, lte, or, type SQL, sql } from "drizzle-orm"
 import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { activityDelivery } from "@/core/db/schema/activity"
@@ -9,40 +9,41 @@ import { sendToUser } from "@/core/notifications"
 import { type ActivityBroker, connectActivityBroker, publishActivity } from "@/core/realtime/broker"
 import { type ActivityDeliveryPolicy, type Delivery, isDeliveryAllowed } from "./delivery-access"
 
-async function claimDelivery() {
-  return db.transaction(async (tx) => {
-    const now = sql`now()`
-    const [row] = await tx
-      .select()
-      .from(activityDelivery)
-      .where(
-        and(
-          or(isNull(activityDelivery.leaseUntil), lt(activityDelivery.leaseUntil, now)),
-          or(
-            and(isNull(activityDelivery.publishedAt), lte(activityDelivery.publishAfter, now)),
-            and(
-              isNull(activityDelivery.pushCompletedAt),
-              isNull(activityDelivery.acknowledgedAt),
-              lte(activityDelivery.pushAfter, now)
-            )
+const DISPATCH_CONCURRENCY = 5
+
+async function claimDeliveries(limit: number) {
+  const now = sql`now()`
+  const candidates = db
+    .select({ id: activityDelivery.id })
+    .from(activityDelivery)
+    .where(
+      and(
+        or(isNull(activityDelivery.leaseUntil), lt(activityDelivery.leaseUntil, now)),
+        or(
+          and(isNull(activityDelivery.publishedAt), lte(activityDelivery.publishAfter, now)),
+          and(
+            isNull(activityDelivery.pushCompletedAt),
+            isNull(activityDelivery.acknowledgedAt),
+            lte(activityDelivery.pushAfter, now)
           )
         )
       )
-      .orderBy(activityDelivery.createdAt)
-      .limit(1)
-      .for("update", { skipLocked: true })
-    if (!row) return null
-    const [claimed] = await tx
-      .update(activityDelivery)
-      .set({
-        leaseToken: crypto.randomUUID(),
-        leaseUntil: sql`now() + interval '90 seconds'`,
-        attempts: row.attempts + 1
-      })
-      .where(eq(activityDelivery.id, row.id))
-      .returning()
-    return claimed
-  })
+    )
+    .orderBy(
+      sql`case when ${activityDelivery.change}->>'conversationId' is not null then 0 else 1 end`,
+      activityDelivery.createdAt
+    )
+    .limit(limit)
+    .for("update", { skipLocked: true })
+  return db
+    .update(activityDelivery)
+    .set({
+      leaseToken: crypto.randomUUID(),
+      leaseUntil: sql`now() + interval '90 seconds'`,
+      attempts: sql`${activityDelivery.attempts} + 1`
+    })
+    .where(inArray(activityDelivery.id, candidates))
+    .returning()
 }
 
 async function dispatchOne(
@@ -108,7 +109,7 @@ async function dispatchOne(
   }
 }
 
-/** Processes one bounded batch. Leases coordinate concurrent dispatches; abort finishes the current delivery. */
+/** Claims concurrent waves atomically, prioritizing Conversation changes; abort finishes only the current wave. */
 export async function dispatchActivity(policy: ActivityDeliveryPolicy, signal?: AbortSignal) {
   if (!env.REDIS_URL) return { processed: 0 }
   let processed = 0
@@ -116,13 +117,19 @@ export async function dispatchActivity(policy: ActivityDeliveryPolicy, signal?: 
   const deadline = Date.now() + 20_000
   try {
     while (!signal?.aborted && processed < 50 && Date.now() < deadline) {
-      const delivery = await claimDelivery()
-      if (!delivery) break
-      await dispatchOne(policy, delivery, async (userId, deliveryId) => {
-        broker ??= connectActivityBroker()
-        await publishActivity(await broker, userId, deliveryId)
-      })
-      processed++
+      const deliveries = await claimDeliveries(Math.min(DISPATCH_CONCURRENCY, 50 - processed))
+      if (!deliveries.length) break
+      const attempts = await Promise.allSettled(
+        deliveries.map((delivery) =>
+          dispatchOne(policy, delivery, async (userId, deliveryId) => {
+            broker ??= connectActivityBroker()
+            await publishActivity(await broker, userId, deliveryId)
+          })
+        )
+      )
+      const failure = attempts.find((attempt) => attempt.status === "rejected")
+      if (failure?.status === "rejected") throw failure.reason
+      processed += deliveries.length
     }
   } finally {
     const connection = await broker?.catch(() => undefined)

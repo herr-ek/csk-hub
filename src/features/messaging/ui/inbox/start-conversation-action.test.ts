@@ -1,6 +1,8 @@
 import { beforeEach, expect, mock, test } from "bun:test"
 
-const direct = mock(async () => ({ conversationId: "direct-1" }))
+const direct = mock(async () => ({ conversationId: "direct-1", created: true }))
+const scheduleActivityDispatch = mock()
+mock.module("@/features/messaging/activity", () => ({ scheduleActivityDispatch }))
 const group = mock(async () => ({ conversationId: "group-1" }))
 const getSession = mock(async () => ({ session: { impersonatedBy: null as string | null } }))
 mock.module("../../sending", () => ({ startDirectConversation: direct, sendMessage: mock() }))
@@ -19,7 +21,8 @@ mock.module("@/core/auth/session.server", () => ({
 mock.module("next/cache", () => ({ revalidatePath: mock() }))
 const { startConversationAction } = await import("./actions")
 beforeEach(() => {
-  direct.mockClear()
+  direct.mockReset().mockResolvedValue({ conversationId: "direct-1", created: true })
+  scheduleActivityDispatch.mockClear()
   group.mockClear()
   getSession.mockResolvedValue({ session: { impersonatedBy: null } })
 })
@@ -66,4 +69,10 @@ test("unified creation blocks support impersonation for both kinds", async () =>
     })
   expect(direct).not.toHaveBeenCalled()
   expect(group).not.toHaveBeenCalled()
+})
+
+test("retrying a first Direct Message does not schedule new delivery", async () => {
+  direct.mockResolvedValueOnce({ conversationId: "direct-1", created: false })
+  await startConversationAction({ status: "idle" }, form(["member-1"]))
+  expect(scheduleActivityDispatch).not.toHaveBeenCalled()
 })

@@ -8,13 +8,14 @@ import { user } from "@/core/db/schema/auth"
 import type { ActivityChange } from "./events"
 
 export type ActivityTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
-export type ActivityNotification = { body: string; title?: string; href?: string }
+export type ActivityNotification = { body: string; title?: string; href?: string; push?: boolean }
 export const PUSH_GRACE_MS = 8_000
 
 /**
  * Enqueues activity in the caller's transaction. The caller owns authorization and
  * recipient selection. With Redis unconfigured, existing non-realtime behavior is kept.
- * Never publish to Redis before this transaction commits.
+ * Returns whether any rows were inserted. `notification.push: false` queues in-app feedback
+ * without push fallback. Never publish to Redis before this transaction commits.
  */
 export async function queueActivity(
   tx: ActivityTransaction,
@@ -22,7 +23,7 @@ export async function queueActivity(
   change: ActivityChange,
   notification?: ActivityNotification
 ) {
-  if (!env.REDIS_URL || !userIds.length) return
+  if (!env.REDIS_URL || !userIds.length) return false
   await tx.insert(activityDelivery).values(
     [...new Set(userIds)].map((userId) => ({
       userId,
@@ -30,9 +31,11 @@ export async function queueActivity(
       body: notification?.body,
       title: notification?.title,
       href: notification?.href,
-      pushAfter: notification ? sql`now() + (${PUSH_GRACE_MS} * interval '1 millisecond')` : null
+      pushAfter:
+        notification && notification.push !== false ? sql`now() + (${PUSH_GRACE_MS} * interval '1 millisecond')` : null
     }))
   )
+  return true
 }
 
 /** Enqueues a content-free change for every active User, inside the feature write transaction. */

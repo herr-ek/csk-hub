@@ -537,7 +537,7 @@
     "noActiveSubscriptions": "Inga aktiva notisprenumerationer.",
     "deliveryFailed": "Det gick inte att skicka notisen.",
     "noRecipients": "Inga mottagare valda.",
-    "queued": "Aviseringar köade för {count, plural, one {# medlem} other {# medlemmar}}. Visas i appen när den är öppen, med push som reserv när det är aktiverat."
+    "queued": "Aviseringar köade för {count, plural, one {# medlem} other {# medlemmar}}."
   },
   "RichText": {
     "editor": {

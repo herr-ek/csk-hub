@@ -5,9 +5,11 @@ import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { activityDelivery } from "@/core/db/schema/activity"
 import { activityStreamKey, connectActivityBroker } from "@/core/realtime/broker"
-import { type ActivityEvent, isStreamCursor } from "@/core/realtime/events"
+import type { ActivityEvent } from "@/core/realtime/events"
 import { getActivitySession, isActivitySessionActive } from "./access"
 import { type ActivityDeliveryPolicy, isDeliveryAllowed } from "./delivery-access"
+import { PUSH_GRACE_MS } from "./outbox"
+import { resolveActivityCursor } from "./stream-cursor"
 
 function unavailableStream() {
   // A non-200 response can permanently close EventSource. A valid stream followed
@@ -37,19 +39,16 @@ export async function handleActivityStream(policy: ActivityDeliveryPolicy, reque
   const key = activityStreamKey(identity.userId)
   const requestedCursor = request.headers.get("last-event-id")
   let cursor: string
+  let reset: boolean
   try {
-    const tail = await broker.withCommandOptions({ timeout: 2_000 }).xRevRange(key, "+", "-", { COUNT: 1 })
-    const latest = tail?.[0]?.id ?? "0-0"
-    // Future or invalid cursors must not strand a subscriber after broker reset or forgery.
-    const compare = (value: string) => value.split("-").map(BigInt)
-    const [lastTime, lastCount] = compare(latest)
-    const [requestTime, requestCount] = compare(isStreamCursor(requestedCursor) ? requestedCursor : latest)
-    cursor =
-      requestTime < lastTime || (requestTime === lastTime && requestCount <= lastCount)
-        ? isStreamCursor(requestedCursor)
-          ? requestedCursor
-          : latest
-        : latest
+    const commands = broker.withCommandOptions({ timeout: 2_000 })
+    const [head, tail] = await Promise.all([
+      commands.xRange(key, "-", "+", { COUNT: 1 }),
+      commands.xRevRange(key, "+", "-", { COUNT: 1 })
+    ])
+    const resolved = resolveActivityCursor(requestedCursor, head?.[0]?.id ?? "0-0", tail?.[0]?.id ?? "0-0")
+    cursor = resolved.cursor
+    reset = resolved.reset
   } catch {
     broker.destroy()
     return unavailableStream()
@@ -71,7 +70,7 @@ export async function handleActivityStream(policy: ActivityDeliveryPolicy, reque
         request.signal.addEventListener("abort", stop, { once: true })
         stopTimer = setTimeout(stop, 240_000)
         try {
-          write(`retry: 3000\nid: ${cursor}\nevent: ready\ndata: {}\n\n`)
+          write(`retry: 3000\nid: ${cursor}\nevent: ready\ndata: ${JSON.stringify({ reset })}\n\n`)
           while (!stopped) {
             if (!(await isActivitySessionActive(identity))) {
               write("event: unauthorized\ndata: {}\n\n")
@@ -95,7 +94,9 @@ export async function handleActivityStream(policy: ActivityDeliveryPolicy, reque
                 ...delivery.change,
                 id: delivery.id,
                 notify: Boolean(delivery.body && !delivery.acknowledgedAt && !delivery.pushCompletedAt),
-                ...(delivery.pushAfter ? { notifyUntil: delivery.pushAfter.getTime() } : {}),
+                ...(delivery.body
+                  ? { notifyUntil: delivery.pushAfter?.getTime() ?? delivery.createdAt.getTime() + PUSH_GRACE_MS }
+                  : {}),
                 ...(delivery.href ? { href: delivery.href } : {}),
                 ...(delivery.change.kind === "notification.created" && delivery.body ? { body: delivery.body } : {})
               }

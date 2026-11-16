@@ -15,12 +15,10 @@ retention, `after()` scheduling and the app-wide browser connection. It imports 
 
 `createActivityDelivery(policy)` binds the server workflow to required feature checks for
 current delivery access and authoritative read state. `src/app/api/realtime/delivery.ts`
-composes the HTTP handlers with
-`conversationActivityPolicy` from the public `features/messaging/activity` entrypoint.
+composes the HTTP handlers with `conversationActivityPolicy` from the public `features/messaging/activity` entrypoint.
 Messaging owns Conversation membership, read-cursor rules and its policy-bound dispatch
 function. Other features call that dispatch entrypoint after commit; notification broadcast
-owns recipient search, delivery-mode selection and queued-versus-sent results. The policy
-is passed
+owns recipient search, delivery-mode selection and queued-versus-sent results. The policy is passed
 explicitly, with no global registration or permissive default for protected deliveries.
 
 The integration suite stays in `features/activity` because it verifies the composed
@@ -39,13 +37,18 @@ Messaging/Post workflows. Transport and scheduling tests live beside their core 
 
 A feature saves its data and delivery records in one Postgres transaction. After commit,
 `scheduleActivityDispatch()` uses Next.js `after()` to attempt delivery after the response.
-The response does not wait for delivery. Each callback opens a 30-second processing window,
-finishing an in-flight delivery when that window ends. Platform Function duration still
+Message writes do not wait for delivery. Concurrent callbacks on an instance share one
+30-second processing loop per policy. A new relevant commit wakes the loop if it is waiting
+for a later deadline. Each request registers its own `after()` callback to await that shared
+work; expiry finishes the currently claimed wave. Draft-only Post changes, unchanged read
+cursors and exact Message retries do not schedule delivery. Platform Function duration still
 bounds the entire request, including `after()` work; allow sufficient time for the write,
 the eight-second grace period, and push attempts.
 
-The callback processes bounded batches with row locks and 90-second leases to coordinate
-concurrent requests. It waits for the next publication, push, retry or lease-expiry deadline
+Each wave atomically claims up to five rows with `UPDATE ... RETURNING` and a
+`FOR UPDATE SKIP LOCKED` subquery, then processes them concurrently. Conversation changes
+take priority over public fan-out. Up to 50 rows are processed per batch; the response loop
+can run further batches within its window. Ninety-second leases coordinate instances. It waits for the next publication, push, retry or lease-expiry deadline
 within its window. Transient database failures retry with backoff; publication and push
 failures retain their own retry deadlines. Redis publication failures do not prevent due
 Web Push. No Redis wakeup stream, independent worker, durable queue or cron is required.
@@ -77,16 +80,18 @@ Redis connection. Size connection capacity for concurrent tabs and devices, plus
 publisher connections. Browser delivery uses independent cursors, not a consumer group
 that would divide events between a User's tabs.
 
-On Vercel, `vercel.json` enables Fluid Compute and retains the migration-checking
-`bun run build`. Configure the same application's validated environment (`POSTGRES_URL`,
-`REDIS_URL`, `REDIS_KEY_PREFIX` and VAPID keys). No worker container, dispatch endpoint,
-bearer secret or deployment-protection bypass is needed. Next.js `after()` also runs with
-`next start` on a dedicated server; independent recovery remains future work.
+Build with `bun run build` to retain the migration check. Configure the application's
+validated environment (`POSTGRES_URL`, `REDIS_URL`, `REDIS_KEY_PREFIX` and VAPID keys).
+The current request-bound dispatcher needs no separate process. Its processing window is
+also bounded by the host's request lifetime. Production Docker/Portainer integration and
+a supervised background dispatcher remain deferred until the hosting PR is merged.
 
 The SSE route has a 300-second Function budget and rotates its connection after four
 minutes. Heartbeats occur at most every 15 seconds and native EventSource reconnects
-with `Last-Event-ID`. Initial connection, reconnect, focus and network recovery refresh
-the current authorized server-rendered state, covering trimmed history or Redis loss.
+with `Last-Event-ID`. The `ready` event carries a `reset` flag: initial connections and
+invalid, future or trimmed cursors request an authoritative refresh. A retained cursor
+resumes through replay without refreshing an unchanged page. Focus and network recovery
+still refresh the current authorized state.
 Redis failures do not roll back a committed Message: publication retries within the
 callback window, and due offline push can still proceed independently. Slow readers are
 disconnected when the stream buffer exceeds its bounded capacity.
@@ -115,7 +120,14 @@ acknowledge on another User's behalf. Redis payloads contain no Message text.
 - After an eight-second grace period, the response callback sends Web Push if no visible
   handling acknowledgement or authoritative read cursor makes it unnecessary. Handling on any
   device suppresses fallback across that User's devices. Web Push still requires an
-  active subscription; in-app feedback does not.
+  active subscription; in-app feedback does not. This grace-and-fallback behavior applies
+  to Messages.
+- Admin broadcasts retain direct bulk Web Push, with the low-level sender limiting
+  concurrent provider calls. With Redis configured, they also queue in-app feedback with
+  no outbox push fallback, so dispatch cannot send a second push. Broadcasts can produce
+  both push and visible feedback; they do not use Message-style push suppression. Members
+  without push subscriptions can still receive queued in-app feedback. Deferred broadcast
+  toasts expire eight seconds after creation.
 - Acknowledgement-versus-push races, or a crash after provider acceptance but before
   recording success, can cause a duplicate. The stable notification tag helps browsers
   replace duplicates. Retries are best-effort within the callback window; provider acceptance
@@ -140,4 +152,8 @@ send retries, live SSE/replay, acknowledgement privacy, unread semantics, concur
 dispatch, broker failure, Group departure, revoked sessions, Post changes, response callbacks,
 the eight-second push grace, acknowledgement during that grace, and recovery on a later
 dispatch after an earlier processing window expires. Scheduler tests run without local
-services and cover deferred execution, retry backoff, disabled realtime and budget expiry.
+services and cover deferred execution, coalescing, wake/query races, retry backoff,
+disabled realtime and budget expiry. Integration tests also cover batch claim leases,
+concurrent delivery bounds, chat priority, direct bulk broadcast push and reset-versus-replay
+handshakes. The service-worker tests run the actual script against rejected or unavailable
+window navigation and verify that a target still opens.

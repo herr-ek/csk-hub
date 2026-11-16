@@ -6,6 +6,7 @@ import { createClient } from "redis"
 import { activityDelivery } from "@/core/db/schema/activity"
 import { session, user } from "@/core/db/schema/auth"
 import { conversation, conversationReadState } from "@/core/db/schema/messaging"
+import type { NotificationDeliveryResult } from "@/core/notifications/types"
 
 // Real PostgreSQL/Redis, with only request identity and the external Web Push boundary replaced.
 // Keep these mocks isolated from the existing action/command unit tests.
@@ -63,7 +64,14 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           : null
       }
     }))
-    const push = mock(async () => ({ success: true, accepted: 1, failed: 0, failureCategories: {} }))
+    const push = mock(
+      async (): Promise<NotificationDeliveryResult> => ({
+        success: true,
+        accepted: 1,
+        failed: 0,
+        failureCategories: {}
+      })
+    )
     const { listUsersWithActiveSubscriptions } = await import("@/core/notifications/subscription")
     mock.module("@/core/notifications", () => ({
       sendToUser: push,
@@ -102,7 +110,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
       if (fixtureUsers.length) await testDatabase.db.delete(user).where(inArray(user.id, fixtureUsers))
       fixtureUsers.length = 0
       fixtureConversations.length = 0
-      push.mockClear()
+      push.mockReset().mockResolvedValue({ success: true, accepted: 1, failed: 0, failureCategories: {} })
       afterResponse.length = 0
     })
 
@@ -387,6 +395,85 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         }
       })
 
+      test("routine reconnects avoid resetting, but trimmed history requests a reset", async () => {
+        const { recipient } = await direct()
+        await dispatchActivity(conversationActivityPolicy)
+        const key = activityStreamKey(recipient.userId)
+        const entries = await redis.xRange(key, "-", "+")
+        const cursor = entries?.[0]?.id
+        if (!cursor) throw new Error("Expected a stream entry")
+        const resumed = await streamAs(recipient, cursor)
+        try {
+          expect(await resumed.read()).toContain('"reset":false')
+        } finally {
+          resumed.close()
+        }
+        const trimmed = await streamAs(recipient, "0-0")
+        try {
+          expect(await trimmed.read()).toContain('"reset":true')
+          expect(await trimmed.read()).toContain("message.created")
+        } finally {
+          trimmed.close()
+        }
+      })
+
+      test("chat is delivered before an older public Post fan-out is drained", async () => {
+        const { recipient } = await direct()
+        const member = await singer()
+        await testDatabase.db.insert(activityDelivery).values(
+          Array.from({ length: 100 }, () => ({
+            userId: member.userId,
+            change: { kind: "posts.changed" as const },
+            createdAt: new Date(0)
+          }))
+        )
+        await dispatchActivity(conversationActivityPolicy)
+        expect((await messageDelivery(recipient.userId)).publishedAt).not.toBeNull()
+        const rows = await testDatabase.db.select().from(activityDelivery)
+        expect(rows.filter((row) => row.change.kind === "posts.changed" && !row.publishedAt).length).toBeGreaterThan(0)
+      })
+
+      test("a dispatch wave sends to multiple recipients concurrently with a fixed bound", async () => {
+        const recipients = await Promise.all(Array.from({ length: 12 }, () => singer()))
+        await testDatabase.db.transaction((tx) =>
+          queueActivity(
+            tx,
+            recipients.map(({ userId }) => userId),
+            { kind: "notification.created" },
+            { body: "Test fallback" }
+          )
+        )
+        await makePushDue()
+        let active = 0
+        let maximum = 0
+        push.mockImplementation(async () => {
+          maximum = Math.max(maximum, ++active)
+          await Bun.sleep(20)
+          active--
+          return { success: true, accepted: 1, failed: 0, failureCategories: {} }
+        })
+        await dispatchActivity(conversationActivityPolicy)
+        expect(push).toHaveBeenCalledTimes(12)
+        expect(maximum).toBeGreaterThan(1)
+        expect(maximum).toBeLessThanOrEqual(5)
+        expect((await testDatabase.db.select().from(activityDelivery)).every((row) => row.leaseToken === null)).toBe(
+          true
+        )
+      })
+
+      test("Admin broadcast push uses one immediate bulk call and never queues fallback push", async () => {
+        const recipients = await Promise.all(Array.from({ length: 8 }, () => singer()))
+        const ids = recipients.map(({ userId }) => userId)
+        expect(await notifyUsers("Rehearsal moved", ids)).toMatchObject({ success: true, delivery: "sent" })
+        expect(push).toHaveBeenCalledTimes(1)
+        expect(push).toHaveBeenCalledWith(ids, { body: "Rehearsal moved" })
+        expect((await testDatabase.db.select().from(activityDelivery)).every((row) => row.pushAfter === null)).toBe(
+          true
+        )
+        await dispatchActivity(conversationActivityPolicy)
+        expect(push).toHaveBeenCalledTimes(1)
+      })
+
       test("revoking a connected session prevents the next event from being exposed", async () => {
         const { recipient } = await direct()
         const stream = await streamAs(recipient)
@@ -437,10 +524,18 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         const member = await singer()
         const inactive = await singer()
         await testDatabase.db.update(user).set({ banned: true }).where(eq(user.id, inactive.userId))
+        push.mockResolvedValueOnce({
+          success: false,
+          error: "noActiveSubscriptions",
+          accepted: 0,
+          failed: 0,
+          failureCategories: {}
+        })
         expect(await notifyUsers("Rehearsal moved")).toEqual({ success: true, delivery: "queued", queued: 1 })
         const rows = await testDatabase.db.select().from(activityDelivery)
         expect(rows).toHaveLength(1)
         expect(rows[0]?.userId).toBe(member.userId)
+        expect(rows[0]?.pushAfter).toBeNull()
       })
 
       test("the next deadline respects active leases and ignores acknowledged push", async () => {

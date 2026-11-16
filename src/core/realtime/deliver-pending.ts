@@ -6,6 +6,7 @@ import { logger } from "@/core/logging"
 import { getErrorCode, getErrorName } from "@/shared/errors"
 import type { ActivityDeliveryPolicy } from "./delivery-access"
 import { dispatchActivity, nextActivityDelay, pruneActivity } from "./dispatch"
+import type { DispatchWakeup } from "./dispatch-wakeup"
 
 let maintenanceAt = 0
 
@@ -14,7 +15,11 @@ let maintenanceAt = 0
  * retries. Stops claiming on abort and finishes the current delivery. Pending work stays
  * in Postgres for a later invocation; there is no independent recovery while idle.
  */
-export async function deliverPendingActivity(policy: ActivityDeliveryPolicy, signal = AbortSignal.timeout(30_000)) {
+export async function deliverPendingActivity(
+  policy: ActivityDeliveryPolicy,
+  signal = AbortSignal.timeout(30_000),
+  wakeup?: DispatchWakeup
+) {
   if (!env.REDIS_URL || signal.aborted) return
   // Opportunistic retention, at most hourly per instance; delivery must survive cleanup failure.
   if (Date.now() >= maintenanceAt) {
@@ -23,12 +28,14 @@ export async function deliverPendingActivity(policy: ActivityDeliveryPolicy, sig
   }
   let failures = 0
   while (!signal.aborted) {
+    const observed = wakeup?.revision ?? 0
     let delay: number
     try {
       const { processed } = await dispatchActivity(policy, signal)
       if (processed) logger.info("realtime.dispatch.batch", { processed })
       if (signal.aborted) break
       const nextDue = await nextActivityDelay()
+      if (wakeup && wakeup.revision !== observed) continue
       if (nextDue === null) return
       delay = Math.max(25, nextDue)
       failures = 0
@@ -42,7 +49,8 @@ export async function deliverPendingActivity(policy: ActivityDeliveryPolicy, sig
         errorName: getErrorName(error)
       })
     }
-    await sleep(delay, undefined, { signal }).catch(() => {})
+    if (wakeup) await wakeup.wait(delay, signal, observed)
+    else await sleep(delay, undefined, { signal }).catch(() => {})
   }
   logger.warn("realtime.dispatch.interrupted")
 }

@@ -20,10 +20,16 @@ self.addEventListener("notificationclick", (event) => {
   const target = new URL(event.notification.data?.url || "/", self.location.origin)
   const url = target.origin === self.location.origin ? target.href : new URL("/", self.location.origin).href
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
-      // Bring an open app window to the notification's page rather than opening another.
-      const open = windows.find((client) => new URL(client.url).origin === self.location.origin)
-      if (open) return open.focus().then((focused) => focused.navigate(url))
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windows) => {
+      for (const client of windows) {
+        if (new URL(client.url).origin !== self.location.origin) continue
+        try {
+          const focused = await client.focus()
+          if (await focused.navigate(url)) return
+        } catch {
+          // Uncontrolled or closed windows may not be navigable. Try the next one.
+        }
+      }
       return clients.openWindow(url)
     })
   )

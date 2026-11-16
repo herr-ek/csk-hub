@@ -36,7 +36,7 @@ export async function startConversationAction(
             idempotencyKey: String(formData.get("idempotencyKey") ?? "")
           })
     revalidatePath("/[locale]/(app)/messages", "page")
-    scheduleActivityDispatch()
+    if (!("created" in result) || result.created) scheduleActivityDispatch()
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {
     return messageCommandErrorState(error, text)

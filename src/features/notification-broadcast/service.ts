@@ -9,30 +9,31 @@ import { queueActivity } from "@/core/realtime/outbox"
 import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import type { BroadcastResult } from "./types"
 
-/** Authorized callers select recipients; success distinguishes queued activity from accepted push. */
+/** Authorized callers select recipients. Broadcast push stays bulk and immediate; in-app feedback is queued separately. */
 export async function notifyUsers(message: string, userIds?: string[]): Promise<BroadcastResult> {
-  if (!env.REDIS_URL) {
-    const result = await (userIds ? sendToUsers(userIds, { body: message }) : sendToAll({ body: message }))
-    return result.success ? { ...result, delivery: "sent" } : { success: false, error: result.error }
-  }
   const ids = userIds ? [...new Set(userIds)] : undefined
   if (ids && !ids.length) return { success: false, error: "noRecipients" }
-  const queued = await db.transaction(async (tx) => {
-    const recipients = await tx
-      .select({ id: user.id })
-      .from(user)
-      .where(and(or(eq(user.banned, false), isNull(user.banned)), ids ? inArray(user.id, ids) : undefined))
-    await queueActivity(
-      tx,
-      recipients.map(({ id }) => id),
-      { kind: "notification.created" },
-      { body: message, href: "/" }
-    )
-    return recipients.length
-  })
-  if (!queued) return { success: false, error: "noRecipients" }
-  scheduleActivityDispatch()
-  return { success: true, delivery: "queued", queued }
+  let queued = 0
+  if (env.REDIS_URL) {
+    queued = await db.transaction(async (tx) => {
+      const recipients = await tx
+        .select({ id: user.id })
+        .from(user)
+        .where(and(or(eq(user.banned, false), isNull(user.banned)), ids ? inArray(user.id, ids) : undefined))
+      const inserted = await queueActivity(
+        tx,
+        recipients.map(({ id }) => id),
+        { kind: "notification.created" },
+        { body: message, href: "/", push: false }
+      )
+      return inserted ? recipients.length : 0
+    })
+    if (queued) scheduleActivityDispatch()
+  }
+  const result = await (ids ? sendToUsers(ids, { body: message }) : sendToAll({ body: message }))
+  if (result.success) return { ...result, delivery: "sent" }
+  if (queued && result.error === "noActiveSubscriptions") return { success: true, delivery: "queued", queued }
+  return { success: false, error: result.error }
 }
 
 /** Lists up to 25 eligible recipients and whether receiving requires an active push subscription. */

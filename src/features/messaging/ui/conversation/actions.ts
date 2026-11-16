@@ -24,7 +24,7 @@ export async function sendMessageAction(_state: MessageCommandState, formData: F
 
     revalidatePath("/[locale]/(app)/messages/[conversationId]", "page")
     revalidatePath("/[locale]/(app)/messages", "page")
-    scheduleActivityDispatch()
+    if (result.created) scheduleActivityDispatch()
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {
     return messageCommandErrorState(error, text)
@@ -35,8 +35,8 @@ export async function markConversationReadAction(conversationId: string, sequenc
   const session = await getRequestSession()
   if (!session || session.session.impersonatedBy) return
   const moved = await markConversationRead(conversationId, sequence, token)
-  scheduleActivityDispatch()
   if (!moved) return
+  scheduleActivityDispatch()
 
   // The navigation's unread badge lives in the layout, which only a refresh re-renders; the
   // inbox the User came from is cached by the router and would still show this one unread.

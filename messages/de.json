@@ -537,7 +537,7 @@
     "noActiveSubscriptions": "Keine aktiven Benachrichtigungsabonnements.",
     "deliveryFailed": "Benachrichtigung konnte nicht gesendet werden.",
     "noRecipients": "Keine Empfänger ausgewählt.",
-    "queued": "Benachrichtigungen für {count, plural, one {# Mitglied} other {# Mitglieder}} eingereiht. Bei geöffneter App werden sie dort angezeigt, sonst nach Möglichkeit per Push."
+    "queued": "Benachrichtigungen für {count, plural, one {# Mitglied} other {# Mitglieder}} eingereiht."
   },
   "RichText": {
     "editor": {

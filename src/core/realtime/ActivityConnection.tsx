@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useTransition } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { parseSafeInternalPath } from "@/core/navigation/navigation-utils"
-import { type ActivityEvent, activityEventSchema } from "@/core/realtime/events"
+import { type ActivityEvent, activityEventSchema, activityReadySchema } from "@/core/realtime/events"
 import { toast } from "@/shared/ui/base/toast"
 import { canPresentActivity } from "./presentation"
 
@@ -114,8 +114,16 @@ export function ActivityConnection({ userId }: { userId: string }) {
       source.close()
       refresh()
     }
+    const ready = (message: MessageEvent<string>) => {
+      try {
+        const parsed = activityReadySchema.safeParse(JSON.parse(message.data))
+        if (parsed.success && parsed.data.reset) refresh()
+      } catch {
+        /* Invalid handshakes do not trigger a route refresh. */
+      }
+    }
     source.addEventListener("activity", receive as EventListener)
-    source.addEventListener("ready", refresh)
+    source.addEventListener("ready", ready as EventListener)
     source.addEventListener("unauthorized", unauthorized)
     window.addEventListener("online", resume)
     window.addEventListener("focus", resume)

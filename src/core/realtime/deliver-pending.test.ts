@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import type { ActivityDeliveryPolicy } from "./delivery-access"
 
 if (!process.env.CSK_DISPATCH_TEST) {
@@ -28,6 +28,7 @@ if (!process.env.CSK_DISPATCH_TEST) {
   const callbacks: Array<() => Promise<void>> = []
   mock.module("next/server", () => ({ after: (callback: () => Promise<void>) => callbacks.push(callback) }))
   const { deliverPendingActivity } = await import("./deliver-pending")
+  const { DispatchWakeup } = await import("./dispatch-wakeup")
   const { scheduleActivityDispatch } = await import("./schedule-dispatch")
 
   beforeEach(() => {
@@ -47,6 +48,80 @@ if (!process.env.CSK_DISPATCH_TEST) {
       expect(dispatch).toHaveBeenCalledTimes(1)
       expect(dispatch.mock.calls[0][0]).toBe(policy)
       expect(sleep).not.toHaveBeenCalled()
+    })
+
+    test("concurrent response callbacks share one running dispatcher", async () => {
+      const release = Promise.withResolvers<void>()
+      const started = Promise.withResolvers<void>()
+      let active = 0
+      let maximum = 0
+      dispatch.mockImplementation(async () => {
+        maximum = Math.max(maximum, ++active)
+        started.resolve()
+        await release.promise
+        active--
+        return { processed: 1 }
+      })
+      scheduleActivityDispatch(policy)
+      const first = callbacks[0]()
+      await started.promise
+      scheduleActivityDispatch(policy)
+      const second = callbacks[1]()
+      release.resolve()
+      await Promise.all([first, second])
+      expect(maximum).toBe(1)
+    })
+
+    test("newly committed work wakes an existing dispatcher's deadline wait", async () => {
+      const waiting = Promise.withResolvers<void>()
+      nextDelay.mockResolvedValueOnce(90_000)
+      sleep.mockImplementationOnce(async (_delay, _value, options) => {
+        waiting.resolve()
+        await new Promise<void>((resolve) => options?.signal.addEventListener("abort", () => resolve(), { once: true }))
+      })
+      scheduleActivityDispatch(policy)
+      const first = callbacks[0]()
+      await waiting.promise
+      scheduleActivityDispatch(policy)
+      const second = callbacks[1]()
+      await Promise.all([first, second])
+      expect(dispatch).toHaveBeenCalledTimes(2)
+    })
+
+    test("a wake during the pending-work query is not lost when it reports an empty queue", async () => {
+      const wakeup = new DispatchWakeup()
+      nextDelay.mockImplementationOnce(async () => {
+        wakeup.wake()
+        return null
+      })
+      await deliverPendingActivity(policy, AbortSignal.timeout(1000), wakeup)
+      expect(dispatch).toHaveBeenCalledTimes(2)
+    })
+
+    test("new work waits for an expired wave, then gets a fresh processing window", async () => {
+      const stop = new AbortController()
+      const release = Promise.withResolvers<void>()
+      const started = Promise.withResolvers<void>()
+      const timeout = spyOn(AbortSignal, "timeout").mockReturnValueOnce(stop.signal)
+      dispatch.mockImplementationOnce(async () => {
+        started.resolve()
+        await release.promise
+        return { processed: 1 }
+      })
+      try {
+        scheduleActivityDispatch(policy)
+        const first = callbacks[0]()
+        await started.promise
+        stop.abort()
+        scheduleActivityDispatch(policy)
+        const second = callbacks[1]()
+        release.resolve()
+        await Promise.all([first, second])
+        expect(dispatch).toHaveBeenCalledTimes(2)
+        expect(dispatch.mock.calls[1][1]?.aborted).toBe(false)
+      } finally {
+        timeout.mockRestore()
+      }
     })
 
     test("disabled realtime schedules no work", () => {

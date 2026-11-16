@@ -537,7 +537,7 @@
     "noActiveSubscriptions": "No active notification subscriptions.",
     "deliveryFailed": "Failed to send notification.",
     "noRecipients": "No recipients selected.",
-    "queued": "Notifications queued for {count, plural, one {# member} other {# members}}. Delivery uses in-app feedback when open, with push fallback when enabled."
+    "queued": "Notifications queued for {count, plural, one {# member} other {# members}}."
   },
   "RichText": {
     "editor": {

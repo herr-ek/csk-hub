@@ -16,6 +16,8 @@ export const activityEventSchema = activityChangeSchema.extend({
   body: z.string().optional()
 })
 
+export const activityReadySchema = z.object({ reset: z.boolean() })
+
 export type ActivityEvent = z.infer<typeof activityEventSchema>
 
 /** Redis cursors are opaque to callers; accept only bounded stream IDs from browsers. */
