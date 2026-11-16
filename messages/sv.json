@@ -1,8 +1,21 @@
 {
   "HomePage": {
-    "title": "Välkommen till CSK Hub",
-    "description": "Allt kören publicerar har nu ett hem här.",
-    "readNews": "Läs nyheterna"
+    "greeting": "Hej {name}",
+    "greetingAnonymous": "Välkommen",
+    "events": {
+      "title": "Härnäst",
+      "seeAll": "Alla evenemang",
+      "today": "Idag",
+      "comingUp": "Framöver",
+      "allDay": "Heldag",
+      "cancelledToday": "Inställt. Kom inte.",
+      "empty": "Inget på gång för dig just nu."
+    },
+    "news": {
+      "title": "Senaste nytt",
+      "seeAll": "Alla nyheter",
+      "empty": "Inget har publicerats än."
+    }
   },
   "Metadata": {
     "description": "Chalmers Sångkörs digitala nav"
