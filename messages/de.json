@@ -161,6 +161,7 @@
     "unreadIndicator": "Etwas Ungelesenes",
     "breadcrumb": "Brotkrümelnavigation",
     "routes": {
+      "home": "Startseite",
       "news": "Neuigkeiten",
       "newsCompose": "Beitrag schreiben",
       "messages": "Nachrichten",
@@ -175,7 +176,11 @@
       "adminEventsNew": "Neue Veranstaltung",
       "adminEventLocations": "Orte"
     },
-    "members": "Mitglieder"
+    "members": "Mitglieder",
+    "quickAccess": "Schnellzugriff",
+    "showQuickAccess": "Schnellzugriff anzeigen",
+    "events": "Veranstaltungen",
+    "profile": "Profil"
   },
   "Posts": {
     "title": "Neuigkeiten",

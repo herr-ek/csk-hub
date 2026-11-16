@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@wrksz/themes/next"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
 import { notFound } from "next/navigation"
 import "@/app/globals.css"
@@ -27,6 +27,9 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"]
 })
+
+// Lets fixed UI at the bottom edge, such as the quick-access bar, read env(safe-area-inset-bottom) on iPhone.
+export const viewport: Viewport = { viewportFit: "cover" }
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata")

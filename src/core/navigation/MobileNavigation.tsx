@@ -1,7 +1,7 @@
 "use client"
 
 import { MenuIcon, XIcon } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
 import { ThemeSwitch } from "@/core/theme/ThemeSwitch"
@@ -20,7 +20,7 @@ import { type NavLinkItem, NavLinks } from "./NavLinks"
 export interface MobileNavigationProps {
   items: NavLinkItem[]
   /** Shown on the menu button, since the links and their badges are hidden until it opens. */
-  indicator?: React.ReactNode
+  indicator?: ReactNode
 }
 
 /** The signed-in menu on small screens: a menu button that opens the nav links and theme in a side sheet. */

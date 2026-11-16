@@ -161,6 +161,7 @@
     "unreadIndicator": "Något oläst",
     "breadcrumb": "Brödsmulor",
     "routes": {
+      "home": "Hem",
       "news": "Nyheter",
       "newsCompose": "Skriv ett inlägg",
       "messages": "Meddelanden",
@@ -175,7 +176,11 @@
       "adminEventsNew": "Nytt evenemang",
       "adminEventLocations": "Platser"
     },
-    "members": "Medlemmar"
+    "members": "Medlemmar",
+    "quickAccess": "Snabbåtkomst",
+    "showQuickAccess": "Visa snabbåtkomst",
+    "events": "Evenemang",
+    "profile": "Profil"
   },
   "Posts": {
     "title": "Nyheter",

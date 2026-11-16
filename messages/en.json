@@ -161,6 +161,7 @@
     "unreadIndicator": "Something unread",
     "breadcrumb": "Breadcrumb",
     "routes": {
+      "home": "Home",
       "news": "News",
       "newsCompose": "Write a post",
       "messages": "Messages",
@@ -175,7 +176,11 @@
       "adminEventsNew": "New Event",
       "adminEventLocations": "Locations"
     },
-    "members": "Members"
+    "members": "Members",
+    "quickAccess": "Quick access",
+    "showQuickAccess": "Show quick access",
+    "events": "Events",
+    "profile": "Profile"
   },
   "Posts": {
     "title": "News",
