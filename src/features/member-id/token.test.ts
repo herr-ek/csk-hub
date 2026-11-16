@@ -31,15 +31,11 @@ describe("member ID tokens", () => {
   })
 })
 
-test("ID policies deny anonymous, ordinary scanners and all support impersonation", () => {
-  const member = { userId: "member", isAdmin: false, impersonatedBy: null }
+test("ID policies deny anonymous, ordinary scanners", () => {
+  const member = { userId: "member", isAdmin: false }
   const admin = { ...member, isAdmin: true }
   expect(evaluatePermission(null, { action: "memberId.issue" })).toBe(false)
   expect(evaluatePermission(member, { action: "memberId.issue" })).toBe(true)
   expect(evaluatePermission(member, { action: "memberId.verify" })).toBe(false)
   expect(evaluatePermission(admin, { action: "memberId.verify" })).toBe(true)
-  for (const actor of [member, admin]) {
-    expect(evaluatePermission({ ...actor, impersonatedBy: "support" }, { action: "memberId.issue" })).toBe(false)
-    expect(evaluatePermission({ ...actor, impersonatedBy: "support" }, { action: "memberId.verify" })).toBe(false)
-  }
 })

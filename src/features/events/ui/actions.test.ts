@@ -1,16 +1,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { asc, eq } from "drizzle-orm"
+import { AUTHORIZATION_DENIED, AuthorizationDeniedError } from "@/core/authz/authorization"
 import { user } from "@/core/db/schema/auth"
 import { event, eventDetail, location } from "@/core/db/schema/events"
 import { createEventsTestDatabase, uniqueName } from "../test-support"
 
-// The admin Server Actions against a real, throwaway database: only the Admin guard, cache
+// The admin Server Actions against a real, throwaway database: only the authorization guard, cache
 // revalidation and redirects are replaced, so typed failures travel the whole way from the module.
 
 const database = await createEventsTestDatabase()
 
 const ADMIN = { state: "authenticated" as const, userId: "admin-1" }
-const requireAdmin = mock(async () => ADMIN)
+const requirePermission = mock(async (_request: { action: string }) => ADMIN)
 const revalidatePath = mock(() => undefined)
 class Redirect extends Error {
   constructor(readonly to: string) {
@@ -24,12 +25,22 @@ const redirect = mock((to: string) => {
 // A module mock holds for the whole test run, so each keeps the module's other exports for the
 // test files that import it later.
 const [permissions, cache, navigation] = await Promise.all([
-  import("@/core/auth/permissions.server"),
+  import("@/core/authz"),
   import("next/cache"),
   import("next/navigation")
 ])
 mock.module("@/core/db", () => ({ db: database?.db }))
-mock.module("@/core/auth/permissions.server", () => ({ ...permissions, requireAdmin }))
+mock.module("@/core/authz", () => ({
+  ...permissions,
+  requirePermission,
+  AUTHORIZATION_DENIED,
+  AuthorizationDeniedError,
+  forCurrentRequest: async () => ({
+    actor: { userId: ADMIN.userId, isAdmin: true },
+    requirePermission: () => ({ userId: ADMIN.userId, isAdmin: true }),
+    can: () => true
+  })
+}))
 mock.module("next/cache", () => ({ ...cache, revalidatePath }))
 mock.module("next/navigation", () => ({ ...navigation, redirect }))
 
@@ -78,8 +89,8 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
   })
 
   beforeEach(() => {
-    requireAdmin.mockClear()
-    requireAdmin.mockImplementation(async () => ADMIN)
+    requirePermission.mockClear()
+    requirePermission.mockImplementation(async () => ADMIN)
     revalidatePath.mockClear()
     redirect.mockClear()
   })
@@ -89,10 +100,10 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
     return to.split("/").at(-1) as string
   }
 
-  describe("the Admin guard", () => {
-    test("refuses a non-Admin before validating or writing anything", async () => {
+  describe("the request guard", () => {
+    test("refuses a caller without the required capability before validating or writing anything", async () => {
       const denied = new Error("denied")
-      requireAdmin.mockImplementation(async () => {
+      requirePermission.mockImplementation(async () => {
         throw denied
       })
       const title = uniqueName("Smygrep")
@@ -116,7 +127,10 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
         archiveLocationAction
       ]
       for (const action of actions) await action(IDLE, form({}))
-      expect(requireAdmin).toHaveBeenCalledTimes(actions.length)
+      expect(requirePermission).toHaveBeenCalledTimes(actions.length)
+      for (const [request] of requirePermission.mock.calls) {
+        expect(["app.access", "event.administer"]).toContain(request.action)
+      }
     })
   })
 
@@ -141,7 +155,7 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
         .orderBy(asc(eventDetail.sortOrder))
       expect(details.map(({ label }) => label)).toEqual(["Dress code", "Bring"])
       expect(revalidatePath).toHaveBeenCalledWith("/admin/events", "layout")
-      expect(redirect).toHaveBeenCalledWith(`/admin/events/${id}`)
+      expect(redirect).toHaveBeenCalledWith(`/events/manage/${id}`)
     })
 
     test("passes a module violation through as a typed failure", async () => {
@@ -184,7 +198,7 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
       const [row] = await t.db.select({ status: event.status, type: event.type }).from(event).where(eq(event.id, id))
       expect(row).toEqual({ status: "Cancelled", type: "Rehearsal" })
 
-      expect(await redirectOf(deleteEventAction(IDLE, form({ eventId: id })))).toBe("/admin/events")
+      expect(await redirectOf(deleteEventAction(IDLE, form({ eventId: id })))).toBe("/events/manage")
       expect(await deleteEventAction(IDLE, form({ eventId: id }))).toEqual({
         status: "error",
         error: "event-not-found"

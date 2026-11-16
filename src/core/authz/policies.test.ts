@@ -10,9 +10,9 @@ import type {
 } from "./model"
 import { evaluatePermission } from "./policy-registry"
 
-const owner: AuthorizationActor = { userId: "owner", isAdmin: false, impersonatedBy: null }
-const other: AuthorizationActor = { userId: "other", isAdmin: false, impersonatedBy: null }
-const admin: AuthorizationActor = { userId: "admin", isAdmin: true, impersonatedBy: null }
+const owner: AuthorizationActor = { userId: "owner", isAdmin: false }
+const other: AuthorizationActor = { userId: "other", isAdmin: false }
+const admin: AuthorizationActor = { userId: "admin", isAdmin: true }
 
 function post(state: "draft" | "published" | "discarded", authorId: string | null = owner.userId): PostAttributes {
   return {
@@ -36,6 +36,12 @@ const groupContext: PermissionContext["group.manageContent"] = {
   memberships: [membership],
   positionHoldings: [holding]
 }
+
+test("baseline application access allows active actors and denies anonymous requests", () => {
+  expect(evaluatePermission(owner, { action: "app.access" })).toBe(true)
+  expect(evaluatePermission(admin, { action: "app.access" })).toBe(true)
+  expect(evaluatePermission(null, { action: "app.access" })).toBe(false)
+})
 
 describe("personal Post policies", () => {
   test("any active actor may create personal content without organisational facts", () => {
@@ -161,6 +167,62 @@ describe("Group policies", () => {
   })
 })
 
+describe("Event policies", () => {
+  const event = { id: "event", organiserGroupId: group.id }
+  const context = { ...groupContext, event, proposedOrganiser: groupContext }
+
+  test("creation requires exact active non-Choir representation or explicit Admin authority", () => {
+    expect(evaluatePermission(owner, { action: "event.create", context: groupContext })).toBe(true)
+    for (const facts of [
+      { ...groupContext, group: null },
+      { ...groupContext, group: { ...group, active: false } },
+      { ...groupContext, group: { ...group, type: "Choir" as const } },
+      { ...groupContext, memberships: [] },
+      { ...groupContext, positionHoldings: [] }
+    ]) {
+      expect(evaluatePermission(owner, { action: "event.create", context: facts })).toBe(false)
+      expect(evaluatePermission(admin, { action: "event.create", context: facts })).toBe(true)
+    }
+  })
+
+  test("updates require authority for both existing and proposed organisers, including removal", () => {
+    for (const proposedOrganiser of [
+      { ...groupContext, group: null },
+      { ...groupContext, group: { ...group, id: "foreign" } },
+      { ...groupContext, group: { ...group, type: "Choir" as const } },
+      { ...groupContext, group: { ...group, active: false } }
+    ]) {
+      expect(evaluatePermission(owner, { action: "event.update", context: { ...context, proposedOrganiser } })).toBe(
+        false
+      )
+      expect(evaluatePermission(admin, { action: "event.update", context: { ...context, proposedOrganiser } })).toBe(
+        true
+      )
+    }
+  })
+
+  test("every instance action binds the Event to its organiser; Admin can manage orphaned or archived organisers", () => {
+    for (const action of ["event.read", "event.update", "event.changeStatus", "event.delete"] as const) {
+      expect(evaluatePermission(owner, { action, context })).toBe(true)
+      expect(evaluatePermission(other, { action, context })).toBe(false)
+      expect(evaluatePermission(null, { action, context })).toBe(false)
+      for (const facts of [
+        { ...context, event: { ...event, organiserGroupId: "unrelated" } },
+        { ...context, event: { ...event, organiserGroupId: null }, group: null },
+        { ...context, group: { ...group, active: false } },
+        { ...context, group: { ...group, type: "Choir" as const } },
+        { ...context, memberships: [] },
+        { ...context, positionHoldings: [] },
+        { ...context, positionHoldings: [{ ...holding, endDate: "2026-01-01" }] }
+      ]) {
+        expect(evaluatePermission(owner, { action, context: facts })).toBe(false)
+        expect(evaluatePermission(admin, { action, context: facts })).toBe(true)
+      }
+      expect(evaluatePermission(admin, { action, context: { ...context, event: null } })).toBe(false)
+    }
+  })
+})
+
 describe("member and administrative policies", () => {
   const member = { id: owner.userId, banned: false }
 
@@ -173,13 +235,6 @@ describe("member and administrative policies", () => {
     }
   })
 
-  test("support impersonation cannot edit the effective actor's profile or borrow Admin authority", () => {
-    const support = { ...owner, impersonatedBy: admin.userId }
-    expect(evaluatePermission(support, { action: "member.readEmail", context: { member } })).toBe(true)
-    expect(evaluatePermission(support, { action: "member.editProfile", context: { member } })).toBe(false)
-    expect(evaluatePermission(support, { action: "admin.access" })).toBe(false)
-  })
-
   test("missing or inactive target profiles deny all member actions", () => {
     for (const resource of [null, { ...member, banned: true }]) {
       for (const action of ["member.read", "member.readEmail", "member.editProfile"] as const) {
@@ -190,7 +245,13 @@ describe("member and administrative policies", () => {
   })
 
   test("administrative grants are explicit and unavailable to other actors", () => {
-    for (const action of ["admin.access", "org.manage", "user.administer", "notification.broadcast"] as const) {
+    for (const action of [
+      "admin.access",
+      "event.administer",
+      "org.manage",
+      "user.administer",
+      "notification.broadcast"
+    ] as const) {
       expect(evaluatePermission(owner, { action })).toBe(false)
       expect(evaluatePermission(admin, { action })).toBe(true)
       expect(evaluatePermission(null, { action })).toBe(false)
@@ -200,6 +261,7 @@ describe("member and administrative policies", () => {
 
 test("every action denies without an active actor, and unknown runtime actions deny", () => {
   const requests = [
+    { action: "app.access" },
     { action: "post.create" },
     ...(["post.read", "post.update", "post.publish", "post.unpublish", "post.discard"] as const).map((action) => ({
       action,
@@ -218,9 +280,11 @@ test("every action denies without an active actor, and unknown runtime actions d
       action,
       context: { member: { id: owner.userId, banned: false } }
     })),
-    ...(["admin.access", "org.manage", "user.administer", "notification.broadcast"] as const).map((action) => ({
-      action
-    }))
+    ...(["admin.access", "event.administer", "org.manage", "user.administer", "notification.broadcast"] as const).map(
+      (action) => ({
+        action
+      })
+    )
   ] satisfies PermissionRequest[]
   for (const request of requests) expect(evaluatePermission(null, request)).toBe(false)
   for (const action of ["unsupported", "constructor", "toString", "__proto__"]) {

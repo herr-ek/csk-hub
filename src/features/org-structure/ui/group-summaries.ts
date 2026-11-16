@@ -1,6 +1,7 @@
 import "server-only"
 
 import { asc, count, eq, isNull } from "drizzle-orm"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
@@ -20,6 +21,7 @@ export type GroupSummary = {
 
 /** Every group, archived ones included, with what the admin overviews show of it, ordered by name. */
 export async function listGroupSummaries(): Promise<GroupSummary[]> {
+  await requirePermission({ action: "org.manage" })
   const [groups, counts, sections, holders] = await Promise.all([
     db.select().from(group).orderBy(asc(group.name)),
     db

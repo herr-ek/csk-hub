@@ -1,5 +1,8 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { and, eq, isNull } from "drizzle-orm"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
+import type { PermissionRequest } from "@/core/authz/model"
+import { evaluatePermission } from "@/core/authz/policy-registry"
 import { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { createOrgStructureTestDatabase } from "../test-support"
 
@@ -8,11 +11,14 @@ import { createOrgStructureTestDatabase } from "../test-support"
 
 const database = await createOrgStructureTestDatabase()
 
-const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
+const requireAdmin = mock(async (_request?: PermissionRequest) => ({
+  state: "authenticated" as const,
+  userId: "admin-1"
+}))
 const revalidatePath = mock(() => undefined)
 
 mock.module("@/core/db", () => ({ db: database?.db }))
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
+mock.module("@/core/authz", () => ({ requirePermission: requireAdmin, AuthorizationDeniedError }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
 const { createGroupAction, renameGroupAction, archiveGroupAction } = await import("./groups/actions")
@@ -37,7 +43,11 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
 
   beforeEach(() => {
     requireAdmin.mockClear()
-    requireAdmin.mockImplementation(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
+    requireAdmin.mockImplementation(async (request?: PermissionRequest) => {
+      const actor = { userId: "admin-1", isAdmin: true }
+      if (request && !evaluatePermission(actor, request)) throw new AuthorizationDeniedError(request, actor)
+      return { state: "authenticated" as const, userId: actor.userId }
+    })
     revalidatePath.mockClear()
   })
 
@@ -174,6 +184,22 @@ describe.skipIf(!database)("admin groups Server Actions", () => {
         .from(positionHolder)
         .where(and(eq(positionHolder.userId, userId), isNull(positionHolder.endDate)))
       expect(holdings).toEqual([])
+    })
+
+    test("ends a Membership in an archived Group and returns missing Groups as typed failures", async () => {
+      const userId = await t.user()
+      await createGroupAction(IDLE, form({ name: "Archived membership", type: "Valberedning" }))
+      const row = await groupNamed("Archived membership")
+      const groupId = row?.id as string
+      await addMemberAction(IDLE, form({ groupId, userId, startDate: "2025-01-01" }))
+      await archiveGroupAction(IDLE, form({ groupId }))
+
+      expect(await endMembershipAction(IDLE, form({ groupId, userId, endDate: "2026-06-30" }))).toMatchObject({
+        status: "success"
+      })
+      expect(
+        await endMembershipAction(IDLE, form({ groupId: crypto.randomUUID(), userId, endDate: "2026-06-30" }))
+      ).toEqual({ status: "error", error: "group-not-found" })
     })
 
     test("refuses to change the Voice of someone who does not sing in the Choir", async () => {

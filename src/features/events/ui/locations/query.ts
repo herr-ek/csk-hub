@@ -1,6 +1,7 @@
 import "server-only"
 
 import { asc, count, desc, eq } from "drizzle-orm"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { event, location } from "@/core/db/schema/events"
 
@@ -8,6 +9,7 @@ export type LocationRow = Awaited<ReturnType<typeof listLocations>>[number]
 
 /** Every Location, active ones first, with how many Events use each. */
 export async function listLocations() {
+  await requirePermission({ action: "event.administer" })
   return db
     .select({
       id: location.id,

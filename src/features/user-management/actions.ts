@@ -4,13 +4,12 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { ROUTES } from "@/core/navigation/site"
 import { accessRoleNames } from "@/shared/roles"
-import type { ImpersonateUserResult, UserCommandState } from "./command-state"
+import type { UserCommandState } from "./command-state"
 import {
   activateUserCommand,
   changeUserRoleCommand,
   deactivateUserCommand,
   eraseUserCommand,
-  impersonateUserCommand,
   resendInvitationCommand
 } from "./commands"
 
@@ -60,10 +59,4 @@ export async function changeUserRole(_state: UserCommandState, formData: FormDat
   const input = changeRolesSchema.safeParse({ userId: formData.get("userId"), roles: formData.getAll("roles") })
   if (!input.success) return invalidInput()
   return refreshUsers(await changeUserRoleCommand(input.data.userId, input.data.roles))
-}
-
-export async function impersonateUser(userId: string): Promise<ImpersonateUserResult> {
-  const input = userIdSchema.safeParse({ userId })
-  if (!input.success) return { status: "error", error: "That user could not be impersonated." }
-  return impersonateUserCommand(input.data.userId)
 }

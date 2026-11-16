@@ -33,9 +33,9 @@ const tx = {
   }))
 }
 const db = { transaction: mock(async (callback: (transaction: typeof tx) => unknown) => callback(tx)) }
-const requireAuthenticatedUser = mock(async () => "creator")
+const requirePermission = mock(async () => ({ userId: "creator", isAdmin: false }))
 mock.module("@/core/db", () => ({ db }))
-mock.module("@/core/auth/session.server", () => ({ requireAuthenticatedUser }))
+mock.module("@/core/authz", () => ({ requirePermission }))
 const { addGroupMembers, createGroupConversation, leaveGroupConversation, renameGroupConversation } = await import(
   "./commands"
 )
@@ -124,8 +124,8 @@ describe("Group Conversation commands", () => {
     }
     expect(db.transaction).not.toHaveBeenCalled()
   })
-  test("rejects oversized creation and addition requests before opening a transaction", async () => {
-    db.transaction.mockClear()
+  test("rejects oversized creation and addition requests before accessing members", async () => {
+    tx.select.mockClear()
     const memberIds = Array.from({ length: 1_000 }, (_, index) => `member-${index}`)
     for (const command of [
       () => createGroupConversation({ name: "Planning", memberIds, idempotencyKey: "intent-1" }),
@@ -133,7 +133,8 @@ describe("Group Conversation commands", () => {
     ]) {
       await expect(command()).rejects.toMatchObject({ kind: "group-members-too-many" })
     }
-    expect(db.transaction).not.toHaveBeenCalled()
+    expect(tx.select).not.toHaveBeenCalled()
+    expect(tx.insert).not.toHaveBeenCalled()
   })
   test("rejects a missing user in a batch before changing memberships", async () => {
     selects.push([{ nextMessageSequence: 7 }], [{ leftAt: null }], [{ id: "first", banned: false }])

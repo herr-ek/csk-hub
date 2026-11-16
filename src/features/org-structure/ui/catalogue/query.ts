@@ -2,6 +2,7 @@ import "server-only"
 
 import { asc, eq } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { group, groupTypePosition, position, positionGroup } from "@/core/db/schema/org-structure"
 import type { GroupType } from "../../model"
@@ -25,6 +26,7 @@ export type PositionCatalogueData = {
 
 /** Every Position with its GroupTypes and limit to groups, and the groups a limit can name. */
 export async function listPositionCatalogue(): Promise<PositionCatalogueData> {
+  await requirePermission({ action: "org.manage" })
   const choirGroup = alias(group, "choir_group")
   const [typeRows, limitRows, groupRows] = await Promise.all([
     db

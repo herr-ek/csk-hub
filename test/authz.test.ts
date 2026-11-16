@@ -13,14 +13,13 @@ describe.skipIf(!database)("authorization server enforcement", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
 
-  async function actor(options: { role?: string; banned?: boolean; impersonatedBy?: string } = {}) {
+  async function actor(options: { role?: string; banned?: boolean } = {}) {
     const id = crypto.randomUUID()
     await t.db
       .insert(user)
       .values({ id, name: "Singer", email: `${id}@example.com`, role: options.role, banned: options.banned })
     let session: AuthorizationSession | null = {
-      user: { id },
-      session: { impersonatedBy: options.impersonatedBy }
+      user: { id }
     }
     const access = createAuthorization({ database: t.db, readSession: async () => session })
     return { id, access, revoke: () => (session = null) }
@@ -41,6 +40,20 @@ describe.skipIf(!database)("authorization server enforcement", () => {
     const erased = await actor()
     await t.db.delete(user).where(eq(user.id, erased.id))
     expect(await erased.access.can({ action: "post.create" })).toBe(false)
+  })
+
+  test("Event administration rejects demotion, deactivation and revoked sessions on the next operation", async () => {
+    const admin = await actor({ role: "admin" })
+    const request = { action: "event.administer" } as const
+    expect(await admin.access.requirePermission(request)).toMatchObject({ userId: admin.id })
+    await t.db.update(user).set({ role: "user" }).where(eq(user.id, admin.id))
+    await expect(admin.access.requirePermission(request)).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await t.db.update(user).set({ role: "admin", banned: true }).where(eq(user.id, admin.id))
+    await expect(admin.access.requirePermission(request)).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await t.db.update(user).set({ banned: false }).where(eq(user.id, admin.id))
+    expect(await admin.access.can(request)).toBe(true)
+    admin.revoke()
+    await expect(admin.access.requirePermission(request)).rejects.toBeInstanceOf(AuthorizationDeniedError)
   })
 
   test("session role and status claims never replace current database facts", async () => {
@@ -77,9 +90,9 @@ describe.skipIf(!database)("authorization server enforcement", () => {
   })
 
   test("one operation's actor snapshot drives can, requirePermission and attribution", async () => {
-    const support = await actor({ impersonatedBy: "support-admin" })
-    const access = await support.access.forCurrentRequest()
-    const post = { id: crypto.randomUUID(), authorId: support.id, publishedAt: null, discardedAt: null }
+    const member = await actor()
+    const access = await member.access.forCurrentRequest()
+    const post = { id: crypto.randomUUID(), authorId: member.id, publishedAt: null, discardedAt: null }
     const request: PermissionRequest = {
       action: "post.update",
       context: { post }
@@ -87,7 +100,7 @@ describe.skipIf(!database)("authorization server enforcement", () => {
     // The resource is supplied by the caller, not looked up again by authorization.
     expect(access.can(request)).toBe(true)
     expect(access.actor).toBe(access.requirePermission(request))
-    expect(access.actor).toEqual({ userId: support.id, isAdmin: false, impersonatedBy: "support-admin" })
+    expect(access.actor).toEqual({ userId: member.id, isAdmin: false })
     expect(Object.isFrozen(access.actor)).toBe(true)
     expect(Object.isFrozen(access)).toBe(true)
 
@@ -97,7 +110,7 @@ describe.skipIf(!database)("authorization server enforcement", () => {
     }
     expect(access.can(denied)).toBe(false)
     expect(() => access.requirePermission(denied)).toThrow(AuthorizationDeniedError)
-    await expect(support.access.requirePermission(denied)).rejects.toMatchObject({
+    await expect(member.access.requirePermission(denied)).rejects.toMatchObject({
       code: "AUTHORIZATION_DENIED",
       request: denied,
       actor: access.actor

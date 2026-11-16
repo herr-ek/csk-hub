@@ -7,6 +7,7 @@ export type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 export { endPositionHolding, replacePositionHolder, startPositionHolding } from "./positions"
 export {
   getCurrentPositionHolder,
+  getGroupAuthorizationFacts,
   listActiveGroups,
   listChoirMembersByVoiceFamily,
   listCurrentChoirAffiliationsOfUsers,
@@ -15,6 +16,7 @@ export {
   listCurrentPositionsOfUser,
   listGroupNames,
   listMembershipsOfUser,
+  lockGroupAuthorizationFacts,
   lockGroupForReference
 } from "./reads"
 export {

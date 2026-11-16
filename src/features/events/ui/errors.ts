@@ -46,6 +46,7 @@ export const ERROR_FIELD: Record<EventCommandError, EventFormField> = {
   "detail-incomplete": "details",
   "user-not-found": "extension",
   "invalid-input": "form",
+  "access-denied": "form",
   unexpected: "form"
 }
 

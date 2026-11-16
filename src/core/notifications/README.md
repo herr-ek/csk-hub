@@ -42,7 +42,7 @@ notifications.
 
 User subscription setup belongs in account settings. Features that only send notifications should not register service workers or write `push_subscription` rows directly.
 
-The browser's PushManager subscription is separate from the current User's server-side binding. Settings must confirm that the endpoint has an active row for the signed-in User before showing notifications as enabled. If a browser subscription exists without that binding, an explicit reconnect action rebinds it to the current User; never return or display the previous owner's identity. Ordinary logout attempts to remove that browser endpoint's binding before signing out. Push discovery or revocation errors never prevent sign-out: if server revocation fails after browser discovery, browser unsubscribe is attempted as a fallback. If both fail, the binding may remain active; logout does not guarantee push revocation. A confirmed binding owned by someone else is left untouched. Stopping impersonation leaves the Admin's browser binding untouched, and subscription actions are unavailable during impersonation.
+The browser's PushManager subscription is separate from the current User's server-side binding. Settings must confirm that the endpoint has an active row for the signed-in User before showing notifications as enabled. If a browser subscription exists without that binding, an explicit reconnect action rebinds it to the current User; never return or display the previous owner's identity. Logout attempts to remove that browser endpoint's binding before signing out. Push discovery or revocation errors never prevent sign-out: if server revocation fails after browser discovery, browser unsubscribe is attempted as a fallback. If both fail, the binding may remain active; logout does not guarantee push revocation. A confirmed binding owned by someone else is left untouched.
 
 ## Endpoint validation and recovery
 
@@ -99,19 +99,18 @@ const everyone = await sendToAll({
 });
 ```
 
-Call these only from server-side feature code, after the feature has authorized the actor and validated its input. For example, an Admin-only write action should call `requireAdmin()` before delivery.
+Call these only from server-side feature code, after the feature has authorized the actor and validated its input. For example, a broadcast action must require `notification.broadcast` before delivery.
 
 ```ts
 "use server";
 
-import { requireAdmin } from "@/core/auth/permissions.server";
-import { sendToUsers } from "@/core/notifications";
+import { requirePermission } from "@/core/authz"
+import { sendToUsers } from "@/core/notifications"
 
 export async function notifySelectedUsers(userIds: string[], message: string) {
-  await requireAdmin();
-  const text = message.trim();
-  if (!text)
-    return { success: false as const, error: "messageRequired" as const };
+  await requirePermission({ action: "notification.broadcast" })
+  const text = message.trim()
+  if (!text) return { success: false as const, error: "messageRequired" as const }
 
   return sendToUsers(userIds, { body: text });
 }

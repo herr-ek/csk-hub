@@ -8,3 +8,6 @@ export const db = drizzle({
   connection: secureConnection(env.POSTGRES_URL),
   relations: { ...defineRelations(authSchema), ...authSchema.authRelations }
 })
+
+/** The application database client or an existing transaction. */
+export type Database = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]

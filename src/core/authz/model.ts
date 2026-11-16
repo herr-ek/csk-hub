@@ -1,6 +1,8 @@
 import type { user } from "@/core/db/schema/auth"
+import type { event } from "@/core/db/schema/events"
 import type { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import type { post } from "@/core/db/schema/posts"
+import type { AudienceMembership, AudienceTarget } from "./event-audience"
 
 /** Minimal resource facts, loaded on the server by the feature performing the operation. */
 export type PostAttributes = Readonly<Pick<typeof post.$inferSelect, "id" | "authorId" | "publishedAt" | "discardedAt">>
@@ -22,16 +24,29 @@ type GroupWorkContext = GroupContext &
     memberships: readonly MembershipAttributes[]
     positionHoldings: readonly PositionHoldingAttributes[]
   }>
+export type EventAttributes = Readonly<Pick<typeof event.$inferSelect, "id" | "organiserGroupId">>
+type EventContext = GroupWorkContext & Readonly<{ event: EventAttributes | null }>
+
+export type EventViewAttributes = EventAttributes &
+  Readonly<Pick<typeof event.$inferSelect, "type" | "status" | "startsAt">>
+type EventViewContext = Omit<EventContext, "event"> &
+  Readonly<{
+    event: EventViewAttributes | null
+    targets: readonly AudienceTarget[]
+    audienceMemberships: readonly AudienceMembership[]
+    now: Date
+  }>
 type MemberContext = Readonly<{ member: MemberAttributes | null }>
 
 /**
  * The facts required for each action. Supply attributes, never precomputed permission booleans.
  * Null resources represent missing records and deny access. These contracts cover today's schema;
- * Group-authored Posts, audience changes and Event instances need their own contexts and policies.
+ * Group-authored Posts and audience changes still need their own contexts and policies.
  */
 export type PermissionContext = {
   "memberId.issue": undefined
   "memberId.verify": undefined
+  "app.access": undefined
   "post.create": undefined
   "post.read": PostContext
   "post.update": PostContext
@@ -47,6 +62,13 @@ export type PermissionContext = {
   "member.readEmail": MemberContext
   "member.editProfile": MemberContext
   "admin.access": undefined
+  "event.create": GroupWorkContext
+  "event.read": EventContext
+  "event.view": EventViewContext
+  "event.update": EventContext & Readonly<{ proposedOrganiser: GroupWorkContext }>
+  "event.changeStatus": EventContext
+  "event.delete": EventContext
+  "event.administer": undefined
   "org.manage": undefined
   "user.administer": undefined
   "notification.broadcast": undefined
@@ -63,17 +85,15 @@ export type PermissionRequest<Action extends PermissionAction = PermissionAction
   >
 }[Action]
 
-/** Effective active User identity; impersonatedBy preserves the support actor for attribution. */
+/** Authenticated active User identity, resolved from the current session and database. */
 export type AuthorizationActor = Readonly<{
   userId: string
   isAdmin: boolean
-  impersonatedBy: string | null
 }>
 
 /** Only a trusted server session resolver may produce this, never a submitted form or client. */
 export type AuthorizationSession = {
   user: { id: string }
-  session: { impersonatedBy?: string | null }
 }
 
 /** Each policy receives exactly the context declared for its action. */

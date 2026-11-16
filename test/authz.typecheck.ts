@@ -19,6 +19,18 @@ function checkInterface(
   access.requirePermission({ action: "post.update", context: { post } })
   access.can({ action: "group.manageContent", context: { group, memberships: [], positionHoldings: [] } })
   access.can({ action: "group.manageMemberships", context: { group } })
+  const organiser = { group, memberships: [], positionHoldings: [] }
+  const event = { id: "event", organiserGroupId: group.id }
+  access.can({ action: "event.create", context: organiser })
+  access.can({ action: "event.read", context: { ...organiser, event } })
+  access.can({ action: "event.update", context: { ...organiser, event, proposedOrganiser: organiser } })
+  // @ts-expect-error Event IDs alone cannot establish organiser authority.
+  access.can({ action: "event.read", context: { eventId: event.id } })
+  // @ts-expect-error Updates require proposed organiser facts as well as the existing Event.
+  access.can({ action: "event.update", context: { ...organiser, event } })
+
+  // @ts-expect-error Audience viewing requires time, Targets and dated Membership facts.
+  access.can({ action: "event.view", context: { ...organiser, event } })
 
   // @ts-expect-error The Post context is required.
   access.can({ action: "post.update" })
@@ -31,7 +43,7 @@ function checkInterface(
   // @ts-expect-error A permission boolean cannot substitute for resource and relationship facts.
   access.can({ action: "group.manageContent", context: { group, canManage: true } })
   // @ts-expect-error An actor cannot be supplied by the calling feature.
-  access.can({ action: "post.create", actor: { userId: "forged", isAdmin: true, impersonatedBy: null } })
+  access.can({ action: "post.create", actor: { userId: "forged", isAdmin: true } })
   // @ts-expect-error Context must remain correlated when the action itself is a union.
   access.can({ action, context: { post } })
   // @ts-expect-error Unsupported actions have no policy contract.

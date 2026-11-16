@@ -9,7 +9,7 @@ const loggerError = mock(() => undefined)
 const loggerWarn = mock(() => undefined)
 
 mock.module("@/core/auth/auth", () => ({ auth: { api: { createUser, signInMagicLink } } }))
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
+mock.module("@/core/authz", () => ({ requirePermission: requireAdmin }))
 mock.module("@/core/logging", () => ({ logger: { error: loggerError, warn: loggerWarn } }))
 mock.module("next/headers", () => ({ headers: requestHeaders }))
 mock.module("next/cache", () => ({ revalidatePath }))

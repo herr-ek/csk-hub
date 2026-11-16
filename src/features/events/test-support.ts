@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { choir, group } from "@/core/db/schema/org-structure"
+import { choir, group, groupMember, position, positionHolder } from "@/core/db/schema/org-structure"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
 import type { EventInput } from "./events"
 import type { EventResult } from "./model"
@@ -43,6 +43,17 @@ function fixture({ db, drop }: TestDatabase) {
         .returning({ id: group.id })
       if (!row) throw new Error("No group created.")
       return row.id
+    },
+
+    /** A complete direct relationship, for authorization fixtures independent of org workflows. */
+    async representative(userId: string, groupId: string) {
+      const [role] = await db
+        .insert(position)
+        .values({ name: uniqueName("Position") })
+        .returning()
+      await db.insert(groupMember).values({ userId, groupId, startDate: "2020-01-01" })
+      await db.insert(positionHolder).values({ userId, groupId, positionId: role.id, startDate: "2020-01-01" })
+      return role.id
     },
 
     async archiveGroup(groupId: string) {

@@ -1,4 +1,5 @@
 import { CalendarPlus, MapPin } from "lucide-react"
+import { io } from "next/cache"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
@@ -8,11 +9,12 @@ import { buttonVariants } from "@/shared/ui/base/button"
 import { Card } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
+import { getEventManagementCapabilities } from "../../access"
 import { addDays, EVENT_STATUSES, EVENT_TYPES, stockholmDate, stockholmInstant } from "../../model"
-import { adminEventPath } from "../command-state"
+import { eventManagementPath } from "../command-state"
 import { StatusBadge } from "../StatusBadge"
 import { EventFilters } from "./EventFilters"
-import { type EventListFilters, type EventListRow, listAdminEvents } from "./query"
+import { type EventListFilters, type EventListRow, listManagedEvents } from "./query"
 
 type SearchParams = Record<string, string | string[] | undefined>
 
@@ -27,10 +29,11 @@ function filtersFrom(searchParams: SearchParams): EventListFilters {
   return { when: one("when") === "past" ? "past" : "upcoming", status, type }
 }
 
-/** Every Event in the CSK calendar, in any status, for the Admin to manage. */
+/** Events the viewer may manage, across lifecycle states. */
 export async function EventsScreen({ searchParams }: { searchParams: SearchParams }) {
+  await io()
   const filters = filtersFrom(searchParams)
-  const [events, t] = await Promise.all([listAdminEvents(filters, new Date()), getTranslations("Events")])
+  const [events, t] = await Promise.all([listManagedEvents(filters, new Date()), getTranslations("Events")])
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
@@ -53,23 +56,28 @@ export async function EventsScreen({ searchParams }: { searchParams: SearchParam
 
 async function EventsHeader() {
   const t = await getTranslations("Events")
+  const { canCreate, canAdminister } = await getEventManagementCapabilities()
   return (
     <div className="flex flex-col gap-2">
-      <PageBreadcrumb route="adminEvents" />
+      <PageBreadcrumb route="eventsManage" />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-semibold">{t("list.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("list.description")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={ROUTES.adminEventLocations} className={buttonVariants({ variant: "outline" })}>
-            <MapPin aria-hidden="true" />
-            {t("list.locations")}
-          </Link>
-          <Link href={ROUTES.adminEventsNew} className={buttonVariants()}>
-            <CalendarPlus aria-hidden="true" />
-            {t("list.new")}
-          </Link>
+          {canAdminister ? (
+            <Link href={ROUTES.adminEventLocations} className={buttonVariants({ variant: "outline" })}>
+              <MapPin aria-hidden="true" />
+              {t("list.locations")}
+            </Link>
+          ) : null}
+          {canCreate ? (
+            <Link href={ROUTES.eventsNew} className={buttonVariants()}>
+              <CalendarPlus aria-hidden="true" />
+              {t("list.new")}
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
@@ -102,7 +110,7 @@ async function EventRow({ row }: { row: EventListRow }) {
 
   return (
     <Link
-      href={adminEventPath(row.id)}
+      href={eventManagementPath(row.id)}
       className="flex flex-col gap-1 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
@@ -125,7 +133,7 @@ async function EventRow({ row }: { row: EventListRow }) {
 export async function EventsScreenSkeleton() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
-      <EventsHeader />
+      <Skeleton className="h-8 w-48" />
       <Skeleton className="h-9 w-full max-w-xl" />
       <div className="flex flex-col gap-2">
         {Array.from({ length: 5 }, (_, index) => (

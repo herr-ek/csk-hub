@@ -58,9 +58,14 @@ never surface as thrown errors.
   which counts the Responses, Registrations and Attendance a delete removes.
 - Locations: `createLocation`, `updateLocation`, `archiveLocation`.
 
-**Commands check no permissions.** The Admin surface calls `requireAdmin()` in every Server
-Action. Delegated Event management (Organiser group Position holders, Choir Positions) is meant to
-put its own policy in front of these same commands.
+**Commands check no permissions.** Callers must establish authority before invoking them.
+The UI requires fresh `event.*` authority at each protected read and command.
+Admin and current member/Position holders of the exact active non-Choir organiser Group may
+manage Events in every lifecycle state. Updates check current and proposed organisers.
+Creator identity and Targets do not grant management. Missing/archived organisers and Choirs
+remain Admin-only. Shared Location management uses Admin-only `event.administer`.
+Delegated form options contain User names and IDs without emails; Admin retains emails.
+`group.manageEvents` alone does not authorize an Event ID. See [authorization](../../../docs/authorization.md#events-implemented-boundaries-and-policy-gaps).
 
 ## The Audience
 
@@ -84,7 +89,7 @@ Both live in `calendar/`, with their reads in `calendar/query.ts`:
   stays, struck through. An Event is upcoming until it has ended, so ongoing ones still show.
 - An Event page the viewer may not see answers exactly like a missing one: a Draft for everyone,
   Admins included (they have the admin page), and any other Event outside the viewer's Audience
-  unless they are an Admin.
+  unless they are an Admin or current Event manager.
 - A Gig's external contact is personal data for organisers only. The calendar reads never select
   it.
 - `/events?type=Gig` narrows the list to one type, after the Audience is computed. The filter only
@@ -92,8 +97,9 @@ Both live in `calendar/`, with their reads in `calendar/query.ts`:
 
 ## Admin pages
 
-`/admin/events` lists every Event, `/admin/events/new` creates one, `/admin/events/[eventId]`
-edits it and moves it through its lifecycle, and `/admin/events/locations` keeps the Locations.
+`/events/manage` lists the Events the viewer may manage, `/events/manage/new` creates one, and
+`/events/manage/[eventId]` edits it and moves it through its lifecycle. The Admin pages remain
+available; `/admin/events/locations` keeps the shared Locations.
 The entrypoint exports their screens; everything else lives in `ui/`:
 
 ```text
@@ -105,8 +111,9 @@ ui/
   errors.ts    the field each violation is shown next to
 ```
 
-Every Server Action goes through `runEventsCommand`: `requireAdmin`, validate the form, run one
-module command, and return its violation as `{ status: "error", error }`. The client translates
+Every Server Action goes through `runEventsCommand`: establish active identity (or
+`event.administer` for Locations), validate the form, check the exact Event policy with trusted
+facts and locks in the command's transaction, run one module command, and return its violation as `{ status: "error", error }`. The client translates
 the kind from `Events.errors` and shows it beside the field `ERROR_FIELD` names, so adding an
 `EventViolation` means adding its message to every catalogue and its field to `ERROR_FIELD`; the
 typecheck fails until you do. Reads for a screen live beside it (`query.ts`) and are shaped for
@@ -119,3 +126,15 @@ The tests run against a real, freshly migrated database created beside the local
 they are skipped with a warning. `test-support.ts` writes the groups the tests name directly,
 since this feature reaches org-structure only through its entrypoint. `schema.test.ts` tests the
 database's own constraints by writing the tables directly.
+
+## Agreed audience and participation access
+
+The registered `event.view` policy and calendar list/detail share the same audience calculation.
+For multi-day Events too, Membership is evaluated at Event start. Before start, closed Memberships
+stop granting access immediately; from start onward, historical Membership preserves viewing after
+departure. Membership dates retain inclusive boundaries and Stockholm calendar-day precision.
+
+Response, Registration and Attendance policies and operations are deferred until those workflows
+exist. The agreed privacy and Section-parent scope remain future-work requirements in the
+[authorization guide](../../../docs/authorization.md#deferred-participation-workflows). This PR
+adds no Position-code migration; that work belongs to the separate Position-code PR.

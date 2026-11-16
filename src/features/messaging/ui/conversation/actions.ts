@@ -1,11 +1,9 @@
 "use server"
 
 import { refresh, revalidatePath } from "next/cache"
-import { getRequestSession } from "@/core/auth/session.server"
 import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import { sendMessage } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
-import { requireMessageSendingAvailable } from "../message-command-access"
 import { messageCommandErrorState } from "../message-command-result"
 import { markConversationRead } from "./read"
 
@@ -15,7 +13,6 @@ export async function sendMessageAction(_state: MessageCommandState, formData: F
   const text = String(formData.get("text") ?? "")
 
   try {
-    await requireMessageSendingAvailable()
     const result = await sendMessage({
       conversationId,
       text,
@@ -32,8 +29,6 @@ export async function sendMessageAction(_state: MessageCommandState, formData: F
 }
 
 export async function markConversationReadAction(conversationId: string, sequence: number, token: string) {
-  const session = await getRequestSession()
-  if (!session || session.session.impersonatedBy) return
   const moved = await markConversationRead(conversationId, sequence, token)
   if (!moved) return
   scheduleActivityDispatch()

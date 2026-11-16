@@ -31,7 +31,9 @@ if (!process.env.CSK_GROUP_CREATION_TEST) {
   const database = await createTestDatabase()
   const identity = new AsyncLocalStorage<string>()
   let failBeforeCommit = false
-  mock.module("@/core/auth/session.server", () => ({ requireAuthenticatedUser: async () => identity.getStore() }))
+  mock.module("@/core/authz", () => ({
+    requirePermission: async () => ({ userId: identity.getStore(), isAdmin: false })
+  }))
   mock.module("@/core/db", () => ({
     db: {
       transaction: async <T>(work: (tx: MessageTransaction) => Promise<T>) => {

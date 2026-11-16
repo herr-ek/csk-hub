@@ -3,14 +3,14 @@ import "server-only"
 import { and, eq, exists, isNotNull, isNull, or } from "drizzle-orm"
 import { headers } from "next/headers"
 import { auth } from "@/core/auth/auth"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { account, user } from "@/core/db/schema/auth"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import { type AccessRole, ADMIN_ROLE, hasAdminRole, USER_ROLE } from "@/shared/roles"
-import type { ImpersonateUserResult, UserCommandState } from "./command-state"
+import type { UserCommandState } from "./command-state"
 
 async function getUser(userId: string) {
   const [targetUser] = await db
@@ -56,7 +56,7 @@ async function fail(action: string, error: unknown): Promise<UserCommandState> {
 }
 
 export async function activateUserCommand(userId: string): Promise<UserCommandState> {
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   const target = await getUser(userId)
   if (!target) return { status: "error", error: "That user could not be found." }
   if (!target.banned) return { status: "error", error: "That user is already active." }
@@ -70,7 +70,7 @@ export async function activateUserCommand(userId: string): Promise<UserCommandSt
 }
 
 export async function deactivateUserCommand(userId: string): Promise<UserCommandState> {
-  const actor = await requireAdmin()
+  const actor = await requirePermission({ action: "user.administer" })
   const target = await getUser(userId)
   if (!target) return { status: "error", error: "That user could not be found." }
   if (target.id === actor.userId) return { status: "error", error: "You cannot deactivate your own account." }
@@ -90,7 +90,7 @@ export async function deactivateUserCommand(userId: string): Promise<UserCommand
 }
 
 export async function eraseUserCommand(userId: string, confirmation: string | undefined): Promise<UserCommandState> {
-  const actor = await requireAdmin()
+  const actor = await requirePermission({ action: "user.administer" })
   const target = await getUser(userId)
   if (!target) return { status: "error", error: "That user could not be found." }
   if (target.id === actor.userId) return { status: "error", error: "You cannot erase your own account." }
@@ -108,7 +108,7 @@ export async function eraseUserCommand(userId: string, confirmation: string | un
 }
 
 export async function resendInvitationCommand(userId: string): Promise<UserCommandState> {
-  await requireAdmin()
+  await requirePermission({ action: "user.administer" })
   const target = await getUser(userId)
   if (!target) return { status: "error", error: "That user could not be found." }
   if (target.hasPassword) return { status: "error", error: "That user has already completed account activation." }
@@ -130,7 +130,7 @@ export async function resendInvitationCommand(userId: string): Promise<UserComma
 }
 
 export async function changeUserRoleCommand(userId: string, requestedRoles: AccessRole[]): Promise<UserCommandState> {
-  const actor = await requireAdmin()
+  const actor = await requirePermission({ action: "user.administer" })
   const target = await getUser(userId)
   if (!target) return { status: "error", error: "That user could not be found." }
   if (target.id === actor.userId) return { status: "error", error: "You cannot change your own role." }
@@ -144,32 +144,5 @@ export async function changeUserRoleCommand(userId: string, requestedRoles: Acce
     return { status: "success", action: "role" }
   } catch (error) {
     return fail("change-role", error)
-  }
-}
-
-export async function impersonateUserCommand(userId: string): Promise<ImpersonateUserResult> {
-  const actor = await requireAdmin()
-  const target = await getUser(userId)
-  if (!target || target.banned) return { status: "error", error: "Only active users can be impersonated." }
-  if (hasAdminRole(target.role)) return { status: "error", error: "Admins cannot be impersonated." }
-
-  try {
-    const result = await auth.api.impersonateUser({ headers: await headers(), body: { userId: target.id } })
-    logger.audit("auth.impersonation.started", {
-      impersonationSessionId: result.session.id,
-      adminUserId: actor.userId,
-      impersonatedUserId: target.id,
-      expiresAt: result.session.expiresAt.toISOString()
-    })
-    return { status: "success" }
-  } catch (error) {
-    logger.error("auth.impersonation.failed", {
-      adminUserId: actor.userId,
-      impersonatedUserId: target.id,
-      errorCode: getErrorCode(error),
-      errorName: getErrorName(error),
-      status: getErrorStatus(error)
-    })
-    return { status: "error", error: "Unable to switch to this user." }
   }
 }

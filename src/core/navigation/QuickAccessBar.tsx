@@ -12,12 +12,9 @@ import { ROUTES } from "./site"
 
 type ShortcutLabel = "events" | "routes.news" | "routes.home" | "routes.messages" | "profile"
 
-/**
- * The bar's slots, in order. Events has no page yet, so it opens Home for now and is never marked as the current page;
- * `current: false` keeps it from lighting up alongside Home.
- */
+/** The main navigation slots, in order. */
 const SHORTCUTS: { label: ShortcutLabel; href: string; icon: LucideIcon; current?: false }[] = [
-  { label: "events", href: ROUTES.home, icon: CalendarDays, current: false },
+  { label: "events", href: ROUTES.events, icon: CalendarDays },
   { label: "routes.news", href: ROUTES.news, icon: Newspaper },
   { label: "routes.home", href: ROUTES.home, icon: House },
   { label: "routes.messages", href: ROUTES.messages, icon: MessageCircle },

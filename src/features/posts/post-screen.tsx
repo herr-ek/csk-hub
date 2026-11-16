@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getTranslations } from "@/core/i18n/server"
 import { newsPostEditPath } from "@/core/navigation/navigation-utils"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
@@ -12,12 +11,12 @@ import { cn } from "@/shared/utils"
 import { unpublishPost } from "./compose/actions"
 import { ConfirmPostCommand } from "./compose/ConfirmPostCommand"
 import { PostByline } from "./post-byline"
-import { getPublishedPost } from "./service"
+import { getEditablePost, getPublishedPost } from "./service"
 import { PostReadMarker } from "./unread"
 
 /** Changing a published Post, offered only to whoever may make the change. */
 async function PostControls({ postId }: { postId: string }) {
-  const [canChange, t] = await Promise.all([isUserAdmin(), getTranslations("Posts")])
+  const [canChange, t] = await Promise.all([getEditablePost(postId), getTranslations("Posts")])
   if (!canChange) return null
 
   return (
