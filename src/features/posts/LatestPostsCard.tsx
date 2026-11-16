@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { canCurrentUser } from "@/core/auth/permissions.server"
 import { requireAuthenticatedUser } from "@/core/auth/session.server"
 import { getTranslations } from "@/core/i18n/server"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
@@ -38,11 +37,10 @@ export async function LatestPostsCard({ className }: { className?: string }) {
 }
 
 /**
- * The reader's own unpublished Posts, for an overview page. Renders nothing for a User who may not
- * publish, or who has no drafts. Nobody else's drafts are ever shown.
+ * The reader's own unpublished Posts, for an overview page. Renders nothing for a User who has no
+ * drafts. Nobody else's drafts are ever shown.
  */
 export async function PostDraftsCard({ className }: { className?: string }) {
-  if (!(await canCurrentUser({ resource: "post", action: "create" }))) return null
   const [drafts, t] = await Promise.all([
     requireAuthenticatedUser().then((authorId) => listDraftsByAuthor(authorId)),
     getTranslations("HomePage.postDrafts")

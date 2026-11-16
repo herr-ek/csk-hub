@@ -9,8 +9,7 @@
       "comingUp": "Framöver",
       "allDay": "Heldag",
       "cancelledToday": "Inställt. Kom inte.",
-      "empty": "Inget på gång för dig just nu.",
-      "noChoir": "Evenemang visas här när du är med i en kör."
+      "empty": "Inget på gång för dig just nu."
     },
     "eventDrafts": {
       "title": "{count, plural, one {# evenemangsutkast} other {# evenemangsutkast}}",

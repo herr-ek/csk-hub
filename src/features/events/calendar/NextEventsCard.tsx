@@ -22,7 +22,7 @@ const NEXT_UP = 5
 export async function NextEventsCard({ className }: { className?: string }) {
   const userId = await requireAuthenticatedUser()
   const now = new Date()
-  const [{ events, inChoir }, t] = await Promise.all([
+  const [{ events }, t] = await Promise.all([
     listUpcomingEventsForUser(db, userId, now),
     getTranslations("HomePage.events")
   ])
@@ -62,7 +62,7 @@ export async function NextEventsCard({ className }: { className?: string }) {
           </OverviewList>
         </section>
       ) : null}
-      {events.length === 0 ? <p className="text-sm text-muted-foreground">{t(inChoir ? "empty" : "noChoir")}</p> : null}
+      {events.length === 0 ? <p className="text-sm text-muted-foreground">{t("empty")}</p> : null}
     </OverviewCard>
   )
 }

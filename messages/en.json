@@ -9,8 +9,7 @@
       "comingUp": "Coming up",
       "allDay": "All day",
       "cancelledToday": "Cancelled. Don't come.",
-      "empty": "Nothing coming up for you right now.",
-      "noChoir": "Events appear here once you are in a Choir."
+      "empty": "Nothing coming up for you right now."
     },
     "eventDrafts": {
       "title": "{count, plural, one {# Event draft} other {# Event drafts}}",
