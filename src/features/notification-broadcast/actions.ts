@@ -7,7 +7,7 @@ export async function sendTestNotificationToAll(message: string) {
   await requireAdmin()
   const trimmedMessage = message.trim()
   if (!trimmedMessage) return { success: false as const, error: "messageRequired" as const }
-  return sendToAll(trimmedMessage)
+  return sendToAll({ body: trimmedMessage })
 }
 
 export async function searchUsersWithSubscriptions(search: string) {
@@ -20,5 +20,5 @@ export async function sendTestNotificationToUsers(userIds: string[], message: st
   const trimmedMessage = message.trim()
   if (!trimmedMessage) return { success: false as const, error: "messageRequired" as const }
   if (userIds.length === 0) return { success: false as const, error: "userRequired" as const }
-  return sendToUsers(userIds, trimmedMessage)
+  return sendToUsers(userIds, { body: trimmedMessage })
 }

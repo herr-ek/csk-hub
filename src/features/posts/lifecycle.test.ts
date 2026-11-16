@@ -101,7 +101,7 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     await editPublishedPost({ postId: id, content: content("Fel datum", "Rättat") }, db)
     const firstPublishedAt = (await row(id))?.publishedAt
 
-    expect(await unpublishPost(id, db)).toBe(true)
+    expect(await unpublishPost(id, db)).toEqual({ authorId: author })
 
     expect(await feedIds()).not.toContain(id)
     expect(await getPublishedPost(id, db)).toBeNull()
@@ -120,7 +120,7 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     const draft = await createPost({ authorId: author, content: content("Utkast"), publish: false }, db)
     const published = await createPost({ authorId: author, content: content("Ute"), publish: true }, db)
 
-    expect(await unpublishPost(draft.id, db)).toBe(false)
+    expect(await unpublishPost(draft.id, db)).toBeNull()
     expect(
       await saveDraft({ postId: published.id, authorId: author, content: content("Tillbaka"), publish: false }, db)
     ).toBeNull()
@@ -135,7 +135,7 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
       await saveDraft({ postId: "not-a-uuid", authorId: author, content: content("x"), publish: true }, db)
     ).toBeNull()
     expect(await editPublishedPost({ postId: "not-a-uuid", content: content("x") }, db)).toBeNull()
-    expect(await unpublishPost("not-a-uuid", db)).toBe(false)
+    expect(await unpublishPost("not-a-uuid", db)).toBeNull()
     expect(await discardDraft({ postId: "not-a-uuid", authorId: author }, db)).toBe(false)
   })
 

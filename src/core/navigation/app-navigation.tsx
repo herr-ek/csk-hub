@@ -10,6 +10,9 @@ import { ThemeSwitch } from "../theme/ThemeSwitch"
 import { AccountMenu } from "./AccountMenu"
 import { MobileNavigation } from "./MobileNavigation"
 import { NavLinks } from "./NavLinks"
+import { RefreshOnReturn } from "./RefreshOnReturn"
+import { UnreadBadge, UnreadIndicator } from "./UnreadBadge"
+import type { UnreadSources } from "./unread-sources"
 
 export type NavigationRoute = {
   id: NavigationRouteId
@@ -41,23 +44,18 @@ export type NavigationConfig = {
   impersonatingUserName?: string
 }
 
-/**
- * Something to show beside a navigation link, such as a feature's unread count. Supplied by
- * the app layout, since the navigation itself must not depend on features.
- */
-export type NavigationBadges = Partial<Record<NavigationRouteId, React.ReactNode>>
-
 export interface AppNavigationTemplateProps {
   config: NavigationConfig | null
-  badges?: NavigationBadges
+  unreadSources?: UnreadSources
 }
-export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateProps) {
+export function AppNavigationTemplate({ config, unreadSources = {} }: AppNavigationTemplateProps) {
   const t = useTranslations("Navigation")
   const items = getNavigationItems(config, t).map((item) => ({
     id: item.id,
     href: ROUTES[item.id],
     label: item.label,
-    badge: badges?.[item.id]
+    // Only render unread badge when not in suspense fallback.
+    badge: config ? <UnreadBadge count={unreadSources[item.id]} /> : undefined
   }))
   const isImpersonating = Boolean(config?.impersonatingUserName)
 
@@ -76,10 +74,11 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
             </nav>
             {config ? (
               <div className="md:hidden">
-                <MobileNavigation items={items} />
+                <MobileNavigation items={items} indicator={<UnreadIndicator counts={Object.values(unreadSources)} />} />
               </div>
             ) : null}
             {config ? <AccountMenu user={config.user} isImpersonating={isImpersonating} /> : null}
+            {config ? <RefreshOnReturn /> : null}
           </div>
         </div>
         {config?.impersonatingUserName ? (
@@ -92,20 +91,25 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
   )
 }
 
-export function AppNavigation({ badges }: { badges?: NavigationBadges }) {
+export interface AppNavigationProps {
+  /** The unread counts the app layout composes from its features, shown beside their links. */
+  unreadSources: UnreadSources
+}
+
+export function AppNavigation({ unreadSources }: AppNavigationProps) {
   return (
     <Suspense fallback={<AppNavigationTemplate config={null} />}>
-      <RuntimeAppNavigation badges={badges} />
+      <RuntimeAppNavigation unreadSources={unreadSources} />
     </Suspense>
   )
 }
 
-export async function RuntimeAppNavigation({ badges }: { badges?: NavigationBadges }) {
+export async function RuntimeAppNavigation({ unreadSources }: AppNavigationProps) {
   const session = await getRequestSession()
   const isAdmin = await isUserAdmin(session)
   return (
     <AppNavigationTemplate
-      badges={badges}
+      unreadSources={unreadSources}
       config={
         session
           ? {

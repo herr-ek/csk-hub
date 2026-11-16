@@ -13,6 +13,7 @@ messaging/
   group-conversations/  creation, additions, renaming, departure, and group write authorization
   sending/       server-only module that owns all Message-send behavior
   reading/       shared read-only Direct Conversation lookup
+  unread/        the count of Conversations with unread Messages, shown on the navigation
   ui/            screens, screen-shaped reads, Server Actions, and client interaction
 ```
 
@@ -55,7 +56,9 @@ receive the current name and their retained Messages, but no current member list
 Creation needs no Message. Joining or rejoining initializes the read cursor through existing
 history; adding an already active member preserves their cursor. Empty groups remain retained,
 with no former member able to reactivate them. The UI uses the same update behavior as Direct
-Conversations; no polling, conversation subscriptions, or push delivery is introduced.
+Conversations; no polling, conversation subscriptions, or push delivery is introduced. The
+navigation's Messages badge counts Conversations with unread Messages; it updates when the User
+reads a Conversation and when they return to the app, not as Messages arrive.
 
 Creation and addition requests accept at most 100 submitted member IDs, including duplicates
 and blanks, before normalization or opening a transaction. The creator is included automatically

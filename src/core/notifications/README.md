@@ -77,27 +77,36 @@ active bindings without reviving disabled ones.
 Import the smallest delivery operation that matches the feature's audience:
 
 ```ts
-import { sendToAll, sendToUser, sendToUsers } from "@/core/notifications"
+import { sendToAll, sendToUser, sendToUsers } from "@/core/notifications";
 
-const oneUser = await sendToUser(userId, "Rehearsal starts in 30 minutes.")
-const selectedUsers = await sendToUsers(userIds, "The venue has changed.")
-const everyone = await sendToAll("The event calendar has been updated.")
+const oneUser = await sendToUser(userId, {
+  body: "Rehearsal starts in 30 minutes.",
+});
+const selectedUsers = await sendToUsers(userIds, {
+  body: "The venue has changed.",
+  url: "/events/42",
+});
+const everyone = await sendToAll({
+  body: "The event calendar has been updated.",
+  tag: "events:calendar",
+});
 ```
 
 Call these only from server-side feature code, after the feature has authorized the actor and validated its input. For example, an Admin-only write action should call `requireAdmin()` before delivery.
 
 ```ts
-"use server"
+"use server";
 
-import { requireAdmin } from "@/core/auth/permissions.server"
-import { sendToUsers } from "@/core/notifications"
+import { requireAdmin } from "@/core/auth/permissions.server";
+import { sendToUsers } from "@/core/notifications";
 
 export async function notifySelectedUsers(userIds: string[], message: string) {
-  await requireAdmin()
-  const text = message.trim()
-  if (!text) return { success: false as const, error: "messageRequired" as const }
+  await requireAdmin();
+  const text = message.trim();
+  if (!text)
+    return { success: false as const, error: "messageRequired" as const };
 
-  return sendToUsers(userIds, text)
+  return sendToUsers(userIds, { body: text });
 }
 ```
 
@@ -107,20 +116,40 @@ All send functions resolve to `NotificationDeliveryResult`. The shared diagnosti
 use the closed failure-category union from `types.ts`:
 
 ```ts
-import type { NotificationDeliveryFailureCategory, NotificationDeliveryResult } from "./types"
+import type {
+  NotificationDeliveryFailureCategory,
+  NotificationDeliveryResult,
+} from "./types";
 
 type Diagnostics = {
-  accepted: number
-  failed: number
-  failureCategories: Partial<Record<NotificationDeliveryFailureCategory, number>>
-}
+  accepted: number;
+  failed: number;
+  failureCategories: Partial<
+    Record<NotificationDeliveryFailureCategory, number>
+  >;
+};
 
 // NotificationDeliveryResult combines Diagnostics with either:
 // { success: true }
 // { success: false, error: "noActiveSubscriptions" | "noRecipients" | "deliveryFailed" }
 ```
 
-`accepted` counts subscriptions whose push provider accepted the notification. `failed` counts subscriptions that did not accept it. A successful result means at least one active subscription accepted the notification; it does not guarantee every selected device received it. `failureCategories` contains only sanitized counts such as `timeout`, `providerRejected`, or `bookkeeping`; it never includes endpoints, keys, or message text. Features show accepted/attempted counts and handle the returned error code. Notifications use the application name, `CSK Hub`, as a fixed title and preserve the supplied message as their body.
+`accepted` counts subscriptions whose push provider accepted the notification. `failed` counts subscriptions that did not accept it. A successful result means at least one active subscription accepted the notification; it does not guarantee every selected device received it. `failureCategories` contains only sanitized counts such as `timeout`, `providerRejected`, or `bookkeeping`; it never includes endpoints, keys, or message text. Features show accepted/attempted counts and handle the returned error code. Notifications use the application name, `CSK Hub`, as a fixed title and preserve the supplied `body`.
+
+A notification may carry a `url`: a same-origin path, such as `/news/<id>`, that clicking it opens, focusing an open app window when there is one. Any other value throws before delivery. A `tag`, conventionally `<feature>:<id>`, makes a newer notification replace an older one with the same tag instead of stacking.
+
+## Adding notifications to a feature
+
+A feature that notifies Users on its own events, such as a published Post or a new Message, calls the send functions from its server-side write path. Keep these rules:
+
+- The feature decides who is notified and authorizes the actor; this module only delivers.
+- Send after the write has committed, inside `after()` from `next/server`, so slow or failed delivery never delays or fails the User's action.
+- Send only when the write created something. An idempotent retry, such as `appendMessage` returning `created: false`, must not notify twice.
+- Write the text in each recipient's Language (ADR-0004): group recipients by their locale and send each group its own body.
+- Set `url` to the item's permalink and `tag` to `<feature>:<id>`.
+- Whether inactive Users are excluded is still open in #99; follow its decision once made.
+
+Notifying on events the product has said are silent, such as publishing a Post, is a product decision first: record it in an ADR before wiring it in.
 
 When a provider returns HTTP 404 or 410, or stored subscription data fails validation, this module marks that subscription disabled so future sends skip it. It also tracks delivery timestamps and atomically increments failure counts in SQL, avoiding lost increments from concurrent sends. Sanitized failure counts are logged without endpoint, key, or message contents. Features must not mutate those lifecycle fields directly.
 

@@ -4,9 +4,10 @@ import { AUTHORIZATION_DENIED, requireAdmin } from "@/core/auth/permissions.serv
 import { logger } from "@/core/logging"
 import { getErrorCode, getErrorName, getErrorStatus } from "@/shared/errors"
 import * as lifecycle from "../lifecycle"
+import type { UnpublishedTo } from "./unpublished-notice"
 
-export type PostWriteResult =
-  | { status: "success"; postId: string }
+export type PostWriteResult<Success extends object = object> =
+  | ({ status: "success"; postId: string } & Success)
   | { status: "unauthorized" }
   | { status: "failed" }
   | { status: "unavailable" }
@@ -19,10 +20,10 @@ function logFailure(event: string, error: unknown) {
   })
 }
 
-async function writePost(
+async function writePost<Saved extends { id: string }>(
   event: "save" | "unpublish" | "discard",
-  write: (actorId: string) => Promise<{ id: string } | null>
-): Promise<PostWriteResult> {
+  write: (actorId: string) => Promise<Saved | null>
+): Promise<PostWriteResult<Omit<Saved, "id">>> {
   let actorId: string
   try {
     actorId = (await requireAdmin()).userId
@@ -36,7 +37,9 @@ async function writePost(
 
   try {
     const saved = await write(actorId)
-    return saved ? { status: "success", postId: saved.id } : { status: "unavailable" }
+    if (!saved) return { status: "unavailable" }
+    const { id, ...rest } = saved
+    return { status: "success", postId: id, ...rest }
   } catch (error) {
     logFailure(`news.post.${event}-failed`, error)
     return { status: "failed" }
@@ -65,9 +68,14 @@ export async function editPublishedPostCommand(
   return writePost("save", () => lifecycle.editPublishedPost({ postId, content }))
 }
 
-/** Authorize recalling a published Post to its author's drafts. */
-export async function unpublishPostCommand(postId: string): Promise<PostWriteResult> {
-  return writePost("unpublish", async () => ((await lifecycle.unpublishPost(postId)) ? { id: postId } : null))
+/** Authorize recalling a published Post to its author's drafts, saying whether they were the actor's own. */
+export async function unpublishPostCommand(postId: string): Promise<PostWriteResult<{ unpublishedTo: UnpublishedTo }>> {
+  return writePost("unpublish", async (actorId) => {
+    const recalled = await lifecycle.unpublishPost(postId)
+    if (!recalled) return null
+    const unpublishedTo: UnpublishedTo = recalled.authorId === actorId ? "own" : "author"
+    return { id: postId, unpublishedTo }
+  })
 }
 
 /** Authorize discarding the acting User's own draft. */

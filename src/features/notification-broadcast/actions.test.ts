@@ -119,7 +119,7 @@ describe("notification actions without a translation context", () => {
   })
 
   test("delivery returns noRecipients without querying subscriptions", async () => {
-    expect(await delivery.sendToUsers([], "Hello")).toEqual({
+    expect(await delivery.sendToUsers([], { body: "Hello" })).toEqual({
       success: false,
       error: "noRecipients",
       accepted: 0,
@@ -127,6 +127,39 @@ describe("notification actions without a translation context", () => {
       failureCategories: {}
     })
     expect(select).not.toHaveBeenCalled()
+  })
+
+  test("delivery carries the link and tag a feature sets", async () => {
+    subscriptions = [activeSubscription]
+    expect(await delivery.sendToUser("user-1", { body: "Hello", url: "/news/post-1", tag: "posts:post-1" })).toEqual({
+      success: true,
+      accepted: 1,
+      failed: 0,
+      failureCategories: {}
+    })
+    expect(sendNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      JSON.stringify({ title: "CSK Hub", body: "Hello", url: "/news/post-1", tag: "posts:post-1" }),
+      expect.objectContaining({ agent: expect.any(Object) })
+    )
+  })
+
+  test("delivery sends a link as its normalized path", async () => {
+    subscriptions = [activeSubscription]
+    await delivery.sendToUser("user-1", { body: "Hello", url: "/news/../news/post-1" })
+    expect(sendNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      JSON.stringify({ title: "CSK Hub", body: "Hello", url: "/news/post-1" }),
+      expect.anything()
+    )
+  })
+
+  test("delivery refuses a link that leaves the app", async () => {
+    subscriptions = [activeSubscription]
+    for (const url of ["https://example.test", "//example.test/news", "/\\example.test/news", "news"]) {
+      await expect(delivery.sendToUser("user-1", { body: "Hello", url })).rejects.toThrow("same-origin path")
+    }
+    expect(sendNotification).not.toHaveBeenCalled()
   })
 
   test("all failed deliveries return a code and record the provider failure", async () => {
@@ -262,7 +295,7 @@ test("delivery processes the queue with at most five simultaneous sends", async 
     await new Promise<void>((resolve) => releases.push(resolve))
     inFlight -= 1
   })
-  const result = delivery.sendToAll("Hello")
+  const result = delivery.sendToAll({ body: "Hello" })
   await Bun.sleep(0)
   expect(sendNotification).toHaveBeenCalledTimes(5)
   for (const release of releases.splice(0)) release()
@@ -283,7 +316,7 @@ test("a provider that never settles times out without losing successful deliveri
       started.resolve()
       return new Promise<void>(() => undefined)
     })
-    const result = delivery.sendToAll("Hello")
+    const result = delivery.sendToAll({ body: "Hello" })
     await started.promise
     jest.advanceTimersByTime(10_000)
     expect(await result).toMatchObject({ success: true, accepted: 1, failed: 1, failureCategories: { timeout: 1 } })
@@ -301,7 +334,7 @@ test("a stalled bookkeeping write cannot turn provider acceptance into a deliver
     started.resolve()
     return new Promise<undefined>(() => undefined)
   })
-  const result = delivery.sendToAll("Hello")
+  const result = delivery.sendToAll({ body: "Hello" })
   await started.promise
   jest.advanceTimersByTime(2_000)
   expect(await result).toMatchObject({ success: true, accepted: 1, failed: 0, failureCategories: { bookkeeping: 1 } })
@@ -310,13 +343,13 @@ test("a stalled bookkeeping write cannot turn provider acceptance into a deliver
 
 test("stored WNS subscriptions remain deliverable after endpoint validation", async () => {
   subscriptions = [{ ...activeSubscription, endpoint: "https://cloud.notify.windows.com/?token=existing-channel" }]
-  expect(await delivery.sendToAll("Hello")).toMatchObject({ accepted: 1, failed: 0 })
+  expect(await delivery.sendToAll({ body: "Hello" })).toMatchObject({ accepted: 1, failed: 0 })
   expect(set).not.toHaveBeenCalledWith(expect.objectContaining({ status: "disabled" }))
 })
 
 test("unsafe stored endpoints are disabled without contacting a provider", async () => {
   subscriptions = [{ ...activeSubscription, endpoint: "https://127.0.0.1/private" }]
-  expect(await delivery.sendToAll("Hello")).toMatchObject({
+  expect(await delivery.sendToAll({ body: "Hello" })).toMatchObject({
     accepted: 0,
     failed: 1,
     failureCategories: { invalidSubscription: 1 }
@@ -331,7 +364,7 @@ test("invalid stored P-256 points are disabled without contacting a provider", a
   subscriptions = [
     { ...activeSubscription, p256dh: Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString("base64url") }
   ]
-  expect(await delivery.sendToAll("Hello")).toMatchObject({
+  expect(await delivery.sendToAll({ body: "Hello" })).toMatchObject({
     accepted: 0,
     failed: 1,
     failureCategories: { invalidSubscription: 1 }

@@ -8,11 +8,13 @@ import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
+import { parseSafeInternalPath } from "@/core/navigation/navigation-utils"
 import { InvalidNotificationSubscriptionError, parseNotificationSubscription } from "./subscription-validation"
 import type {
   NotificationDeliveryDiagnostics,
   NotificationDeliveryFailureCategory,
-  NotificationDeliveryResult
+  NotificationDeliveryResult,
+  PushNotification
 } from "./types"
 
 const DEFAULT_CONCURRENCY = 5
@@ -54,7 +56,7 @@ function failureCategory(error: unknown): NotificationDeliveryFailureCategory {
   return statusCode === undefined ? "transport" : "providerRejected"
 }
 
-async function deliverOne(stored: StoredSubscription, message: string) {
+async function deliverOne(stored: StoredSubscription, payload: string) {
   const agent = new https.Agent({ keepAlive: false })
   let category: NotificationDeliveryFailureCategory | undefined
   try {
@@ -63,11 +65,10 @@ async function deliverOne(stored: StoredSubscription, message: string) {
       keys: { p256dh: stored.p256dh, auth: stored.auth }
     })
     await withDeadline(
-      webpush.sendNotification(
-        { endpoint: subscription.endpoint, keys: subscription.keys },
-        JSON.stringify({ title: app.name, body: message }),
-        { timeout: SOCKET_IDLE_TIMEOUT_MS, agent }
-      ),
+      webpush.sendNotification({ endpoint: subscription.endpoint, keys: subscription.keys }, payload, {
+        timeout: SOCKET_IDLE_TIMEOUT_MS,
+        agent
+      }),
       REQUEST_DEADLINE_MS
     )
   } catch (error) {
@@ -87,10 +88,20 @@ async function deliverOne(stored: StoredSubscription, message: string) {
   return { accepted: category === undefined, category, bookkeepingFailed }
 }
 
+/** A notification may only lead into this app, so its url is sent as a normalized internal path. */
+function toPayload({ body, url, tag }: PushNotification) {
+  const path = url === undefined ? undefined : parseSafeInternalPath(url)
+  if (url !== undefined && path === undefined) {
+    throw new Error(`A push notification url must be a same-origin path, not ${url}`)
+  }
+  return JSON.stringify({ title: app.name, body, url: path, tag })
+}
+
 async function sendToSubscriptions(
   subscriptions: StoredSubscription[],
-  message: string
+  notification: PushNotification
 ): Promise<NotificationDeliveryResult> {
+  const payload = toPayload(notification)
   if (subscriptions.length === 0) {
     return { success: false, error: "noActiveSubscriptions", accepted: 0, failed: 0, failureCategories: {} }
   }
@@ -103,7 +114,7 @@ async function sendToSubscriptions(
   await Promise.all(
     Array.from({ length: Math.min(DEFAULT_CONCURRENCY, subscriptions.length) }, async () => {
       while (nextIndex < subscriptions.length) {
-        const attempt = await deliverOne(subscriptions[nextIndex++], message)
+        const attempt = await deliverOne(subscriptions[nextIndex++], payload)
         if (attempt.accepted) accepted += 1
         if (attempt.category) countFailure(attempt.category)
         if (attempt.bookkeepingFailed) countFailure("bookkeeping")
@@ -145,25 +156,28 @@ async function recordSuccess(stored: StoredSubscription) {
     .where(eq(pushSubscription.id, stored.id))
 }
 
-/** Delivers a message to every active push subscription belonging to one User. */
-export async function sendToUser(userId: string, message: string) {
-  return sendToUsers([userId], message)
+/** Delivers a notification to every active push subscription belonging to one User. */
+export async function sendToUser(userId: string, notification: PushNotification) {
+  return sendToUsers([userId], notification)
 }
 
 /**
- * Delivers a message to active subscriptions for the selected Users.
+ * Delivers a notification to active subscriptions for the selected Users.
  * A successful result means at least one subscription accepted the delivery.
  */
-export async function sendToUsers(userIds: string[], message: string): Promise<NotificationDeliveryResult> {
+export async function sendToUsers(
+  userIds: string[],
+  notification: PushNotification
+): Promise<NotificationDeliveryResult> {
   if (userIds.length === 0) {
     return { success: false, error: "noRecipients", accepted: 0, failed: 0, failureCategories: {} }
   }
-  return sendToSubscriptions(await listDeliverySubscriptions(userIds), message)
+  return sendToSubscriptions(await listDeliverySubscriptions(userIds), notification)
 }
 
-/** Delivers a message to every eligible active User's push subscriptions. */
-export async function sendToAll(message: string) {
-  return sendToSubscriptions(await listDeliverySubscriptions(), message)
+/** Delivers a notification to every eligible active User's push subscriptions. */
+export async function sendToAll(notification: PushNotification) {
+  return sendToSubscriptions(await listDeliverySubscriptions(), notification)
 }
 
 function listDeliverySubscriptions(userIds?: string[]) {
