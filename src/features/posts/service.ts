@@ -59,19 +59,17 @@ export async function listNewsFeed(
   database: PostsDatabase = db,
   authorize = requirePermission
 ): Promise<NewsFeedEntry[]> {
-  return database.transaction(async (tx) => {
-    await authorize({ action: "app.access" }, tx)
-    const rows = await tx
-      .select(publishedPostColumns)
-      .from(post)
-      // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
-      // in the feed.
-      .leftJoin(user, eq(post.authorId, user.id))
-      .where(isNotNull(post.publishedAt))
-      .orderBy(desc(post.publishedAt))
+  await authorize({ action: "app.access" }, database)
+  const rows = await database
+    .select(publishedPostColumns)
+    .from(post)
+    // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
+    // in the feed.
+    .leftJoin(user, eq(post.authorId, user.id))
+    .where(isNotNull(post.publishedAt))
+    .orderBy(desc(post.publishedAt))
 
-    return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
-  })
+  return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
 }
 
 /** One Post by its opaque id, or null when it does not exist or is not published. */
@@ -107,14 +105,12 @@ export async function listOwnDrafts(
   database: PostsDatabase = db,
   authorize = requirePermission
 ): Promise<DraftSummary[]> {
-  return database.transaction(async (tx) => {
-    const { userId: authorId } = await authorize({ action: "app.access" }, tx)
-    return tx
-      .select({ id: post.id, title: post.title, savedAt: post.updatedAt })
-      .from(post)
-      .where(and(eq(post.authorId, authorId), isNull(post.publishedAt), isNull(post.discardedAt)))
-      .orderBy(desc(post.updatedAt))
-  })
+  const { userId: authorId } = await authorize({ action: "app.access" }, database)
+  return database
+    .select({ id: post.id, title: post.title, savedAt: post.updatedAt })
+    .from(post)
+    .where(and(eq(post.authorId, authorId), isNull(post.publishedAt), isNull(post.discardedAt)))
+    .orderBy(desc(post.updatedAt))
 }
 
 /**
