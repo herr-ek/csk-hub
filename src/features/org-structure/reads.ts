@@ -165,11 +165,9 @@ export async function lockGroupForReference(tx: OrgStructureTransaction, groupId
  * Unlike summary reads, these retain User IDs and both period boundaries.
  */
 export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
-  const [groups, memberships, positionHoldings] = await Promise.all([
-    database.select({ id: group.id, type: group.type, active: group.active }).from(group),
-    database.select().from(groupMember).where(eq(groupMember.userId, userId)),
-    database.select().from(positionHolder).where(eq(positionHolder.userId, userId))
-  ])
+  const groups = await database.select({ id: group.id, type: group.type, active: group.active }).from(group)
+  const memberships = await database.select().from(groupMember).where(eq(groupMember.userId, userId))
+  const positionHoldings = await database.select().from(positionHolder).where(eq(positionHolder.userId, userId))
   return { groups, memberships, positionHoldings }
 }
 
@@ -178,8 +176,13 @@ export async function getGroupAuthorizationFacts(database: OrgStructureDatabase,
  * Groups against archival, until the transaction ends. Call before taking Event locks.
  * Uses the same User advisory lock as organisational commands; acquires no Position slot locks.
  */
-export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, userId: string, groupIds: string[]) {
-  await lockUser(tx, userId)
+export async function lockGroupAuthorizationFacts(
+  tx: OrgStructureTransaction,
+  userId: string,
+  groupIds: string[],
+  relatedUserIds: string[] = []
+) {
+  for (const id of [...new Set([userId, ...relatedUserIds])].sort()) await lockUser(tx, id)
   if (groupIds.length > 0) {
     await tx
       .select({ id: group.id })
@@ -190,4 +193,20 @@ export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, u
       .for("share")
   }
   return getGroupAuthorizationFacts(tx, userId)
+}
+
+/** Position facts with stable policy codes; never infer authority from mutable Position names. */
+export function listPositionHoldingsForAuthorization(database: OrgStructureDatabase, userId: string) {
+  return database
+    .select({
+      userId: positionHolder.userId,
+      groupId: positionHolder.groupId,
+      positionId: positionHolder.positionId,
+      startDate: positionHolder.startDate,
+      endDate: positionHolder.endDate,
+      positionCode: position.code
+    })
+    .from(positionHolder)
+    .innerJoin(position, eq(position.id, positionHolder.positionId))
+    .where(eq(positionHolder.userId, userId))
 }

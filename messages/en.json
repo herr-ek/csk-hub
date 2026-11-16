@@ -192,8 +192,8 @@
       "adminEvents": "Events",
       "adminEventsNew": "New Event",
       "adminEventLocations": "Locations",
-      "events": "Events",
-      "eventsNew": "New Event"
+      "eventsNew": "New Event",
+      "eventsManage": "Manage Events"
     },
     "members": "Members",
     "quickAccess": "Quick access",

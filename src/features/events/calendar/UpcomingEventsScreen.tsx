@@ -1,21 +1,23 @@
+import { io } from "next/cache"
 import Link from "next/link"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
-import { db } from "@/core/db"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
 import { eventPath } from "@/core/navigation/navigation-utils"
+import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
+import { getEventManagementCapabilities } from "../access"
 import { EVENT_TYPES, stockholmInstant } from "../model"
 import { StatusBadge } from "../ui/StatusBadge"
 import { eventDays, groupByDay } from "./days"
 import { EventKind } from "./EventKind"
-import { listUpcomingEventsForUser, type UpcomingEvent } from "./query"
+import { listCurrentUpcomingEvents, type UpcomingEvent } from "./query"
 import { UpcomingEventsFilter } from "./UpcomingEventsFilter"
 
 async function UpcomingEventsHeader() {
   const t = await getTranslations("Events.calendar")
+
   return (
     <div>
       <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
@@ -28,9 +30,9 @@ type SearchParams = Record<string, string | string[] | undefined>
 
 /** The signed-in User's upcoming Events, by month and day in Europe/Stockholm, optionally of one type. */
 export async function UpcomingEventsScreen({ searchParams }: { searchParams: SearchParams }) {
-  const userId = await requireAuthenticatedUser()
+  await io()
   const [{ events: upcoming }, t, format] = await Promise.all([
-    listUpcomingEventsForUser(db, userId, new Date()),
+    listCurrentUpcomingEvents(new Date()),
     getTranslations("Events.calendar"),
     getFormatter()
   ])
@@ -45,6 +47,7 @@ export async function UpcomingEventsScreen({ searchParams }: { searchParams: Sea
   return (
     <ContentPage>
       <UpcomingEventsHeader />
+      <ManagementLink />
       {types.length > 1 || type ? <UpcomingEventsFilter type={type} types={types} /> : null}
       {months.length === 0 ? (
         <Empty>
@@ -143,4 +146,14 @@ export async function UpcomingEventsScreenSkeleton() {
       </div>
     </ContentPage>
   )
+}
+
+async function ManagementLink() {
+  const t = await getTranslations("Navigation.routes")
+  const { canCreate } = await getEventManagementCapabilities()
+  return canCreate ? (
+    <Link href={ROUTES.eventsManage} className="text-sm underline">
+      {t("eventsManage")}
+    </Link>
+  ) : null
 }

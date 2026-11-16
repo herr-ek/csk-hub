@@ -1,9 +1,7 @@
+import { io } from "next/cache"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
-import { isUserAdmin } from "@/core/auth/permissions.server"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
-import { db } from "@/core/db"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { RichTextContent } from "@/features/rich-text/view"
@@ -12,21 +10,20 @@ import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { stockholmInstant } from "../model"
-import { adminEventPath } from "../ui/command-state"
+import { eventManagementPath } from "../ui/command-state"
 import { StatusBadge } from "../ui/StatusBadge"
 import { eventDays } from "./days"
 import { EventKind } from "./EventKind"
-import { type EventPage, getEventPage } from "./query"
+import { type EventPage, getCurrentEventPage } from "./query"
 
 /**
  * One Event as its Audience reads it. Anything the viewer may not see, including every Draft, is
  * answered as a missing page.
  */
 export async function EventPageScreen({ eventId }: { eventId: string }) {
-  const userId = await requireAuthenticatedUser()
-  const isAdmin = await isUserAdmin()
+  await io()
   const [page, t] = await Promise.all([
-    getEventPage(db, eventId, { userId, isAdmin }),
+    getCurrentEventPage(eventId, new Date()),
     getTranslations("Events.calendar.page")
   ])
   if (!page) notFound()
@@ -38,8 +35,8 @@ export async function EventPageScreen({ eventId }: { eventId: string }) {
         <div className="min-w-0">
           <PageBreadcrumb route="events" current={page.title} />
         </div>
-        {isAdmin ? (
-          <Link href={adminEventPath(page.id)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+        {page.canManage ? (
+          <Link href={eventManagementPath(page.id)} className={buttonVariants({ variant: "outline", size: "sm" })}>
             {t("edit")}
           </Link>
         ) : null}

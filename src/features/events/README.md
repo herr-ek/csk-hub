@@ -89,7 +89,7 @@ Both live in `calendar/`, with their reads in `calendar/query.ts`:
   stays, struck through. An Event is upcoming until it has ended, so ongoing ones still show.
 - An Event page the viewer may not see answers exactly like a missing one: a Draft for everyone,
   Admins included (they have the admin page), and any other Event outside the viewer's Audience
-  unless they are an Admin.
+  unless they are an Admin or current Event manager.
 - A Gig's external contact is personal data for organisers only. The calendar reads never select
   it.
 - `/events?type=Gig` narrows the list to one type, after the Audience is computed. The filter only
@@ -97,8 +97,8 @@ Both live in `calendar/`, with their reads in `calendar/query.ts`:
 
 ## Admin pages
 
-`/events` lists the Events the viewer may manage, `/events/new` creates one, and
-`/events/[eventId]` edits it and moves it through its lifecycle. The Admin pages remain
+`/events/manage` lists the Events the viewer may manage, `/events/manage/new` creates one, and
+`/events/manage/[eventId]` edits it and moves it through its lifecycle. The Admin pages remain
 available; `/admin/events/locations` keeps the shared Locations.
 The entrypoint exports their screens; everything else lives in `ui/`:
 
@@ -126,3 +126,26 @@ The tests run against a real, freshly migrated database created beside the local
 they are skipped with a warning. `test-support.ts` writes the groups the tests name directly,
 since this feature reaches org-structure only through its entrypoint. `schema.test.ts` tests the
 database's own constraints by writing the tables directly.
+
+## Agreed audience and participation access
+
+The registered `event.view` policy and calendar list/detail share the same audience calculation.
+For multi-day Events too, Membership is evaluated at Event start. Before start, closed Memberships
+stop granting access immediately; from start onward, historical Membership preserves viewing after
+departure. Membership dates retain inclusive boundaries and Stockholm calendar-day precision.
+
+`getResponseDetails` and `getRegistrationDetails` authorize actual record ownership and current
+Event management before returning reasons/comments or registration answers/choices. Only the
+submitting member, Admin or current Event manager can read these fields. A Section-parent
+attendance grant does not include them.
+
+`getAttendance` and `recordAttendance` enforce the attendance policies. The member can read their
+own record. Admin/current managers can read and record/correct attendance; current Stämföräldrar
+can do so only for Rehearsals and Concerts, for subjects in their Section at Event start.
+Gigs are excluded. Recording requires Published status and an audience subject. Missing rows
+stay "not recorded". Corrections keep the row and derive the recorder from fresh identity.
+
+The Section-parent grant uses `position.code`, never the editable name or a fixed UUID.
+Subject/actor relationship locks precede Group/Event/record locks; related User locks are sorted.
+Forbidden private reads return null; unauthorized attendance writes throw a server-side
+authorization error. See the authorization guide for the complete agreed rules and date precision.

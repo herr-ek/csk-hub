@@ -155,7 +155,7 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
         .orderBy(asc(eventDetail.sortOrder))
       expect(details.map(({ label }) => label)).toEqual(["Dress code", "Bring"])
       expect(revalidatePath).toHaveBeenCalledWith("/admin/events", "layout")
-      expect(redirect).toHaveBeenCalledWith(`/events/${id}`)
+      expect(redirect).toHaveBeenCalledWith(`/events/manage/${id}`)
     })
 
     test("passes a module violation through as a typed failure", async () => {
@@ -198,7 +198,7 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
       const [row] = await t.db.select({ status: event.status, type: event.type }).from(event).where(eq(event.id, id))
       expect(row).toEqual({ status: "Cancelled", type: "Rehearsal" })
 
-      expect(await redirectOf(deleteEventAction(IDLE, form({ eventId: id })))).toBe("/events")
+      expect(await redirectOf(deleteEventAction(IDLE, form({ eventId: id })))).toBe("/events/manage")
       expect(await deleteEventAction(IDLE, form({ eventId: id }))).toEqual({
         status: "error",
         error: "event-not-found"

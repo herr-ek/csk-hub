@@ -2,6 +2,7 @@ import type { user } from "@/core/db/schema/auth"
 import type { event } from "@/core/db/schema/events"
 import type { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import type { post } from "@/core/db/schema/posts"
+import type { AudienceMembership, AudienceTarget } from "./event-audience"
 
 /** Minimal resource facts, loaded on the server by the feature performing the operation. */
 export type PostAttributes = Readonly<Pick<typeof post.$inferSelect, "id" | "authorId" | "publishedAt" | "discardedAt">>
@@ -25,6 +26,24 @@ type GroupWorkContext = GroupContext &
   }>
 export type EventAttributes = Readonly<Pick<typeof event.$inferSelect, "id" | "organiserGroupId">>
 type EventContext = GroupWorkContext & Readonly<{ event: EventAttributes | null }>
+
+export type EventViewAttributes = EventAttributes &
+  Readonly<Pick<typeof event.$inferSelect, "type" | "status" | "startsAt">>
+type EventViewContext = Omit<EventContext, "event"> &
+  Readonly<{
+    event: EventViewAttributes | null
+    targets: readonly AudienceTarget[]
+    audienceMemberships: readonly AudienceMembership[]
+    now: Date
+  }>
+type EventPrivateContext = EventContext & Readonly<{ record: { eventId: string; userId: string | null } | null }>
+type EventAttendanceContext = Omit<EventViewContext, "audienceMemberships"> &
+  Readonly<{
+    record: { eventId: string; userId: string | null } | null
+    subjectMemberships: readonly AudienceMembership[]
+    sections: readonly GroupAttributes[]
+    sectionHoldings: readonly (PositionHoldingAttributes & { positionCode: string | null })[]
+  }>
 
 type MemberContext = Readonly<{ member: MemberAttributes | null }>
 
@@ -54,6 +73,11 @@ export type PermissionContext = {
   "admin.access": undefined
   "event.create": GroupWorkContext
   "event.read": EventContext
+  "event.view": EventViewContext
+  "event.readResponseReason": EventPrivateContext
+  "event.readRegistrationAnswers": EventPrivateContext
+  "event.readAttendance": EventAttendanceContext
+  "event.recordAttendance": EventAttendanceContext
   "event.update": EventContext & Readonly<{ proposedOrganiser: GroupWorkContext }>
   "event.changeStatus": EventContext
   "event.delete": EventContext

@@ -9,5 +9,5 @@ export type EventCommandState = CommandState<EventCommandError>
 
 /** The admin page of one Event, where it is edited and moved through its lifecycle. */
 export function eventManagementPath(eventId: string) {
-  return `${ROUTES.events}/${eventId}`
+  return `${ROUTES.eventsManage}/${eventId}`
 }

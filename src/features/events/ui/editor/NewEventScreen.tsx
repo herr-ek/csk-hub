@@ -29,7 +29,7 @@ export async function NewEventScreen() {
         options={options}
         unsavedSlot="new"
         submitLabel={t("newPage.submit")}
-        cancelHref={ROUTES.events}
+        cancelHref={ROUTES.eventsManage}
       />
     </main>
   )

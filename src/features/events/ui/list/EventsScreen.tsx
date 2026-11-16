@@ -59,7 +59,7 @@ async function EventsHeader() {
   const { canCreate, canAdminister } = await getEventManagementCapabilities()
   return (
     <div className="flex flex-col gap-2">
-      <PageBreadcrumb route="events" />
+      <PageBreadcrumb route="eventsManage" />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-semibold">{t("list.title")}</h1>

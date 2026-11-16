@@ -88,8 +88,8 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 | `group.publishPost`, `group.manageContent`, `group.manageEvents` | Admin, or current Position holder with current Membership in that exact active non-Choir Group |
 | `group.manageMemberships`, `group.managePositions` | Admin, for an existing active Group |
 | `org.manage`, `user.administer`, `notification.broadcast`, `admin.access` | Explicit Admin grants; feature-specific safeguards still apply |
-| `memberId.issue` | Active Users outside support impersonation may present their own temporary ID |
-| `memberId.verify` | Active Admins outside support impersonation may verify a temporary ID |
+| `memberId.issue` | Active Users may present their own temporary ID |
+| `memberId.verify` | Active Admins may verify a temporary ID |
 | `event.*` | Exact organiser management and explicit Admin grants; see Events below |
 | `member.read` | Active Users may read other active Users' shared profiles |
 | `member.readEmail` | Profile owner only; no Admin bypass |
@@ -215,10 +215,10 @@ native Better Auth endpoints.
 
 ## Events: implemented boundaries and policy gaps
 
-The `/events` management surface is available to active Users. Its collection is filtered in
-SQL by authorised organiser Group IDs before loading Events, Targets or counts. `/events/new`
-creates a Draft and `/events/[eventId]` edits it. The existing Admin routes remain available.
-This is a management view, not an audience-facing calendar.
+The `/events/manage` management surface is available to active Users. Its collection is filtered in
+SQL by authorised organiser Group IDs before loading Events, Targets or counts. `/events/manage/new`
+creates a Draft and `/events/manage/[eventId]` edits it. The existing Admin routes remain available.
+The member calendar stays at `/events` and `/events/[eventId]`.
 
 The following policies are registered in `core/authz/event-policies.ts`:
 
@@ -230,6 +230,10 @@ The following policies are registered in `core/authz/event-policies.ts`:
 | `event.changeStatus` | Event managers may publish, cancel or reinstate; the feature still enforces legal lifecycle transitions |
 | `event.delete` | Event managers; the existing confirmation includes the deletion impact |
 | `event.administer` | Admin-only shared Location catalogue and Admin route access |
+| `event.view` | Admin/current manager, or a non-Draft Event's audience under the time rules below |
+| `event.readResponseReason`, `event.readRegistrationAnswers` | The submitting member, Admin, or current Event manager; record must belong to the Event |
+| `event.readAttendance` | The member, Admin, current Event manager, or eligible current Stämförälder |
+| `event.recordAttendance` | Admin/current manager or eligible current Stämförälder, for an audience member of a Published Event |
 
 Management covers Draft, Published and Cancelled Events. `createdBy`, audience Targets, Choir
 ownership and links to another Group confer no management authority. Choir organisers, missing
@@ -258,16 +262,52 @@ lifecycle/deletion, attribution, email masking, departure/holding expiry/archiva
 coordination. Core tests cover grants/denials and fresh rejection after Admin demotion,
 deactivation and Session revocation.
 
-Remaining policy fog is outside the management surface implemented here:
+### Agreed audience and participation rules
 
-- **Schema conflict:** the Events scheme describes broader Choir/subgroup/target-based authority.
-  This implementation follows exact organiser representation and Admin-only Choir authority.
-  Reconcile those examples before implementing broader grants.
-- **Audience and history:** settle current versus event-time Membership, departed members,
-  archived Targets, and Cancelled Event visibility for member-facing lists, details and notifications.
-  A management grant does not establish member audience visibility.
-- **Participation privacy:** Response reasons, Registration answers and Section-scoped
-  Stämförälder attendance need explicit field-level policies when those workflows are implemented.
+Audience Membership is evaluated at the **Event start**, including multi-day Events. Before that
+instant, a closed Membership grants no access, so departure removes future visibility immediately.
+At or after start, historical Membership remains a viewing grant after departure. Targets are
+OR'ed; group/Voice filters within a Target are AND'ed. No Targets means every active User.
+Cancelled Events retain audience visibility; Draft calendar pages stay hidden and managers
+use their management page.
+
+Stored Membership boundaries are dates, with inclusive end dates in the existing Events scheme.
+Checks use the Stockholm date of the start instant. The schema cannot distinguish departures
+before versus after an Event start on the same calendar day. This change does not invent
+timestamp precision or alter global organisational period semantics.
+
+Response comments/reasons and registration comments/answers, including withdrawn registrations
+and every answer kind, are accessible only to the submitting member, Admin and **current** Event
+managers. Audience Membership and Section-parent attendance authority expose none of these fields.
+Erased subjects have no self grant; Admin/managers may read retained non-identifying records.
+
+Attendance is visible to the member, Admin and current Event managers. Additional Stämförälder
+viewing/recording/correction authority applies **only to Rehearsal and Concert**, never Gig or
+other types. The subject must have belonged to the editor's exact Section at Event start; the
+editor must hold that Section's Stämförälder Position now. The holding must have begun and
+remain open, and the Section must remain active. Holding the Position at Event time is
+insufficient. Recording/correction requires a Published Event and an audience subject.
+Existing records remain readable after cancellation but cannot then be changed.
+
+`position.code = stamforalder` provides stable identity independent of editable names and
+environment-specific IDs. The additive migration binds the canonical Stämförälder catalogue
+entry once; reference-data seeding retains its code after renaming. A legacy entry renamed
+before migration stays unprivileged until explicitly bound; unknown labels never grant rights.
+
+`calendar/query.ts` provides fresh protected collection/detail entrypoints using the same
+`event.view` policy. Actor relationship locks serialize with departure, and Event shared locks
+protect Targets/start/status. Low-level calendar queries accept trusted server actor facts
+for composition/testing, never browser authority.
+
+`participation-access.ts` protects response details, registration answers, attendance reads
+and recording/correction. It derives the actor, reads actual participant ownership and loads
+dated subject Memberships/coded holdings through org-structure inside the transaction. Record
+reads lock Event then record. Attendance writes derive `recordedBy` and upsert the existing row.
+Related User advisory locks are sorted before Group/Event locks. Full Response/Registration/
+Attendance form UIs remain feature work; the protected data operations are implemented.
+
+The Events scheme's former broader Choir/subgroup/Target management examples are reconciled
+with the exact-organiser rule. Choir-organised and organiser-less Events remain Admin-only.
 
 Rich text has no separate protected persistence workflow.
 

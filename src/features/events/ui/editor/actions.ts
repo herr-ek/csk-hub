@@ -80,5 +80,5 @@ export async function deleteEventAction(_state: EventCommandState, formData: For
     (input) => ({ action: "event.delete", eventId: input.eventId })
   )
   if (state.status !== "success") return state
-  redirect(ROUTES.events)
+  redirect(ROUTES.eventsManage)
 }

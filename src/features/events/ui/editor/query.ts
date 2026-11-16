@@ -62,19 +62,17 @@ export async function getEventFormOptions(
   return database.transaction(async (database) => {
     const { access, facts } = await getEventManagementScope(database)
     const groupIds = managedEventGroupIds(access, facts)
-    const [locations, groups, users] = await Promise.all([
-      database
-        .select({ id: location.id, name: location.name, active: location.active })
-        .from(location)
-        .where(or(eq(location.active, true), keep(location.id, kept.locationIds)))
-        .orderBy(asc(location.name)),
-      listActiveGroups(database, kept.groupIds),
-      database
-        .select({ id: user.id, name: user.name, ...(access.actor?.isAdmin ? { email: user.email } : {}) })
-        .from(user)
-        .where(or(isNull(user.banned), eq(user.banned, false), keep(user.id, kept.userIds)))
-        .orderBy(asc(user.name))
-    ])
+    const locations = await database
+      .select({ id: location.id, name: location.name, active: location.active })
+      .from(location)
+      .where(or(eq(location.active, true), keep(location.id, kept.locationIds)))
+      .orderBy(asc(location.name))
+    const groups = await listActiveGroups(database, kept.groupIds)
+    const users = await database
+      .select({ id: user.id, name: user.name, ...(access.actor?.isAdmin ? { email: user.email } : {}) })
+      .from(user)
+      .where(or(isNull(user.banned), eq(user.banned, false), keep(user.id, kept.userIds)))
+      .orderBy(asc(user.name))
 
     return {
       canCreate: access.actor?.isAdmin === true || groupIds.length > 0,
@@ -137,18 +135,16 @@ export async function getEventEditor(eventId: string) {
       .where(eq(event.id, eventId))
     if (!row) return null
 
-    const [targets, details, impact] = await Promise.all([
-      db
-        .select({ groupId: eventTarget.groupId, voiceFamily: eventTarget.voiceFamily })
-        .from(eventTarget)
-        .where(eq(eventTarget.eventId, eventId)),
-      db
-        .select({ label: eventDetail.label, value: eventDetail.value })
-        .from(eventDetail)
-        .where(eq(eventDetail.eventId, eventId))
-        .orderBy(asc(eventDetail.sortOrder)),
-      getEventDeletionImpact(db, eventId)
-    ])
+    const targets = await db
+      .select({ groupId: eventTarget.groupId, voiceFamily: eventTarget.voiceFamily })
+      .from(eventTarget)
+      .where(eq(eventTarget.eventId, eventId))
+    const details = await db
+      .select({ label: eventDetail.label, value: eventDetail.value })
+      .from(eventDetail)
+      .where(eq(eventDetail.eventId, eventId))
+      .orderBy(asc(eventDetail.sortOrder))
+    const impact = await getEventDeletionImpact(db, eventId)
     const stored = row.event
     const userIds = [row.leaderUserId, row.responsibleUserId].filter((id): id is string => Boolean(id))
     const groupIds = [stored.organiserGroupId, ...targets.map(({ groupId }) => groupId)].filter((id): id is string =>

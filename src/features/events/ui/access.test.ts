@@ -117,7 +117,7 @@ describe.skipIf(!database)("Event delegation at protected entrypoints", () => {
       expect(await updateEventAction(owned.id, idle, form({ organiserGroupId: id }))).toEqual(denied)
     }
     await expect(createEventAction(idle, form({ organiserGroupId: organiser, createdBy: stranger }))).rejects.toThrow(
-      "redirect:/events/"
+      "redirect:/events/manage/"
     )
     const created = await t.db.select().from(event).where(eq(event.title, "Delegated event"))
     expect(created).toHaveLength(1)
@@ -134,7 +134,7 @@ describe.skipIf(!database)("Event delegation at protected entrypoints", () => {
     expect(await updateEventAction(owned.id, idle, form({ organiserGroupId: otherGroup }))).toMatchObject({
       status: "success"
     })
-    await expect(deleteEventAction(idle, form({ eventId: owned.id }))).rejects.toThrow("redirect:/events")
+    await expect(deleteEventAction(idle, form({ eventId: owned.id }))).rejects.toThrow("redirect:/events/manage")
     for (const call of [
       () => listLocations(),
       () => createLocationAction(idle, form()),

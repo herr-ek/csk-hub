@@ -8,7 +8,8 @@ The module never imports features and does not load their resources itself.
 Stages one through three are implemented: personal Posts, Members, Messaging, account settings,
 administrative workflows (including Events and Locations), routes and navigation use these policies. Better Auth no longer carries
 application Post grants; the legacy application permission guards have been removed. Group-authored
-Posts, audience targets, Recalled Group Posts and member-facing Event audience policies remain unimplemented.
+Posts, Post audience targets and Recalled Group Posts remain unimplemented.
+Event audience visibility, participant field privacy and Section-scoped attendance are implemented.
 Event management uses organiser-bound `event.*` policies; `event.administer` remains Admin-only
 for Locations and Admin routes. See the adoption guide for the explicit policy list.
 
@@ -96,7 +97,8 @@ Policies are ordinary synchronous TypeScript functions with boolean expressions:
 
 - `app-policies.ts`: baseline application access for active Users.
 - `post-policies.ts`: personal Post creation, reading and lifecycle permissions.
-- `event-policies.ts`: organiser-bound creation, reading, updates, lifecycle and deletion.
+- `event-policies.ts`: organiser management, audience viewing, private participant reads and scoped attendance.
+- `event-audience.ts`: shared start-time audience and future-departure rules.
 - `group-policies.ts`: exact-Group representation and administration.
 - `member-policies.ts`: shared profiles, private email and self-profile edits.
 - `admin-policies.ts`: explicit administrative grants.
@@ -168,3 +170,8 @@ through `bun run typecheck`.
 `forCurrentRequest`, denial errors and caller-facing types; it does not re-export the factory.
 Production wiring supplies the application database and `getFreshRequestSession`. Never use
 the factory to accept browser-supplied identity.
+
+Event contexts require trusted resource/participant ownership, dated audience/Section Memberships,
+a server clock and coded Position holdings. Attendance scope uses the subject's Section at Event
+start and the editor's current holding. Private reason/registration policies never inherit
+Section-parent attendance authority. See the adoption guide for the full rules and date precision.

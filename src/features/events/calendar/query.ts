@@ -3,12 +3,21 @@ import "server-only"
 import { and, asc, eq, gt, inArray, ne } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { z } from "zod"
+import { forCurrentRequest } from "@/core/authz"
+import { evaluatePermission } from "@/core/authz/policy-registry"
+import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { event, eventDetail, eventTarget, gig, location, rehearsal, socialEvent } from "@/core/db/schema/events"
-import { listGroupNames, listMembershipsOfUser } from "@/features/org-structure"
+import {
+  getGroupAuthorizationFacts,
+  listGroupNames,
+  listMembershipsOfUser,
+  lockGroupAuthorizationFacts
+} from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
 import type { VoiceFamily } from "@/features/voice/model"
-import { type AudienceTarget, inAudience } from "../audience"
+import { eventGroupContext } from "../access"
+import type { AudienceTarget } from "../audience"
 import {
   byPresentValue,
   type EventStatus,
@@ -47,7 +56,8 @@ export type UpcomingEvents = { events: UpcomingEvent[] }
 export async function listUpcomingEventsForUser(
   database: EventsDatabase,
   userId: string,
-  now: Date
+  now: Date,
+  isAdmin = false
 ): Promise<UpcomingEvents> {
   const rows = await database
     .select({
@@ -58,6 +68,7 @@ export async function listUpcomingEventsForUser(
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       allDay: event.allDay,
+      organiserGroupId: event.organiserGroupId,
       seriesId: event.seriesId,
       locationText: event.locationText,
       locationName: location.name
@@ -66,21 +77,36 @@ export async function listUpcomingEventsForUser(
     .leftJoin(location, eq(location.id, event.locationId))
     .where(and(ne(event.status, "Draft"), gt(event.endsAt, now)))
     .orderBy(asc(event.startsAt), asc(event.title), asc(event.id))
+    .for("share", { of: event })
 
   const today = stockholmDate(now)
   // An ongoing Event counts the Memberships of the day it started.
   const earliest = rows.reduce((from, row) => minDate(from, stockholmDate(row.startsAt)), today)
-  const [targets, memberships] = await Promise.all([
-    targetsOf(
-      database,
-      rows.map(({ id }) => id)
-    ),
-    listMembershipsOfUser(database, userId, { from: earliest })
-  ])
+  const targets = await targetsOf(
+    database,
+    rows.map(({ id }) => id)
+  )
+  const memberships = await listMembershipsOfUser(database, userId, { from: earliest })
 
+  const facts = await getGroupAuthorizationFacts(database, userId)
   const events = rows.flatMap((row) => {
     const eventTargets = targets.get(row.id) ?? []
-    if (!inAudience(memberships, { startsAt: row.startsAt, targets: eventTargets })) return []
+    if (
+      !evaluatePermission(
+        { userId, isAdmin },
+        {
+          action: "event.view",
+          context: {
+            ...eventGroupContext(facts, row.organiserGroupId),
+            event: row,
+            targets: eventTargets,
+            audienceMemberships: memberships,
+            now
+          }
+        }
+      )
+    )
+      return []
     return [
       {
         id: row.id,
@@ -115,7 +141,12 @@ const responsible = alias(user, "responsible")
  * every null the same way, so a hidden Event cannot be told from a missing one. A Gig's external
  * contact is personal data for organisers only and is never read here.
  */
-export async function getEventPage(database: EventsDatabase, eventId: string, viewer: EventPageViewer) {
+export async function getEventPage(
+  database: EventsDatabase,
+  eventId: string,
+  viewer: EventPageViewer,
+  now: Date = new Date()
+) {
   // Ids arrive from the address, so anything may.
   if (!eventIdSchema.safeParse(eventId).success) return null
   const [row] = await database
@@ -147,17 +178,23 @@ export async function getEventPage(database: EventsDatabase, eventId: string, vi
     .leftJoin(responsible, eq(responsible.id, gig.responsibleUserId))
     .leftJoin(socialEvent, eq(socialEvent.eventId, event.id))
     .where(eq(event.id, eventId))
+    .for("share", { of: event })
   if (!row || row.status === "Draft") return null
 
-  const [targetsByEvent, organiser] = await Promise.all([
-    targetsOf(database, [row.id]),
-    groupsById(database, row.organiserGroupId ? [row.organiserGroupId] : [])
-  ])
+  const targetsByEvent = await targetsOf(database, [row.id])
+  const organiser = await groupsById(database, row.organiserGroupId ? [row.organiserGroupId] : [])
   const targets = targetsByEvent.get(row.id) ?? []
-  if (!viewer.isAdmin) {
-    const memberships = await listMembershipsOfUser(database, viewer.userId, { from: stockholmDate(row.startsAt) })
-    if (!inAudience(memberships, { startsAt: row.startsAt, targets })) return null
+  const memberships = await listMembershipsOfUser(database, viewer.userId, { from: stockholmDate(row.startsAt) })
+  const facts = await getGroupAuthorizationFacts(database, viewer.userId)
+  const context = {
+    ...eventGroupContext(facts, row.organiserGroupId),
+    event: row,
+    targets,
+    audienceMemberships: memberships,
+    now
   }
+  if (!evaluatePermission(viewer, { action: "event.view", context })) return null
+  const canManage = evaluatePermission(viewer, { action: "event.read", context })
 
   const details = await database
     .select({ label: eventDetail.label, value: eventDetail.value })
@@ -166,6 +203,7 @@ export async function getEventPage(database: EventsDatabase, eventId: string, vi
     .orderBy(asc(eventDetail.sortOrder), asc(eventDetail.id))
 
   return {
+    canManage,
     id: row.id,
     title: row.title,
     type: row.type,
@@ -228,4 +266,24 @@ async function groupsById(database: EventsDatabase, groupIds: string[]) {
 
 function minDate(a: string, b: string) {
   return a < b ? a : b
+}
+
+/** Protected calendar collection: derive fresh active identity instead of accepting browser claims. */
+export async function listCurrentUpcomingEvents(now: Date, database: EventsDatabase = db) {
+  return database.transaction(async (tx) => {
+    const access = await forCurrentRequest(tx)
+    const actor = access.requirePermission({ action: "app.access" })
+    await lockGroupAuthorizationFacts(tx, actor.userId, [])
+    return listUpcomingEventsForUser(tx, actor.userId, now, actor.isAdmin)
+  })
+}
+
+/** Protected calendar detail; hidden resources map to null without exposing authz diagnostics. */
+export async function getCurrentEventPage(eventId: string, now: Date, database: EventsDatabase = db) {
+  return database.transaction(async (tx) => {
+    const access = await forCurrentRequest(tx)
+    const actor = access.requirePermission({ action: "app.access" })
+    await lockGroupAuthorizationFacts(tx, actor.userId, [])
+    return getEventPage(tx, eventId, actor, now)
+  })
 }

@@ -167,9 +167,10 @@ describe.skipIf(!database)("calendar reads", () => {
       expect(await titlesFor("Olof", at("2026-10-20"))).not.toContain("Rephelg")
     })
 
-    test("dated Memberships count on each Event's own date", async () => {
+    test("departure removes future access immediately while preserving access after the Event start", async () => {
       // Lucas left KK on 16 October: the Rehearsal on the 14th was his, the Rephelg from the 18th is not.
-      expect(await titlesFor("Lucas", at("2026-10-01"))).toEqual(["Past rehearsal", "Körmöte"])
+      expect(await titlesFor("Lucas", at("2026-10-01"))).toEqual(["Körmöte"])
+      expect(await titlesFor("Lucas", at("2026-10-14T20:00"))).toEqual(["Past rehearsal", "Körmöte"])
       expect(await titlesFor("Lucas")).toEqual(["Körmöte"])
     })
 

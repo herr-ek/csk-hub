@@ -16,8 +16,8 @@ export const ROUTES = {
   adminNotifications: "/admin/notifications",
   adminOrgStructure: "/admin/org-structure",
   adminOrgStructureGroups: "/admin/org-structure/groups",
-  events: "/events",
-  eventsNew: "/events/new",
+  eventsManage: "/events/manage",
+  eventsNew: "/events/manage/new",
   adminEvents: "/admin/events",
   adminEventsNew: "/admin/events/new",
   adminEventLocations: "/admin/events/locations",
@@ -35,9 +35,9 @@ export type NavigationRouteId = Exclude<RouteId, "home">
 export type MenuRouteId =
   | "news"
   | "events"
+  | "eventsManage"
   | "eventsNew"
   | "newsCompose"
-  | "events"
   | "messages"
   | "account"
   | "accountSettings"
@@ -52,7 +52,8 @@ export type MenuRouteId =
 
 /** Where each nested route sits in the menu hierarchy; routes without an entry are top-level sections. */
 export const ROUTE_PARENTS: Partial<Record<MenuRouteId, MenuRouteId>> = {
-  eventsNew: "events",
+  eventsManage: "events",
+  eventsNew: "eventsManage",
   newsCompose: "news",
   accountSettings: "account",
   adminUsers: "admin",

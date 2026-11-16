@@ -52,5 +52,6 @@ export async function runEventsCommand<Schema extends z.ZodType, T>(
 
   revalidatePath(ROUTES.adminEvents, "layout")
   revalidatePath(ROUTES.events, "layout")
+  revalidatePath(ROUTES.eventsManage, "layout")
   return { state: { status: "success", completedAt: Date.now() }, data: result.data }
 }

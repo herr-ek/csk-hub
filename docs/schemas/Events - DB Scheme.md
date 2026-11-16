@@ -266,9 +266,14 @@ kind(e):
 **Targets and audience**
 
 - [app] Several targets are OR'ed; within one target, group and voice family are AND'ed.
-- [app] **No targets = everyone**: Users with a Choir membership on the event's date (see pseudo-code below).
+- [app] **No targets = everyone**: every active User, including Users without a Choir Membership.
 - [app] Targets, event details and registration questions are copied per occurrence when a series is created or edited.
 - [app] Typical shapes: a choir (`groupId = KK`), a section (`groupId = KKB`), all basses in CSK (`voiceFamily = B`), KK basses (`groupId = KK, voiceFamily = B`), a gig group (`groupId = <gig group>`).
+
+Viewing uses Membership at Event start, also for multi-day Events. Before start, closed Memberships
+stop granting access immediately. At/after start, historical Membership preserves viewing after
+departure. The existing date-only periods have Stockholm calendar-day precision; same-day
+before/after departure cannot be reconstructed.
 
 Audience (computed, never stored):
 
@@ -278,7 +283,7 @@ active(m, d) = m.startDate <= d AND (m.endDate IS NULL OR m.endDate >= d)
 
 inAudience(user, event):
 	if the event has no EventTargets:
-		return user has an active(., d) GroupMembers row in any group with type = Choir
+		return true
 	return any target t of the event satisfies matches(t, user, d)
 
 matches(t, user, d):
@@ -308,7 +313,7 @@ scope(g):  g IS NULL                          -> all sections
 - [app] In `ResponseRequired`: any answer; a reason with No is optional.
 - [app] Only active `AbsenceReasons` can be selected. Archived ones stay on old rows.
 - [app] A response after `respondBy` is accepted but flagged late (`respondedAt > respondBy`). It is not blocked.
-- [app] **Visibility**: the answer itself is visible to the audience. `comment`, `absenceReasonId` and `reasonText` are visible only to the singer and to those who may edit the event.
+- [app] **Visibility**: the answer itself is visible to the audience. `comment`, `absenceReasonId` and `reasonText` are visible only to the singer, Admins and current Event managers.
 - [app] A response is kept when the singer later leaves (Inactive User).
 
 **Registrations**
@@ -320,22 +325,23 @@ scope(g):  g IS NULL                          -> all sections
 - [app] **Withdrawing** sets `status = Withdrawn` and `withdrawnAt`; the answers stay. Registering again sets `status = Registered`, clears `withdrawnAt` and updates `registeredAt`.
 - [app] Once an event has registrations, its questions and options can be added and relabelled but not deleted (`ON DELETE NO ACTION`). Deleting the whole event still removes them.
 - [app] A registration after `respondBy` is accepted but flagged late (`registeredAt > respondBy`). It is not blocked.
-- [app] **Visibility**: who is registered is visible to the audience. `comment` and the answers are visible only to the registrant and to those who may edit the event.
+- [app] **Visibility**: who is registered is visible to the audience. `comment` and the answers are visible only to the registrant, Admins and current Event managers.
 - [app] Registration answers can be sensitive (dietary requirements, allergies). Clear them when no longer needed (retention rule not decided).
 
 **Attendance**
 
 - [app] **No row = not recorded**. It never means Absent.
 - [app] Rows are recorded for audience members of Published events. A Cancelled event gets no attendance.
-- [app] **Who may record**: everyone who may edit the event, plus the **Stämförälder** of a section, for members of their own section only.
-- [app] Independent of the response or registration: the organiser decides Present / Excused / Absent. The UI may show the reason while recording, but nothing is set automatically.
+- [app] **Who may view**: the subject, Admins and current Event managers; additionally current **Stämföräldrar** of the subject's Section at Event start, only for Rehearsal and Concert (never Gig).
+- [app] **Who may record/correct**: Admins/current managers and the same scoped Stämföräldrar. The editor must hold the Position now, not merely at Event time.
+- [app] Independent of the response or registration: the organiser decides Present / Excused / Absent. A separate private-field permission is required to show a reason while recording; attendance authority grants none. Nothing is set automatically.
 
 **Permissions (app rules, no permission tables)**
 
 - [app] **Admin** may do everything.
-- [app] A **position holder in the organiser group** may edit that event.
-- [app] A **position on a choir** (Conductor, Notfiskal, Konsertmästare) gives rights over events organised by that choir or any group with that `choirId`, and over events whose targets all lie within that choir (consistent with the groups spec).
-- [app] **Gigs** are created by position holders in the Gigmästeri group (which becomes the organiser group), or by Admins.
+- [app] A **current Position holder with current Membership in the exact active non-Choir organiser group** may create/manage its Events. Creator identity and Targets grant no management authority.
+- [app] **Choir-organised Events and Events without an organiser are Admin-only**, for creation and management. Choir/subgroup/Target relationships confer no inherited authority.
+- [app] **Gigs** use the same exact-organiser policy and confer no Stämförälder attendance grant.
 - [app] Editing includes creating, changing, cancelling, managing targets, event details and registration questions, and recording attendance.
 - [app] Draft events are visible only to those who may edit.
 

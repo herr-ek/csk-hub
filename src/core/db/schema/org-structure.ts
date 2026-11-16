@@ -117,9 +117,12 @@ export const position = pgTable(
   "position",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    name: text("name").notNull()
+    name: text("name").notNull(),
+    // Stable policy identity, independent of editable labels and environment-specific UUIDs.
+    code: text("code")
   },
   (table) => [
+    uniqueIndex("position_code_unique").on(table.code),
     uniqueIndex("position_name_unique").on(table.name),
     check("position_name_not_blank_check", sql`length(btrim(${table.name})) > 0`)
   ]
