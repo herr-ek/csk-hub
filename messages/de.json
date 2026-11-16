@@ -8,6 +8,26 @@
     "description": "Das digitale Zentrum von Chalmers Sångkör"
   },
   "Public": {
+    "info": {
+      "privacyTitle": "Datenschutzerklärung",
+      "supportTitle": "Support",
+      "privacyIntro": "Diese Erklärung beschreibt, wie CSK Hub, der digitale Dienst von Chalmers Sångkör, mit deinen Daten umgeht.",
+      "dataTitle": "Mitgliedsdaten",
+      "dataBody": "Hub verwendet deinen Namen, deine E-Mail-Adresse, deinen Benutzernamen, dein Profilfoto, deinen Kontostatus und deine Chorzugehörigkeiten, um dein Konto und deine Chormitgliedschaft zu verwalten. Auch geteilte Inhalte wie Beiträge und Nachrichten sowie deine Einstellungen werden gespeichert. Der Zugriff auf Mitgliedsdaten richtet sich nach Rolle und Berechtigungen.",
+      "idTitle": "iPhone-App",
+      "idBody": "Die App verwendet dein Hub-Konto, um einen temporären QR-Code anzuzeigen. Bei der Überprüfung sieht ein Admin deinen Namen, dein Profilfoto, falls vorhanden, deinen Kontostatus und deine aktuellen Chorzugehörigkeiten. Der Kamerazugriff dient zum Lesen von QR-Codes; Kamerafotos und Videos werden nicht hochgeladen.",
+      "appSession": "Die App speichert ihre Sitzung im iOS-Schlüsselbund.",
+      "technicalTitle": "Anmeldung und Dienstleister",
+      "technicalBody": "Hub verwendet Cookies für die Anmeldung und Einstellungen. Sitzungsdaten können aus Sicherheitsgründen deine IP-Adresse und Informationen zu Browser oder Gerät enthalten. Hosting-, Datenbank- und E-Mail-Anbieter verarbeiten Daten für den Betrieb des Dienstes. Die Website verwendet Vercel Web Analytics, um die Nutzung der Website zu verstehen.",
+      "contactTitle": "Kontakt",
+      "privacyContact": "Bei Fragen zu deinen Daten oder für Anfragen zu Auskunft, Berichtigung oder Löschung schreibe uns eine E-Mail. Konto- und Chordaten werden aufbewahrt, solange sie für den Betrieb des Dienstes und die Verwaltung der Chormitgliedschaft benötigt werden. Kontaktiere uns zu deinen konkreten Daten.",
+      "supportIntro": "Brauchst du Hilfe mit CSK Hub? Kontaktiere uns per E-Mail.",
+      "supportDetails": "Beschreibe, was du tun wolltest, was schiefgelaufen ist und welches Gerät oder welche App-Version du nutzt. Sende niemals dein Passwort, Zwei-Faktor-Codes oder deinen Mitglieds-QR-Code.",
+      "loginHelpTitle": "Probleme bei der Anmeldung?",
+      "loginHelpBody": "Verwende dein bestehendes Hub-Konto. Wenn du dein Passwort vergessen hast, kannst du es unten zurücksetzen lassen. Bei Problemen mit dem Kontozugang oder der Zwei-Faktor-Anmeldung schreibe uns eine E-Mail.",
+      "resetPassword": "Passwort zurücksetzen",
+      "signIn": "Bei Hub anmelden"
+    },
     "activation": {
       "pageTitle": "Konto aktivieren",
       "title": "Aktiviere dein CSK-Konto",

@@ -8,6 +8,8 @@ import { getPostLoginPath, loginPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
 
 const PUBLIC_PATHS = new Set<string>([
+  ROUTES.privacy,
+  ROUTES.support,
   ROUTES.login,
   ROUTES.forgotPassword,
   ROUTES.resetPassword,

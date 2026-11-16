@@ -8,6 +8,26 @@
     "description": "The digital hub for Chalmers Sångkör"
   },
   "Public": {
+    "info": {
+      "privacyTitle": "Privacy policy",
+      "supportTitle": "Support",
+      "privacyIntro": "This policy explains how CSK Hub, the digital service for Chalmers Sångkör, handles your information.",
+      "dataTitle": "Member information",
+      "dataBody": "Hub uses your name, email, username, profile photo, account status and choir affiliations to manage your account and choir membership. It also stores content you share, such as posts and messages, and your preferences. Access to member information depends on your role and permissions.",
+      "idTitle": "iPhone app",
+      "idBody": "The app uses your Hub account to show a temporary QR code. When an Admin verifies it, they see your name, profile photo if available, account status and current choir affiliations. Camera access is used to read QR codes; camera photos and video are not uploaded.",
+      "appSession": "The app stores its sign-in session in the iOS Keychain.",
+      "technicalTitle": "Sign-in and service providers",
+      "technicalBody": "Hub uses cookies for sign-in and preferences. Session records may include your IP address and browser or device information for account security. Hosting, database and email providers process data to run the service. The website uses Vercel Web Analytics to understand website usage.",
+      "contactTitle": "Contact",
+      "privacyContact": "For questions about your data, or to request access, correction or deletion, email us. Account and choir records are kept as needed to operate the service and manage choir membership; contact us about your specific records.",
+      "supportIntro": "Need help with CSK Hub? Contact us by email.",
+      "supportDetails": "Tell us what you were trying to do, what went wrong, and which device or app version you use. Never send your password, two-factor codes or member QR code.",
+      "loginHelpTitle": "Trouble signing in?",
+      "loginHelpBody": "Use your existing Hub account. If you forgot your password, request a reset below. For account access or two-factor problems, email us.",
+      "resetPassword": "Reset password",
+      "signIn": "Sign in to Hub"
+    },
     "activation": {
       "pageTitle": "Activate your account",
       "title": "Activate your CSK account",
