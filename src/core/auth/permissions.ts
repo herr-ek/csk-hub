@@ -17,7 +17,8 @@ export const accessRoles = {
     ...defaultRoles.user.statements
   }),
   [ADMIN_ROLE]: accessControl.newRole({
-    ...defaultRoles.admin.statements
+    ...defaultRoles.admin.statements,
+    user: defaultRoles.admin.statements.user.filter((action) => action !== "impersonate")
   })
 } as const
 
