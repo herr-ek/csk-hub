@@ -191,7 +191,9 @@
       "adminOrgStructureGroups": "Groups and positions",
       "adminEvents": "Events",
       "adminEventsNew": "New Event",
-      "adminEventLocations": "Locations"
+      "adminEventLocations": "Locations",
+      "events": "Events",
+      "eventsNew": "New Event"
     },
     "members": "Members",
     "quickAccess": "Quick access",
@@ -890,7 +892,8 @@
       "detail-incomplete": "Each Event detail needs both a label and a value.",
       "user-not-found": "That User no longer exists.",
       "invalid-input": "Some of the values are not valid. Check the form and try again.",
-      "unexpected": "Something went wrong. Please try again."
+      "unexpected": "Something went wrong. Please try again.",
+      "access-denied": "You no longer have permission to manage this Event."
     },
     "form": {
       "saved": "Event saved.",
@@ -989,7 +992,7 @@
     },
     "list": {
       "title": "Events",
-      "description": "Every Event in the CSK calendar, in any status.",
+      "description": "Events you can manage, in any status.",
       "locations": "Locations",
       "new": "New Event",
       "when": "Which Events",

@@ -1,9 +1,9 @@
 import { Suspense } from "react"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { NewEventScreen, NewEventScreenSkeleton } from "@/features/events"
 
 async function AdminNewEvent() {
-  await requireAdmin()
+  await requirePermission({ action: "event.administer" })
 
   return <NewEventScreen />
 }

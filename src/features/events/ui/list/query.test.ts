@@ -1,15 +1,25 @@
-import { afterAll, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"
+import { createAuthorization } from "@/core/authz/authorization"
+import { user } from "@/core/db/schema/auth"
 import { createEvent } from "../../events"
 import { createEventsTestDatabase, eventInput, expectSuccess } from "../../test-support"
 
 const database = await createEventsTestDatabase()
 mock.module("@/core/db", () => ({ db: database?.db }))
 
-const { listAdminEvents } = await import("./query")
+const access = database
+  ? createAuthorization({ database: database.db, readSession: async () => ({ user: { id: "admin" } }) })
+  : undefined
+mock.module("@/core/authz", () => ({ forCurrentRequest: access?.forCurrentRequest }))
+
+const { listManagedEvents } = await import("./query")
 
 describe.skipIf(!database)("the admin Events list", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
+  beforeAll(async () => {
+    await t.db.insert(user).values({ id: "admin", name: "Admin", email: "list-admin@example.test", role: "admin" })
+  })
 
   test("names the Organiser group and the Target groups, archived or not, in name order", async () => {
     const choir = await t.choir()
@@ -30,7 +40,7 @@ describe.skipIf(!database)("the admin Events list", () => {
     )
     await t.archiveGroup(organiser)
 
-    const rows = await listAdminEvents({ when: "upcoming" }, new Date("2026-01-01T00:00:00Z"))
+    const rows = await listManagedEvents({ when: "upcoming" }, new Date("2026-01-01T00:00:00Z"))
     const row = rows.find((candidate) => candidate.id === id)
 
     expect(row?.organiserGroup).toStartWith("Board ")
@@ -44,7 +54,7 @@ describe.skipIf(!database)("the admin Events list", () => {
 
   test("leaves the Organiser group empty when the Event has none", async () => {
     const { id } = expectSuccess(await createEvent(t.db, { ...eventInput(), createdBy: null }))
-    const rows = await listAdminEvents({ when: "upcoming" }, new Date("2026-01-01T00:00:00Z"))
+    const rows = await listManagedEvents({ when: "upcoming" }, new Date("2026-01-01T00:00:00Z"))
     expect(rows.find((candidate) => candidate.id === id)).toMatchObject({ organiserGroup: null, targets: [] })
   })
 })

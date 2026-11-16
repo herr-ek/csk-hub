@@ -42,6 +42,20 @@ describe.skipIf(!database)("authorization server enforcement", () => {
     expect(await erased.access.can({ action: "post.create" })).toBe(false)
   })
 
+  test("Event administration rejects demotion, deactivation and revoked sessions on the next operation", async () => {
+    const admin = await actor({ role: "admin" })
+    const request = { action: "event.administer" } as const
+    expect(await admin.access.requirePermission(request)).toMatchObject({ userId: admin.id })
+    await t.db.update(user).set({ role: "user" }).where(eq(user.id, admin.id))
+    await expect(admin.access.requirePermission(request)).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await t.db.update(user).set({ role: "admin", banned: true }).where(eq(user.id, admin.id))
+    await expect(admin.access.requirePermission(request)).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await t.db.update(user).set({ banned: false }).where(eq(user.id, admin.id))
+    expect(await admin.access.can(request)).toBe(true)
+    admin.revoke()
+    await expect(admin.access.requirePermission(request)).rejects.toBeInstanceOf(AuthorizationDeniedError)
+  })
+
   test("session role and status claims never replace current database facts", async () => {
     const member = await actor()
     const staleSession = { user: { id: member.id, role: "admin", banned: false }, session: {} }

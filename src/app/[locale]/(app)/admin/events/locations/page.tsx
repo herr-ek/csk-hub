@@ -1,9 +1,9 @@
 import { Suspense } from "react"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { LocationsScreen, LocationsScreenSkeleton } from "@/features/events"
 
 async function AdminEventLocations() {
-  await requireAdmin()
+  await requirePermission({ action: "event.administer" })
 
   return <LocationsScreen />
 }

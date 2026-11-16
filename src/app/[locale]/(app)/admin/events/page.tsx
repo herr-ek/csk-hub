@@ -1,11 +1,11 @@
 import { Suspense } from "react"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { EventsScreen, EventsScreenSkeleton } from "@/features/events"
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>
 
 async function AdminEvents({ searchParams }: { searchParams: SearchParams }) {
-  await requireAdmin()
+  await requirePermission({ action: "event.administer" })
 
   return <EventsScreen searchParams={await searchParams} />
 }

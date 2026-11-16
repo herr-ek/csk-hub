@@ -1,4 +1,5 @@
 import type { user } from "@/core/db/schema/auth"
+import type { event } from "@/core/db/schema/events"
 import type { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import type { post } from "@/core/db/schema/posts"
 
@@ -22,12 +23,15 @@ type GroupWorkContext = GroupContext &
     memberships: readonly MembershipAttributes[]
     positionHoldings: readonly PositionHoldingAttributes[]
   }>
+export type EventAttributes = Readonly<Pick<typeof event.$inferSelect, "id" | "organiserGroupId">>
+type EventContext = GroupWorkContext & Readonly<{ event: EventAttributes | null }>
+
 type MemberContext = Readonly<{ member: MemberAttributes | null }>
 
 /**
  * The facts required for each action. Supply attributes, never precomputed permission booleans.
  * Null resources represent missing records and deny access. These contracts cover today's schema;
- * Group-authored Posts, audience changes and Event instances need their own contexts and policies.
+ * Group-authored Posts and audience changes still need their own contexts and policies.
  */
 export type PermissionContext = {
   "memberId.issue": undefined
@@ -48,6 +52,12 @@ export type PermissionContext = {
   "member.readEmail": MemberContext
   "member.editProfile": MemberContext
   "admin.access": undefined
+  "event.create": GroupWorkContext
+  "event.read": EventContext
+  "event.update": EventContext & Readonly<{ proposedOrganiser: GroupWorkContext }>
+  "event.changeStatus": EventContext
+  "event.delete": EventContext
+  "event.administer": undefined
   "org.manage": undefined
   "user.administer": undefined
   "notification.broadcast": undefined

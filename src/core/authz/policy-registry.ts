@@ -1,5 +1,6 @@
 import { adminPolicies } from "./admin-policies"
 import { appPolicies } from "./app-policies"
+import { eventPolicies } from "./event-policies"
 import { groupPolicies } from "./group-policies"
 import { memberIdPolicies } from "./member-id-policies"
 import { memberPolicies } from "./member-policies"
@@ -17,6 +18,7 @@ const policies: AuthorizationPolicies = {
   ...appPolicies,
   ...postPolicies,
   ...groupPolicies,
+  ...eventPolicies,
   ...memberPolicies,
   ...memberIdPolicies,
   ...adminPolicies

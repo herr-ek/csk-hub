@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
@@ -13,10 +14,12 @@ const FIRST_TYPE = EVENT_TYPES[0] as EventType
 export async function NewEventScreen() {
   const [options, t] = await Promise.all([getEventFormOptions(), getTranslations("Events")])
 
+  if (!options.canCreate) notFound()
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-2">
-        <PageBreadcrumb route="adminEventsNew" />
+        <PageBreadcrumb route="eventsNew" />
         <h1 className="font-heading text-2xl font-semibold">{t("newPage.title")}</h1>
         <p className="text-sm text-muted-foreground">{t("newPage.description")}</p>
       </div>
@@ -26,7 +29,7 @@ export async function NewEventScreen() {
         options={options}
         unsavedSlot="new"
         submitLabel={t("newPage.submit")}
-        cancelHref={ROUTES.adminEvents}
+        cancelHref={ROUTES.events}
       />
     </main>
   )
@@ -37,7 +40,7 @@ export async function NewEventScreenSkeleton() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
       <div className="flex flex-col gap-2">
-        <PageBreadcrumb route="adminEventsNew" />
+        <PageBreadcrumb route="eventsNew" />
         <h1 className="font-heading text-2xl font-semibold">{t("newPage.title")}</h1>
       </div>
       <FormSkeleton />

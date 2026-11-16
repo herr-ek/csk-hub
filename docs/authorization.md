@@ -90,13 +90,14 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 | `org.manage`, `user.administer`, `notification.broadcast`, `admin.access` | Explicit Admin grants; feature-specific safeguards still apply |
 | `memberId.issue` | Active Users outside support impersonation may present their own temporary ID |
 | `memberId.verify` | Active Admins outside support impersonation may verify a temporary ID |
+| `event.*` | Exact organiser management and explicit Admin grants; see Events below |
 | `member.read` | Active Users may read other active Users' shared profiles |
 | `member.readEmail` | Profile owner only; no Admin bypass |
 | `member.editProfile` | Profile owner |
 
 Discarded Posts are inaccessible. Group requests express authority to represent a Group; they
-cannot authorize an arbitrary Post, Event or Conversation ID. Future instance policies must bind
-the resource to its representing/organiser Group. Choir operations remain Admin-only. No grant
+cannot authorize an arbitrary Post, Event or Conversation ID. Event instance policies bind
+the resource to its organiser Group; future Group Post policies must do the same. Choir operations remain Admin-only. No grant
 propagates through `choirId`, linked holdings or the Board to unrelated Groups.
 
 ## Freshness, locks and limitations
@@ -200,7 +201,7 @@ list. The shared Direct lookup accepts trusted caller IDs and grants no access b
 Keep command, departure/read-lock, idempotency and recipient-deactivation tests. If these policies
 later move into core, move the complete readable-range rule and its tests together.
 
-## Routes, account settings and future Events
+## Routes and account settings
 
 Proxy and `route-access.ts` use cheap cached-session presentation gates. Admin pages establish
 `admin.access`; navigation uses fresh `app.access`/`admin.access` hints. Neither layout nor Proxy
@@ -212,12 +213,63 @@ Account settings rendering, locale updates, subscription writes and self push te
 transaction. Passwords, passkeys, sessions, username, email verification and 2FA continue through
 native Better Auth endpoints.
 
-`features/events` contains schema tests only. Future Event instance policies must bind management
-to `organiserGroupId`, separately from audience and `createdBy`. Non-Choir organiser Position
-holders manage that organiser's Events; Choir grants remain Admin-only. Do not adopt broader
-Choir/subgroup/target-based authority from schema examples without revisiting the decision.
-Response reasons, Registration answers and Section-scoped Stämförälder attendance require explicit
-field-level policies when implemented. Rich text has no separate protected persistence workflow.
+## Events: implemented boundaries and policy gaps
+
+The `/events` management surface is available to active Users. Its collection is filtered in
+SQL by authorised organiser Group IDs before loading Events, Targets or counts. `/events/new`
+creates a Draft and `/events/[eventId]` edits it. The existing Admin routes remain available.
+This is a management view, not an audience-facing calendar.
+
+The following policies are registered in `core/authz/event-policies.ts`:
+
+| Policy | Grant |
+| --- | --- |
+| `event.create` | Admin, or a current Position holder with current Membership in the proposed exact active non-Choir organiser Group |
+| `event.read` | Admin, or the same representation of the Event's actual organiser Group |
+| `event.update` | Management of the current Event **and** authority over the proposed organiser, including clearing it |
+| `event.changeStatus` | Event managers may publish, cancel or reinstate; the feature still enforces legal lifecycle transitions |
+| `event.delete` | Event managers; the existing confirmation includes the deletion impact |
+| `event.administer` | Admin-only shared Location catalogue and Admin route access |
+
+Management covers Draft, Published and Cancelled Events. `createdBy`, audience Targets, Choir
+ownership and links to another Group confer no management authority. Choir organisers, missing
+organisers and archived organisers are Admin-only. An absent Event denies even Admin. Admin may
+create an Event without an organiser, and may retain an archived organiser on an existing Event;
+feature validation still refuses newly choosing an archived or nonexistent Group.
+
+Every Event action supplies trusted resource and relationship facts to its exact policy in the
+same transaction as the domain command. The update context contains the proposed organiser facts.
+The feature acquires org-structure's User advisory lock before Group archive locks and Event
+locks, coordinating with Membership departure and Position handover. If an Event's organiser
+changes during lock acquisition, the operation fails closed for retry. Collection and option
+reads take relationship/archive locks too; instance reads hold an Event shared lock through
+loading editor data. User deactivation and Session revocation retain the general freshness
+limitation described above; the check does not serialize a later revocation.
+
+`getEventEditor`, `getEventFormOptions`, `listManagedEvents` and `listLocations` establish their
+own boundaries. Delegated pickers return User names and IDs, with no email fields; Admin pickers
+retain emails. Organiser choices are restricted to manageable Groups; audience choices are
+independent. Locations may be selected by delegates but created, edited or archived only by Admin.
+Domain commands and low-level fact reads remain session-independent; callers must authorize.
+
+`ui/access.test.ts` exercises real authorization and persistence: anonymous direct calls, exact
+organiser scope, creator/Target non-grants, Choir restrictions, both sides of organiser changes,
+lifecycle/deletion, attribution, email masking, departure/holding expiry/archival and lock
+coordination. Core tests cover grants/denials and fresh rejection after Admin demotion,
+deactivation and Session revocation.
+
+Remaining policy fog is outside the management surface implemented here:
+
+- **Schema conflict:** the Events scheme describes broader Choir/subgroup/target-based authority.
+  This implementation follows exact organiser representation and Admin-only Choir authority.
+  Reconcile those examples before implementing broader grants.
+- **Audience and history:** settle current versus event-time Membership, departed members,
+  archived Targets, and Cancelled Event visibility for member-facing lists, details and notifications.
+  A management grant does not establish member audience visibility.
+- **Participation privacy:** Response reasons, Registration answers and Section-scoped
+  Stämförälder attendance need explicit field-level policies when those workflows are implemented.
+
+Rich text has no separate protected persistence workflow.
 
 ## Stage four: Group attribution, targeting and recall
 

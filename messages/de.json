@@ -191,7 +191,9 @@
       "adminOrgStructureGroups": "Gruppen und Ämter",
       "adminEvents": "Veranstaltungen",
       "adminEventsNew": "Neue Veranstaltung",
-      "adminEventLocations": "Orte"
+      "adminEventLocations": "Orte",
+      "events": "Veranstaltungen",
+      "eventsNew": "Neue Veranstaltung"
     },
     "members": "Mitglieder",
     "quickAccess": "Schnellzugriff",
@@ -890,7 +892,8 @@
       "detail-incomplete": "Jedes Detail braucht eine Bezeichnung und einen Wert.",
       "user-not-found": "Diesen Benutzer gibt es nicht mehr.",
       "invalid-input": "Einige Werte sind ungültig. Prüfe das Formular und versuche es erneut.",
-      "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+      "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+      "access-denied": "Du hast keine Berechtigung mehr, diese Veranstaltung zu verwalten."
     },
     "form": {
       "saved": "Veranstaltung gespeichert.",
@@ -989,7 +992,7 @@
     },
     "list": {
       "title": "Veranstaltungen",
-      "description": "Alle Veranstaltungen im CSK-Kalender, in jedem Status.",
+      "description": "Veranstaltungen, die du verwalten kannst, in jedem Status.",
       "locations": "Orte",
       "new": "Neue Veranstaltung",
       "when": "Welche Veranstaltungen",

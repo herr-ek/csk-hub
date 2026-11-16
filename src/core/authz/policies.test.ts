@@ -167,6 +167,62 @@ describe("Group policies", () => {
   })
 })
 
+describe("Event policies", () => {
+  const event = { id: "event", organiserGroupId: group.id }
+  const context = { ...groupContext, event, proposedOrganiser: groupContext }
+
+  test("creation requires exact active non-Choir representation or explicit Admin authority", () => {
+    expect(evaluatePermission(owner, { action: "event.create", context: groupContext })).toBe(true)
+    for (const facts of [
+      { ...groupContext, group: null },
+      { ...groupContext, group: { ...group, active: false } },
+      { ...groupContext, group: { ...group, type: "Choir" as const } },
+      { ...groupContext, memberships: [] },
+      { ...groupContext, positionHoldings: [] }
+    ]) {
+      expect(evaluatePermission(owner, { action: "event.create", context: facts })).toBe(false)
+      expect(evaluatePermission(admin, { action: "event.create", context: facts })).toBe(true)
+    }
+  })
+
+  test("updates require authority for both existing and proposed organisers, including removal", () => {
+    for (const proposedOrganiser of [
+      { ...groupContext, group: null },
+      { ...groupContext, group: { ...group, id: "foreign" } },
+      { ...groupContext, group: { ...group, type: "Choir" as const } },
+      { ...groupContext, group: { ...group, active: false } }
+    ]) {
+      expect(evaluatePermission(owner, { action: "event.update", context: { ...context, proposedOrganiser } })).toBe(
+        false
+      )
+      expect(evaluatePermission(admin, { action: "event.update", context: { ...context, proposedOrganiser } })).toBe(
+        true
+      )
+    }
+  })
+
+  test("every instance action binds the Event to its organiser; Admin can manage orphaned or archived organisers", () => {
+    for (const action of ["event.read", "event.update", "event.changeStatus", "event.delete"] as const) {
+      expect(evaluatePermission(owner, { action, context })).toBe(true)
+      expect(evaluatePermission(other, { action, context })).toBe(false)
+      expect(evaluatePermission(null, { action, context })).toBe(false)
+      for (const facts of [
+        { ...context, event: { ...event, organiserGroupId: "unrelated" } },
+        { ...context, event: { ...event, organiserGroupId: null }, group: null },
+        { ...context, group: { ...group, active: false } },
+        { ...context, group: { ...group, type: "Choir" as const } },
+        { ...context, memberships: [] },
+        { ...context, positionHoldings: [] },
+        { ...context, positionHoldings: [{ ...holding, endDate: "2026-01-01" }] }
+      ]) {
+        expect(evaluatePermission(owner, { action, context: facts })).toBe(false)
+        expect(evaluatePermission(admin, { action, context: facts })).toBe(true)
+      }
+      expect(evaluatePermission(admin, { action, context: { ...context, event: null } })).toBe(false)
+    }
+  })
+})
+
 describe("member and administrative policies", () => {
   const member = { id: owner.userId, banned: false }
 
@@ -189,7 +245,13 @@ describe("member and administrative policies", () => {
   })
 
   test("administrative grants are explicit and unavailable to other actors", () => {
-    for (const action of ["admin.access", "org.manage", "user.administer", "notification.broadcast"] as const) {
+    for (const action of [
+      "admin.access",
+      "event.administer",
+      "org.manage",
+      "user.administer",
+      "notification.broadcast"
+    ] as const) {
       expect(evaluatePermission(owner, { action })).toBe(false)
       expect(evaluatePermission(admin, { action })).toBe(true)
       expect(evaluatePermission(null, { action })).toBe(false)
@@ -218,9 +280,11 @@ test("every action denies without an active actor, and unknown runtime actions d
       action,
       context: { member: { id: owner.userId, banned: false } }
     })),
-    ...(["admin.access", "org.manage", "user.administer", "notification.broadcast"] as const).map((action) => ({
-      action
-    }))
+    ...(["admin.access", "event.administer", "org.manage", "user.administer", "notification.broadcast"] as const).map(
+      (action) => ({
+        action
+      })
+    )
   ] satisfies PermissionRequest[]
   for (const request of requests) expect(evaluatePermission(null, request)).toBe(false)
   for (const action of ["unsupported", "constructor", "toString", "__proto__"]) {

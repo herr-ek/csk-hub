@@ -1,11 +1,11 @@
 import "server-only"
 
-import { and, asc, eq, gte, inArray, isNull, or } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
 import type { IsoDate } from "./model"
-import type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
+import { lockUser, type OrgStructureDatabase, type OrgStructureTransaction } from "./operation"
 
 /** The current members of a group, with the Voice each sings when the group is a Section. */
 export function listCurrentGroupMembers(database: OrgStructureDatabase, groupId: string) {
@@ -158,4 +158,36 @@ export async function listGroupNames(database: OrgStructureDatabase, groupIds: s
 export async function lockGroupForReference(tx: OrgStructureTransaction, groupId: string) {
   const [row] = await tx.select({ active: group.active }).from(group).where(eq(group.id, groupId)).for("share")
   return row ?? null
+}
+
+/**
+ * Complete Group relationship facts for authorization, without deciding permissions.
+ * Unlike summary reads, these retain User IDs and both period boundaries.
+ */
+export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
+  const [groups, memberships, positionHoldings] = await Promise.all([
+    database.select({ id: group.id, type: group.type, active: group.active }).from(group),
+    database.select().from(groupMember).where(eq(groupMember.userId, userId)),
+    database.select().from(positionHolder).where(eq(positionHolder.userId, userId))
+  ])
+  return { groups, memberships, positionHoldings }
+}
+
+/**
+ * Lock the actor's organisational relationships against departure/handover, then the named
+ * Groups against archival, until the transaction ends. Call before taking Event locks.
+ * Uses the same User advisory lock as organisational commands; acquires no Position slot locks.
+ */
+export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, userId: string, groupIds: string[]) {
+  await lockUser(tx, userId)
+  if (groupIds.length > 0) {
+    await tx
+      .select({ id: group.id })
+      .from(group)
+      .where(inArray(group.id, [...new Set(groupIds)].sort()))
+      // Choir archival locks its Choir before updating Sections; preserve that order here.
+      .orderBy(sql`case when ${group.type} = 'Choir' then 0 else 1 end`, asc(group.id))
+      .for("share")
+  }
+  return getGroupAuthorizationFacts(tx, userId)
 }

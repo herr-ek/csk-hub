@@ -6,10 +6,11 @@ owns the decisions. Better Auth retains authentication and its native account pe
 The module never imports features and does not load their resources itself.
 
 Stages one through three are implemented: personal Posts, Members, Messaging, account settings,
-administrative workflows, routes and navigation use these policies. Better Auth no longer carries
+administrative workflows (including Events and Locations), routes and navigation use these policies. Better Auth no longer carries
 application Post grants; the legacy application permission guards have been removed. Group-authored
-Posts, audience targets, Recalled Group Posts and Event instance policies remain unimplemented.
-The member-ID API also uses fresh issuance and Admin verification policies.
+Posts, audience targets, Recalled Group Posts and member-facing Event audience policies remain unimplemented.
+Event management uses organiser-bound `event.*` policies; `event.administer` remains Admin-only
+for Locations and Admin routes. See the adoption guide for the explicit policy list.
 
 ## Reading order
 
@@ -17,7 +18,7 @@ The member-ID API also uses fresh issuance and Admin verification policies.
 | --- | --- |
 | `README.md` | Calling the module and adding policies |
 | `model.ts` | The action catalogue, required resource facts and policy types |
-| `app-policies.ts`, `post-policies.ts`, `group-policies.ts`, `member-policies.ts`, `member-id-policies.ts`, `admin-policies.ts` | The permission rules for each subject |
+| `app-policies.ts`, `post-policies.ts`, `group-policies.ts`, `event-policies.ts`, `member-policies.ts`, `member-id-policies.ts`, `admin-policies.ts` | The permission rules for each subject |
 | `policy-registry.ts` | Static registration and pure policy evaluation |
 | `authorization.ts` | Fresh actor resolution, operation snapshots and denial errors |
 | `index.ts` | Production wiring and the application entrypoint |
@@ -95,6 +96,7 @@ Policies are ordinary synchronous TypeScript functions with boolean expressions:
 
 - `app-policies.ts`: baseline application access for active Users.
 - `post-policies.ts`: personal Post creation, reading and lifecycle permissions.
+- `event-policies.ts`: organiser-bound creation, reading, updates, lifecycle and deletion.
 - `group-policies.ts`: exact-Group representation and administration.
 - `member-policies.ts`: shared profiles, private email and self-profile edits.
 - `admin-policies.ts`: explicit administrative grants.
@@ -146,7 +148,7 @@ file discovery. Add the new family to the reading order and policy list above.
 ### Resource changes and feature adoption
 
 New operations that change authorization-relevant fields must include the proposed values in
-their context and check those values in the policy, as well as the existing resource. Current
+their context and check those values in the policy, as well as the existing resource. Event updates include both existing and proposed organiser facts. Current
 Post policies do not implement Group attribution, audience changes or recall, and Group work
 grants do not authorize arbitrary Post or Event instances.
 

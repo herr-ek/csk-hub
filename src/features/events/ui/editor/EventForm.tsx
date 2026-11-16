@@ -166,7 +166,10 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
 
   const userOptions = (none: string) => [
     { value: "", label: none },
-    ...options.users.map((user) => ({ value: user.id, label: t("userOption", { name: user.name, email: user.email }) }))
+    ...options.users.map((user) => ({
+      value: user.id,
+      label: user.email ? t("userOption", { name: user.name, email: user.email }) : user.name
+    }))
   ]
   const groupOptions = (none: string) => [
     { value: "", label: none },
@@ -368,7 +371,10 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
               name="organiserGroupId"
               onValueChange={onEdit}
               defaultValue={initial.organiserGroupId}
-              options={groupOptions(t("noOrganiserGroup"))}
+              options={[
+                { value: "", label: t("noOrganiserGroup") },
+                ...options.organiserGroups.map((group) => ({ value: group.id, label: group.name }))
+              ]}
               invalid={Boolean(errorFor("organiserGroup"))}
               error={errorFor("organiserGroup")}
             />

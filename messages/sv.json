@@ -191,7 +191,9 @@
       "adminOrgStructureGroups": "Grupper och poster",
       "adminEvents": "Evenemang",
       "adminEventsNew": "Nytt evenemang",
-      "adminEventLocations": "Platser"
+      "adminEventLocations": "Platser",
+      "events": "Evenemang",
+      "eventsNew": "Nytt evenemang"
     },
     "members": "Medlemmar",
     "quickAccess": "Snabbåtkomst",
@@ -890,7 +892,8 @@
       "detail-incomplete": "Varje detalj behöver både en rubrik och ett värde.",
       "user-not-found": "Användaren finns inte längre.",
       "invalid-input": "Några av värdena är ogiltiga. Kontrollera formuläret och försök igen.",
-      "unexpected": "Något gick fel. Försök igen."
+      "unexpected": "Något gick fel. Försök igen.",
+      "access-denied": "Du har inte längre behörighet att hantera detta evenemang."
     },
     "form": {
       "saved": "Evenemanget har sparats.",
@@ -989,7 +992,7 @@
     },
     "list": {
       "title": "Evenemang",
-      "description": "Alla evenemang i CSK:s kalender, oavsett status.",
+      "description": "Evenemang du kan hantera, oavsett status.",
       "locations": "Platser",
       "new": "Nytt evenemang",
       "when": "Vilka evenemang",
