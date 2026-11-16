@@ -5,7 +5,7 @@ import * as authSchema from "@/core/db/schema/auth"
 import { secureConnection } from "@/core/db/tls"
 
 export const db = drizzle({
-  connection: { ...secureConnection(env.POSTGRES_URL), connectionTimeoutMillis: 5_000 },
+  connection: secureConnection(env.POSTGRES_URL),
   relations: { ...defineRelations(authSchema), ...authSchema.authRelations }
 })
 
