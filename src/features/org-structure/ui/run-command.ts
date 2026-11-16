@@ -1,16 +1,9 @@
 import "server-only"
 
-import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import type { z } from "zod"
-import {
-  type AuthorizationDatabase,
-  AuthorizationDeniedError,
-  type PermissionRequest,
-  requirePermission
-} from "@/core/authz"
+import { type AuthorizationDatabase, AuthorizationDeniedError, requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
-import { group } from "@/core/db/schema/org-structure"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName } from "@/shared/errors"
@@ -36,19 +29,7 @@ export async function runGroupCommand<Schema extends z.ZodType>(
   let result: OrgStructureResult<unknown>
   try {
     result = await db.transaction(async (tx) => {
-      const groupId = (input.data as { groupId?: string }).groupId
-      const action = ["assign-holder", "end-holding"].includes(name)
-        ? "group.managePositions"
-        : "group.manageMemberships"
-      let permission: PermissionRequest = { action: "org.manage" }
-      if (groupId && ["add-member", "end-membership", "change-voice", "assign-holder", "end-holding"].includes(name)) {
-        const [resource] = await tx
-          .select({ id: group.id, type: group.type, active: group.active })
-          .from(group)
-          .where(eq(group.id, groupId))
-        permission = { action, context: { group: resource ?? null } }
-      }
-      await requirePermission(permission, tx)
+      await requirePermission({ action: "org.manage" }, tx)
       return command(input.data, tx)
     })
   } catch (error) {
