@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, eq, ilike, isNull, or } from "drizzle-orm"
-import { db } from "@/core/db"
+import { type Database, db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
 import { parseNotificationSubscription, parsePushEndpoint } from "./subscription-validation"
@@ -12,11 +12,7 @@ import { parseNotificationSubscription, parsePushEndpoint } from "./subscription
  * resets disabled/failure metadata. Callers must authorize the supplied userId.
  * Throws `InvalidNotificationSubscriptionError` for invalid data; persistence failures reject.
  */
-export async function subscribe(
-  userId: string,
-  subscription: unknown,
-  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
-) {
+export async function subscribe(userId: string, subscription: unknown, database: Database = db) {
   const validated = parseNotificationSubscription(subscription)
   const now = new Date()
   const values = {
@@ -46,11 +42,7 @@ export async function subscribe(
  * Returns whether an owned row was removed. Throws
  * `InvalidNotificationSubscriptionError` for invalid endpoints; persistence failures reject.
  */
-export async function unsubscribe(
-  userId: string,
-  endpoint: string,
-  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
-) {
+export async function unsubscribe(userId: string, endpoint: string, database: Database = db) {
   const normalizedEndpoint = parsePushEndpoint(endpoint)
   const [deleted] = await database
     .delete(pushSubscription)
@@ -65,11 +57,7 @@ export async function unsubscribe(
  * revealing another owner's identity. Returns false for absent or disabled bindings.
  * Throws `InvalidNotificationSubscriptionError` for invalid endpoints; lookup failures reject.
  */
-export async function hasActiveSubscription(
-  userId: string,
-  endpoint: string,
-  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
-) {
+export async function hasActiveSubscription(userId: string, endpoint: string, database: Database = db) {
   const normalizedEndpoint = parsePushEndpoint(endpoint)
   const [subscription] = await database
     .select({ id: pushSubscription.id })

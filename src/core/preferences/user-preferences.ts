@@ -1,7 +1,7 @@
 import "server-only"
 
 import { eq, sql } from "drizzle-orm"
-import { db } from "@/core/db"
+import { type Database, db } from "@/core/db"
 import { userPreferences } from "@/core/db/schema/user-preferences"
 import {
   type UserPreferences,
@@ -41,7 +41,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
 export async function updateUserPreferences(
   userId: string,
   input: UserPreferencesUpdate,
-  database: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+  database: Database = db
 ): Promise<void> {
   const preferences = userPreferencesUpdateSchema.parse(input)
 
