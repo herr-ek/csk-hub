@@ -311,9 +311,9 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         expect(push).toHaveBeenCalledTimes(1)
         expect(push).toHaveBeenCalledWith(
           recipient.userId,
-          "Private Message",
           expect.objectContaining({
-            href: `/messages/${sent.conversationId}`
+            body: "Private Message",
+            url: `/messages/${sent.conversationId}`
           })
         )
       })
