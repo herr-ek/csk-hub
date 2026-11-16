@@ -16,11 +16,10 @@ export type ProfileEditorActor = { userId: string }
 /** The actor comes from authentication, never from the submitted profile form. */
 export async function saveOwnVoiceCapabilities(
   database: MemberDatabase,
-  actor: ProfileEditorActor | null,
+  actor: ProfileEditorActor,
   input: unknown,
   authorize = requirePermission
 ): Promise<EditProfileState> {
-  if (!actor) return { status: "error", error: "sign-in-required" }
   if (!Array.isArray(input) || input.length > VOICE_DIVISIONS.length || !input.every(isVoiceDivision)) {
     return { status: "error", error: "invalid-voices" }
   }

@@ -12,10 +12,10 @@ describe.skipIf(!database)("Self-reported profile capabilities", () => {
   if (!database) return
   const { db, drop } = database
   afterAll(drop)
-  function saveOwnVoiceCapabilities(database: typeof db, actor: { userId: string } | null, input: unknown) {
+  function saveOwnVoiceCapabilities(database: typeof db, actor: { userId: string }, input: unknown) {
     const authorize = createAuthorization({
       database,
-      readSession: async () => (actor ? { user: { id: actor.userId } } : null)
+      readSession: async () => ({ user: { id: actor.userId } })
     }).requirePermission
     return saveCapabilities(database, actor, input, authorize)
   }
@@ -55,13 +55,6 @@ describe.skipIf(!database)("Self-reported profile capabilities", () => {
       expect(await saveOwnVoiceCapabilities(db, actor, input)).toEqual({ status: "error", error: "invalid-voices" })
     }
     expect(await getOwnVoiceCapabilities(db, actor.userId)).toEqual(["B1"])
-  })
-
-  test("refuses unauthenticated edits", async () => {
-    const actor = await member()
-    await setVoiceCapabilities(db, actor.userId, ["A1"])
-    expect(await saveOwnVoiceCapabilities(db, null, ["B1"])).toEqual({ status: "error", error: "sign-in-required" })
-    expect(await getOwnVoiceCapabilities(db, actor.userId)).toEqual(["A1"])
   })
 
   test("a stale edit form cannot write after the actor is deactivated or erased", async () => {

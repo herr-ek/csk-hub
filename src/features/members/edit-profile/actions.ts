@@ -12,7 +12,7 @@ export async function saveProfileAction(_state: EditProfileState, formData: Form
   try {
     const actor = await requirePermission({ action: "app.access" })
     const result = await saveOwnVoiceCapabilities(db, actor, formData.getAll("voices"))
-    if (result.status === "success" && actor) {
+    if (result.status === "success") {
       revalidatePath("/[locale]/(app)/me", "page")
       revalidatePath("/[locale]/(app)/me/edit", "page")
       revalidatePath("/[locale]/(app)/members/[memberId]", "page")
