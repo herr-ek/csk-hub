@@ -311,10 +311,11 @@ describe.skipIf(!database)("groups structure", () => {
       expect(kept.find(({ id }) => id === archived)).toMatchObject({ type: "Board", active: false })
     })
 
-    test("names the given groups, archived or not", async () => {
+    test("names and types the given groups, archived or not", async () => {
       const { active, archived } = await activeAndArchived()
       const names = await listGroupNames(t.db, [active, archived, active])
       expect(names.map(({ id }) => id).sort()).toEqual([active, archived].sort())
+      expect(names.find(({ id }) => id === archived)).toMatchObject({ type: "Board" })
       expect(await listGroupNames(t.db, [])).toEqual([])
     })
 

@@ -3,7 +3,12 @@ import { and, asc, eq } from "drizzle-orm"
 import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
 import { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 import { startPositionHolding } from "./positions"
-import { listChoirMembersByVoiceFamily, listCurrentGroupMembers, listCurrentGroupsOfUser } from "./reads"
+import {
+  listChoirMembersByVoiceFamily,
+  listCurrentGroupMembers,
+  listCurrentGroupsOfUser,
+  listMembershipsOfUser
+} from "./reads"
 import { archiveGroup, createGroup } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
 
@@ -361,6 +366,47 @@ describe.skipIf(!database)("groups membership", () => {
       const members = (await listCurrentGroupMembers(t.db, await t.groupId("KKT"))).map(({ userId }) => userId)
       expect(members).toContain(tenor)
       expect(members).not.toContain(bass)
+    })
+
+    test("lists a user's dated Memberships that had not ended before a date", async () => {
+      const [mk, mkb1, kk, kkb] = [
+        await t.groupId("MK"),
+        await t.groupId("MKB1"),
+        await t.groupId("KK"),
+        await t.groupId("KKB")
+      ]
+      const userId = await t.user()
+      expectSuccess(await placeSinger(t.db, { userId, choirId: mk, voice: "B1", startDate: "2020-08-20" }))
+      expectSuccess(await endMembership(t.db, { userId, groupId: mk, endDate: "2024-06-30" }))
+      expectSuccess(await placeSinger(t.db, { userId, choirId: kk, voice: "B2", startDate: "2024-08-20" }))
+
+      const from2024 = await listMembershipsOfUser(t.db, userId, { from: "2024-06-30" })
+      expect(from2024).toEqual(
+        expect.arrayContaining([
+          {
+            groupId: mk,
+            groupType: "Choir",
+            choirId: null,
+            voice: null,
+            startDate: "2020-08-20",
+            endDate: "2024-06-30"
+          },
+          {
+            groupId: mkb1,
+            groupType: "Section",
+            choirId: mk,
+            voice: "B1",
+            startDate: "2020-08-20",
+            endDate: "2024-06-30"
+          },
+          { groupId: kk, groupType: "Choir", choirId: null, voice: null, startDate: "2024-08-20", endDate: null },
+          { groupId: kkb, groupType: "Section", choirId: kk, voice: "B2", startDate: "2024-08-20", endDate: null }
+        ])
+      )
+      expect(from2024).toHaveLength(4)
+
+      const groupIds = (await listMembershipsOfUser(t.db, userId, { from: "2024-07-01" })).map(({ groupId }) => groupId)
+      expect(groupIds.sort()).toEqual([kk, kkb].sort())
     })
   })
 })

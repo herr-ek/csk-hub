@@ -1,5 +1,7 @@
 import "server-only"
 
+export { EventPageScreen, EventPageScreenSkeleton } from "./calendar/EventPageScreen"
+export { UpcomingEventsScreen, UpcomingEventsScreenSkeleton } from "./calendar/UpcomingEventsScreen"
 export {
   createEvent,
   type EventDetailInput,

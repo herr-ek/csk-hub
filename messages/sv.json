@@ -184,6 +184,7 @@
       "home": "Hem",
       "news": "Nyheter",
       "newsCompose": "Skriv ett inlägg",
+      "events": "Evenemang",
       "messages": "Meddelanden",
       "account": "Mitt konto",
       "accountSettings": "Inställningar",
@@ -940,7 +941,7 @@
       "costInfoDescription": "Till exempel \"200 kr inkl. mat, 150 kr för nya medlemmar\".",
       "targetsTitle": "Målgrupp",
       "targetsDescription": "Varje målgrupp anger en grupp, en stämma eller båda. Evenemanget är för alla som någon målgrupp omfattar.",
-      "everyoneInCsk": "Evenemanget är för alla i CSK: varje användare med ett körmedlemskap på evenemangets datum.",
+      "everyoneInCsk": "Evenemanget är för alla i CSK: varje användare, oavsett medlemskap.",
       "anyGroup": "Vilken grupp som helst",
       "anyVoice": "Vilken stämma som helst",
       "targetGroup": "Målgrupp {number}: grupp",
@@ -1036,6 +1037,45 @@
       "archivedBadge": "Arkiverad",
       "eventCount": "{count, plural, =0 {Används inte av något evenemang} one {Används av # evenemang} other {Används av # evenemang}}",
       "openMap": "Karta"
+    },
+    "calendar": {
+      "title": "Kommande evenemang",
+      "description": "Det som väntar dig i CSK:s kalender.",
+      "allDay": "Heldag",
+      "until": "Till {end}",
+      "emptyTitle": "Inget på gång",
+      "emptyDescription": "Du har inga kommande evenemang just nu.",
+      "filterLabel": "Typ",
+      "anyType": "Alla typer",
+      "noMatchTitle": "Inget av den här typen",
+      "noMatchDescription": "Du har inga kommande evenemang av den här typen. Välj Alla typer för att se allt.",
+      "rehearsalKinds": {
+        "ChoirRehearsal": "Körrepetition",
+        "ExtraRehearsal": "Extrarepetition",
+        "SectionalRehearsal": "Stämrepetition",
+        "Rehearsal": "Repetition"
+      },
+      "voiceFamilies": {
+        "S": "Sopraner",
+        "A": "Altar",
+        "T": "Tenorer",
+        "B": "Basar"
+      },
+      "everyoneInCsk": "Alla i CSK",
+      "voiceInGroup": "{voices} i {group}",
+      "voiceInCsk": "{voices} i CSK",
+      "page": {
+        "when": "När",
+        "callTime": "Samling",
+        "where": "Var",
+        "openMap": "Öppna karta",
+        "organiser": "Arrangeras av",
+        "audience": "För",
+        "leader": "Leds av",
+        "responsible": "Ansvarig",
+        "cost": "Kostnad",
+        "edit": "Redigera evenemang"
+      }
     }
   }
 }

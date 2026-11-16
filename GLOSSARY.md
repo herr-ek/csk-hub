@@ -163,7 +163,7 @@ _Avoid_: Invitee, recipient, filter
 
 **Audience**:
 The Users an Event is for, worked out from its Targets and the Memberships on the Event's
-date, never stored. Without Targets it is every User with a Choir Membership on that date.
+date, never stored. Without Targets it is every User, whatever their Memberships.
 _Avoid_: Invitees, guest list, attendees
 
 **Participation mode**:

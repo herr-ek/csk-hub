@@ -184,6 +184,7 @@
       "home": "Startseite",
       "news": "Neuigkeiten",
       "newsCompose": "Beitrag schreiben",
+      "events": "Veranstaltungen",
       "messages": "Nachrichten",
       "account": "Mein Konto",
       "accountSettings": "Einstellungen",
@@ -940,7 +941,7 @@
       "costInfoDescription": "Zum Beispiel \"200 kr inkl. Essen, 150 kr für neue Mitglieder\".",
       "targetsTitle": "Publikum",
       "targetsDescription": "Jede Zielgruppe nennt eine Gruppe, eine Stimmlage oder beides. Die Veranstaltung ist für alle, auf die eine Zielgruppe zutrifft.",
-      "everyoneInCsk": "Diese Veranstaltung ist für alle in CSK: jeden Benutzer mit einer Chormitgliedschaft am Tag der Veranstaltung.",
+      "everyoneInCsk": "Diese Veranstaltung ist für alle in CSK: jeden Benutzer, unabhängig von seinen Mitgliedschaften.",
       "anyGroup": "Jede Gruppe",
       "anyVoice": "Jede Stimmlage",
       "targetGroup": "Zielgruppe {number}: Gruppe",
@@ -1036,6 +1037,45 @@
       "archivedBadge": "Archiviert",
       "eventCount": "{count, plural, =0 {Von keiner Veranstaltung genutzt} one {Von # Veranstaltung genutzt} other {Von # Veranstaltungen genutzt}}",
       "openMap": "Karte"
+    },
+    "calendar": {
+      "title": "Kommende Veranstaltungen",
+      "description": "Was im CSK-Kalender für dich ansteht.",
+      "allDay": "Ganztägig",
+      "until": "Bis {end}",
+      "emptyTitle": "Nichts geplant",
+      "emptyDescription": "Für dich stehen gerade keine Veranstaltungen an.",
+      "filterLabel": "Art",
+      "anyType": "Alle Arten",
+      "noMatchTitle": "Nichts von dieser Art",
+      "noMatchDescription": "Für dich stehen keine Veranstaltungen dieser Art an. Wähle Alle Arten, um alles zu sehen.",
+      "rehearsalKinds": {
+        "ChoirRehearsal": "Chorprobe",
+        "ExtraRehearsal": "Zusatzprobe",
+        "SectionalRehearsal": "Stimmprobe",
+        "Rehearsal": "Probe"
+      },
+      "voiceFamilies": {
+        "S": "Soprane",
+        "A": "Alte",
+        "T": "Tenöre",
+        "B": "Bässe"
+      },
+      "everyoneInCsk": "Alle in CSK",
+      "voiceInGroup": "{voices} in {group}",
+      "voiceInCsk": "{voices} in CSK",
+      "page": {
+        "when": "Wann",
+        "callTime": "Treffpunkt",
+        "where": "Wo",
+        "openMap": "Karte öffnen",
+        "organiser": "Organisiert von",
+        "audience": "Für",
+        "leader": "Geleitet von",
+        "responsible": "Verantwortlich",
+        "cost": "Kosten",
+        "edit": "Veranstaltung bearbeiten"
+      }
     }
   }
 }
