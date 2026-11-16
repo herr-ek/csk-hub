@@ -22,7 +22,7 @@ import { voice, voiceDivision } from "./voice"
 // database cannot express. See GLOSSARY.md#groups for the language.
 //
 // Drizzle cannot express every database invariant. The Voice domains are described in
-// `./voice.ts`; `drizzle/20261102210555_redesign-organisation-appointments/migration.sql` also maintains
+// `./voice.ts`; `drizzle/20261116194645_redesign-organisation-appointments/migration.sql` also maintains
 // NULLS NOT DISTINCT name uniqueness, range exclusions and organisation policy triggers.
 // Drizzle neither generates nor diffs these additions; preserve them in later migrations.
 
@@ -32,7 +32,7 @@ export const group = pgTable(
   "group",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    // Section and other derived Group names are null; see derive-section-names migration.
+    // Section and other derived Group names are null; see the organisation redesign migration.
     name: text("name"),
     type: groupType("type").notNull(),
     // Null means CSK-wide. A Choir group itself is always CSK-wide, and a Section always belongs to one.
@@ -42,7 +42,7 @@ export const group = pgTable(
     organisationYear: integer("organisation_year")
   },
   (table) => [
-    // Hand-written in drizzle/20261102210555_redesign-organisation-appointments/migration.sql: the index is NULLS NOT DISTINCT, which Drizzle's
+    // Hand-written in drizzle/20261116194645_redesign-organisation-appointments/migration.sql: the index is NULLS NOT DISTINCT, which Drizzle's
     // index builder cannot express, so two active CSK-wide groups (choir_id null) cannot share a
     // name while each Choir keeps its own namespace.
     uniqueIndex("group_name_choir_active_unique")
@@ -155,7 +155,7 @@ export const positionAppointment = pgTable(
   ]
 )
 
-// Hand-written in drizzle/20261102210555_redesign-organisation-appointments/migration.sql: btree_gist range exclusions
+// Hand-written in drizzle/20261116194645_redesign-organisation-appointments/migration.sql: btree_gist range exclusions
 // on appointment occupancy, Board exclusivity and direct Membership overlap; fixed-policy
 // triggers on group, position_appointment and direct_membership. Drizzle
 // does not diff these. Preserve them in later migrations; see docs/schemas/Groups - DB Scheme.md.

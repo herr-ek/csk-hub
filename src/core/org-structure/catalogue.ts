@@ -7,7 +7,7 @@ type GroupPolicy = {
   cardinality: "singleton" | "choir-singleton" | "multiple" | "existing-choirs" | "four-sections"
 }
 
-/** Fixed organisation policy; Arkivarie retains its existing database identifier. */
+/** Fixed organisation policy keyed by stable Group type codes. */
 export const GROUP_POLICIES = {
   [GroupType.Choir]: { scope: "csk", lifetime: "continuing", directMembership: "yes", cardinality: "existing-choirs" },
   [GroupType.Section]: {

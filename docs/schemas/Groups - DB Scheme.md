@@ -13,7 +13,7 @@ The implementation sources are:
   [fixed Group and Position catalogues](../../src/core/org-structure/catalogue.ts).
 - [Organisation module guide](../../src/features/org-structure/README.md) for public commands
   and reads, and [the glossary](../../GLOSSARY.md#groups) for shared domain language.
-- [Organisation redesign migration](../../drizzle/20261102210555_redesign-organisation-appointments/migration.sql)
+- [Organisation redesign migration](../../drizzle/20261116194645_redesign-organisation-appointments/migration.sql)
   for the final schema and hand-written constraints and triggers that Drizzle cannot represent.
 
 Identifiers below use actual PostgreSQL names. User IDs are `text`; Group, direct Membership,
@@ -61,29 +61,29 @@ parent Board above Board 26/27 and Board 27/28.
 
 | Stored Group type | Scope | Lifetime | Direct Membership | Cardinality |
 | --- | --- | --- | --- | --- |
-| `Choir` | CSK-wide | Continuing | Yes | Existing MK, DK, KK |
-| `Section` | One Choir | Continuing | Singer placement | Four non-overlapping Sections per Choir |
-| `Board` | CSK-wide | Annual | No | One per year |
-| `Gigmästeri` | CSK-wide | Annual | Helpers | One per year |
-| `Sexmästeri` | CSK-wide | Annual | Helpers | One per year |
-| `Konsertmästeri` | CSK-wide | Annual | Helpers | One per year |
-| `Rekryteringskommitté` | CSK-wide | Annual | Helpers | One per year |
-| `Turnékommitté` | CSK-wide | Annual | Helpers | One per year; only one operates at a time |
-| `Valberedning` | CSK-wide | Annual | Yes; no Positions | One per year |
-| `Webmästeri` | CSK-wide | Annual | Yes; no Positions | One per year |
-| `Arkivarie` | CSK-wide | Annual | Yes; no Positions | One per year |
-| `Utantillkommitté` | CSK-wide | Annual | Yes; no Positions | One per year |
-| `Föräldramötet` | CSK-wide | Continuing | No | One continuing identity |
-| `Roddgrupp` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
-| `Festgrupp` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
-| `Rephelg` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
-| `GigGroup` | CSK-wide | Fluid | Singers with a Voice division | Multiple |
-| `Övrig` | CSK-wide | Fluid | Yes; no Positions | Multiple |
+| `choir` | CSK-wide | Continuing | Yes | Existing MK, DK, KK |
+| `section` | One Choir | Continuing | Singer placement | Four non-overlapping Sections per Choir |
+| `board` | CSK-wide | Annual | No | One per year |
+| `gig-committee` | CSK-wide | Annual | Helpers | One per year |
+| `social-committee` | CSK-wide | Annual | Helpers | One per year |
+| `concert-committee` | CSK-wide | Annual | Helpers | One per year |
+| `recruitment-committee` | CSK-wide | Annual | Helpers | One per year |
+| `tour-committee` | CSK-wide | Annual | Helpers | One per year; only one operates at a time |
+| `nomination-committee` | CSK-wide | Annual | Yes; no Positions | One per year |
+| `web-team` | CSK-wide | Annual | Yes; no Positions | One per year |
+| `archives` | CSK-wide | Annual | Yes; no Positions | One per year |
+| `memorisation-committee` | CSK-wide | Annual | Yes; no Positions | One per year |
+| `parents-meeting` | CSK-wide | Continuing | No | One continuing identity |
+| `equipment-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
+| `party-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
+| `rehearsal-weekend-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
+| `gig-group` | CSK-wide | Fluid | Singers with a Voice division | Multiple |
+| `other` | CSK-wide | Fluid | Yes; no Positions | Multiple |
 
 These are the values of the native PostgreSQL `group_type` enum, defined from the core
 `GroupType` string enum in [`identifiers.ts`](../../src/core/org-structure/identifiers.ts).
-Use named identifiers such as `GroupType.Board` in application code. `Arkivarie` is the retained
-storage identifier for Arkivariet. `Övrig` is a compatibility type for explicit participation,
+Use named identifiers such as `GroupType.Board` in application code. `archives` identifies Arkivariet. `other` is a compatibility type for explicit
+participation,
 not a way to bypass the rules of a known formal Group type.
 
 Annual types require a year; continuing and fluid types forbid it. Continuing identities
@@ -95,16 +95,16 @@ identities; it never copies people or renews appointments.
 
 | Group | Type | `choir_id` | `organisation_year` | `section.voice` |
 | --- | --- | --- | --- | --- |
-| MK / DK / KK | `Choir` | null | null | — |
-| MKT1 / MKT2 / MKB1 / MKB2 | `Section` | MK | null | T1 / T2 / B1 / B2 |
-| DKS1 / DKS2 / DKA1 / DKA2 | `Section` | DK | null | S1 / S2 / A1 / A2 |
-| KKS / KKA / KKT / KKB | `Section` | KK | null | S / A / T / B |
-| Styret 26/27 | `Board` | null | 2026 | — |
-| Styret 27/28 | `Board` | null | 2027 | — |
-| Konsertmästeriet 26/27 | `Konsertmästeri` | null | 2026 | — |
-| Föräldramötet | `Föräldramötet` | null | null | — |
-| MK roddgrupp | `Roddgrupp` | MK | null | — |
-| A particular gig ensemble | `GigGroup` | null | null | — |
+| MK / DK / KK | `choir` | null | null | — |
+| MKT1 / MKT2 / MKB1 / MKB2 | `section` | MK | null | T1 / T2 / B1 / B2 |
+| DKS1 / DKS2 / DKA1 / DKA2 | `section` | DK | null | S1 / S2 / A1 / A2 |
+| KKS / KKA / KKT / KKB | `section` | KK | null | S / A / T / B |
+| Styret 26/27 | `board` | null | 2026 | — |
+| Styret 27/28 | `board` | null | 2027 | — |
+| Konsertmästeriet 26/27 | `concert-committee` | null | 2026 | — |
+| Föräldramötet | `parents-meeting` | null | null | — |
+| MK roddgrupp | `equipment-team` | MK | null | — |
+| A particular gig ensemble | `gig-group` | null | null | — |
 
 
 ### Stored names and localized labels
@@ -126,7 +126,7 @@ Sections' and teams' displayed labels immediately, without updating their rows. 
 division does not determine the Section name: a B2 singer in KK belongs to KKB.
 
 The English enum member names (for example `GroupType.ConcertCommittee` and
-`PositionCode.FirstConcertMaster`) are independent of the retained storage strings.
+`PositionCode.FirstConcertMaster`) are independent of the stable storage codes.
 `groupTypeKey` and `positionCodeKey` provide English intl keys. All display text lives in
 the English, Swedish, and German message catalogues, not in `POSITION_DEFINITIONS`.
 `formatGroupLabel` uses ICU templates for annual and Choir-team labels so each locale owns
@@ -631,13 +631,14 @@ erDiagram
 ## Migration and maintenance
 
 Migrations already on `master`, through `20261018183236_post-read`, remain unchanged. The single
-`20261102210555_redesign-organisation-appointments` migration replaces the legacy participation and
+`20261116194645_redesign-organisation-appointments` migration replaces the legacy participation and
 Position catalogue tables with `direct_membership` and `position_appointment`. It adds
 explicit organisational years, fixed-name policy, date-based annual lifecycle constraints,
 range exclusions and fixed-policy triggers directly, without transitional tables or flags.
 
-Group IDs and explicit names are retained; fixed labels are cleared and derived by the
-application. The active-name index retains `NULLS NOT DISTINCT` for Choir scope, but excludes
+Legacy `group_type` enum values are renamed in place to stable lowercase kebab-case codes.
+Group IDs, Section Voice rows, Choir references, and explicit names are retained;
+fixed labels are cleared and derived by the application. The active-name index retains `NULLS NOT DISTINCT` for Choir scope, but excludes
 null names so distinct fixed Groups cannot collide through their absent names. Appointment
 memberships are derived from the current catalogue for every year; no grant rows are stored.
 
@@ -666,7 +667,7 @@ be verified against a real disposable PostgreSQL database, including migration f
 - Voice capabilities belong to the Voice feature, even though they are shown here to explain
   their relationship to singer placement.
 - Gig events, repertoire, cleaning assignments, and musical formation are separate models.
-  A `GigGroup` here is the ensemble's organisational identity, not an event occurrence.
+  A `gig-group` here is the ensemble's organisational identity, not an event occurrence.
 - Appointments add no new permissions or delegated management. Existing Admin authorization
   applies to organisation editing; no choir-wide permission inheritance is introduced here.
 

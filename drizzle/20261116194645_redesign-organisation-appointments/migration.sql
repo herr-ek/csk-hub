@@ -1,3 +1,40 @@
+-- Rename enum values in place so existing Group IDs, references and type checks survive.
+ALTER TYPE "public"."group_type" RENAME VALUE 'Choir' TO 'choir';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Section' TO 'section';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Board' TO 'board';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'GigGroup' TO 'gig-group';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Gigmästeri' TO 'gig-committee';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Sexmästeri' TO 'social-committee';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Roddgrupp' TO 'equipment-team';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Festgrupp' TO 'party-team';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Rephelg' TO 'rehearsal-weekend-team';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Konsertmästeri' TO 'concert-committee';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Rekryteringskommitté' TO 'recruitment-committee';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Turnékommitté' TO 'tour-committee';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Valberedning' TO 'nomination-committee';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Webmästeri' TO 'web-team';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Föräldramötet' TO 'parents-meeting';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Arkivarie' TO 'archives';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Utantillkommitté' TO 'memorisation-committee';
+--> statement-breakpoint
+ALTER TYPE "public"."group_type" RENAME VALUE 'Övrig' TO 'other';
+--> statement-breakpoint
 CREATE TABLE "direct_membership" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"user_id" text NOT NULL,
@@ -37,8 +74,8 @@ DROP INDEX "group_name_choir_active_unique";--> statement-breakpoint
 CREATE UNIQUE INDEX "group_name_choir_active_unique" ON "group" ("name","choir_id") NULLS NOT DISTINCT WHERE "active" AND "name" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX "direct_membership_group_idx" ON "direct_membership" ("group_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "group_annual_identity_unique" ON "group" ("type","organisation_year") WHERE "organisation_year" IS NOT NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX "group_continuing_singleton_unique" ON "group" ("type") WHERE "type" = 'Föräldramötet';--> statement-breakpoint
-CREATE UNIQUE INDEX "group_choir_team_unique" ON "group" ("type","choir_id") WHERE "active" AND "type" IN ('Roddgrupp', 'Festgrupp', 'Rephelg');--> statement-breakpoint
+CREATE UNIQUE INDEX "group_continuing_singleton_unique" ON "group" ("type") WHERE "type" = 'parents-meeting';--> statement-breakpoint
+CREATE UNIQUE INDEX "group_choir_team_unique" ON "group" ("type","choir_id") WHERE "active" AND "type" IN ('equipment-team', 'party-team', 'rehearsal-weekend-team');--> statement-breakpoint
 CREATE INDEX "position_appointment_user_idx" ON "position_appointment" ("user_id");--> statement-breakpoint
 ALTER TABLE "direct_membership" ADD CONSTRAINT "direct_membership_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "direct_membership" ADD CONSTRAINT "direct_membership_group_id_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "group"("id") ON DELETE RESTRICT;--> statement-breakpoint
@@ -47,10 +84,10 @@ ALTER TABLE "position_appointment" ADD CONSTRAINT "position_appointment_context_
 ALTER TABLE "group" ADD CONSTRAINT "group_organisation_year_check" CHECK ("organisation_year" IS NULL OR "organisation_year" BETWEEN 1000 AND 9998);--> statement-breakpoint
 ALTER TABLE "group" ADD CONSTRAINT "group_annual_active_check" CHECK ("organisation_year" IS NULL OR "active");--> statement-breakpoint
 -- Fixed Group labels are derived from type, year and Choir; preserve explicit names and IDs.
-UPDATE "group" SET "name" = NULL WHERE "type" NOT IN ('Choir', 'Section', 'GigGroup', 'Övrig');
+UPDATE "group" SET "name" = NULL WHERE "type" NOT IN ('choir', 'gig-group', 'other');
 --> statement-breakpoint
 ALTER TABLE "group" ADD CONSTRAINT "group_name_policy_check" CHECK (
-      CASE WHEN "type" IN ('Choir', 'Section', 'GigGroup', 'Övrig')
+      CASE WHEN "type" IN ('choir', 'gig-group', 'other')
         THEN "name" IS NOT NULL AND length(btrim("name")) > 0
         ELSE "name" IS NULL END
     );
@@ -69,11 +106,11 @@ ALTER TABLE direct_membership ADD CONSTRAINT direct_membership_overlap_excl
   EXCLUDE USING gist (group_id WITH =, user_id WITH =, daterange(start_date, end_date, '[)') WITH &&);
 --> statement-breakpoint
 CREATE FUNCTION organisation_group_policy(code text) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$
-  SELECT '{"Choir": {"scope": "csk", "lifetime": "continuing", "directMembership": "yes", "cardinality": "existing-choirs"}, "Section": {"scope": "choir", "lifetime": "continuing", "directMembership": "placement", "cardinality": "four-sections"}, "Board": {"scope": "csk", "lifetime": "annual", "directMembership": "no", "cardinality": "singleton"}, "Gigmästeri": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "Sexmästeri": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "Konsertmästeri": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "Rekryteringskommitté": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "Turnékommitté": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "Valberedning": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "Webmästeri": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "Arkivarie": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "Utantillkommitté": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "Föräldramötet": {"scope": "csk", "lifetime": "continuing", "directMembership": "no", "cardinality": "singleton"}, "Roddgrupp": {"scope": "choir", "lifetime": "fluid", "directMembership": "yes", "cardinality": "choir-singleton"}, "Festgrupp": {"scope": "choir", "lifetime": "fluid", "directMembership": "yes", "cardinality": "choir-singleton"}, "Rephelg": {"scope": "choir", "lifetime": "fluid", "directMembership": "yes", "cardinality": "choir-singleton"}, "GigGroup": {"scope": "csk", "lifetime": "fluid", "directMembership": "yes", "cardinality": "multiple"}, "Övrig": {"scope": "csk", "lifetime": "fluid", "directMembership": "yes", "cardinality": "multiple"}}'::jsonb -> code
+  SELECT '{"choir": {"scope": "csk", "lifetime": "continuing", "directMembership": "yes", "cardinality": "existing-choirs"}, "section": {"scope": "choir", "lifetime": "continuing", "directMembership": "placement", "cardinality": "four-sections"}, "board": {"scope": "csk", "lifetime": "annual", "directMembership": "no", "cardinality": "singleton"}, "gig-committee": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "social-committee": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "concert-committee": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "recruitment-committee": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "tour-committee": {"scope": "csk", "lifetime": "annual", "directMembership": "helpers", "cardinality": "singleton"}, "nomination-committee": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "web-team": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "archives": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "memorisation-committee": {"scope": "csk", "lifetime": "annual", "directMembership": "yes", "cardinality": "singleton"}, "parents-meeting": {"scope": "csk", "lifetime": "continuing", "directMembership": "no", "cardinality": "singleton"}, "equipment-team": {"scope": "choir", "lifetime": "fluid", "directMembership": "yes", "cardinality": "choir-singleton"}, "party-team": {"scope": "choir", "lifetime": "fluid", "directMembership": "yes", "cardinality": "choir-singleton"}, "rehearsal-weekend-team": {"scope": "choir", "lifetime": "fluid", "directMembership": "yes", "cardinality": "choir-singleton"}, "gig-group": {"scope": "csk", "lifetime": "fluid", "directMembership": "yes", "cardinality": "multiple"}, "other": {"scope": "csk", "lifetime": "fluid", "directMembership": "yes", "cardinality": "multiple"}}'::jsonb -> code
 $$;
 --> statement-breakpoint
 CREATE FUNCTION organisation_position_policy(code text) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $$
-  SELECT '{"ordforande": {"label": "Ordförande", "context": "Board", "prerequisite": false, "grants": ["Board"], "endPolicy": "annual"}, "vice-ordforande": {"label": "Vice Ordförande", "context": "Board", "prerequisite": false, "grants": ["Board", "Rekryteringskommitté"], "endPolicy": "annual"}, "kassor": {"label": "Kassör", "context": "Board", "prerequisite": false, "grants": ["Board"], "endPolicy": "annual"}, "sekreterare": {"label": "Sekreterare", "context": "Board", "prerequisite": false, "grants": ["Board", "Föräldramötet"], "endPolicy": "annual"}, "pr-mastare": {"label": "PR-mästare", "context": "Board", "prerequisite": false, "grants": ["Board"], "endPolicy": "annual"}, "forsta-konsertmastare": {"label": "1:a Konsertmästare", "context": "Board", "prerequisite": false, "grants": ["Board", "Konsertmästeri"], "endPolicy": "annual"}, "csk-gigmastare": {"label": "CSK Gigmästare", "context": "Board", "prerequisite": false, "grants": ["Board", "Gigmästeri"], "endPolicy": "annual"}, "sexmastare": {"label": "Sexmästare", "context": "Board", "prerequisite": false, "grants": ["Board", "Sexmästeri"], "endPolicy": "annual"}, "sexmastarinna": {"label": "Sexmästarinna", "context": "Sexmästeri", "prerequisite": false, "grants": ["Sexmästeri"], "endPolicy": "annual"}, "ekonomiskt-ansvarig": {"label": "Ekonomiskt Ansvarig", "context": "Turnékommitté", "prerequisite": false, "grants": ["Turnékommitté"], "endPolicy": "annual"}, "dirigent": {"label": "Dirigent", "context": "Choir", "prerequisite": true, "grants": [], "endPolicy": "fluid"}, "notfiskal": {"label": "Notfiskal", "context": "Choir", "prerequisite": true, "grants": [], "endPolicy": "fluid"}, "choir-konsertmastare": {"label": "Choir Konsertmästare", "context": "Choir", "prerequisite": true, "grants": ["Konsertmästeri"], "endPolicy": "annual"}, "choir-gigmastare": {"label": "Choir Gigmästare", "context": "Choir", "prerequisite": true, "grants": ["Gigmästeri"], "endPolicy": "annual"}, "stamforalder": {"label": "Stämförälder", "context": "Section", "prerequisite": true, "grants": ["Föräldramötet"], "endPolicy": "fluid"}, "gigledare": {"label": "Gigledare", "context": "GigGroup", "prerequisite": true, "grants": [], "endPolicy": "fluid"}}'::jsonb -> code
+  SELECT '{"ordforande": {"label": "Ordförande", "context": "board", "prerequisite": false, "grants": ["board"], "endPolicy": "annual"}, "vice-ordforande": {"label": "Vice Ordförande", "context": "board", "prerequisite": false, "grants": ["board", "recruitment-committee"], "endPolicy": "annual"}, "kassor": {"label": "Kassör", "context": "board", "prerequisite": false, "grants": ["board"], "endPolicy": "annual"}, "sekreterare": {"label": "Sekreterare", "context": "board", "prerequisite": false, "grants": ["board", "parents-meeting"], "endPolicy": "annual"}, "pr-mastare": {"label": "PR-mästare", "context": "board", "prerequisite": false, "grants": ["board"], "endPolicy": "annual"}, "forsta-konsertmastare": {"label": "1:a Konsertmästare", "context": "board", "prerequisite": false, "grants": ["board", "concert-committee"], "endPolicy": "annual"}, "csk-gigmastare": {"label": "CSK Gigmästare", "context": "board", "prerequisite": false, "grants": ["board", "gig-committee"], "endPolicy": "annual"}, "sexmastare": {"label": "Sexmästare", "context": "board", "prerequisite": false, "grants": ["board", "social-committee"], "endPolicy": "annual"}, "sexmastarinna": {"label": "Sexmästarinna", "context": "social-committee", "prerequisite": false, "grants": ["social-committee"], "endPolicy": "annual"}, "ekonomiskt-ansvarig": {"label": "Ekonomiskt Ansvarig", "context": "tour-committee", "prerequisite": false, "grants": ["tour-committee"], "endPolicy": "annual"}, "dirigent": {"label": "Dirigent", "context": "choir", "prerequisite": true, "grants": [], "endPolicy": "fluid"}, "notfiskal": {"label": "Notfiskal", "context": "choir", "prerequisite": true, "grants": [], "endPolicy": "fluid"}, "choir-konsertmastare": {"label": "Choir Konsertmästare", "context": "choir", "prerequisite": true, "grants": ["concert-committee"], "endPolicy": "annual"}, "choir-gigmastare": {"label": "Choir Gigmästare", "context": "choir", "prerequisite": true, "grants": ["gig-committee"], "endPolicy": "annual"}, "stamforalder": {"label": "Stämförälder", "context": "section", "prerequisite": true, "grants": ["parents-meeting"], "endPolicy": "fluid"}, "gigledare": {"label": "Gigledare", "context": "gig-group", "prerequisite": true, "grants": [], "endPolicy": "fluid"}}'::jsonb -> code
 $$;
 --> statement-breakpoint
 CREATE FUNCTION check_organisation_group() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -128,10 +165,10 @@ BEGIN
       OR NEW.end_date > make_date(target.organisation_year + 1, 7, 1)) THEN
     RAISE check_violation USING CONSTRAINT = 'direct_membership_annual_check';
   END IF;
-  IF (target.type IN ('Section', 'GigGroup')) <> (NEW.voice IS NOT NULL) THEN
+  IF (target.type IN ('section', 'gig-group')) <> (NEW.voice IS NOT NULL) THEN
     RAISE check_violation USING CONSTRAINT = 'direct_membership_voice_check';
   END IF;
-  IF target.type = 'Section' THEN
+  IF target.type = 'section' THEN
     SELECT voice::text INTO section_voice FROM section WHERE group_id = target.id;
     IF section_voice IS NULL OR NOT (section_voice = NEW.voice::text OR section_voice = left(NEW.voice::text, 1)) THEN
       RAISE check_violation USING CONSTRAINT = 'direct_membership_voice_check';

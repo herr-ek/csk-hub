@@ -193,8 +193,8 @@ async function insertGroup(
 async function activeSectionId(client: ClientBase, choirId: string, voice: Voice) {
   const { rows } = await client.query<{ id: string }>(
     `SELECT g.id FROM "group" g JOIN section s ON s.group_id = g.id
-     WHERE g.type = 'Section' AND g.choir_id = $1 AND g.active AND s.voice = $2::voice`,
-    [choirId, voice]
+     WHERE g.type = $3 AND g.choir_id = $1 AND g.active AND s.voice = $2::voice`,
+    [choirId, voice, GroupType.Section]
   )
   return rows[0]?.id
 }

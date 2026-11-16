@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
-import { GROUP_POLICIES, hasExplicitGroupName } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, hasExplicitGroupName } from "@/core/org-structure"
 import { InputField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { CommandDialog } from "../command-dialog"
@@ -13,7 +13,9 @@ export function GroupHeaderActions({ group }: { group: GroupDetail["group"] }) {
   const t = useTranslations("Groups")
   // Choirs and Sections are reference data, archived only together and not from here.
   const archivable =
-    group.type !== "Choir" && group.type !== "Section" && GROUP_POLICIES[group.type].lifetime !== "annual"
+    group.type !== GroupType.Choir &&
+    group.type !== GroupType.Section &&
+    GROUP_POLICIES[group.type].lifetime !== "annual"
 
   return (
     <div className="flex flex-wrap gap-2">

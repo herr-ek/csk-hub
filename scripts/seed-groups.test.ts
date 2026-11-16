@@ -44,7 +44,7 @@ describe.skipIf(!database)("seedGroups", () => {
         .where(and(eq(directMembership.userId, userId), isNull(directMembership.endDate)))
       expect(rows.map(({ type }) => type).sort()).toEqual([GroupType.Choir, GroupType.Section])
       // Every seeded singer gets a division, even in a Section that sings a whole family.
-      expect(rows.find(({ type }) => type === "Section")?.voice).toMatch(/^[SATB][12]$/)
+      expect(rows.find(({ type }) => type === GroupType.Section)?.voice).toMatch(/^[SATB][12]$/)
     }
 
     expect(await seedGroups(t.db)).toEqual({ created: [], placed: 0 })

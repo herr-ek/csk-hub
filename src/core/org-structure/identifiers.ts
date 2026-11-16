@@ -1,23 +1,23 @@
-/** Stable Group type identifiers shared by the database and organisation policies. */
+/** Stable Group type codes; translated labels live in the locale catalogues. */
 export enum GroupType {
-  Choir = "Choir",
-  Section = "Section",
-  Board = "Board",
-  GigGroup = "GigGroup",
-  GigCommittee = "Gigmästeri",
-  SocialCommittee = "Sexmästeri",
-  EquipmentTeam = "Roddgrupp",
-  PartyTeam = "Festgrupp",
-  RehearsalWeekendTeam = "Rephelg",
-  ConcertCommittee = "Konsertmästeri",
-  RecruitmentCommittee = "Rekryteringskommitté",
-  TourCommittee = "Turnékommitté",
-  NominationCommittee = "Valberedning",
-  WebTeam = "Webmästeri",
-  ParentsMeeting = "Föräldramötet",
-  Archives = "Arkivarie",
-  MemorisationCommittee = "Utantillkommitté",
-  Other = "Övrig"
+  Choir = "choir",
+  Section = "section",
+  Board = "board",
+  GigGroup = "gig-group",
+  GigCommittee = "gig-committee",
+  SocialCommittee = "social-committee",
+  EquipmentTeam = "equipment-team",
+  PartyTeam = "party-team",
+  RehearsalWeekendTeam = "rehearsal-weekend-team",
+  ConcertCommittee = "concert-committee",
+  RecruitmentCommittee = "recruitment-committee",
+  TourCommittee = "tour-committee",
+  NominationCommittee = "nomination-committee",
+  WebTeam = "web-team",
+  ParentsMeeting = "parents-meeting",
+  Archives = "archives",
+  MemorisationCommittee = "memorisation-committee",
+  Other = "other"
 }
 
 /** Stable Position codes; translated labels belong to the Position definitions. */

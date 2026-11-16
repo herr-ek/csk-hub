@@ -142,9 +142,12 @@ local copy before using the normal guarded production migration command.
 
 ## Organisation model cutover
 
-The `20261102210555_redesign-organisation-appointments` migration drops the old Membership,
+The `20261116194645_redesign-organisation-appointments` migration drops the old Membership,
 Position catalogue, and holding tables without converting their records. The cutover assumes
-disposable organisation data. For a fresh local example, explicitly run `bun run ops reset`,
+disposable organisation data. It also renames Group type enum values to stable codes and clears
+redundant Section names. This replaces both unmerged PR migrations; databases that applied the
+earlier versions need a deliberate local reset/reseed or a separately planned upgrade, rather than
+editing their migration ledger. For a fresh local example, explicitly run `bun run ops reset`,
 then `bun run ops seed-demo`. Reset refuses production and non-local database targets.
 
 ## Section identities

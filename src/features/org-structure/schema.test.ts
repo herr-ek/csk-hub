@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { sql } from "drizzle-orm"
 import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
-import { GroupType, PositionCode } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, POSITION_DEFINITIONS, PositionCode } from "@/core/org-structure"
 import { createOrganisationGroup } from "./appointments"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
@@ -29,6 +29,26 @@ describe.skipIf(!database)("final organisation schema", () => {
       old_restriction: null,
       has_marker: false
     })
+  })
+
+  test("stored Group codes and SQL policies match the complete catalogue", async () => {
+    const codes = await t.db.execute<{ code: string }>(sql`
+      SELECT unnest(enum_range(NULL::group_type))::text AS code
+    `)
+    expect(codes.rows.map(({ code }) => code)).toEqual(Object.values(GroupType))
+    for (const type of Object.values(GroupType)) {
+      const result = await t.db.execute<{ policy: unknown }>(sql`
+        SELECT organisation_group_policy(${type}) AS policy
+      `)
+      expect(result.rows[0]?.policy).toEqual(GROUP_POLICIES[type])
+    }
+    for (const code of Object.values(PositionCode)) {
+      const result = await t.db.execute<{ policy: unknown }>(sql`
+        SELECT organisation_position_policy(${code}) AS policy
+      `)
+      expect(result.rows[0]?.policy).toMatchObject(POSITION_DEFINITIONS[code])
+    }
+    await expect(t.db.execute(sql`SELECT 'Gigmästeri'::group_type`).execute()).rejects.toBeDefined()
   })
 
   test("Section Voice containment and direct period overlap are database enforced", async () => {

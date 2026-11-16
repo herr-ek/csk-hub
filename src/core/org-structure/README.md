@@ -28,7 +28,9 @@ on 1 July in the organisation's calendar time zone. Annual Groups also become cu
 historical from that year automatically; manual archival is reserved for non-annual Groups.
 
 
-Enum member names and translation keys are English; existing stored values are retained.
+Enum member names and translation keys are English. Group type storage values are stable
+lowercase kebab-case codes, independent of translated labels, just like Position codes.
+The consolidated redesign migration renames the legacy PostgreSQL enum values in place.
 `group-names.ts` owns the enum-based list of explicitly named types, shared by command
 validation and the database constraint. `labels.ts` formats derived labels through a supplied
 intl translator: annual type + year, Choir team type + Choir name, and the parents meeting's

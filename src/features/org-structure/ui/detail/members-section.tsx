@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "@/core/i18n/translations"
+import { GroupType } from "@/core/org-structure"
 import { compareVoices, VOICE_DIVISIONS, type Voice } from "@/features/voice/model"
 import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
@@ -44,10 +45,10 @@ const PAST_MEMBER_MISSING = { voice: (past: PastMember) => past.voice === null }
 export function MembersSection({ detail, today }: { detail: GroupDetail; today: string }) {
   const t = useTranslations("Groups.detail")
   const { group } = detail
-  const isSection = group.type === "Section"
-  const isGigGroup = group.type === "GigGroup"
+  const isSection = group.type === GroupType.Section
+  const isGigGroup = group.type === GroupType.GigGroup
   // Choirs show the Section Voice assignment; Sections and gig groups show their own.
-  const showsVoice = isSection || isGigGroup || group.type === "Choir"
+  const showsVoice = isSection || isGigGroup || group.type === GroupType.Choir
   const members = useSortedRows(detail.members, MEMBER_ORDER, "member", MEMBER_MISSING)
   const pastMembers = useSortedRows(detail.pastMembers, PAST_MEMBER_ORDER, "member", PAST_MEMBER_MISSING)
 
@@ -150,7 +151,7 @@ export function MembersSection({ detail, today }: { detail: GroupDetail; today: 
 function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string }) {
   const t = useTranslations("Groups.detail")
   const { group } = detail
-  const isSection = group.type === "Section"
+  const isSection = group.type === GroupType.Section
 
   return (
     <CommandDialog
@@ -180,7 +181,7 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
           }))}
         />
       )}
-      {isSection || group.type === "GigGroup" ? (
+      {isSection || group.type === GroupType.GigGroup ? (
         <SelectField
           label={t("voice")}
           name="voice"
@@ -215,7 +216,9 @@ function EndMembershipDialog({ detail, member, today }: { detail: GroupDetail; m
               ? t("endsPositions", { positions: member.positions.join(", ") })
               : t("endsNoPositions")}
           </span>
-          {group.type === "Choir" ? <span className="block">{t("endsChoirGroups", { choir: group.name })}</span> : null}
+          {group.type === GroupType.Choir ? (
+            <span className="block">{t("endsChoirGroups", { choir: group.name })}</span>
+          ) : null}
         </>
       }
       action={endMembershipAction}

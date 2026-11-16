@@ -6,6 +6,7 @@ import { account, user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { post } from "@/core/db/schema/posts"
 import { voiceCapability } from "@/core/db/schema/voice"
+import { GroupType } from "@/core/org-structure"
 import { postDocument } from "@/features/posts/post-document"
 import { createTestDatabase } from "../test/database"
 import { insertReferenceData } from "./ops/reference-data"
@@ -50,10 +51,10 @@ describe.skipIf(!database)("complete local demo seed", () => {
     const groups = await db.select().from(group)
     const memberships = await db.select().from(directMembership)
     const current = memberships.filter(({ endDate }) => !endDate)
-    const choirs = groups.filter(({ type }) => type === "Choir")
+    const choirs = groups.filter(({ type }) => type === GroupType.Choir)
     expect(choirs.map(({ id }) => current.filter(({ groupId }) => groupId === id).length).sort()).toEqual([33, 33, 34])
     for (const choir of choirs) {
-      const sections = groups.filter(({ choirId, type }) => choirId === choir.id && type === "Section")
+      const sections = groups.filter(({ choirId, type }) => choirId === choir.id && type === GroupType.Section)
       expect(sections).toHaveLength(4)
       const sizes = sections.map(({ id }) => current.filter(({ groupId }) => groupId === id).length)
       expect(Math.max(...sizes) - Math.min(...sizes)).toBeLessThanOrEqual(1)
@@ -61,9 +62,11 @@ describe.skipIf(!database)("complete local demo seed", () => {
     for (const singer of SEED_USERS) {
       const placements = current.filter(({ userId }) => userId === singer.id)
       expect(
-        placements.filter(({ groupId }) => groups.find(({ id }) => id === groupId)?.type === "Choir")
+        placements.filter(({ groupId }) => groups.find(({ id }) => id === groupId)?.type === GroupType.Choir)
       ).toHaveLength(1)
-      const sections = placements.filter(({ groupId }) => groups.find(({ id }) => id === groupId)?.type === "Section")
+      const sections = placements.filter(
+        ({ groupId }) => groups.find(({ id }) => id === groupId)?.type === GroupType.Section
+      )
       expect(sections).toHaveLength(1)
       expect(sections[0]?.voice).toMatch(/^[SATB][12]$/)
     }

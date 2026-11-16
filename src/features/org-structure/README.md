@@ -62,7 +62,7 @@ to retained participation data expecting an automatic conversion.
 Database tests create, migrate, and drop disposable PostgreSQL databases using the local
 `POSTGRES_URL`. Skipped database tests do not establish that migrations or constraints work.
 
-The subsequent `derive-section-names` migration clears only redundant Section names and updates
-the naming constraint. It retains Section UUIDs, Voice rows, Choir relationships, Direct Memberships,
-appointments, and historical periods. Reference seeding matches Sections by Choir and Voice and
+The consolidated redesign migration also renames legacy Group type enum values to stable codes
+and clears redundant Section names. It retains Group and Section UUIDs, Voice rows, and Choir
+relationships. Legacy participation is dropped as described above. Reference seeding matches Sections by Choir and Voice and
 retains the existing UUID tokens.

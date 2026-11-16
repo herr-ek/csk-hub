@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
 import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
-import { groupTypeKey } from "@/core/org-structure"
+import { GroupType, groupTypeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { GroupHeaderActions } from "./group-header-actions"
@@ -23,7 +23,7 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
   ])
   if (!detail) notFound()
   const { group } = detail
-  const isChoirOrSection = group.type === "Choir" || group.type === "Section"
+  const isChoirOrSection = group.type === GroupType.Choir || group.type === GroupType.Section
   const date = today()
 
   return (

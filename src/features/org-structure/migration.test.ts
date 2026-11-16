@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { eq, sql } from "drizzle-orm"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import { user } from "@/core/db/schema/auth"
-import { group } from "@/core/db/schema/org-structure"
+import { group, section } from "@/core/db/schema/org-structure"
 import { post, postRead } from "@/core/db/schema/posts"
 import { GroupType } from "@/core/org-structure"
 import { createTestDatabase } from "../../../test/database"
@@ -48,7 +48,40 @@ describe.skipIf(!database)("consolidated organisation migration", () => {
       INSERT INTO "group" (name, type, choir_id) VALUES ('Old team label', 'Roddgrupp', ${mk.id}) RETURNING id
     `)
 
+    const bass = await db.execute<{ id: string }>(sql`
+      INSERT INTO "group" (name, type, choir_id) VALUES ('Old bass label', 'Section', ${mk.id}) RETURNING id
+    `)
+    const bassId = bass.rows[0]?.id as string
+    await db.execute(sql`INSERT INTO section (group_id, voice) VALUES (${bassId}, 'B1')`)
+    const sections = await db.select().from(section)
+    const other = await db.execute<{ id: string }>(sql`
+      INSERT INTO "group" (name, type) VALUES ('Individual name', 'Övrig') RETURNING id
+    `)
+    const parents = await db.execute<{ id: string }>(sql`
+      INSERT INTO "group" (name, type) VALUES ('Old parents label', 'Föräldramötet') RETURNING id
+    `)
+
     await migrate(db, { migrationsFolder: "drizzle" })
+
+    expect(await db.select().from(section)).toEqual(sections)
+    expect(await db.select().from(group).where(eq(group.id, bassId))).toMatchObject([
+      { name: null, type: GroupType.Section, choirId: mk.id }
+    ])
+    expect(
+      await db
+        .select()
+        .from(group)
+        .where(eq(group.id, other.rows[0]?.id as string))
+    ).toMatchObject([{ name: "Individual name", type: GroupType.Other }])
+    expect(
+      await db
+        .select()
+        .from(group)
+        .where(eq(group.id, parents.rows[0]?.id as string))
+    ).toMatchObject([{ name: null, type: GroupType.ParentsMeeting }])
+    await expect(
+      db.update(group).set({ name: "Independent name" }).where(eq(group.id, bassId)).execute()
+    ).rejects.toMatchObject({ cause: { constraint: "group_name_policy_check" } })
 
     expect(await db.select().from(postRead)).toEqual(reads)
     expect(await db.select().from(post)).toEqual([announcement])
