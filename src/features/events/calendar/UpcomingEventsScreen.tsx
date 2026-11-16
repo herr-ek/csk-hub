@@ -29,7 +29,7 @@ type SearchParams = Record<string, string | string[] | undefined>
 /** The signed-in User's upcoming Events, by month and day in Europe/Stockholm, optionally of one type. */
 export async function UpcomingEventsScreen({ searchParams }: { searchParams: SearchParams }) {
   const userId = await requireAuthenticatedUser()
-  const [{ events: upcoming, inChoir }, t, format] = await Promise.all([
+  const [{ events: upcoming }, t, format] = await Promise.all([
     listUpcomingEventsForUser(db, userId, new Date()),
     getTranslations("Events.calendar"),
     getFormatter()
@@ -49,10 +49,8 @@ export async function UpcomingEventsScreen({ searchParams }: { searchParams: Sea
       {months.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>{t(type ? "noMatchTitle" : inChoir ? "emptyTitle" : "noChoirTitle")}</EmptyTitle>
-            <EmptyDescription>
-              {t(type ? "noMatchDescription" : inChoir ? "emptyDescription" : "noChoirDescription")}
-            </EmptyDescription>
+            <EmptyTitle>{t(type ? "noMatchTitle" : "emptyTitle")}</EmptyTitle>
+            <EmptyDescription>{t(type ? "noMatchDescription" : "emptyDescription")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (

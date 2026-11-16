@@ -5,13 +5,18 @@ import { alias } from "drizzle-orm/pg-core"
 import { z } from "zod"
 import { user } from "@/core/db/schema/auth"
 import { event, eventDetail, eventTarget, gig, location, rehearsal, socialEvent } from "@/core/db/schema/events"
-import { group } from "@/core/db/schema/org-structure"
-import { listMembershipsOfUser } from "@/features/org-structure"
-import type { GroupType } from "@/features/org-structure/model"
+import { listGroupNames, listMembershipsOfUser } from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
 import type { VoiceFamily } from "@/features/voice/model"
 import { type AudienceTarget, inAudience } from "../audience"
-import { type EventStatus, type EventType, type RehearsalKind, rehearsalKind, stockholmDate } from "../model"
+import {
+  byPresentValue,
+  type EventStatus,
+  type EventType,
+  type RehearsalKind,
+  rehearsalKind,
+  stockholmDate
+} from "../model"
 import type { EventsDatabase } from "../operation"
 
 /** A Target as the calendar shows it: the group's name for the words, its type for the rules. */
@@ -32,11 +37,7 @@ export type UpcomingEvent = {
   location: string | null
 }
 
-export type UpcomingEvents = {
-  events: UpcomingEvent[]
-  /** Whether the User is in a Choir today, which decides what an empty list says. */
-  inChoir: boolean
-}
+export type UpcomingEvents = { events: UpcomingEvent[] }
 
 /**
  * The Events a User is in the Audience of that have not ended by `now`, ongoing ones included,
@@ -95,8 +96,7 @@ export async function listUpcomingEventsForUser(
       }
     ]
   })
-  // An Event for everyone today would reach exactly the Users in a Choir today.
-  return { events, inChoir: inAudience(memberships, { startsAt: now, targets: [] }) }
+  return { events }
 }
 
 /** Who is looking at an Event page. Admins may open any Event that is not a Draft. */
@@ -134,14 +134,13 @@ export async function getEventPage(database: EventsDatabase, eventId: string, vi
       locationName: location.name,
       locationAddress: location.address,
       locationMapUrl: location.mapUrl,
-      organiserGroup: group.name,
+      organiserGroupId: event.organiserGroupId,
       leaderName: leader.name,
       responsibleName: responsible.name,
       costInfo: socialEvent.costInfo
     })
     .from(event)
     .leftJoin(location, eq(location.id, event.locationId))
-    .leftJoin(group, eq(group.id, event.organiserGroupId))
     .leftJoin(rehearsal, eq(rehearsal.eventId, event.id))
     .leftJoin(leader, eq(leader.id, rehearsal.leaderUserId))
     .leftJoin(gig, eq(gig.eventId, event.id))
@@ -150,7 +149,11 @@ export async function getEventPage(database: EventsDatabase, eventId: string, vi
     .where(eq(event.id, eventId))
   if (!row || row.status === "Draft") return null
 
-  const targets = (await targetsOf(database, [row.id])).get(row.id) ?? []
+  const [targetsByEvent, organiser] = await Promise.all([
+    targetsOf(database, [row.id]),
+    groupsById(database, row.organiserGroupId ? [row.organiserGroupId] : [])
+  ])
+  const targets = targetsByEvent.get(row.id) ?? []
   if (!viewer.isAdmin) {
     const memberships = await listMembershipsOfUser(database, viewer.userId, { from: stockholmDate(row.startsAt) })
     if (!inAudience(memberships, { startsAt: row.startsAt, targets })) return null
@@ -177,7 +180,7 @@ export async function getEventPage(database: EventsDatabase, eventId: string, vi
     location: row.locationName
       ? { name: row.locationName, address: row.locationAddress, mapUrl: row.locationMapUrl }
       : null,
-    organiserGroup: row.organiserGroup,
+    organiserGroup: row.organiserGroupId ? (organiser.get(row.organiserGroupId)?.name ?? null) : null,
     details,
     // Each is set only on its own type: a Rehearsal's leader, a Gig's responsible User, a Social's cost.
     leaderName: row.type === "Rehearsal" ? row.leaderName : null,
@@ -187,28 +190,40 @@ export async function getEventPage(database: EventsDatabase, eventId: string, vi
   }
 }
 
-/** The Targets of each Event, with their groups' names and types, choirs first. */
+/** The Targets of each Event, with their groups' names and types, by group name. */
 async function targetsOf(database: EventsDatabase, eventIds: string[]) {
   const byEvent = new Map<string, CalendarTarget[]>()
   if (eventIds.length === 0) return byEvent
   const rows = await database
-    .select({
-      eventId: eventTarget.eventId,
-      groupId: eventTarget.groupId,
-      groupType: group.type,
-      groupName: group.name,
-      voiceFamily: eventTarget.voiceFamily
-    })
+    .select({ eventId: eventTarget.eventId, groupId: eventTarget.groupId, voiceFamily: eventTarget.voiceFamily })
     .from(eventTarget)
-    .leftJoin(group, eq(group.id, eventTarget.groupId))
     .where(inArray(eventTarget.eventId, eventIds))
-    .orderBy(asc(group.name), asc(eventTarget.voiceFamily))
-  for (const { eventId, groupType, voiceFamily, ...target } of rows) {
+  const groups = await groupsById(
+    database,
+    rows.flatMap(({ groupId }) => (groupId ? [groupId] : []))
+  )
+  const targets = rows.map(({ eventId, groupId, voiceFamily }) => {
+    const found = groupId ? groups.get(groupId) : undefined
+    return {
+      eventId,
+      groupId,
+      groupType: found?.type ?? null,
+      groupName: found?.name ?? null,
+      voiceFamily: voiceFamily as VoiceFamily | null
+    }
+  })
+  targets.sort((a, b) => byPresentValue(a.groupName, b.groupName) || byPresentValue(a.voiceFamily, b.voiceFamily))
+  for (const { eventId, ...target } of targets) {
     const list = byEvent.get(eventId) ?? []
-    list.push({ ...target, groupType: groupType as GroupType | null, voiceFamily: voiceFamily as VoiceFamily | null })
+    list.push(target)
     byEvent.set(eventId, list)
   }
   return byEvent
+}
+
+/** Group names and types through org-structure, which alone reads its tables. */
+async function groupsById(database: EventsDatabase, groupIds: string[]) {
+  return new Map((await listGroupNames(database, groupIds)).map((found) => [found.id, found]))
 }
 
 function minDate(a: string, b: string) {

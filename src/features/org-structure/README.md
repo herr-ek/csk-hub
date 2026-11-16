@@ -73,7 +73,7 @@ races, never surface as thrown errors.
 - Reads: `listCurrentGroupMembers`, `listCurrentGroupsOfUser`, `getCurrentPositionHolder`,
   `listChoirMembersByVoiceFamily`, `listCurrentPositionsOfUser`,
   `listCurrentChoirAffiliationsOfUsers` (batched Choir/Section summaries), `listActiveGroups`
-  (for pickers, keeping groups already chosen), `listGroupNames` (batched),
+  (for pickers, keeping groups already chosen), `listGroupNames` (batched, with each group's type),
   `lockGroupForReference`, which another feature's command calls in its own transaction to
   check a group it is about to refer to and hold it against archiving, and
   `listMembershipsOfUser`: a user's dated Memberships from a date on, from which the events

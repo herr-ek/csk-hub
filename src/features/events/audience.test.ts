@@ -63,16 +63,8 @@ const SINGERS = {
 }
 
 describe("inAudience", () => {
-  test("no Targets: everyone with a Choir Membership on the day", () => {
-    expect(audienceOf([], SINGERS)).toEqual([
-      "kkBass",
-      "kkSoprano",
-      "mkBass1",
-      "mkBass2",
-      "mkTenor",
-      "dkAlto",
-      "gigger"
-    ])
+  test("no Targets: every User, in a Choir or not", () => {
+    expect(audienceOf([], SINGERS)).toEqual(Object.keys(SINGERS))
   })
 
   test("a Choir: its members", () => {
@@ -115,8 +107,9 @@ describe("inAudience", () => {
     ])
   })
 
-  test("Positions and roles play no part: someone in no group sees nothing", () => {
-    expect(audienceOf([], { nobody: [] })).toEqual([])
+  test("Positions and roles play no part: someone in no group sees only Events for everyone", () => {
+    expect(audienceOf([choir("KK")], { nobody: [] })).toEqual([])
+    expect(audienceOf([voiceFamily("B")], { nobody: [] })).toEqual([])
   })
 
   describe("dated Memberships", () => {
@@ -128,7 +121,6 @@ describe("inAudience", () => {
     test("count only on the Event's date, inclusive at both ends", () => {
       expect(audienceOf([choir("KK")], { leaving, joining, lastDay, firstDay })).toEqual(["lastDay", "firstDay"])
       expect(audienceOf([voiceFamily("B")], { leaving, joining, lastDay, firstDay })).toEqual(["lastDay", "firstDay"])
-      expect(audienceOf([], { leaving, joining, lastDay, firstDay })).toEqual(["lastDay", "firstDay"])
     })
 
     test("a Voice change counts the Section the singer is in on the day", () => {
@@ -146,8 +138,8 @@ describe("inAudience", () => {
     test("the date that counts is the start date in Stockholm, not in UTC", () => {
       // 00:30 on 8 October in Stockholm is still 7 October in UTC.
       const justAfterMidnight = new Date("2026-10-07T22:30:00Z")
-      expect(inAudience(lastDay, { startsAt: justAfterMidnight, targets: [] })).toBe(false)
-      expect(inAudience(joining, { startsAt: justAfterMidnight, targets: [] })).toBe(true)
+      expect(inAudience(lastDay, { startsAt: justAfterMidnight, targets: [choir("KK")] })).toBe(false)
+      expect(inAudience(joining, { startsAt: justAfterMidnight, targets: [choir("KK")] })).toBe(true)
     })
   })
 })

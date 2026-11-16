@@ -68,3 +68,11 @@ const STATUS_CHANGES: Record<EventStatus, readonly EventStatus[]> = {
 export function statusChangesFrom(status: EventStatus): readonly EventStatus[] {
   return STATUS_CHANGES[status]
 }
+
+/** Ascending, with absent values last, as SQL orders them. */
+export function byPresentValue(a: string | null, b: string | null) {
+  if (a === b) return 0
+  if (a === null) return 1
+  if (b === null) return -1
+  return a.localeCompare(b, "sv")
+}

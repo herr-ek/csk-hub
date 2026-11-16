@@ -32,16 +32,15 @@ export type AudienceEvent = { startsAt: Date; targets: readonly AudienceTarget[]
 
 /**
  * Whether a User with these Memberships is in the Event's Audience. Only Memberships active on
- * the Event's start date in Europe/Stockholm count. No Targets means everyone with a Choir
- * Membership on that date. Several Targets are OR'ed; inside one, the group and the Voice family
+ * the Event's start date in Europe/Stockholm count. No Targets means every User, Membership or
+ * not. Several Targets are OR'ed; inside one, the group and the Voice family
  * are AND'ed, and the Voice family is matched through a Section Membership within the group's
  * scope: a Choir's own Sections, the Section itself, or every Section for any other group.
  */
 export function inAudience(memberships: readonly AudienceMembership[], event: AudienceEvent): boolean {
+  if (event.targets.length === 0) return true
   const day = stockholmDate(event.startsAt)
   const active = memberships.filter((membership) => isActiveOn(membership, day))
-
-  if (event.targets.length === 0) return active.some(({ groupType }) => groupType === "Choir")
   return event.targets.some((target) => matches(target, active))
 }
 

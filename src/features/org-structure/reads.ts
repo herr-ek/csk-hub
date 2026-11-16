@@ -141,11 +141,11 @@ export function listActiveGroups(database: OrgStructureDatabase, alsoGroupIds: s
     .where(or(eq(group.active, true), alsoGroupIds.length > 0 ? inArray(group.id, alsoGroupIds) : undefined))
 }
 
-/** The names of the given groups, archived or not, for showing what refers to them. */
+/** The names and types of the given groups, archived or not, for showing what refers to them. */
 export async function listGroupNames(database: OrgStructureDatabase, groupIds: string[]) {
   if (groupIds.length === 0) return []
   return database
-    .select({ id: group.id, name: group.name })
+    .select({ id: group.id, name: group.name, type: group.type })
     .from(group)
     .where(inArray(group.id, [...new Set(groupIds)]))
 }

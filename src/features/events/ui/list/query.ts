@@ -5,7 +5,7 @@ import { db } from "@/core/db"
 import { event, eventTarget } from "@/core/db/schema/events"
 import { listGroupNames } from "@/features/org-structure"
 import type { VoiceFamily } from "@/features/voice/model"
-import type { EventStatus, EventType } from "../../model"
+import { byPresentValue, type EventStatus, type EventType } from "../../model"
 
 export type EventListFilters = {
   /** Upcoming Events have not ended yet; past ones have. */
@@ -75,12 +75,4 @@ export async function listAdminEvents(filters: EventListFilters, now: Date) {
       .map(({ groupId, voiceFamily }) => ({ group: nameOf(groupId), voiceFamily: voiceFamily as VoiceFamily | null }))
       .sort((a, b) => byPresentValue(a.group, b.group) || byPresentValue(a.voiceFamily, b.voiceFamily))
   }))
-}
-
-/** Ascending, with absent values last, as SQL orders them. */
-function byPresentValue(a: string | null, b: string | null) {
-  if (a === b) return 0
-  if (a === null) return 1
-  if (b === null) return -1
-  return a.localeCompare(b, "sv")
 }

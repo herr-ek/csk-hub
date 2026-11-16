@@ -169,16 +169,14 @@ describe.skipIf(!database)("calendar reads", () => {
 
     test("dated Memberships count on each Event's own date", async () => {
       // Lucas left KK on 16 October: the Rehearsal on the 14th was his, the Rephelg from the 18th is not.
-      expect(await titlesFor("Lucas", at("2026-10-01"))).toEqual(["Past rehearsal"])
-      expect(await titlesFor("Lucas")).toEqual([])
-      // Sara joins MK on 1 November: the Körmöte after it is hers, the sectional before it is not.
-      expect(await titlesFor("Sara")).toEqual(["Körmöte"])
+      expect(await titlesFor("Lucas", at("2026-10-01"))).toEqual(["Past rehearsal", "Körmöte"])
+      expect(await titlesFor("Lucas")).toEqual(["Körmöte"])
     })
 
-    test("someone in no Choir sees no Event for everyone, and is told why", async () => {
-      expect(await listUpcomingEventsForUser(t.db, users.Admin as string, NOW)).toEqual({ events: [], inChoir: false })
-      expect((await listUpcomingEventsForUser(t.db, users.Olof as string, NOW)).inChoir).toBe(true)
-      expect((await listUpcomingEventsForUser(t.db, users.Sara as string, NOW)).inChoir).toBe(false)
+    test("someone in no Choir still sees the Events for everyone", async () => {
+      expect(await titlesFor("Admin")).toEqual(["Körmöte"])
+      // Sara is in no Choir until 1 November, so the sectional before it is not hers.
+      expect(await titlesFor("Sara")).toEqual(["Körmöte"])
     })
 
     test("labels Rehearsals by their derived kind, and other Events not at all", async () => {
@@ -263,13 +261,13 @@ describe.skipIf(!database)("calendar reads", () => {
       expect(await getEventPage(t.db, draftId, viewer("Admin", true))).toBeNull()
     })
 
-    test("a Cancelled Social shows its status and cost to everyone in a Choir", async () => {
+    test("a Cancelled Social shows its status and cost to everyone", async () => {
       expect(await getEventPage(t.db, socialId, viewer("Maja"))).toMatchObject({
         status: "Cancelled",
         costInfo: "200 kr incl. food",
         targets: []
       })
-      expect(await getEventPage(t.db, socialId, viewer("Sara"))).toBeNull()
+      expect(await getEventPage(t.db, socialId, viewer("Sara"))).not.toBeNull()
     })
   })
 })
