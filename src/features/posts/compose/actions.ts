@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
-import { scheduleActivityDispatch } from "@/features/activity/server"
+import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import {
   createPostCommand,
   discardDraftCommand,

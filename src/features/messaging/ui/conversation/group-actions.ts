@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { scheduleActivityDispatch } from "@/features/activity/server"
+import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import { addGroupMembers, leaveGroupConversation, renameGroupConversation } from "../../group-conversations"
 import { MessagingAccessError } from "../../model/messaging-error"
 import type { MessageCommandState } from "../composer/message-command-state"

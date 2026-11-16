@@ -14,10 +14,13 @@ Redis transport, authenticated SSE, acknowledgement handling, push fallback, ret
 retention, `after()` scheduling and the app-wide browser connection. It imports no features.
 
 `createActivityDelivery(policy)` binds the server workflow to required feature checks for
-current delivery access and authoritative read state. `features/activity/server` is the
-app composition point: it supplies `conversationActivityPolicy` from
-`features/messaging/activity`. Messaging owns Conversation membership and read-cursor
-rules; other features use the same composed delivery entrypoint. The policy is passed
+current delivery access and authoritative read state. `src/app/api/realtime/delivery.ts`
+composes the HTTP handlers with
+`conversationActivityPolicy` from the public `features/messaging/activity` entrypoint.
+Messaging owns Conversation membership, read-cursor rules and its policy-bound dispatch
+function. Other features call that dispatch entrypoint after commit; notification broadcast
+owns recipient search, delivery-mode selection and queued-versus-sent results. The policy
+is passed
 explicitly, with no global registration or permissive default for protected deliveries.
 
 The integration suite stays in `features/activity` because it verifies the composed
@@ -107,6 +110,8 @@ acknowledge on another User's behalf. Redis payloads contain no Message text.
 - Elsewhere in a visible app, a linked toast acknowledges delivery without marking the
   Conversation read. Browser Web Locks and local storage deduplicate across tabs where
   available. Hidden tabs defer feedback and never acknowledge merely receiving an event.
+  Deferred toasts expire at the server-supplied push deadline; returning later still refreshes
+  authoritative state without presenting the stale alert.
 - After an eight-second grace period, the response callback sends Web Push if no visible
   handling acknowledgement or authoritative read cursor makes it unnecessary. Handling on any
   device suppresses fallback across that User's devices. Web Push still requires an

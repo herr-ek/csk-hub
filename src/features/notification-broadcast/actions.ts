@@ -1,26 +1,25 @@
 "use server"
 
 import { requireAdmin } from "@/core/auth/permissions.server"
-import { env } from "@/core/config/env"
-import { listUsersWithActiveSubscriptions, sendToAll, sendToUsers } from "@/core/notifications"
-import { notifyUsers, searchNotificationUsers } from "@/features/activity/server"
+import { notifyUsers, searchNotificationRecipients } from "./service"
+import type { BroadcastResult } from "./types"
 
-export async function sendTestNotificationToAll(message: string) {
+export async function sendTestNotificationToAll(message: string): Promise<BroadcastResult> {
   await requireAdmin()
   const trimmedMessage = message.trim()
   if (!trimmedMessage) return { success: false as const, error: "messageRequired" as const }
-  return env.REDIS_URL ? notifyUsers(trimmedMessage) : sendToAll({ body: trimmedMessage })
+  return notifyUsers(trimmedMessage)
 }
 
-export async function searchUsersWithSubscriptions(search: string) {
+export async function searchNotificationUsers(search: string) {
   await requireAdmin()
-  return env.REDIS_URL ? searchNotificationUsers(search) : listUsersWithActiveSubscriptions(search)
+  return searchNotificationRecipients(search)
 }
 
-export async function sendTestNotificationToUsers(userIds: string[], message: string) {
+export async function sendTestNotificationToUsers(userIds: string[], message: string): Promise<BroadcastResult> {
   await requireAdmin()
   const trimmedMessage = message.trim()
   if (!trimmedMessage) return { success: false as const, error: "messageRequired" as const }
   if (userIds.length === 0) return { success: false as const, error: "userRequired" as const }
-  return env.REDIS_URL ? notifyUsers(trimmedMessage, userIds) : sendToUsers(userIds, { body: trimmedMessage })
+  return notifyUsers(trimmedMessage, userIds)
 }

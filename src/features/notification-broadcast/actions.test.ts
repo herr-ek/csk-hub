@@ -46,7 +46,7 @@ mock.module("@/core/notifications", () => ({
   unsubscribe,
   listUsersWithActiveSubscriptions: mock(async () => [])
 }))
-const { sendTestNotificationToAll, sendTestNotificationToUsers } = await import("./actions")
+const { searchNotificationUsers, sendTestNotificationToAll, sendTestNotificationToUsers } = await import("./actions")
 const { getPushSubscriptionBinding, sendPushNotificationTest, subscribeUserToPush, unsubscribeUserFromPush } =
   await import("../account/settings/notifications/push-notification-actions")
 
@@ -76,13 +76,15 @@ const activeSubscription = {
 }
 
 describe("notification actions without a translation context", () => {
+  test("recipient search explains that push subscriptions are required without Redis", async () => {
+    expect(await searchNotificationUsers("Singer")).toEqual({ users: [], requiresPush: true })
+    expect(requireAdmin).toHaveBeenCalledTimes(1)
+  })
+
   test("broadcast returns a delivery error code for the UI to translate", async () => {
     expect(await sendTestNotificationToAll("Hello")).toEqual({
       success: false,
-      error: "noActiveSubscriptions",
-      accepted: 0,
-      failed: 0,
-      failureCategories: {}
+      error: "noActiveSubscriptions"
     })
     expect(requireAdmin).toHaveBeenCalledTimes(1)
     expect(getTranslations).not.toHaveBeenCalled()
@@ -103,6 +105,7 @@ describe("notification actions without a translation context", () => {
     subscriptions = [activeSubscription]
     expect(await sendTestNotificationToUsers(["user-1"], "  Hello  ")).toEqual({
       success: true,
+      delivery: "sent",
       accepted: 1,
       failed: 0,
       failureCategories: {}
@@ -167,10 +170,7 @@ describe("notification actions without a translation context", () => {
     sendNotification.mockRejectedValue(Object.assign(new Error("Gone"), { statusCode: 410 }))
     expect(await sendTestNotificationToAll("Hello")).toEqual({
       success: false,
-      error: "deliveryFailed",
-      accepted: 0,
-      failed: 1,
-      failureCategories: { subscriptionGone: 1 }
+      error: "deliveryFailed"
     })
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -186,6 +186,7 @@ describe("notification actions without a translation context", () => {
     sendNotification.mockRejectedValueOnce(new Error("Provider unavailable"))
     expect(await sendTestNotificationToAll("Hello")).toEqual({
       success: true,
+      delivery: "sent",
       accepted: 1,
       failed: 1,
       failureCategories: { transport: 1 }

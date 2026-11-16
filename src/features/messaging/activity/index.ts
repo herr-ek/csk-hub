@@ -6,3 +6,4 @@ export {
   queueConversationActivity,
   queueMessageActivity
 } from "./events"
+export { scheduleActivityDispatch } from "./schedule-dispatch"

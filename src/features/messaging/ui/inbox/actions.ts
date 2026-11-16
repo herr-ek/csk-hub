@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { scheduleActivityDispatch } from "@/features/activity/server"
+import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import { createGroupConversation } from "../../group-conversations"
 import { groupMemberIds } from "../../model/group-conversation"
 import { startDirectConversation } from "../../sending"

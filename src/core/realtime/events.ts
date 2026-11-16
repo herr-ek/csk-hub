@@ -11,6 +11,7 @@ export type ActivityChange = z.infer<typeof activityChangeSchema>
 export const activityEventSchema = activityChangeSchema.extend({
   id: z.uuid(),
   notify: z.boolean(),
+  notifyUntil: z.number().finite().optional(),
   href: z.string().optional(),
   body: z.string().optional()
 })

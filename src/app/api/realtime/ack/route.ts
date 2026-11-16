@@ -1,3 +1,3 @@
-import { handleActivityAcknowledgement } from "@/features/activity/server"
+import { handleActivityAcknowledgement } from "../delivery"
 
 export const POST = handleActivityAcknowledgement

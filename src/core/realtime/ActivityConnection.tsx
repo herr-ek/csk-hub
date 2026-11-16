@@ -6,6 +6,7 @@ import { useTranslations } from "@/core/i18n/translations"
 import { parseSafeInternalPath } from "@/core/navigation/navigation-utils"
 import { type ActivityEvent, activityEventSchema } from "@/core/realtime/events"
 import { toast } from "@/shared/ui/base/toast"
+import { canPresentActivity } from "./presentation"
 
 /** One SSE connection for this session. Hidden clients never acknowledge notifications. */
 export function ActivityConnection({ userId }: { userId: string }) {
@@ -48,13 +49,13 @@ export function ActivityConnection({ userId }: { userId: string }) {
     }
 
     const present = async (event: ActivityEvent) => {
-      if (!event.notify || document.visibilityState !== "visible" || disposed) return
+      if (!canPresentActivity(event, Date.now()) || document.visibilityState !== "visible" || disposed) return
       const href = parseSafeInternalPath(event.href)
       // The signed read marker acknowledges only after the refreshed timeline renders.
       if (event.kind === "message.created" && href === route.current.pathname && !route.current.older) return
       const key = `csk-activity:${userId}:${event.id}`
       const show = async () => {
-        if (disposed || document.visibilityState !== "visible") return
+        if (disposed || document.visibilityState !== "visible" || !canPresentActivity(event, Date.now())) return
         let alreadyShown = false
         try {
           alreadyShown = localStorage.getItem(key) !== null

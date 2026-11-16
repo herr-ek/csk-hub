@@ -493,6 +493,8 @@
     "broadcastDescription": "Alle berechtigten Mitglieder benachrichtigen.",
     "selectedTitle": "An ausgewählte Nutzer senden",
     "selectedDescription": "Empfänger nach Namen oder E-Mail-Adresse suchen.",
+    "selectedPushDescription": "Mitglieder mit aktiven Push-Abonnements nach Namen oder E-Mail suchen.",
+    "noPushRecipients": "Keine Mitglieder mit aktiven Push-Abonnements gefunden.",
     "enabled": "Push-Benachrichtigungen sind auf diesem Gerät aktiviert.",
     "disabled": "Push-Benachrichtigungen sind auf diesem Gerät deaktiviert.",
     "unsupportedSubscription": "Das Push-Abonnement dieses Browsers wird nicht mehr unterstützt. Entferne es, bevor du Benachrichtigungen erneut aktivierst.",
@@ -515,7 +517,7 @@
     "searchPlaceholder": "Nach Name oder E-Mail suchen",
     "searchLabel": "Personen suchen",
     "searching": "Suche läuft…",
-    "noSubscribedUsers": "Keine Personen gefunden",
+    "noRecipientsFound": "Keine Personen gefunden",
     "notSupported": "Push-Benachrichtigungen werden von diesem Browser nicht unterstützt.",
     "deviceEnableFailed": "Die App konnte Push-Benachrichtigungen auf diesem Gerät nicht aktivieren.",
     "notConfigured": "Push-Benachrichtigungen sind noch nicht eingerichtet.",
@@ -535,7 +537,7 @@
     "noActiveSubscriptions": "Keine aktiven Benachrichtigungsabonnements.",
     "deliveryFailed": "Benachrichtigung konnte nicht gesendet werden.",
     "noRecipients": "Keine Empfänger ausgewählt.",
-    "queued": "Benachrichtigungen für {count, plural, one {# Person} other {# Personen}} eingereiht. Bei geöffneter App erscheinen Hinweise in der App, andernfalls bei aktivierter Funktion als Push-Benachrichtigung."
+    "queued": "Benachrichtigungen für {count, plural, one {# Mitglied} other {# Mitglieder}} eingereiht. Bei geöffneter App werden sie dort angezeigt, sonst nach Möglichkeit per Push."
   },
   "RichText": {
     "editor": {

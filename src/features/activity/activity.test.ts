@@ -64,7 +64,13 @@ if (!process.env.CSK_ACTIVITY_TEST) {
       }
     }))
     const push = mock(async () => ({ success: true, accepted: 1, failed: 0, failureCategories: {} }))
-    mock.module("@/core/notifications", () => ({ sendToUser: push, sendToAll: push, sendToUsers: push }))
+    const { listUsersWithActiveSubscriptions } = await import("@/core/notifications/subscription")
+    mock.module("@/core/notifications", () => ({
+      sendToUser: push,
+      sendToAll: push,
+      sendToUsers: push,
+      listUsersWithActiveSubscriptions
+    }))
     const afterResponse: Array<() => Promise<void>> = []
     mock.module("next/server", () => ({ after: (callback: () => Promise<void>) => afterResponse.push(callback) }))
     const { env } = await import("@/core/config/env")
@@ -76,10 +82,9 @@ if (!process.env.CSK_ACTIVITY_TEST) {
     const { createReadToken } = await import("@/features/messaging/ui/conversation/read-token")
     const { dispatchActivity, nextActivityDelay, pruneActivity } = await import("@/core/realtime/dispatch")
     const { deliverPendingActivity } = await import("@/core/realtime/deliver-pending")
-    const { conversationActivityPolicy } = await import("@/features/messaging/activity")
-    const { scheduleActivityDispatch, handleActivityStream, handleActivityAcknowledgement, notifyUsers } = await import(
-      "./server"
-    )
+    const { conversationActivityPolicy, scheduleActivityDispatch } = await import("@/features/messaging/activity")
+    const { handleActivityStream, handleActivityAcknowledgement } = await import("@/app/api/realtime/delivery")
+    const { notifyUsers, searchNotificationRecipients } = await import("@/features/notification-broadcast/service")
     const { createPost, saveDraft, unpublishPost } = await import("@/features/posts/lifecycle")
     const { markPostRead, nextUnreadPostChangeAt } = await import("@/features/posts/unread/service")
 
@@ -414,11 +419,25 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         ).toHaveLength(2)
       })
 
+      test("recipient search treats wildcard characters and backslashes literally", async () => {
+        const literal = await singer()
+        const other = await singer()
+        await testDatabase.db.update(user).set({ name: "Singer %_\\" }).where(eq(user.id, literal.userId))
+        await testDatabase.db.update(user).set({ name: "Singer ordinary" }).where(eq(user.id, other.userId))
+        for (const search of ["%", "_", "\\"]) {
+          const result = await searchNotificationRecipients(search)
+          expect(result.requiresPush).toBe(false)
+          expect(result.users.map(({ id }) => id)).toEqual([literal.userId])
+        }
+        await testDatabase.db.update(user).set({ banned: true }).where(eq(user.id, literal.userId))
+        expect((await searchNotificationRecipients("%")).users).toEqual([])
+      })
+
       test("notifications include active Users without push subscriptions", async () => {
         const member = await singer()
         const inactive = await singer()
         await testDatabase.db.update(user).set({ banned: true }).where(eq(user.id, inactive.userId))
-        expect(await notifyUsers("Rehearsal moved")).toEqual({ success: true, queued: 1 })
+        expect(await notifyUsers("Rehearsal moved")).toEqual({ success: true, delivery: "queued", queued: 1 })
         const rows = await testDatabase.db.select().from(activityDelivery)
         expect(rows).toHaveLength(1)
         expect(rows[0]?.userId).toBe(member.userId)

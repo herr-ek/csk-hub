@@ -2,7 +2,6 @@ import "server-only"
 
 import { handleActivityAcknowledgement } from "./acknowledge"
 import type { ActivityDeliveryPolicy } from "./delivery-access"
-import { notifyUsers, searchNotificationUsers } from "./notifications"
 import { scheduleActivityDispatch } from "./schedule-dispatch"
 import { handleActivityStream } from "./stream"
 
@@ -15,8 +14,6 @@ export function createActivityDelivery(policy: ActivityDeliveryPolicy) {
   return {
     handleActivityAcknowledgement: (request: Request) => handleActivityAcknowledgement(policy, request),
     handleActivityStream: (request: Request) => handleActivityStream(policy, request),
-    notifyUsers: (message: string, userIds?: string[]) => notifyUsers(policy, message, userIds),
-    searchNotificationUsers,
     scheduleActivityDispatch: () => scheduleActivityDispatch(policy)
   }
 }

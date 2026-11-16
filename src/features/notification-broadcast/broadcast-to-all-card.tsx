@@ -22,7 +22,7 @@ export function BroadcastToAllCard() {
         setFeedback({
           success: result.success,
           message: result.success
-            ? "queued" in result
+            ? result.delivery === "queued"
               ? t("queued", { count: result.queued })
               : t("sentToAll", {
                   accepted: result.accepted,

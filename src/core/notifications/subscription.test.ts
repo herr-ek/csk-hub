@@ -59,6 +59,15 @@ if (process.env.CSK_NOTIFICATION_TEST_FILE !== import.meta.path) {
       await t.drop()
     })
 
+    test("the push recipient picker searches wildcard characters literally", async () => {
+      await subscribe(firstUser, subscription)
+      await subscribe(secondUser, { ...subscription, endpoint: `${subscription.endpoint}-second` })
+      await t.db.update(user).set({ name: "Singer %_\\" }).where(eq(user.id, firstUser))
+      for (const search of ["%", "_", "\\"]) {
+        expect((await listUsersWithActiveSubscriptions(search)).map(({ id }) => id)).toEqual([firstUser])
+      }
+    })
+
     test("inactive Users are excluded from every delivery operation and the picker", async () => {
       await subscribe(firstUser, subscription)
       await t.db.update(user).set({ banned: true }).where(eq(user.id, firstUser))

@@ -95,6 +95,7 @@ export async function handleActivityStream(policy: ActivityDeliveryPolicy, reque
                 ...delivery.change,
                 id: delivery.id,
                 notify: Boolean(delivery.body && !delivery.acknowledgedAt && !delivery.pushCompletedAt),
+                ...(delivery.pushAfter ? { notifyUntil: delivery.pushAfter.getTime() } : {}),
                 ...(delivery.href ? { href: delivery.href } : {}),
                 ...(delivery.change.kind === "notification.created" && delivery.body ? { body: delivery.body } : {})
               }

@@ -493,6 +493,8 @@
     "broadcastDescription": "Notify all eligible members.",
     "selectedTitle": "Send to selected users",
     "selectedDescription": "Find recipients by name or email.",
+    "selectedPushDescription": "Find members with active push subscriptions by name or email.",
+    "noPushRecipients": "No members with active push subscriptions found.",
     "enabled": "Push notifications are enabled on this device.",
     "disabled": "Push notifications are disabled on this device.",
     "unsupportedSubscription": "This browser’s push subscription is no longer supported. Remove it before enabling notifications again.",
@@ -515,7 +517,7 @@
     "searchPlaceholder": "Search by name or email",
     "searchLabel": "Search users",
     "searching": "Searching…",
-    "noSubscribedUsers": "No users found",
+    "noRecipientsFound": "No users found",
     "notSupported": "Push notifications are not supported in this browser.",
     "deviceEnableFailed": "The app could not enable push notifications on this device.",
     "notConfigured": "Push notifications are not configured yet.",
@@ -535,7 +537,7 @@
     "noActiveSubscriptions": "No active notification subscriptions.",
     "deliveryFailed": "Failed to send notification.",
     "noRecipients": "No recipients selected.",
-    "queued": "Notifications queued for {count, plural, one {# User} other {# Users}}. Delivery uses in-app feedback when open, with push fallback when enabled."
+    "queued": "Notifications queued for {count, plural, one {# member} other {# members}}. Delivery uses in-app feedback when open, with push fallback when enabled."
   },
   "RichText": {
     "editor": {

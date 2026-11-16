@@ -2,7 +2,7 @@
 
 import { refresh, revalidatePath } from "next/cache"
 import { getRequestSession } from "@/core/auth/session.server"
-import { scheduleActivityDispatch } from "@/features/activity/server"
+import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import { sendMessage } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
 import { requireMessageSendingAvailable } from "../message-command-access"
