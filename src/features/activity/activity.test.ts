@@ -5,7 +5,7 @@ import { and, eq, inArray, sql } from "drizzle-orm"
 import { createClient } from "redis"
 import { activityDelivery } from "@/core/db/schema/activity"
 import { session, user } from "@/core/db/schema/auth"
-import { conversation, conversationReadState } from "@/core/db/schema/messaging"
+import { conversation, conversationReadState, groupConversation } from "@/core/db/schema/messaging"
 import type { NotificationDeliveryResult } from "@/core/notifications/types"
 
 // Real PostgreSQL/Redis, with only request identity and the external Web Push boundary replaced.
@@ -261,8 +261,46 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           const update = await stream.read()
           expect(update).toContain("event: activity")
           expect(update).toContain('"kind":"message.created"')
-          expect(update).not.toContain("Private Message")
+          expect(update).toContain('"snippet":"Private Message"')
+          expect(update).toContain('"title":"Singer"')
           expect(push).not.toHaveBeenCalled()
+        } finally {
+          stream.close()
+        }
+      })
+
+      test("Group previews retain the send-time name and leave push content unchanged", async () => {
+        const sender = await singer()
+        const recipient = await singer()
+        const group = await identity.run(sender, () =>
+          createGroupConversation({
+            name: "Planning",
+            memberIds: [recipient.userId],
+            idempotencyKey: crypto.randomUUID()
+          })
+        )
+        fixtureConversations.push(group.conversationId)
+        const text = "  Hello\n  choir 👨‍👩‍👧‍👦  "
+        await identity.run(sender, () =>
+          sendMessage({ conversationId: group.conversationId, text, idempotencyKey: crypto.randomUUID() })
+        )
+        await testDatabase.db
+          .update(groupConversation)
+          .set({ name: "Renamed" })
+          .where(eq(groupConversation.conversationId, group.conversationId))
+        const delivery = await messageDelivery(recipient.userId)
+        expect(delivery.change.messagePreview).toEqual({
+          snippet: "Hello choir 👨‍👩‍👧‍👦",
+          conversationName: "Planning"
+        })
+        expect(delivery.body).toBe(text.trim())
+        const stream = await streamAs(recipient)
+        try {
+          await stream.read()
+          await dispatchActivity(conversationActivityPolicy)
+          const update = await stream.read()
+          expect(update).toContain('"conversationName":"Planning"')
+          expect(update).toContain('"title":"Singer"')
         } finally {
           stream.close()
         }
