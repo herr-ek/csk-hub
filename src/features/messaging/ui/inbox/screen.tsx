@@ -25,7 +25,7 @@ export async function MessagesScreen() {
         <StartConversationDialog />
       </div>
       {conversations.length ? (
-        <ol className="grid gap-3" aria-label={t("conversations")}>
+        <ol className="grid grid-cols-1 gap-3" aria-label={t("conversations")}>
           {conversations.map((conversation) => (
             <li key={conversation.id}>
               <Link
