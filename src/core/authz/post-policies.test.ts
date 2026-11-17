@@ -312,25 +312,40 @@ describe("Post Group/Voice-family audiences", () => {
 })
 
 describe("Board audience selection", () => {
-  test("current active Board representatives may select any active Group, independent of publisher", () => {
+  test("current Board representatives may select any active Group when publishing as that Board", () => {
+    const publisherGroupId = "active-board"
     const facts: PostRelationships = {
-      ...relationships(alice, ["active-board"], ["active-board"]),
-      groups: [...groups, { id: "active-board", type: "Board", active: true, choirId: null }]
+      ...relationships(alice, [publisherGroupId, "committee"], [publisherGroupId, "committee"]),
+      groups: [...groups, { id: publisherGroupId, type: "Board", active: true, choirId: null }]
     }
-    for (const groupId of ["MK", "MKS", "committee"]) {
-      expect(address({ targets: [{ groupId, voiceFamily: "B" }] }, { relationships: facts })).toBe(true)
+    for (const groupId of ["MK", "MKS"]) {
+      const targets = [{ groupId, voiceFamily: "B" as const }]
+      expect(address({ publisherGroupId, targets }, { relationships: facts })).toBe(true)
+      expect(address({ targets }, { relationships: facts })).toBe(false)
+      expect(address({ publisherGroupId: "committee", targets }, { relationships: facts })).toBe(false)
     }
-    expect(address({ publisherGroupId: "committee", audienceAll: true }, { relationships: facts })).toBe(false)
+    const targets = [{ groupId: "MKS", voiceFamily: null }]
+    expect(
+      address(
+        { targets },
+        {
+          post: resource({ publisherGroupId, publishedAt: null, firstPublishedAt: null }),
+          relationships: facts,
+          targets,
+          publishing: false
+        }
+      )
+    ).toBe(false)
     for (const changed of [
-      { ...facts, groups: facts.groups.map((g) => (g.id === "active-board" ? { ...g, active: false } : g)) },
+      { ...facts, groups: facts.groups.map((g) => (g.id === publisherGroupId ? { ...g, active: false } : g)) },
       { ...facts, memberships: [] },
       { ...facts, positionHoldings: [] },
       { ...facts, positionHoldings: facts.positionHoldings.map((p) => ({ ...p, endDate: "2026-11-17" })) }
     ])
-      expect(address({ targets: [{ groupId: "MKS", voiceFamily: null }] }, { relationships: changed })).toBe(false)
+      expect(address({ publisherGroupId, targets }, { relationships: changed })).toBe(false)
     expect(
       address(
-        { targets: [{ groupId: "MKS", voiceFamily: null }] },
+        { publisherGroupId, targets },
         { relationships: { ...facts, groups: facts.groups.map((g) => (g.id === "MKS" ? { ...g, active: false } : g)) } }
       )
     ).toBe(false)

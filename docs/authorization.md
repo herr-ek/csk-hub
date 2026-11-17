@@ -342,8 +342,9 @@ management. All-CSK is available to every active Member. Otherwise the actor mus
 to every selected Group, belong to the owning Choir for a Section target, or publish for
 the selected CSK-wide Group to address a whole Choir. Admin bypasses representation and
 Membership, but never the Choir-publisher ban or active-publisher/target requirement.
-Current representatives of an active Board may select any active Group audience, regardless
-of publisher, without gaining additional Group representation, readership or editing rights.
+Current representatives of an active Board may select any active Group audience when
+publishing on behalf of that Board. Personal Posts and Posts for other Groups use their
+ordinary selection rules.
 `post.readAttribution` restricts Group creator/editor names to Admins and current representatives
 of that exact publishing Group; feed and detail reads omit those names for other readers.
 Voice-only targets are available to every active Member. Group/Voice criteria within a target

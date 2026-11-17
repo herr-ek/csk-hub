@@ -530,7 +530,7 @@ describe("Group Post access end to end", () => {
     })
   })
 
-  test("Board audience authority is reflected in picker options and enforced after handover/archival", async () => {
+  test("only the selected Board publisher grants Board audience authority in the picker and command", async () => {
     const holder = await member()
     const [board] = await db.insert(group).values({ name: "Current Board", type: "Board" }).returning()
     const [target] = await db
@@ -543,22 +543,26 @@ describe("Group Post access end to end", () => {
     await db
       .insert(positionHolder)
       .values({ userId: holder, groupId: board.id, positionId: office.id, startDate: "2026-01-01" })
-    const address = { publisherGroupId: null, audienceAll: false, targets: [{ groupId: target.id, voiceFamily: null }] }
-    expect((await reads.getPostComposeOptions(dependencies(holder))).audiencesByPublisher[""]).toContain(target.id)
+    await holding(holder)
+    const address = {
+      publisherGroupId: board.id,
+      audienceAll: false,
+      targets: [{ groupId: target.id, voiceFamily: null }]
+    }
+    const { audiencesByPublisher } = await reads.getPostComposeOptions(dependencies(holder))
+    expect(audiencesByPublisher[board.id]).toContain(target.id)
     await publish(holder, address)
-    expect(
-      (
-        await commands.createPostCommand(
-          content({ ...address, publisherGroupId: publisherGroup }),
-          true,
-          dependencies(holder)
-        )
-      ).status
-    ).toBe("unauthorized")
-    await db.update(positionHolder).set({ endDate: "2026-11-17" }).where(eq(positionHolder.userId, holder))
+    for (const publisherGroupId of [null, publisherGroup]) {
+      expect(audiencesByPublisher[publisherGroupId ?? ""]).not.toContain(target.id)
+      expect(
+        (await commands.createPostCommand(content({ ...address, publisherGroupId }), true, dependencies(holder))).status
+      ).toBe("unauthorized")
+    }
+    const boardHolding = and(eq(positionHolder.userId, holder), eq(positionHolder.groupId, board.id))
+    await db.update(positionHolder).set({ endDate: "2026-11-17" }).where(boardHolding)
     expect((await commands.createPostCommand(content(address), true, dependencies(holder))).status).toBe("unauthorized")
-    expect((await reads.getPostComposeOptions(dependencies(holder))).audiencesByPublisher[""]).not.toContain(target.id)
-    await db.update(positionHolder).set({ endDate: null }).where(eq(positionHolder.userId, holder))
+    expect((await reads.getPostComposeOptions(dependencies(holder))).audiencesByPublisher[board.id]).toBeUndefined()
+    await db.update(positionHolder).set({ endDate: null }).where(boardHolding)
     await db.update(group).set({ active: false }).where(eq(group.id, board.id))
     expect((await commands.createPostCommand(content(address), true, dependencies(holder))).status).toBe("unauthorized")
   })

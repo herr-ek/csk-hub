@@ -34,7 +34,7 @@ for **every** selected Group:
 | A Group they belong to | Any current Member of that Group |
 | A Section | Any current Member of the Section's Choir |
 | A whole Choir they do not belong to | A representative publishing **on behalf of the specific CSK-wide Group they represent** |
-| Any active Group | A current representative of an active Board, regardless of selected publisher |
+| Any active Group | A current representative publishing on behalf of the active Board they represent |
 | An archived Group | Nobody may newly select it |
 
 The general CSK-wide exception covers whole Choirs only, not their Sections or committees. It
@@ -42,17 +42,16 @@ does not apply to personal Posts or Posts published for a different Group. For e
 a CSK-wide Board representative can publish as the Board to KK without belonging to KK.
 A KK tenor can personally address the KK sopranos without belonging to that Section.
 
-Board representatives have a separate audience-selection exception: current Membership and
-a current Position in an active Board allow choosing every active Group, including Sections
-and committees, for personal Posts or for Groups they separately represent. This grants no
-additional publishing identities, readership or editing authority.
+When publishing on behalf of an active Board, a Member with current Membership and a current
+Position in that Board may choose any active Group, including Sections and committees.
+Personal Posts and Posts for other Groups follow their ordinary audience-selection rules.
 
 A Voice-only target is available to every active Member: selecting B with no Group means
 bass singers across CSK. A Voice filter on a Group target narrows its audience without
 changing who may select that Group.
 
 Audience permission is checked at publication, republication and whenever the selected
-audience changes. An ordinary text edit may retain an existing audience even if the
+publisher or audience changes. An ordinary text edit may retain an existing audience even if the
 editor no longer belongs to it. Republication requires replacing/removing archived targets.
 
 ## Reading
