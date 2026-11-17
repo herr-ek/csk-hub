@@ -61,6 +61,7 @@ export type PermissionContext = {
   "member.read": MemberContext
   "member.readEmail": MemberContext
   "member.editProfile": MemberContext
+  "oidcClient.manage": undefined
   "admin.access": undefined
   "event.create": GroupWorkContext
   "event.read": EventContext

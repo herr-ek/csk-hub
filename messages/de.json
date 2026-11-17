@@ -193,7 +193,8 @@
       "adminEventsNew": "Neue Veranstaltung",
       "adminEventLocations": "Orte",
       "eventsNew": "Neue Veranstaltung",
-      "eventsManage": "Veranstaltungen verwalten"
+      "eventsManage": "Veranstaltungen verwalten",
+      "adminOidcClients": "OIDC-Clients"
     },
     "members": "Mitglieder",
     "quickAccess": "Schnellzugriff",
@@ -266,7 +267,9 @@
     "groups": "Gruppen und Ämter",
     "groupsDescription": "Vorstand, Ausschüsse und andere Gruppen mit ihren Mitgliedern und Ämtern.",
     "events": "Veranstaltungen",
-    "eventsDescription": "Veranstaltungen im CSK-Kalender anlegen, veröffentlichen, absagen und löschen, und die Orte pflegen."
+    "eventsDescription": "Veranstaltungen im CSK-Kalender anlegen, veröffentlichen, absagen und löschen, und die Orte pflegen.",
+    "oidcClients": "OIDC-Clients",
+    "oidcClientsDescription": "Vertrauenswürdige Anwendungen mit CSK-Hub-Anmeldung verwalten."
   },
   "Members": {
     "title": "Mitglieder",
@@ -1079,5 +1082,33 @@
     "newMessage": "Neue Nachricht",
     "notification": "Benachrichtigung",
     "open": "Öffnen"
+  },
+  "OidcClients": {
+    "title": "OIDC-Clients",
+    "description": "Vertrauenswürdige Anwendungen mit CSK-Hub-Anmeldung verwalten.",
+    "discoveryUrl": "Discovery-URL",
+    "create": "Client erstellen",
+    "edit": "Client bearbeiten",
+    "rotate": "Geheimnis erneuern",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "empty": "Keine Clients registriert.",
+    "name": "Name",
+    "redirectUrls": "Weiterleitungsadressen",
+    "redirectHelp": "Eine exakte Callback-URL pro Zeile. HTTPS ist in Produktion erforderlich.",
+    "save": "Speichern",
+    "error": "Die Aktion konnte nicht abgeschlossen werden. Werte prüfen und erneut versuchen.",
+    "rotateWarning": "Das bisherige Geheimnis wird sofort ungültig. Die Anwendung muss mit dem neuen Geheimnis aktualisiert werden.",
+    "credentials": "Client-Zugangsdaten",
+    "secretWarning": "Das Geheimnis jetzt kopieren. Es wird nicht erneut angezeigt.",
+    "clientId": "Client-ID",
+    "secret": "Client-Geheimnis",
+    "copy": "Geheimnis kopieren",
+    "consentTitle": "Bei {name} anmelden",
+    "consentDescription": "Dieser Anwendung die angeforderten Identitätsinformationen übermitteln?",
+    "allow": "Erlauben",
+    "deny": "Ablehnen"
   }
 }

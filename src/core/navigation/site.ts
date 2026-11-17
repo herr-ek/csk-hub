@@ -12,6 +12,7 @@ export const ROUTES = {
   newsCompose: "/news/new",
   events: "/events",
   admin: "/admin",
+  adminOidcClients: "/admin/oidc-clients",
   adminUsers: "/admin/users",
   adminNotifications: "/admin/notifications",
   adminOrgStructure: "/admin/org-structure",
@@ -42,6 +43,7 @@ export type MenuRouteId =
   | "account"
   | "accountSettings"
   | "admin"
+  | "adminOidcClients"
   | "adminUsers"
   | "adminNotifications"
   | "adminOrgStructure"
@@ -56,6 +58,7 @@ export const ROUTE_PARENTS: Partial<Record<MenuRouteId, MenuRouteId>> = {
   eventsNew: "eventsManage",
   newsCompose: "news",
   accountSettings: "account",
+  adminOidcClients: "admin",
   adminUsers: "admin",
   adminNotifications: "admin",
   adminOrgStructure: "admin",

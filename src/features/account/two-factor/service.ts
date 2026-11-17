@@ -1,8 +1,9 @@
 import { authClient } from "@/core/auth/auth-client"
+import { isOAuthRedirect } from "@/core/auth/oauth-continuation"
 
 export type TwoFactorMethod = "otp" | "totp" | "backup"
 type OperationFailure = { success: false; error: "sendFailed" | "verifyFailed" } | { success: false; unavailable: true }
-export type TwoFactorOperationResult = { success: true; role?: string } | OperationFailure
+export type TwoFactorOperationResult = { success: true; redirecting?: boolean; role?: string } | OperationFailure
 
 export function getAvailableMethods(methods: string[]): Exclude<TwoFactorMethod, "backup">[] {
   return methods.filter((method): method is "otp" | "totp" => method === "otp" || method === "totp")
@@ -31,6 +32,8 @@ export async function verifyTwoFactorMethod(
           : await authClient.twoFactor.verifyBackupCode({ code, trustDevice, disableSession: false })
 
     if (result.error) return { success: false, error: "verifyFailed" }
+
+    if (isOAuthRedirect(result.data)) return { success: true, redirecting: true }
 
     const role = result.data?.user?.role
     return role ? { success: true, role } : { success: true }

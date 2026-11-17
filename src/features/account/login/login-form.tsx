@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import type z from "zod"
+import { withOAuthQuery } from "@/core/auth/oauth-continuation"
 import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
@@ -28,14 +29,14 @@ export function LoginForm() {
   function completeSignIn(result: LoginResult) {
     if (!result.success) {
       if ("requiresTwoFactor" in result) {
-        router.replace(twoFactorPath(result.methods, returnTo))
+        router.replace(withOAuthQuery(twoFactorPath(result.methods, returnTo), searchParams.toString()))
         return
       }
       setFormError(t(`errors.${result.error}`))
       return
     }
 
-    router.replace(getPostLoginPath(result.role, returnTo))
+    if (!result.redirecting) router.replace(getPostLoginPath(result.role, returnTo))
   }
 
   async function handlePasskeySignIn() {

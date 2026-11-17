@@ -1,4 +1,5 @@
 import { authClient } from "@/core/auth/auth-client"
+import { isOAuthRedirect } from "@/core/auth/oauth-continuation"
 
 export type EmailPasswordSignInInput = {
   email: string
@@ -10,7 +11,7 @@ export type UsernamePasswordSignInInput = Omit<EmailPasswordSignInInput, "email"
 export type IdentifierPasswordSignInInput = Omit<EmailPasswordSignInInput, "email"> & { identifier: string }
 
 export type LoginResult =
-  | { success: true; role?: string | null }
+  | { success: true; redirecting?: boolean; role?: string | null }
   | { success: false; error: "invalidCredentials" | "unavailable" | "passkeyFailed" | "passkeyUnavailable" }
   | { success: false; requiresTwoFactor: true; methods: string[] }
 
@@ -45,6 +46,8 @@ export async function signInWithEmailPassword(input: EmailPasswordSignInInput): 
       }
     }
 
+    if (isOAuthRedirect(result.data)) return { success: true, redirecting: true }
+
     if (requiresTwoFactor(result)) {
       return {
         success: false,
@@ -76,6 +79,8 @@ export async function signInWithUsernamePassword(input: UsernamePasswordSignInIn
         error: "invalidCredentials"
       }
     }
+
+    if (isOAuthRedirect(result.data)) return { success: true, redirecting: true }
 
     if (requiresTwoFactor(result)) {
       return {
@@ -110,6 +115,8 @@ export async function signInWithPasskey(): Promise<LoginResult> {
         error: "passkeyFailed"
       }
     }
+
+    if (isOAuthRedirect(result.data)) return { success: true, redirecting: true }
 
     const role = (result.data.user as { role?: string }).role
     return { success: true, role }

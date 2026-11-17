@@ -3,15 +3,18 @@ import { i18n, locales } from "@better-auth/i18n"
 import { passkey } from "@better-auth/passkey"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
-import { admin, emailOTP, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
+import { admin, emailOTP, jwt, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
 import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
 import { getBaseURL } from "./base-url"
+import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
 import { adminPluginOptions } from "./permissions"
 
 const authPlugins = [
+  jwt({ disableSettingJwtHeader: true }),
+  createOAuthProvider(db, env.ENVIRONMENT === "development" && process.env.NODE_ENV !== "production"),
   username(),
   admin(adminPluginOptions),
   openAPI(),
@@ -52,6 +55,7 @@ const authPlugins = [
 
 export const authOptions = {
   appName: app.name,
+  disabledPaths: ["/token", ...oauthDisabledPaths],
   baseURL: getBaseURL(env),
   database: drizzleAdapter(db, {
     provider: "pg",

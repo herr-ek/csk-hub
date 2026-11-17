@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
-const sendOtp = mock(async () => ({ error: null as null | { message: string } }))
-const verifyTotp = mock(async () => ({ error: null as null | { message: string } }))
-const verifyOtp = mock(async () => ({ error: null as null | { message: string } }))
-const verifyBackupCode = mock(async () => ({ error: null as null | { message: string } }))
+type Response = { error: null | { message: string }; data?: { redirect: boolean; url: string } }
+
+const sendOtp = mock(async (): Promise<Response> => ({ error: null }))
+const verifyTotp = mock(async (): Promise<Response> => ({ error: null }))
+const verifyOtp = mock(async (): Promise<Response> => ({ error: null }))
+const verifyBackupCode = mock(async (): Promise<Response> => ({ error: null }))
 
 mock.module("@/core/auth/auth-client", () => ({
   authClient: {
@@ -21,6 +23,15 @@ beforeEach(() => {
 })
 
 describe("two-factor verification", () => {
+  test("preserves provider redirects from every verification method", async () => {
+    const response = { data: { redirect: true, url: "https://app.example/callback" }, error: null }
+    verifyTotp.mockResolvedValue(response)
+    verifyOtp.mockResolvedValue(response)
+    verifyBackupCode.mockResolvedValue(response)
+    for (const method of ["totp", "otp", "backup"] as const) {
+      await expect(verifyTwoFactorMethod(method, "code", false)).resolves.toEqual({ success: true, redirecting: true })
+    }
+  })
   test("keeps supported methods and ignores unknown methods", () => {
     expect(getAvailableMethods(["totp", "sms", "otp", "backup"])).toEqual(["totp", "otp"])
   })
