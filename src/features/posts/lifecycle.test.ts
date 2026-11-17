@@ -20,7 +20,7 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
   let viewerId: string
   function authorizeAs(id: string) {
     return createAuthorization({ database: db, readSession: async () => ({ user: { id }, session: {} }) })
-      .requirePermission
+      .withCurrentRequest
   }
   function listNewsFeed(database = db) {
     return reads.listNewsFeed(database, authorizeAs(viewerId))
@@ -71,7 +71,9 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     const otherAdmin = await newAdmin()
     const { id } = await createPost({ authorId: author, content: content("Privat"), publish: false }, db)
 
-    expect(await listDraftsByAuthor(author, db)).toEqual([{ id, title: "Privat", savedAt: expect.any(Date) }])
+    expect(await listDraftsByAuthor(author, db)).toEqual([
+      { id, title: "Privat", savedAt: expect.any(Date), recalled: false }
+    ])
     expect(await listDraftsByAuthor(otherAdmin, db)).toEqual([])
     expect(await getEditablePost(id, author, db)).toMatchObject({ id, state: "draft" })
     expect(await getEditablePost(id, otherAdmin, db)).toBeNull()
@@ -79,7 +81,7 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     expect(
       await saveDraft({ postId: id, authorId: otherAdmin, content: content("Kapat"), publish: true }, db)
     ).toBeNull()
-    expect(await editPublishedPost({ postId: id, content: content("Kapat") }, db)).toBeNull()
+    expect(await editPublishedPost({ actorId: author, postId: id, content: content("Kapat") }, db)).toBeNull()
     expect(await row(id)).toMatchObject({ title: "Privat", publishedAt: null })
   })
 
@@ -97,7 +99,9 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     const author = await newAdmin()
     const { id } = await createPost({ authorId: author, content: content("Gig", "Lördag 14:00"), publish: true }, db)
 
-    expect(await editPublishedPost({ postId: id, content: content("Gig", "Söndag 14:00") }, db)).toEqual({ id })
+    expect(
+      await editPublishedPost({ actorId: author, postId: id, content: content("Gig", "Söndag 14:00") }, db)
+    ).toEqual({ id })
 
     const edited = await getPublishedPost(id, db)
     expect(edited?.body).toEqual(content("Gig", "Söndag 14:00").body)
@@ -109,7 +113,7 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     const author = await newAdmin()
     const { id } = await createPost({ authorId: author, content: content("Oförändrad"), publish: true }, db)
 
-    await editPublishedPost({ postId: id, content: content("Oförändrad") }, db)
+    await editPublishedPost({ actorId: author, postId: id, content: content("Oförändrad") }, db)
 
     expect((await getPublishedPost(id, db))?.editedAt).toBeNull()
   })
@@ -118,21 +122,21 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     const author = await newAdmin()
     const recaller = await newAdmin()
     const { id } = await createPost({ authorId: author, content: content("Fel datum"), publish: true }, db)
-    await editPublishedPost({ postId: id, content: content("Fel datum", "Rättat") }, db)
+    await editPublishedPost({ actorId: author, postId: id, content: content("Fel datum", "Rättat") }, db)
     const firstPublishedAt = (await row(id))?.publishedAt
 
-    expect(await unpublishPost(id, db)).toEqual({ authorId: author })
+    expect(await unpublishPost(id, db)).toEqual({ authorId: author, publisherGroupId: null })
 
     expect(await feedIds()).not.toContain(id)
     expect(await getPublishedPost(id, db)).toBeNull()
-    expect(await row(id)).toMatchObject({ publishedAt: null, editedAt: null, authorId: author })
+    expect(await row(id)).toMatchObject({ publishedAt: null, editedAt: expect.any(Date), authorId: author })
     expect((await listDraftsByAuthor(author, db)).map((draft) => draft.id)).toContain(id)
     expect(await getEditablePost(id, recaller, db)).toBeNull()
 
     await saveDraft({ postId: id, authorId: author, content: content("Rätt datum"), publish: true }, db)
     const republished = await row(id)
     expect(republished?.publishedAt?.getTime()).toBeGreaterThan(firstPublishedAt?.getTime() ?? Number.POSITIVE_INFINITY)
-    expect(republished?.editedAt).toBeNull()
+    expect(republished?.editedAt).toBeInstanceOf(Date)
   })
 
   test("a draft cannot be unpublished, and a published Post is not saved as a draft", async () => {
@@ -154,7 +158,7 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     expect(
       await saveDraft({ postId: "not-a-uuid", authorId: author, content: content("x"), publish: true }, db)
     ).toBeNull()
-    expect(await editPublishedPost({ postId: "not-a-uuid", content: content("x") }, db)).toBeNull()
+    expect(await editPublishedPost({ actorId: author, postId: "not-a-uuid", content: content("x") }, db)).toBeNull()
     expect(await unpublishPost("not-a-uuid", db)).toBeNull()
     expect(await discardDraft({ postId: "not-a-uuid", authorId: author }, db)).toBe(false)
   })

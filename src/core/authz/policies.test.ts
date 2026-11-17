@@ -17,6 +17,9 @@ const admin: AuthorizationActor = { userId: "admin", isAdmin: true }
 function post(state: "draft" | "published" | "discarded", authorId: string | null = owner.userId): PostAttributes {
   return {
     id: "post",
+    publisherGroupId: null,
+    firstPublishedAt: state === "published" ? new Date("2026-01-01") : null,
+    audienceAll: true,
     authorId,
     publishedAt: state === "published" ? new Date("2026-01-01") : null,
     discardedAt: state === "discarded" ? new Date("2026-01-01") : null
@@ -120,7 +123,7 @@ describe("Group policies", () => {
     for (const action of ["group.publishPost", "group.manageContent", "group.manageEvents"] as const) {
       const context = { ...groupContext, group: { ...group, type: "Choir" as const } }
       expect(evaluatePermission(owner, { action, context })).toBe(false)
-      expect(evaluatePermission(admin, { action, context })).toBe(true)
+      expect(evaluatePermission(admin, { action, context })).toBe(action !== "group.publishPost")
       expect(evaluatePermission(admin, { action, context: { group, memberships: [], positionHoldings: [] } })).toBe(
         true
       )

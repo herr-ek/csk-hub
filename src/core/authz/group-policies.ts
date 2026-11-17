@@ -31,7 +31,7 @@ function canAdministerGroup(
 
 /** Group authority is not permission to act on arbitrary Post or Event instances. */
 export const groupPolicies = {
-  "group.publishPost": canRepresentGroup,
+  "group.publishPost": (actor, context) => context.group?.type !== "Choir" && canRepresentGroup(actor, context),
   "group.manageContent": canRepresentGroup,
   "group.manageEvents": canRepresentGroup,
   "group.manageMemberships": canAdministerGroup,

@@ -136,7 +136,7 @@ export function listChoirMembersByVoiceFamily(database: OrgStructureDatabase, ch
  */
 export function listActiveGroups(database: OrgStructureDatabase, alsoGroupIds: string[] = []) {
   return database
-    .select({ id: group.id, name: group.name, type: group.type, active: group.active })
+    .select({ id: group.id, name: group.name, type: group.type, active: group.active, choirId: group.choirId })
     .from(group)
     .where(or(eq(group.active, true), alsoGroupIds.length > 0 ? inArray(group.id, alsoGroupIds) : undefined))
 }
@@ -165,7 +165,9 @@ export async function lockGroupForReference(tx: OrgStructureTransaction, groupId
  * Unlike summary reads, these retain User IDs and both period boundaries.
  */
 export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
-  const groups = await database.select({ id: group.id, type: group.type, active: group.active }).from(group)
+  const groups = await database
+    .select({ id: group.id, type: group.type, active: group.active, choirId: group.choirId })
+    .from(group)
   const memberships = await database.select().from(groupMember).where(eq(groupMember.userId, userId))
   const positionHoldings = await database.select().from(positionHolder).where(eq(positionHolder.userId, userId))
   return { groups, memberships, positionHoldings }

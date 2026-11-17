@@ -1,7 +1,7 @@
 "use server"
 
 import { refresh, revalidatePath } from "next/cache"
-import { getRequestSession } from "@/core/auth/session.server"
+import { requirePermission } from "@/core/authz"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { scheduleActivityDispatch } from "@/features/messaging/activity"
@@ -13,10 +13,9 @@ import { markPostRead } from "./service"
  */
 export async function markPostReadAction(postId: string) {
   try {
-    const session = await getRequestSession()
-    if (!session) return
+    const actor = await requirePermission({ action: "app.access" })
 
-    if (!(await markPostRead(session.user.id, postId))) return
+    if (!(await markPostRead(actor.userId, postId))) return
   } catch (error) {
     logger.error("news.post.mark-read-failed", {
       errorCode: getErrorCode(error),

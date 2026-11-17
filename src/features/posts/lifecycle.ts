@@ -1,147 +1,143 @@
 import "server-only"
 
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm"
+import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm"
+import type { PostAddress, PostAudienceTarget } from "@/core/authz/model"
+import { samePostTargets } from "@/core/authz/post-audience"
 import { db } from "@/core/db"
-import { post } from "@/core/db/schema/posts"
+import { post, postTarget } from "@/core/db/schema/posts"
 import { queuePublicActivity } from "@/core/realtime/outbox"
 import type { RichTextDocument } from "@/features/rich-text"
 import { isPostId, type PostsDatabase } from "./service"
 
-/**
- * Persistence operations used by the authorized Post commands. Callers must establish current
- * resource permission in the same transaction before invoking them. Drafts belong to their author
- * alone; a published personal Post may be changed by its author or an explicitly authorized Admin.
- * Unpublishing is a recall: the Post becomes its author's draft again. Nothing deletes one;
- * an author who no longer wants a draft discards it, which hides it for good.
- *
- * Every command checks its starting state in the same statement that changes it, so a Post
- * that moved on in the meantime — published from another tab, recalled by another Admin —
- * is reported as missing rather than written in the wrong state.
- */
-
-/** A Post's title and body, already checked against the Post's schema. */
-export type PostContent = { title: string; body: RichTextDocument }
-
+/** Validated content. Production commands supply an explicit address; legacy callers retain all-CSK. */
+export type PostContent = { title: string; body: RichTextDocument } & Partial<PostAddress>
 type SavedPost = { id: string }
 
-/** The live draft `postId`, as long as `authorId` wrote it. */
-function draftOf(postId: string, authorId: string) {
-  return and(eq(post.id, postId), eq(post.authorId, authorId), isNull(post.publishedAt), isNull(post.discardedAt))
+async function replaceTargets(database: PostsDatabase, postId: string, targets: PostAudienceTarget[]) {
+  await database.delete(postTarget).where(eq(postTarget.postId, postId))
+  if (targets.length) await database.insert(postTarget).values(targets.map((target) => ({ postId, ...target })))
 }
 
-/** Writes a new Post for its author, either published at once or kept as their draft. */
+/** Persistence only: callers authorize and lock organisational facts in the enclosing transaction. */
 export async function createPost(
   input: { authorId: string; content: PostContent; publish: boolean },
   database: PostsDatabase = db
 ): Promise<SavedPost> {
   return database.transaction(async (tx) => {
+    const { targets = [], title, body, publisherGroupId = null, audienceAll = true } = input.content
+    const content = { title, body, publisherGroupId, audienceAll }
+    const now = input.publish ? new Date() : null
     const [created] = await tx
       .insert(post)
-      .values({
-        ...input.content,
-        authorId: input.authorId,
-        publishedAt: input.publish ? new Date() : null
-      })
+      .values({ ...content, authorId: input.authorId, publishedAt: now, firstPublishedAt: now })
       .returning({ id: post.id })
-
     if (!created) throw new Error("The post insert returned no row.")
+    await replaceTargets(tx, created.id, targets)
     if (input.publish) await queuePublicActivity(tx, { kind: "posts.changed" })
     return created
   })
 }
 
-/**
- * Saves the author's draft, and publishes it when asked. Null when the Post is not a
- * draft of theirs: someone else's, already published, discarded, or not there at all.
- */
+async function saveContent(
+  input: { postId: string; actorId: string; content: PostContent; publish: boolean; draft: boolean },
+  database: PostsDatabase
+): Promise<SavedPost | null> {
+  if (!isPostId(input.postId)) return null
+  return database.transaction(async (tx) => {
+    const { targets, title, body, publisherGroupId, audienceAll } = input.content
+    const content = { title, body, publisherGroupId, audienceAll }
+    const oldTargets =
+      targets === undefined
+        ? []
+        : await tx
+            .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
+            .from(postTarget)
+            .where(eq(postTarget.postId, input.postId))
+    const audienceChanged = targets !== undefined && !samePostTargets(oldTargets, targets)
+    const changed = sql`(${post.title} is distinct from ${content.title} or ${post.body} is distinct from ${JSON.stringify(content.body)}::jsonb
+      or ${audienceChanged} or ${post.audienceAll} is distinct from ${content.audienceAll ?? sql`${post.audienceAll}`})`
+    const edited = sql`(${post.firstPublishedAt} is not null or ${post.publishedAt} is not null) and ${changed}`
+    const state = input.draft
+      ? and(
+          isNull(post.publishedAt),
+          or(eq(post.authorId, input.actorId), and(isNotNull(post.firstPublishedAt), isNotNull(post.publisherGroupId)))
+        )
+      : isNotNull(post.publishedAt)
+    const [saved] = await tx
+      .update(post)
+      .set({
+        ...content,
+        editedAt: sql`case when ${edited} then now() else ${post.editedAt} end`,
+        lastEditorId: sql`case when ${edited} then ${input.actorId} else ${post.lastEditorId} end`,
+        lastEditorRecorded: sql`case when ${edited} then true else ${post.lastEditorRecorded} end`,
+        revision: sql`${post.revision} + 1`,
+        ...(input.publish
+          ? { publishedAt: new Date(), firstPublishedAt: sql`coalesce(${post.firstPublishedAt}, now())` }
+          : {})
+      })
+      .where(and(eq(post.id, input.postId), isNull(post.discardedAt), state))
+      .returning({ id: post.id })
+    if (!saved) return null
+    if (targets !== undefined) await replaceTargets(tx, saved.id, targets)
+    if (input.publish || !input.draft) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return saved
+  })
+}
+
+/** Save an authorized private Draft or shared Recalled Group Post, optionally publishing it. */
 export async function saveDraft(
   input: { postId: string; authorId: string; content: PostContent; publish: boolean },
   database: PostsDatabase = db
 ): Promise<SavedPost | null> {
-  if (!isPostId(input.postId)) return null
-
-  return database.transaction(async (tx) => {
-    const [saved] = await tx
-      .update(post)
-      .set({ ...input.content, ...(input.publish ? { publishedAt: new Date() } : {}) })
-      .where(draftOf(input.postId, input.authorId))
-      .returning({ id: post.id })
-
-    if (saved && input.publish) await queuePublicActivity(tx, { kind: "posts.changed" })
-    return saved ?? null
-  })
+  return saveContent({ ...input, actorId: input.authorId, draft: true }, database)
 }
 
-/**
- * Changes a published Post in place, with immediate effect. It is marked edited only when
- * the title or body actually differ, so saving without a change does not tell readers the
- * Post moved. Null when the Post is not published.
- */
+/** Preserve original authorship, tracking meaningful edits against the actual acting Member. */
 export async function editPublishedPost(
-  input: { postId: string; content: PostContent },
+  input: { postId: string; content: PostContent; actorId: string },
   database: PostsDatabase = db
 ): Promise<SavedPost | null> {
-  if (!isPostId(input.postId)) return null
-
-  const { title, body } = input.content
-  // The comparison reads the row as it was before this update; jsonb equality ignores key
-  // order, so only a different document counts as an edit.
-  const editedAt = sql`case
-    when ${post.title} is distinct from ${title} or ${post.body} is distinct from ${JSON.stringify(body)}::jsonb
-    then now() else ${post.editedAt} end`
-
-  return database.transaction(async (tx) => {
-    const [saved] = await tx
-      .update(post)
-      .set({ title, body, editedAt })
-      .where(and(eq(post.id, input.postId), isNotNull(post.publishedAt)))
-      .returning({ id: post.id })
-
-    if (saved) await queuePublicActivity(tx, { kind: "posts.changed" })
-    return saved ?? null
-  })
+  return saveContent({ ...input, draft: false, publish: false }, database)
 }
 
-/**
- * Recalls a published Post: it leaves the feed and its permalink and is its author's
- * draft again, so republishing dates it afresh and it carries no edited mark. Resolves whose
- * drafts it went back to — null as `authorId` after the author's Erasure — or null when the
- * Post is not published.
- */
+/** Recall without clearing publication history or editor attribution. Group content remains shared. */
 export async function unpublishPost(
   postId: string,
   database: PostsDatabase = db
-): Promise<{ authorId: string | null } | null> {
+): Promise<{ authorId: string | null; publisherGroupId: string | null } | null> {
   if (!isPostId(postId)) return null
-
   return database.transaction(async (tx) => {
     const [recalled] = await tx
       .update(post)
-      .set({ publishedAt: null, editedAt: null })
+      .set({
+        publishedAt: null,
+        firstPublishedAt: sql`coalesce(${post.firstPublishedAt}, ${post.publishedAt})`,
+        revision: sql`${post.revision} + 1`
+      })
       .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
-      .returning({ authorId: post.authorId })
-
+      .returning({ authorId: post.authorId, publisherGroupId: post.publisherGroupId })
     if (recalled) await queuePublicActivity(tx, { kind: "posts.changed" })
     return recalled ?? null
   })
 }
 
-/**
- * Throws the author's draft away: it leaves their drafts and cannot be opened, saved or
- * published again. The row stays, since Posts are never deleted. False when the Post is not
- * a live draft of theirs; a published Post is unpublished first.
- */
+/** Discard authorized unpublished content. Rows survive, but no application view exposes them. */
 export async function discardDraft(
   input: { postId: string; authorId: string },
   database: PostsDatabase = db
 ): Promise<boolean> {
   if (!isPostId(input.postId)) return false
-
   const discarded = await database
     .update(post)
-    .set({ discardedAt: new Date() })
-    .where(draftOf(input.postId, input.authorId))
+    .set({ discardedAt: new Date(), revision: sql`${post.revision} + 1` })
+    .where(
+      and(
+        eq(post.id, input.postId),
+        isNull(post.publishedAt),
+        isNull(post.discardedAt),
+        or(eq(post.authorId, input.authorId), and(isNotNull(post.firstPublishedAt), isNotNull(post.publisherGroupId)))
+      )
+    )
     .returning({ id: post.id })
-
   return discarded.length > 0
 }

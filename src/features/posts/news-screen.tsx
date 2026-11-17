@@ -15,6 +15,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/ba
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
 import { UnpublishedNotice } from "./compose/UnpublishedNotice"
+import { PostAudience } from "./PostAudience"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
 import { listNewsFeed, listOwnDrafts } from "./service"
@@ -41,7 +42,7 @@ async function OwnDrafts() {
   return (
     <section aria-labelledby="own-drafts" className="flex flex-col gap-2">
       <h2 id="own-drafts" className="text-sm font-medium text-muted-foreground">
-        {t("yourDrafts")}
+        {t("unpublishedPosts")}
       </h2>
       <ul className="flex flex-col divide-y rounded-xl border">
         {drafts.map((draft) => (
@@ -50,7 +51,10 @@ async function OwnDrafts() {
               href={newsPostEditPath(draft.id)}
               className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
             >
-              <span className="font-medium break-words">{draft.title}</span>
+              <span className="font-medium break-words">
+                {draft.title}
+                {draft.recalled ? <span className="ml-2 text-sm text-muted-foreground">{t("recalled")}</span> : null}
+              </span>
               <span className="text-sm text-muted-foreground">
                 {t("draftSaved")} <PostTime date={draft.savedAt} />
               </span>
@@ -118,11 +122,16 @@ export async function NewsScreen() {
                       ) : null}
                       <CardDescription>
                         <PostByline
+                          publisherName={entry.publisherName}
+                          showAuthor={entry.showAuthor}
+                          lastEditorName={entry.lastEditorName}
+                          lastEditorRecorded={entry.lastEditorRecorded}
                           authorName={entry.authorName}
                           publishedAt={entry.publishedAt}
                           editedAt={entry.editedAt}
                         />
                       </CardDescription>
+                      <PostAudience audienceAll={entry.audienceAll} targets={entry.targets} />
                     </CardHeader>
                     <CardContent>
                       <RichTextContent

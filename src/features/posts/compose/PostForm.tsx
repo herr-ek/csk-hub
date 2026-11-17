@@ -1,17 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { useTranslations } from "@/core/i18n/translations"
-import { type RichTextDocument, RichTextEditor } from "@/features/rich-text"
+import { RichTextEditor } from "@/features/rich-text"
 import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertAction, AlertDescription } from "@/shared/ui/base/alert"
 import { Button, buttonVariants } from "@/shared/ui/base/button"
 import { Field, FieldError, FieldGroup, FieldTitle } from "@/shared/ui/base/field"
 import { postDocument } from "../post-document"
+import type { PostComposeOptions } from "../service"
 import type { PostFormState } from "./actions"
+import { PostAddressFields } from "./PostAddressFields"
 import { POST_TITLE_MAX_LENGTH } from "./schemas"
+import type { UnsavedPost } from "./use-unsaved-post"
 import { useUnsavedPost } from "./use-unsaved-post"
 
 const POST_BODY_LABEL_ID = "post-body-label"
@@ -19,9 +22,10 @@ const POST_BODY_LABEL_ID = "post-body-label"
 type PostFormProps = {
   action: (state: PostFormState, formData: FormData) => Promise<PostFormState>
   /** A draft can be saved or published; a published Post can only be saved as it is. */
-  stage: "draft" | "published"
+  stage: "draft" | "published" | "recalled"
   /** What the Post says now, when it already exists. */
-  initial?: { title: string; body: RichTextDocument }
+  initial?: UnsavedPost & { revision?: number; identityFixed?: boolean }
+  options: PostComposeOptions
   /**
    * Where unsaved changes are kept across a reload: the Post's id, or `"new"`, and the
    * version of the Post the form was loaded from.
@@ -30,19 +34,45 @@ type PostFormProps = {
   cancelHref: string
 }
 
-const NOTHING_WRITTEN = { title: "", body: undefined }
+const NOTHING_WRITTEN = { title: "", body: undefined, publisherGroupId: null, audienceAll: false, targets: [] }
 
-export function PostForm({ action: submit, stage, initial, unsaved: storage, cancelHref }: PostFormProps) {
+export function PostForm({
+  action: submit,
+  stage,
+  initial: latestInitial,
+  options,
+  unsaved: storage,
+  cancelHref
+}: PostFormProps) {
   const t = useTranslations("Posts")
   const common = useTranslations("Common")
+  // Keep the loaded revision while this editor is open: background activity must not replace unsaved work.
+  const [initial, setInitial] = useState(latestInitial)
   const [state, action] = useActionState<PostFormState, FormData>(submit, { status: "idle" })
-  const unsaved = useUnsavedPost({ ...storage, initial: initial ?? NOTHING_WRITTEN })
-  const { saveFailed } = unsaved
+  const unsaved = useUnsavedPost({
+    ...storage,
+    version: initial?.revision === undefined ? storage.version : String(initial.revision),
+    initial: initial ?? NOTHING_WRITTEN
+  })
+  const { saveFailed, saved } = unsaved
+  // Only our own successful save advances this editor's baseline. Other saves produce a conflict.
+  if (state.status === "saved" && initial?.revision !== state.revision) {
+    setInitial({
+      title: state.values.title,
+      body: postDocument.parse(state.values.body) ?? undefined,
+      publisherGroupId: state.values.publisherGroupId || null,
+      audienceAll: state.values.audienceAll,
+      targets: state.values.targets ?? [],
+      revision: state.revision,
+      identityFixed: initial?.identityFixed
+    })
+  }
 
   // Runs once per settled submission: a failure keeps the copy for the next attempt.
   useEffect(() => {
     if (state.status === "error") saveFailed()
-  }, [state, saveFailed])
+    if (state.status === "saved") saved()
+  }, [state, saveFailed, saved])
 
   // React resets the form once the action settles, so a rejected post survives only
   // if the action hands back what was typed. Short of that, the form starts from a
@@ -53,10 +83,10 @@ export function PostForm({ action: submit, stage, initial, unsaved: storage, can
   const body = rejected ? (postDocument.parse(rejected.body) ?? undefined) : startedFrom?.body
   // A restored copy arrives after the fields have mounted, and the editor only reads its
   // default once, so the fields start over whenever the copy comes or goes.
-  const fieldsKey = unsaved.restored ? "restored" : "saved"
+  const fieldsKey = `${initial?.revision ?? "new"}-${unsaved.restored ? "restored" : "saved"}`
 
   return (
-    <form action={action} onSubmit={unsaved.saving} className="flex flex-col gap-6 md:min-h-0 md:flex-1">
+    <form action={action} onSubmit={unsaved.saving} className="flex flex-col gap-6">
       {unsaved.restored && state.status === "idle" ? (
         <Alert>
           <AlertDescription>{t("unsavedRestored")}</AlertDescription>
@@ -67,7 +97,20 @@ export function PostForm({ action: submit, stage, initial, unsaved: storage, can
           </AlertAction>
         </Alert>
       ) : null}
-      <FieldGroup className="md:min-h-0">
+      {initial?.revision !== undefined ? <input type="hidden" name="revision" value={initial.revision} /> : null}
+      <FieldGroup>
+        <PostAddressFields
+          key={`${fieldsKey}-${state.status}`}
+          initial={{
+            publisherGroupId: rejected ? rejected.publisherGroupId || null : (startedFrom?.publisherGroupId ?? null),
+            audienceAll: rejected?.audienceAll ?? startedFrom?.audienceAll ?? false,
+            targets: rejected?.targets ?? startedFrom?.targets ?? []
+          }}
+          options={options}
+          identityFixed={initial?.identityFixed ?? false}
+          onChange={unsaved.changeAddress}
+          targetErrors={state.status === "error" ? state.targetErrors : undefined}
+        />
         <InputField
           key={fieldsKey}
           onChange={(event) => unsaved.changeTitle(event.target.value)}
@@ -78,7 +121,7 @@ export function PostForm({ action: submit, stage, initial, unsaved: storage, can
           maxLength={POST_TITLE_MAX_LENGTH}
           required
         />
-        <Field className="md:min-h-0">
+        <Field className="min-h-64">
           <FieldTitle id={POST_BODY_LABEL_ID}>{t("bodyLabel")}</FieldTitle>
           <RichTextEditor
             key={fieldsKey}
@@ -91,6 +134,16 @@ export function PostForm({ action: submit, stage, initial, unsaved: storage, can
           />
         </Field>
         <FieldError>{state.status === "error" ? t(state.error) : undefined}</FieldError>
+        {state.status === "error" && state.error === "editConflict" ? (
+          <Link
+            href={`/news/${storage.slot}/edit`}
+            target="_blank"
+            rel="noopener"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            {t("openLatest")}
+          </Link>
+        ) : null}
       </FieldGroup>
       <div className="flex flex-wrap items-center gap-3">
         <SubmitButtons stage={stage} />
@@ -122,7 +175,7 @@ function SubmitButtons({ stage }: { stage: PostFormProps["stage"] }) {
   return (
     <>
       <Button type="submit" name="intent" value="draft" variant="outline" disabled={pending}>
-        {pendingIntent === "draft" ? t("savingDraft") : t("saveDraft")}
+        {pendingIntent === "draft" ? t("savingDraft") : t(stage === "recalled" ? "saveRecalled" : "saveDraft")}
       </Button>
       <Button type="submit" name="intent" value="publish" disabled={pending}>
         {pendingIntent === "publish" ? t("publishing") : t("publish")}

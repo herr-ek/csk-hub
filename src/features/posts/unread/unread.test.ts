@@ -11,7 +11,14 @@ const refresh = mock(() => undefined)
 const revalidatePath = mock(() => undefined)
 
 mock.module("@/core/db", () => ({ db: database?.db }))
-mock.module("@/core/auth/session.server", () => ({ getRequestSession: async () => currentSession }))
+const authorization = await import("@/core/authz")
+mock.module("@/core/authz", () => ({
+  ...authorization,
+  requirePermission: async () => {
+    if (!currentSession) throw new Error("No active session")
+    return { userId: currentSession.user.id, isAdmin: false }
+  }
+}))
 mock.module("next/cache", () => ({ refresh, revalidatePath }))
 
 const { countUnreadPosts, listUnreadPostIds, markPostRead } = await import("./service")

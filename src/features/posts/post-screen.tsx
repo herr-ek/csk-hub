@@ -10,6 +10,7 @@ import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
 import { unpublishPost } from "./compose/actions"
 import { ConfirmPostCommand } from "./compose/ConfirmPostCommand"
+import { PostAudience } from "./PostAudience"
 import { PostByline } from "./post-byline"
 import { getEditablePost, getPublishedPost } from "./service"
 import { PostReadMarker } from "./unread"
@@ -27,7 +28,7 @@ async function PostControls({ postId }: { postId: string }) {
       >
         {t("editPost")}
       </Link>
-      <ConfirmPostCommand command="unpublish" action={unpublishPost.bind(null, postId)} />
+      <ConfirmPostCommand revision={canChange.revision} command="unpublish" action={unpublishPost.bind(null, postId)} />
     </div>
   )
 }
@@ -51,8 +52,9 @@ export async function PostScreen({ postId }: { postId: string }) {
         <header>
           <h1 className="font-heading text-2xl font-semibold break-words">{post.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            <PostByline authorName={post.authorName} publishedAt={post.publishedAt} editedAt={post.editedAt} />
+            <PostByline {...post} />
           </p>
+          <PostAudience className="mt-2" audienceAll={post.audienceAll} targets={post.targets} />
         </header>
         <RichTextContent document={post.body} />
       </article>
