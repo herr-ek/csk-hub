@@ -1,0 +1,142 @@
+# Who can access Posts?
+
+This guide describes the Member-facing rules. All permissions require an active,
+signed-in Member. Being able to do something yesterday does not grant permission today.
+The implementation lives in `post-policies.ts`; the calling contract is in `README.md`.
+
+## Publisher, creator and audience are separate
+
+Every active Member can write a Post. They choose whether to publish personally or on
+behalf of a Group, then explicitly choose an audience. Choirs can organise Events, but
+**a Choir can never publish a Post**, even through an Admin.
+
+The original human creator is retained. A Group Post shows its publishing Group to readers.
+Only Admins and current representatives who may publish for that Group see “Posted by” the
+original creator and named editor attribution. Other readers receive neither name in the
+feed/detail data and see edit timestamps without editor names. Personal Post attribution
+remains visible to its readers.
+The publishing identity becomes fixed at first publication, including after recall.
+
+To represent a Group, a Member must have both a current Membership and any current
+Position in that exact active Group. Membership alone, a position in another Group,
+a linked position or membership of the owning Choir does not suffice. A CSK-wide Group
+belongs to no particular Choir; its name and type do not determine its scope.
+
+## Choosing an audience
+
+Personal Posts and Group Posts may address all CSK. Alternatively, choose one or more
+Group/Voice-family targets. Targets are OR'ed; Group and Voice family within a target are AND'ed.
+A target may contain a Group, a Voice family (S/A/T/B), or both. The acting Member must qualify
+for **every** selected Group:
+
+| Audience | Who may select it? |
+| --- | --- |
+| A Group they belong to | Any current Member of that Group |
+| A Section | Any current Member of the Section's Choir |
+| A whole Choir they do not belong to | A representative publishing **on behalf of the specific CSK-wide Group they represent** |
+| Any active Group | A current representative of an active Board, regardless of selected publisher |
+| An archived Group | Nobody may newly select it |
+
+The general CSK-wide exception covers whole Choirs only, not their Sections or committees. It
+does not apply to personal Posts or Posts published for a different Group. For example,
+a CSK-wide Board representative can publish as the Board to KK without belonging to KK.
+A KK tenor can personally address the KK sopranos without belonging to that Section.
+
+Board representatives have a separate audience-selection exception: current Membership and
+a current Position in an active Board allow choosing every active Group, including Sections
+and committees, for personal Posts or for Groups they separately represent. This grants no
+additional publishing identities, readership or editing authority.
+
+A Voice-only target is available to every active Member: selecting B with no Group means
+bass singers across CSK. A Voice filter on a Group target narrows its audience without
+changing who may select that Group.
+
+Audience permission is checked at publication, republication and whenever the selected
+audience changes. An ordinary text edit may retain an existing audience even if the
+editor no longer belongs to it. Republication requires replacing/removing archived targets.
+
+## Reading
+
+A published Post addressed to all CSK is readable by every active Member. For selected
+targets, matching **any one** target is enough. A Group criterion requires current Membership
+in that exact Group. A Voice-family criterion matches the Voice division in a current Section
+Membership, never self-reported voice capabilities. With a Choir criterion, that Section must
+belong to the Choir; with a Section criterion, it must be that exact Section. Other Groups
+allow Voice matching through any current Section Membership. Membership is checked when reading: newcomers see earlier Posts; former Members lose audience-based access.
+Previously reading a Post does not grant continued access after its audience changes.
+
+Feed cards and Post details show audience chips only for targets the current reader matches.
+All-CSK Posts show an all-CSK chip. Author or management access adds no unrelated chips; the
+editor retains the complete audience configuration.
+
+Permission to address a Section does **not** grant readership of that Section's Posts.
+Choir Membership alone does not grant readership of Section-targeted Posts.
+
+There are three additional grounds for access:
+
+- The original creator can always read their own personal Post.
+- Current representatives can read Posts published on behalf of their Group, even if
+  they do not belong to an audience Group.
+- Admins can read every published Post and every Recalled Group Post.
+
+Historical credit grants no special access to a Group Post: a former representative
+must qualify through the audience or current management authority.
+
+These rules apply equally to the feed, direct links, editor, unread counts, unread IDs
+and unread expiry information. Read markers do not bypass them.
+
+## Editing, recall and discard
+
+| State | Who may read and edit? | Who may publish or republish? |
+| --- | --- | --- |
+| Never-published Draft, including one intended for a Group | Its creator only, including against Admins | Its creator, with valid publisher and audience permissions |
+| Published personal Post | Creator and Admins may edit; readers follow the audience rules above | Already published |
+| Recalled personal Post | Its creator only; it is a private Draft again | Its creator, with a valid audience |
+| Published Group Post | Current Group representatives and Admins may edit; audience Members may read | Already published |
+| Recalled Group Post | Current Group representatives and Admins | Current representatives with a valid audience, or Admins |
+
+Everyone who may edit a published Post may recall it. Personal recall creates a private
+Draft; Group recall creates a shared Recalled Group Post. Current managers can find
+Recalled Group Posts alongside their private Drafts. Recalling does not clear creator,
+publisher or editor attribution. Republication receives a new publication time.
+
+Those who may edit unpublished content may discard it. Discard is irreversible in the
+application, although the database record remains. Published Posts must be recalled first.
+
+A handover applies to existing Group Posts: new representatives gain management access;
+former representatives lose it, including the original creator. A private Draft is never
+shared merely because it names a Group as its intended publisher.
+
+## Admin exceptions and archived Groups
+
+Admins may publish or republish for an active Group without Membership or a Position,
+and may select any active audience. They may manage published and recalled Group content
+without representation. They cannot access another creator's never-published private
+Draft, publish as a Choir, publish as an archived Group, or select an archived audience.
+
+Archiving an audience Group preserves historical access for its remaining current Members.
+Archiving a publishing Group preserves its published Posts and attribution, but removes
+representative management rights. Admins may edit, recall or discard that Group's content;
+nobody may republish it while its publishing Group is archived.
+
+## Attribution, conflicting edits and unread status
+
+Meaningful changes to title, body or audience after first publication record the acting
+Member as last editor. Identical saves, private Draft edits and publication-status changes
+alone do not. Recall and republication preserve editor information. Account inactivation
+retains names; Erasure removes creator/editor identities and displays “former member”
+while preserving timestamps. A legacy edit whose editor was never recorded is labelled
+as an edit without inventing an editor identity.
+
+An open editor retains its loaded version through background live updates. Saving,
+recalling or discarding from an outdated screen is rejected rather than silently
+overwriting another editor. The form keeps the submitted content; open the latest version
+in a new tab to reconcile changes without losing the old text.
+
+Existing read markers survive edits, recall and republication. A new audience Member is
+unread if they have no marker and the Post falls within the existing 30-day unread window.
+A new announcement should be a new Post.
+
+“Current” follows the organisation's existing convention: a Membership or Position
+holding has no end date. Future start dates do not postpone permission, and a future
+end date already ends current permission. This feature does not change that convention.

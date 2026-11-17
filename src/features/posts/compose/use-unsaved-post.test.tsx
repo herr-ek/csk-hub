@@ -59,6 +59,34 @@ describe("keeping unsaved changes to a Post", () => {
     expect(unsaved.restored).toEqual({ title: "Höstkonsert", body: paragraph("Vi sjunger söndag.") })
   })
 
+  test("publisher and audience choices survive a failed save and reload alongside content", async () => {
+    await open()
+    unsaved.changeAddress({
+      publisherGroupId: "board",
+      audienceAll: false,
+      targets: [
+        { groupId: "11111111-1111-4111-8111-111111111111", voiceFamily: null },
+        { groupId: null, voiceFamily: "B" },
+        { groupId: null, voiceFamily: null }
+      ]
+    })
+    unsaved.changeTitle("Group notice")
+    unsaved.saving()
+    unsaved.saveFailed()
+    await open()
+    expect(unsaved.restored).toEqual({
+      ...SAVED,
+      title: "Group notice",
+      publisherGroupId: "board",
+      audienceAll: false,
+      targets: [
+        { groupId: "11111111-1111-4111-8111-111111111111", voiceFamily: null },
+        { groupId: null, voiceFamily: "B" },
+        { groupId: null, voiceFamily: null }
+      ]
+    })
+  })
+
   test("warns before leaving only while there are unsaved changes", async () => {
     await open()
     expect(leavingIsWarned()).toBe(false)

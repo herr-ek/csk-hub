@@ -25,7 +25,9 @@ export function UnpublishedNotice() {
     toast.add({
       type: "success",
       title: t("unpublishedTitle"),
-      description: t(to === "own" ? "unpublishedToOwnDrafts" : "unpublishedToAuthorDrafts")
+      description: t(
+        to === "group" ? "unpublishedToGroup" : to === "own" ? "unpublishedToOwnDrafts" : "unpublishedToAuthorDrafts"
+      )
     })
     router.replace(pathname, { scroll: false })
   }, [to, pathname, router, t])

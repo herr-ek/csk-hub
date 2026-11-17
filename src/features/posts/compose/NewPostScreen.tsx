@@ -5,6 +5,7 @@ import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { getPostComposeOptions } from "../service"
 import { createPost } from "./actions"
 import { PostForm } from "./PostForm"
 
@@ -21,14 +22,21 @@ async function ComposeHeader() {
 
 async function ComposeForm() {
   await requirePermission({ action: "post.create" })
+  const options = await getPostComposeOptions()
   return (
-    <PostForm action={createPost} stage="draft" unsaved={{ slot: "new", version: "new" }} cancelHref={ROUTES.news} />
+    <PostForm
+      options={options}
+      action={createPost}
+      stage="draft"
+      unsaved={{ slot: "new", version: "new" }}
+      cancelHref={ROUTES.news}
+    />
   )
 }
 
 export function NewPostScreen() {
   return (
-    <ContentPage fill>
+    <ContentPage>
       <PageBreadcrumb route="newsCompose" />
       <ComposeHeader />
       <Suspense fallback={<Skeleton className="h-56 w-full" />}>

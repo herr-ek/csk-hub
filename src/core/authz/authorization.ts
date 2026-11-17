@@ -8,6 +8,7 @@ import type { AuthorizationActor, AuthorizationSession, PermissionRequest } from
 import { evaluatePermission } from "./policy-registry"
 
 export type AuthorizationDatabase = Database
+export type AuthorizationTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 
 export const AUTHORIZATION_DENIED = "AUTHORIZATION_DENIED"
 
@@ -44,8 +45,10 @@ export type RequestAuthorization = Readonly<{
  * Resource and relationship attributes come from the calling feature's trusted server reads.
  */
 export function createAuthorization({ database, readSession }: Dependencies) {
-  async function getActor(connection: AuthorizationDatabase): Promise<AuthorizationActor | null> {
-    const session = await readSession()
+  async function getActor(
+    connection: AuthorizationDatabase,
+    session: AuthorizationSession | null
+  ): Promise<AuthorizationActor | null> {
     if (!session) return null
     const [row] = await connection
       .select({ id: user.id, role: user.role, banned: user.banned })
@@ -65,8 +68,10 @@ export function createAuthorization({ database, readSession }: Dependencies) {
    * The feature must coordinate resource/fact reads and writes with their concurrent writers.
    */
   async function forCurrentRequest(connection = database): Promise<RequestAuthorization> {
-    const actor = await getActor(connection)
+    return snapshot(await getActor(connection, await readSession()))
+  }
 
+  function snapshot(actor: AuthorizationActor | null): RequestAuthorization {
     function can(request: PermissionRequest): boolean {
       return evaluatePermission(actor, request)
     }
@@ -77,6 +82,19 @@ export function createAuthorization({ database, readSession }: Dependencies) {
     }
 
     return Object.freeze({ actor, can, requirePermission })
+  }
+
+  /**
+   * Validate the session before leasing a transaction connection, then resolve current User
+   * facts inside the transaction. Reuse its snapshot for every resource check. Call on a
+   * database client: session validation may itself need a connection from the same pool.
+   */
+  async function withCurrentRequest<T>(
+    work: (access: RequestAuthorization, tx: AuthorizationTransaction) => Promise<T>,
+    connection = database
+  ): Promise<T> {
+    const session = await readSession()
+    return connection.transaction(async (tx) => work(snapshot(await getActor(tx, session)), tx))
   }
 
   /** Resolves a fresh actor for this check. Expected denials are false; session/DB failures propagate. */
@@ -93,5 +111,5 @@ export function createAuthorization({ database, readSession }: Dependencies) {
     return (await forCurrentRequest(connection)).requirePermission(request)
   }
 
-  return { can, requirePermission, forCurrentRequest }
+  return { can, requirePermission, forCurrentRequest, withCurrentRequest }
 }

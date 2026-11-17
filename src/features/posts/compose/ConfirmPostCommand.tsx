@@ -28,30 +28,36 @@ const COPY = {
 
 /**
  * A button that asks before changing a Post's state for good — recalling a published Post,
- * throwing a draft away. The action sends the Admin to the feed once it is done.
+ * throwing a draft away. The action sends the Member to the feed once it is done.
  */
 export function ConfirmPostCommand({
   command,
-  action
+  action,
+  revision,
+  recalled = false
 }: {
   command: PostCommand
-  action: (state: PostCommandState) => Promise<PostCommandState>
+  recalled?: boolean
+  revision: number
+  action: (state: PostCommandState, formData: FormData) => Promise<PostCommandState>
 }) {
   const t = useTranslations("Posts")
   const common = useTranslations("Common")
   const copy = COPY[command]
   const formId = useId()
   const [open, setOpen] = useState(false)
-  const [state, submit, pending] = useActionState<PostCommandState>(action, { status: "idle" })
+  const [state, submit, pending] = useActionState<PostCommandState, FormData>(action, { status: "idle" })
 
   // The form sits outside the dialog so it adds no gap to the dialog's layout; the
   // confirm button reaches it through its `form` attribute.
   return (
     <>
-      <form id={formId} action={submit} />
+      <form id={formId} action={submit}>
+        <input type="hidden" name="revision" value={revision} />
+      </form>
       <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
         <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
-          {t(copy.label)}
+          {t(recalled && command === "discard" ? "discardPost" : copy.label)}
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -66,7 +72,7 @@ export function ConfirmPostCommand({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>{common("cancel")}</AlertDialogCancel>
             <AlertDialogAction type="submit" form={formId} variant="destructive" disabled={pending}>
-              {pending ? t(copy.pending) : t(copy.label)}
+              {pending ? t(copy.pending) : t(recalled && command === "discard" ? "discardPost" : copy.label)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

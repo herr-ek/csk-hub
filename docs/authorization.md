@@ -327,35 +327,37 @@ Rich text has no separate protected persistence workflow.
 
 ## Stage four: Group attribution, targeting and recall
 
-The Post schema currently has only personal `authorId`, `publishedAt` and `discardedAt`.
-Implement a separate representing Group reference while retaining the human author's identity;
-an audience-target model; and an explicit recalled-Group state distinguishable from private Drafts.
-Do not infer publication identity from the author's current holdings or overload `authorId`.
+Implemented. The [Post access guide](../src/core/authz/POLICIES.md) is the human-readable
+policy reference, including Section audiences, CSK-wide representation, Admin exceptions,
+archival, handover, recall and attribution.
 
-Before a Group publication, validate authority for its representing Group and proposed audience.
-Both personal and Group-authored Posts may address all CSK or Groups in which the publisher
-currently has Membership. Representation and destination are independent: publishing as KKB to
-KK does not grant editing of KK's content or publishing as KK. A changed destination or representing
-Group must be checked against the proposed values, not only the old Post.
+Posts store a separate publishing Group, immutable human creator, last editor, first
+publication instant, explicit all-CSK flag, Group/Voice-family audience targets and a revision. Existing
+published Posts retain personal identity and all-CSK audiences. First publication fixes
+the identity; recall retains publication/editor history. Never-published Drafts remain private.
 
-Audience targets restrict visibility in the feed, search, direct links, previews, counts and
-notifications. Filter in the database before pagination/counting; do not fetch a page then remove
-forbidden rows. Detail and collection visibility must share a rule and have equivalence tests.
-Use current Membership at read time initially; newcomers can see older notices and former members
-lose audience-based access. For published content, authorship and current content-management
-authority remain separate access grounds. Historical-Membership access, particularly for Choirs/Sections, is an open
-investigation, not a grant. Resolve archived-target history explicitly when implementing targets.
+`post.address` checks proposed identity and audience facts independently of instance
+management. All-CSK is available to every active Member. Otherwise the actor must belong
+to every selected Group, belong to the owning Choir for a Section target, or publish for
+the selected CSK-wide Group to address a whole Choir. Admin bypasses representation and
+Membership, but never the Choir-publisher ban or active-publisher/target requirement.
+Current representatives of an active Board may select any active Group audience, regardless
+of publisher, without gaining additional Group representation, readership or editing rights.
+`post.readAttribution` restricts Group creator/editor names to Admins and current representatives
+of that exact publishing Group; feed and detail reads omit those names for other readers.
+Voice-only targets are available to every active Member. Group/Voice criteria within a target
+are AND'ed and targets are OR'ed. Post Voice-family matching uses current Section assignment
+voices with Choir/Section scope, separately from Event start-time policy. Self-reported voice
+capabilities remain deferred to #159.
 
-Never-published Drafts are author-private even if intended for a Group. Unpublishing a personal
-Post restores its private Draft. Unpublishing Group content produces a Recalled Group Post that
-current Group content managers can read, revise and republish. Losing a Position removes Group
-management authority; authorship remains attribution, not continued Group management.
-
-Update `posts/lifecycle.ts`, `service.ts`, compose actions/forms/screens and read view models in the
-same change as the schema migration. Cover handover to a different holder, former authors,
-republication, mixed audiences, untrusted Group IDs and confidentiality of every collection surface.
-The existing Groups schema's Choir-wide permission examples must be reconciled with direct-Group
-scope and the current Admin-only Choir decision; they are not automatic grants.
+Post operations use `withCurrentRequest` to validate the session before leasing a transaction
+connection, then reload the User inside the transaction and reuse one actor snapshot.
+This avoids pool starvation from session lookups while relationship locks are held.
+They lock actor relationships and Group archival before Post rows. Writes
+recheck current policies and reject stale revisions before changing content, targets or
+state. Feed/detail and unread queries share one database visibility predicate; audience
+Membership is current, while personal authorship and current Group management supply
+separate access grounds. Archived audience Membership preserves historical reading.
 
 ## Organisational periods and appointments
 
