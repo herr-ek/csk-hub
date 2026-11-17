@@ -30,10 +30,7 @@ export function canAddressPostGroup(
 ): boolean {
   if (!target.active) return false
   if (actor.isAdmin) return true
-  if (
-    relationships.groups.some((group) => group.type === "Board" && canRepresentPostGroup(actor, group, relationships))
-  )
-    return true
+  if (publisher?.type === "Board" && canRepresentPostGroup(actor, publisher, relationships)) return true
   const memberOf = (id: string | null) =>
     relationships.memberships.some((m) => m.userId === actor.userId && m.groupId === id && m.endDate === null)
   return (
@@ -109,7 +106,11 @@ function canAddressPost(actor: AuthorizationActor, context: PermissionContext["p
     return false
   if (proposed.audienceAll && proposed.targets.length > 0) return false
   if ((publishing || post?.publishedAt) && !proposed.audienceAll && proposed.targets.length === 0) return false
-  const unchanged = post && post.audienceAll === proposed.audienceAll && samePostTargets(targets, proposed.targets)
+  const unchanged =
+    post &&
+    post.publisherGroupId === proposed.publisherGroupId &&
+    post.audienceAll === proposed.audienceAll &&
+    samePostTargets(targets, proposed.targets)
   if (!publishing && unchanged) return true
   return proposed.targets.every((rule) => {
     if (rule.groupId === null) return rule.voiceFamily !== null
