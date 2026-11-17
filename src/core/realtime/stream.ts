@@ -98,7 +98,12 @@ export async function handleActivityStream(policy: ActivityDeliveryPolicy, reque
                   ? { notifyUntil: delivery.pushAfter?.getTime() ?? delivery.createdAt.getTime() + PUSH_GRACE_MS }
                   : {}),
                 ...(delivery.href ? { href: delivery.href } : {}),
-                ...(delivery.change.kind === "notification.created" && delivery.body ? { body: delivery.body } : {})
+                ...(delivery.change.kind === "message.created" && delivery.title ? { title: delivery.title } : {}),
+                ...((delivery.change.kind === "notification.created" ||
+                  (delivery.change.kind === "message.created" && !delivery.change.messagePreview)) &&
+                delivery.body
+                  ? { body: delivery.body }
+                  : {})
               }
               write(`id: ${cursor}\nevent: activity\ndata: ${JSON.stringify(event)}\n\n`)
               if ((controller.desiredSize ?? 0) < -64_000) {

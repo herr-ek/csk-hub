@@ -5,10 +5,16 @@ import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { activityDelivery } from "@/core/db/schema/activity"
 import { user } from "@/core/db/schema/auth"
-import { conversationReadState, directConversation, groupMembership } from "@/core/db/schema/messaging"
+import {
+  conversationReadState,
+  directConversation,
+  groupConversation,
+  groupMembership
+} from "@/core/db/schema/messaging"
 import { conversationPath } from "@/core/navigation/navigation-utils"
 import type { ActivityTransaction } from "@/core/realtime/outbox"
 import { queueActivity } from "@/core/realtime/outbox"
+import { messageSnippet } from "./message-snippet"
 
 async function activeConversationUsers(tx: ActivityTransaction, conversationId: string) {
   return tx
@@ -46,6 +52,10 @@ export async function queueMessageActivity(
   if (!env.REDIS_URL) return
   const members = await activeConversationUsers(tx, input.conversationId)
   const [author] = await tx.select({ name: user.name }).from(user).where(eq(user.id, input.authorUserId))
+  const [group] = await tx
+    .select({ name: groupConversation.name })
+    .from(groupConversation)
+    .where(eq(groupConversation.conversationId, input.conversationId))
   const others = members.filter(({ id }) => id !== input.authorUserId).map(({ id }) => id)
   await queueActivity(
     tx,
@@ -53,7 +63,8 @@ export async function queueMessageActivity(
     {
       kind: "message.created",
       conversationId: input.conversationId,
-      sequence: input.sequence
+      sequence: input.sequence,
+      messagePreview: { snippet: messageSnippet(input.text), conversationName: group?.name }
     },
     { body: [...input.text].slice(0, 400).join(""), title: author?.name, href: conversationPath(input.conversationId) }
   )

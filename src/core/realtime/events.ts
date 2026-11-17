@@ -3,7 +3,8 @@ import { z } from "zod"
 export const activityChangeSchema = z.object({
   kind: z.enum(["message.created", "conversation.changed", "unread.changed", "posts.changed", "notification.created"]),
   conversationId: z.uuid().optional(),
-  sequence: z.number().int().positive().optional()
+  sequence: z.number().int().positive().optional(),
+  messagePreview: z.object({ snippet: z.string(), conversationName: z.string().optional() }).optional()
 })
 
 export type ActivityChange = z.infer<typeof activityChangeSchema>
@@ -13,7 +14,8 @@ export const activityEventSchema = activityChangeSchema.extend({
   notify: z.boolean(),
   notifyUntil: z.number().finite().optional(),
   href: z.string().optional(),
-  body: z.string().optional()
+  body: z.string().optional(),
+  title: z.string().optional()
 })
 
 export const activityReadySchema = z.object({ reset: z.boolean() })

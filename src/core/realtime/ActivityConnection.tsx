@@ -63,10 +63,26 @@ export function ActivityConnection({ userId }: { userId: string }) {
           /* Storage can be disabled. */
         }
         if (!alreadyShown) {
+          const isMessage = event.kind === "message.created"
+          const sender = event.title || translate.current("newMessage")
           toast.add({
             id: event.id,
-            title: translate.current(event.kind === "message.created" ? "newMessage" : "notification"),
-            description: event.body,
+            title: isMessage ? (
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">
+                {event.messagePreview?.conversationName
+                  ? translate.current("groupMessage", { sender, conversation: event.messagePreview.conversationName })
+                  : sender}
+              </span>
+            ) : (
+              translate.current("notification")
+            ),
+            description: isMessage ? (
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">
+                {event.messagePreview?.snippet ?? event.body?.replace(/\s+/gu, " ").trim()}
+              </span>
+            ) : (
+              event.body
+            ),
             ...(href ? { actionProps: { children: translate.current("open"), onClick: () => router.push(href) } } : {})
           })
           try {

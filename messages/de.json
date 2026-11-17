@@ -1076,6 +1076,7 @@
     }
   },
   "Realtime": {
+    "groupMessage": "{sender} · {conversation}",
     "newMessage": "Neue Nachricht",
     "notification": "Benachrichtigung",
     "open": "Öffnen"
