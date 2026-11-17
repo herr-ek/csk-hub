@@ -1,7 +1,6 @@
 "use server"
 
 import { z } from "zod"
-import { db } from "@/core/db"
 import { createOrganisationGroup } from "../../appointments"
 import { archiveGroup, renameGroup } from "../../structure"
 import type { GroupCommandState } from "../command-state"
@@ -25,7 +24,7 @@ export async function createGroupAction(_state: GroupCommandState, formData: For
       choirId: value(formData, "choirId"),
       organisationYear: value(formData, "organisationYear")
     },
-    (input) => createOrganisationGroup(db, input)
+    (input, tx) => createOrganisationGroup(tx, input)
   )
 }
 
@@ -36,14 +35,14 @@ export async function renameGroupAction(_state: GroupCommandState, formData: For
     "rename",
     renameGroupSchema,
     { groupId: value(formData, "groupId"), name: value(formData, "name") },
-    (input) => renameGroup(db, input.groupId, input.name)
+    (input, tx) => renameGroup(tx, input.groupId, input.name)
   )
 }
 
 const archiveGroupSchema = z.object({ groupId: fields.id })
 
 export async function archiveGroupAction(_state: GroupCommandState, formData: FormData) {
-  return runGroupCommand("archive", archiveGroupSchema, { groupId: value(formData, "groupId") }, (input) =>
-    archiveGroup(db, input.groupId)
+  return runGroupCommand("archive", archiveGroupSchema, { groupId: value(formData, "groupId") }, (input, tx) =>
+    archiveGroup(tx, input.groupId)
   )
 }

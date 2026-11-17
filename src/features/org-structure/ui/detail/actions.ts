@@ -1,7 +1,6 @@
 "use server"
 
 import { z } from "zod"
-import { db } from "@/core/db"
 import { GroupType, shiftDate } from "@/core/org-structure"
 import { endAppointment, replaceAppointmentHolder } from "../../appointments"
 import { changeVoice, endMembership, placeSingerInSection, startMembership } from "../../membership"
@@ -29,16 +28,16 @@ export async function addMemberAction(_state: GroupCommandState, formData: FormD
       startDate: value(formData, "startDate"),
       voice: value(formData, "voice")
     },
-    async (input) => {
+    async (input, tx) => {
       if (input.voice && (await getGroupTypeOf(input.groupId)) !== GroupType.GigGroup) {
-        return placeSingerInSection(db, {
+        return placeSingerInSection(tx, {
           userId: input.userId,
           sectionId: input.groupId,
           voice: input.voice,
           startDate: input.startDate
         })
       }
-      return startMembership(db, input)
+      return startMembership(tx, input)
     }
   )
 }
@@ -50,7 +49,7 @@ export async function endMembershipAction(_state: GroupCommandState, formData: F
     "end-membership",
     endMembershipSchema,
     { groupId: value(formData, "groupId"), userId: value(formData, "userId"), endDate: value(formData, "endDate") },
-    (input) => endMembership(db, { ...input, endDate: shiftDate(input.endDate, 1) })
+    (input, tx) => endMembership(tx, { ...input, endDate: shiftDate(input.endDate, 1) })
   )
 }
 
@@ -72,10 +71,10 @@ export async function changeVoiceAction(_state: GroupCommandState, formData: For
       voice: value(formData, "voice"),
       date: value(formData, "date")
     },
-    async (input) => {
+    async (input, tx) => {
       const choirId = await getChoirIdOf(input.groupId)
       if (!choirId) return { success: false, error: "not-a-singer" }
-      return changeVoice(db, { userId: input.userId, choirId, voice: input.voice, date: input.date })
+      return changeVoice(tx, { userId: input.userId, choirId, voice: input.voice, date: input.date })
     }
   )
 }
@@ -100,8 +99,8 @@ export async function assignHolderAction(_state: GroupCommandState, formData: Fo
       userId: value(formData, "userId"),
       startDate: value(formData, "startDate")
     },
-    (input) =>
-      replaceAppointmentHolder(db, {
+    (input, tx) =>
+      replaceAppointmentHolder(tx, {
         contextGroupId: input.groupId,
         positionCode: input.positionId,
         userId: input.userId,
@@ -124,6 +123,6 @@ export async function endHoldingAction(_state: GroupCommandState, formData: Form
       appointmentId: value(formData, "appointmentId"),
       endDate: value(formData, "endDate")
     },
-    (input) => endAppointment(db, { ...input, endDate: shiftDate(input.endDate, 1) })
+    (input, tx) => endAppointment(tx, { ...input, endDate: shiftDate(input.endDate, 1) })
   )
 }

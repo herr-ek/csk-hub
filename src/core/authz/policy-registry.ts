@@ -1,5 +1,8 @@
 import { adminPolicies } from "./admin-policies"
+import { appPolicies } from "./app-policies"
+import { eventPolicies } from "./event-policies"
 import { groupPolicies } from "./group-policies"
+import { memberIdPolicies } from "./member-id-policies"
 import { memberPolicies } from "./member-policies"
 import type {
   AuthorizationActor,
@@ -12,9 +15,12 @@ import { postPolicies } from "./post-policies"
 
 // Register each policy family here. This complete map requires a policy for every declared action.
 const policies: AuthorizationPolicies = {
+  ...appPolicies,
   ...postPolicies,
   ...groupPolicies,
+  ...eventPolicies,
   ...memberPolicies,
+  ...memberIdPolicies,
   ...adminPolicies
 }
 

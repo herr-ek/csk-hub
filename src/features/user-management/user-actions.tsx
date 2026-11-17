@@ -4,7 +4,6 @@ import { MoreHorizontalIcon } from "lucide-react"
 import { useCallback, useEffect, useState, useTransition } from "react"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
-import { ROUTES } from "@/core/navigation/site"
 import { ADMIN_ROLE, hasAdminRole, USER_ROLE } from "@/shared/roles"
 import {
   AlertDialog,
@@ -31,7 +30,6 @@ import {
   changeUserRole,
   deactivateUser,
   eraseUser,
-  impersonateUser,
   resendInvitation,
   type UserCommandState
 } from "./actions"
@@ -178,23 +176,6 @@ export function UserActions({
     startTransition(() => void command({ status: "idle" }, formData).then(setState))
   }
 
-  async function impersonate() {
-    try {
-      const result = await impersonateUser(userId)
-      if (result.status === "error") {
-        toast.add({
-          type: "error",
-          title: t("impersonationFailed"),
-          description: result.error
-        })
-        return
-      }
-      window.location.assign(ROUTES.home)
-    } catch {
-      toast.add({ type: "error", title: t("impersonationFailed"), description: t("impersonationFailedDescription") })
-    }
-  }
-
   return (
     <>
       <form id={formId} action={submit}>
@@ -220,9 +201,6 @@ export function UserActions({
           >
             {t("manageRoles")}
           </DropdownMenuItem>
-          {!inactive && !hasAdminRole(role) ? (
-            <DropdownMenuItem onClick={impersonate}>{t("impersonate")}</DropdownMenuItem>
-          ) : null}
           {!hasPassword ? (
             <DropdownMenuItem onClick={() => setDialogAction("invite")}>{t("sendInvitation")}</DropdownMenuItem>
           ) : null}

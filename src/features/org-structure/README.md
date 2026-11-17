@@ -49,6 +49,12 @@ Operational seeds are the deliberate writer exception and must preserve the same
 Use effective participation reads for rosters, profiles, and authorization relationships. Combining
 raw direct Memberships and appointments separately can omit granted Groups or duplicate people.
 Authorization adoption follows the [authorization guide](../../../docs/authorization.md).
+`getGroupAuthorizationFacts` supplies complete contextual appointment periods, while
+`lockGroupAuthorizationFacts` coordinates the User advisory lock and Group archive locks for
+Events. `listMembershipsOfUser` supplies dated direct and appointment-derived Memberships for
+Event audiences, including archived Groups and excluding periods ending at the requested boundary.
+Admin commands authorize before parsing and again inside the transaction used by the command;
+protected screen queries establish their own `org.manage` boundary.
 
 The existing Admin screens support basic Group creation, direct participation, singer placement,
 and appointment assignment/end through this model. There is no runtime editor for formal Positions.

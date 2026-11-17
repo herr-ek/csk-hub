@@ -2,10 +2,11 @@ import "server-only"
 
 import { createHash } from "node:crypto"
 import { and, eq, inArray, sql } from "drizzle-orm"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { conversation, conversationReadState, groupConversation, groupMembership } from "@/core/db/schema/messaging"
+import { queueConversationActivity } from "../activity"
 import { groupMemberIds, normalizeGroupName } from "../model/group-conversation"
 import { MessagingAccessError } from "../model/messaging-error"
 import type { MessageTransaction } from "../sending"
@@ -28,14 +29,14 @@ async function requireActiveUsers(tx: MessageTransaction, ids: string[]) {
 }
 
 export async function createGroupConversation(input: { name: unknown; memberIds: string[]; idempotencyKey: string }) {
-  const userId = await requireAuthenticatedUser()
   const name = normalizeGroupName(input.name)
-  const ids = groupMemberIds(input.memberIds, userId)
   if (!input.idempotencyKey.trim()) throw new MessagingAccessError("idempotency-key-required")
-  const payloadHash = createHash("sha256")
-    .update(JSON.stringify([name, ids]))
-    .digest("hex")
   return db.transaction(async (tx) => {
+    const { userId } = await requirePermission({ action: "app.access" }, tx)
+    const ids = groupMemberIds(input.memberIds, userId)
+    const payloadHash = createHash("sha256")
+      .update(JSON.stringify([name, ids]))
+      .digest("hex")
     // Serialize retries for this creator/key before checking whether the original intent committed.
     await tx.execute(
       sql`SELECT pg_advisory_xact_lock(hashtext(${JSON.stringify(["group-creation", userId, input.idempotencyKey])}))`
@@ -67,14 +68,15 @@ export async function createGroupConversation(input: { name: unknown; memberIds:
     })
     await tx.insert(groupMembership).values(ids.map((userId) => ({ conversationId, userId })))
     await tx.insert(conversationReadState).values(ids.map((userId) => ({ conversationId, userId })))
+    await queueConversationActivity(tx, conversationId)
     return { conversationId }
   })
 }
 
 export async function addGroupMembers(input: { conversationId: string; memberIds: string[] }) {
-  const userId = await requireAuthenticatedUser()
   const ids = groupMemberIds(input.memberIds)
   return db.transaction(async (tx) => {
+    const { userId } = await requirePermission({ action: "app.access" }, tx)
     const row = await lockGroupConversation(tx, input.conversationId)
     await requireActiveGroupMember(tx, input.conversationId, userId, "group-management-forbidden")
     await requireActiveUsers(tx, ids)
@@ -102,33 +104,36 @@ export async function addGroupMembers(input: { conversationId: string; memberIds
           target: [conversationReadState.conversationId, conversationReadState.userId],
           set: { lastReadSequence: row.nextMessageSequence - 1 }
         })
+    await queueConversationActivity(tx, input.conversationId)
     return { conversationId: input.conversationId }
   })
 }
 
 export async function renameGroupConversation(input: { conversationId: string; name: unknown }) {
-  const userId = await requireAuthenticatedUser()
   const name = normalizeGroupName(input.name)
   return db.transaction(async (tx) => {
+    const { userId } = await requirePermission({ action: "app.access" }, tx)
     await lockGroupConversation(tx, input.conversationId)
     await requireActiveGroupMember(tx, input.conversationId, userId, "group-management-forbidden")
     await tx
       .update(groupConversation)
       .set({ name, updatedAt: new Date() })
       .where(eq(groupConversation.conversationId, input.conversationId))
+    await queueConversationActivity(tx, input.conversationId)
     return { conversationId: input.conversationId }
   })
 }
 
 export async function leaveGroupConversation(conversationId: string) {
-  const userId = await requireAuthenticatedUser()
   return db.transaction(async (tx) => {
+    const { userId } = await requirePermission({ action: "app.access" }, tx)
     const row = await lockGroupConversation(tx, conversationId)
     await requireActiveGroupMember(tx, conversationId, userId, "group-management-forbidden")
     await tx
       .update(groupMembership)
       .set({ leftAt: new Date(), historyVisibleThroughSequence: row.nextMessageSequence - 1 })
       .where(and(eq(groupMembership.conversationId, conversationId), eq(groupMembership.userId, userId)))
+    await queueConversationActivity(tx, conversationId, userId)
     return { conversationId }
   })
 }

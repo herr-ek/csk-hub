@@ -31,6 +31,7 @@ describe.skipIf(!database)("complete local demo seed", () => {
     expect(result.users.created).toBe(100)
     expect(result.groups.placed).toBe(100)
     expect(result.posts.created).toBe(24)
+    expect(result.events.created.length).toBeGreaterThan(0)
   }, 30_000)
 
   test("creates 100 usable, verified identities with a shared seed password hash and three Admins", async () => {
@@ -96,7 +97,8 @@ describe.skipIf(!database)("complete local demo seed", () => {
     expect(await seedDemo(db)).toEqual({
       users: { created: 0 },
       groups: { created: [], placed: 0 },
-      posts: { created: 0 }
+      posts: { created: 0 },
+      events: { created: [] }
     })
     expect(await db.select().from(directMembership)).toEqual(before.memberships)
     expect(await db.select().from(positionAppointment)).toEqual(before.holdings)

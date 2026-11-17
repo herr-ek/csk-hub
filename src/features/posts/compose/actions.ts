@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { newsPostEditPath, newsPostPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import {
   createPostCommand,
   discardDraftCommand,
@@ -13,6 +14,7 @@ import {
   unpublishPostCommand
 } from "./commands"
 import { type PostFormInput, postFormSchema } from "./schemas"
+import { UNPUBLISHED_NOTICE_PARAM } from "./unpublished-notice"
 
 /**
  * What the Admin typed, echoed back so a rejected submission does not lose the post.
@@ -62,7 +64,8 @@ async function submitPost(
   return { savedId: result.postId }
 }
 
-function revalidatePost(postId: string) {
+function revalidatePost(postId: string, publishedChanged: boolean) {
+  if (publishedChanged) scheduleActivityDispatch()
   revalidatePath(ROUTES.news)
   revalidatePath(newsPostPath(postId))
 }
@@ -73,7 +76,7 @@ export async function createPost(_state: PostFormState, formData: FormData): Pro
   const result = await submitPost(formData, (content) => createPostCommand(content, publish))
   if ("state" in result) return result.state
 
-  revalidatePost(result.savedId)
+  revalidatePost(result.savedId, publish)
   redirect(publish ? newsPostPath(result.savedId) : newsPostEditPath(result.savedId))
 }
 
@@ -86,7 +89,7 @@ export async function saveDraft(postId: string, _state: PostFormState, formData:
   const result = await submitPost(formData, (content) => saveDraftCommand(postId, content, publish))
   if ("state" in result) return result.state
 
-  revalidatePost(result.savedId)
+  revalidatePost(result.savedId, publish)
   redirect(publish ? newsPostPath(result.savedId) : newsPostEditPath(result.savedId))
 }
 
@@ -99,18 +102,20 @@ export async function editPublishedPost(
   const result = await submitPost(formData, (content) => editPublishedPostCommand(postId, content))
   if ("state" in result) return result.state
 
-  revalidatePost(result.savedId)
+  revalidatePost(result.savedId, true)
   redirect(newsPostPath(result.savedId))
 }
 
 /**
- * The shared shape of a confirmed command: authorize, run it, and send the Admin back to
- * the feed. A command that finds the Post in another state reports it unavailable.
+ * The shared shape of a confirmed command: authorize, run it, and send the User where the
+ * command resolves — the feed, unless it names another destination. A command that finds the Post in another state resolves null
+ * and reports it unavailable.
  */
-async function runCommand(
+async function runCommand<Success extends object>(
   postId: string,
   command: PostCommand,
-  run: () => Promise<PostWriteResult>
+  run: () => Promise<PostWriteResult<Success>>,
+  destination: (result: { postId: string } & Success) => string = () => ROUTES.news
 ): Promise<PostCommandState> {
   const failed = command === "unpublish" ? "unpublishFailed" : "discardFailed"
 
@@ -119,13 +124,21 @@ async function runCommand(
   if (result.status === "failed") return { status: "error", error: failed }
   if (result.status === "unavailable") return { status: "error", error: "postUnavailable" }
 
-  revalidatePost(postId)
-  redirect(ROUTES.news)
+  revalidatePost(postId, command === "unpublish")
+  redirect(destination(result))
 }
 
-/** Recalls a published Post from the feed and its permalink, back to its author's drafts. */
+/**
+ * Recalls a published Post from the feed and its permalink, back to its author's drafts. The
+ * feed then confirms where the Post went: to the User's own drafts when they wrote it.
+ */
 export async function unpublishPost(postId: string, _state: PostCommandState): Promise<PostCommandState> {
-  return runCommand(postId, "unpublish", () => unpublishPostCommand(postId))
+  return runCommand(
+    postId,
+    "unpublish",
+    () => unpublishPostCommand(postId),
+    ({ unpublishedTo }) => `${ROUTES.news}?${UNPUBLISHED_NOTICE_PARAM}=${unpublishedTo}`
+  )
 }
 
 /** Throws away the acting Admin's own draft. It is hidden for good, never deleted. */

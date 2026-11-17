@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, eq, ilike, isNull, or } from "drizzle-orm"
-import { db } from "@/core/db"
+import { type Database, db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { pushSubscription } from "@/core/db/schema/notifications"
 import { parseNotificationSubscription, parsePushEndpoint } from "./subscription-validation"
@@ -12,7 +12,7 @@ import { parseNotificationSubscription, parsePushEndpoint } from "./subscription
  * resets disabled/failure metadata. Callers must authorize the supplied userId.
  * Throws `InvalidNotificationSubscriptionError` for invalid data; persistence failures reject.
  */
-export async function subscribe(userId: string, subscription: unknown) {
+export async function subscribe(userId: string, subscription: unknown, database: Database = db) {
   const validated = parseNotificationSubscription(subscription)
   const now = new Date()
   const values = {
@@ -31,7 +31,7 @@ export async function subscribe(userId: string, subscription: unknown) {
     updatedAt: now
   }
 
-  await db
+  await database
     .insert(pushSubscription)
     .values({ id: crypto.randomUUID(), ...values })
     .onConflictDoUpdate({ target: pushSubscription.endpoint, set: values })
@@ -42,9 +42,9 @@ export async function subscribe(userId: string, subscription: unknown) {
  * Returns whether an owned row was removed. Throws
  * `InvalidNotificationSubscriptionError` for invalid endpoints; persistence failures reject.
  */
-export async function unsubscribe(userId: string, endpoint: string) {
+export async function unsubscribe(userId: string, endpoint: string, database: Database = db) {
   const normalizedEndpoint = parsePushEndpoint(endpoint)
-  const [deleted] = await db
+  const [deleted] = await database
     .delete(pushSubscription)
     .where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.endpoint, normalizedEndpoint)))
     .returning({ id: pushSubscription.id })
@@ -57,9 +57,9 @@ export async function unsubscribe(userId: string, endpoint: string) {
  * revealing another owner's identity. Returns false for absent or disabled bindings.
  * Throws `InvalidNotificationSubscriptionError` for invalid endpoints; lookup failures reject.
  */
-export async function hasActiveSubscription(userId: string, endpoint: string) {
+export async function hasActiveSubscription(userId: string, endpoint: string, database: Database = db) {
   const normalizedEndpoint = parsePushEndpoint(endpoint)
-  const [subscription] = await db
+  const [subscription] = await database
     .select({ id: pushSubscription.id })
     .from(pushSubscription)
     .where(
@@ -77,9 +77,8 @@ export async function hasActiveSubscription(userId: string, endpoint: string) {
 /** Returns at most 25 active push subscribers whose name or email matches the optional search text. */
 export async function listUsersWithActiveSubscriptions(search: string = "") {
   const normalizedSearch = search.trim()
-  const searchFilter = normalizedSearch
-    ? or(ilike(user.name, `%${normalizedSearch}%`), ilike(user.email, `%${normalizedSearch}%`))
-    : undefined
+  const pattern = `%${normalizedSearch.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`
+  const searchFilter = normalizedSearch ? or(ilike(user.name, pattern), ilike(user.email, pattern)) : undefined
 
   return db
     .selectDistinct({ id: user.id, name: user.name, email: user.email })

@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Suspense } from "react"
-import { isUserAdmin } from "@/core/auth/permissions.server"
 import { getRequestSession } from "@/core/auth/session.server"
+import { can } from "@/core/authz"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
 import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
@@ -10,6 +10,10 @@ import { ThemeSwitch } from "../theme/ThemeSwitch"
 import { AccountMenu } from "./AccountMenu"
 import { MobileNavigation } from "./MobileNavigation"
 import { NavLinks } from "./NavLinks"
+import { QuickAccessBar } from "./QuickAccessBar"
+import { RefreshOnReturn } from "./RefreshOnReturn"
+import { UnreadBadge, UnreadIndicator } from "./UnreadBadge"
+import type { UnreadSources } from "./unread-sources"
 
 export type NavigationRoute = {
   id: NavigationRouteId
@@ -19,10 +23,11 @@ export type NavigationRoute = {
 
 export function getNavigationItems(
   config: NavigationConfig | null,
-  t: (key: "admin" | "messages" | "members" | "myAccount" | "login" | "news") => string
+  t: (key: "admin" | "events" | "messages" | "members" | "myAccount" | "login" | "news") => string
 ): NavigationRoute[] {
   const authenticatedRoutes = [
     { id: "news" as const, section: "member" as const, label: t("news") },
+    { id: "events" as const, section: "member" as const, label: t("events") },
     { id: "messages" as const, section: "member" as const, label: t("messages") },
     { id: "members" as const, section: "member" as const, label: t("members") },
     { id: "admin" as const, section: "admin" as const, label: t("admin") }
@@ -38,37 +43,37 @@ export function getNavigationItems(
 export type NavigationConfig = {
   showAdmin: boolean
   user: { name: string; image?: string | null }
-  impersonatingUserName?: string
 }
-
-/**
- * Something to show beside a navigation link, such as a feature's unread count. Supplied by
- * the app layout, since the navigation itself must not depend on features.
- */
-export type NavigationBadges = Partial<Record<NavigationRouteId, React.ReactNode>>
 
 export interface AppNavigationTemplateProps {
   config: NavigationConfig | null
-  badges?: NavigationBadges
+  unreadSources?: UnreadSources
 }
-export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateProps) {
+export function AppNavigationTemplate({ config, unreadSources = {} }: AppNavigationTemplateProps) {
   const t = useTranslations("Navigation")
   const items = getNavigationItems(config, t).map((item) => ({
     id: item.id,
     href: ROUTES[item.id],
     label: item.label,
-    badge: badges?.[item.id]
+    // Only render unread badge when not in suspense fallback.
+    badge: config ? <UnreadBadge count={unreadSources[item.id]} /> : undefined
   }))
-  const isImpersonating = Boolean(config?.impersonatingUserName)
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-3">
-          <Link href={ROUTES.home} className="font-semibold text-base tracking-normal">
+        {/*
+          On small screens the title is centred, with the avatar to its left and the menu to its right. From `md` up the
+          title leads and the links and avatar follow at the far end.
+        */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:flex md:gap-2">
+          <Link
+            href={ROUTES.home}
+            className="col-start-2 row-start-1 font-semibold text-base tracking-normal md:mr-auto"
+          >
             {app.name}
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="col-start-3 row-start-1 flex items-center justify-end gap-2">
             {/* Signed out there is only the login link, which fits on every screen. */}
             <nav aria-label={t("primary")} className={cn("items-center gap-1.5", config ? "hidden md:flex" : "flex")}>
               <NavLinks items={items} />
@@ -76,45 +81,64 @@ export function AppNavigationTemplate({ config, badges }: AppNavigationTemplateP
             </nav>
             {config ? (
               <div className="md:hidden">
-                <MobileNavigation items={items} />
+                <MobileNavigation items={items} indicator={<UnreadIndicator counts={Object.values(unreadSources)} />} />
               </div>
             ) : null}
-            {config ? <AccountMenu user={config.user} isImpersonating={isImpersonating} /> : null}
+            {config ? <RefreshOnReturn /> : null}
           </div>
+          {config ? (
+            <div className="col-start-1 row-start-1 flex">
+              <AccountMenu user={config.user} />
+            </div>
+          ) : null}
         </div>
-        {config?.impersonatingUserName ? (
-          <div className="rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground" role="status">
-            {t("impersonating", { name: config.impersonatingUserName })}
-          </div>
-        ) : null}
       </div>
     </header>
   )
 }
 
-export function AppNavigation({ badges }: { badges?: NavigationBadges }) {
+export interface AppNavigationProps {
+  /** The unread counts the app layout composes from its features, shown beside their links. */
+  unreadSources: UnreadSources
+}
+
+export function AppNavigation({ unreadSources }: AppNavigationProps) {
   return (
     <Suspense fallback={<AppNavigationTemplate config={null} />}>
-      <RuntimeAppNavigation badges={badges} />
+      <RuntimeAppNavigation unreadSources={unreadSources} />
     </Suspense>
   )
 }
 
-export async function RuntimeAppNavigation({ badges }: { badges?: NavigationBadges }) {
+export async function RuntimeAppNavigation({ unreadSources }: AppNavigationProps) {
   const session = await getRequestSession()
-  const isAdmin = await isUserAdmin(session)
+  const active = session && (await can({ action: "app.access" }))
+  const isAdmin = active && (await can({ action: "admin.access" }))
   return (
     <AppNavigationTemplate
-      badges={badges}
+      unreadSources={unreadSources}
       config={
-        session
+        active && session
           ? {
-              showAdmin: isAdmin,
-              user: { name: session.user.name, image: session.user.image },
-              ...(session?.session.impersonatedBy ? { impersonatingUserName: session.user.name } : {})
+              showAdmin: Boolean(isAdmin),
+              user: { name: session.user.name, image: session.user.image }
             }
           : null
       }
     />
   )
+}
+
+/** The quick-access bar for signed-in members on small screens. Render it after the page content, spacer last. */
+export function AppQuickAccessBar() {
+  return (
+    <Suspense fallback={null}>
+      <RuntimeQuickAccessBar />
+    </Suspense>
+  )
+}
+
+async function RuntimeQuickAccessBar() {
+  const session = await getRequestSession()
+  return session ? <QuickAccessBar /> : null
 }

@@ -1,8 +1,10 @@
 import { beforeEach, expect, mock, test } from "bun:test"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
 
-const direct = mock(async () => ({ conversationId: "direct-1" }))
+const direct = mock(async () => ({ conversationId: "direct-1", created: true }))
+const scheduleActivityDispatch = mock()
+mock.module("@/features/messaging/activity", () => ({ scheduleActivityDispatch }))
 const group = mock(async () => ({ conversationId: "group-1" }))
-const getSession = mock(async () => ({ session: { impersonatedBy: null as string | null } }))
 mock.module("../../sending", () => ({ startDirectConversation: direct, sendMessage: mock() }))
 mock.module("../../group-conversations", () => ({
   createGroupConversation: group,
@@ -12,16 +14,14 @@ mock.module("../../group-conversations", () => ({
   requireActiveGroupMember: mock()
 }))
 mock.module("./member-search", () => ({ searchMembers: mock() }))
-mock.module("@/core/auth/session.server", () => ({
-  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
-  getRequestSession: getSession
-}))
+
 mock.module("next/cache", () => ({ revalidatePath: mock() }))
+
 const { startConversationAction } = await import("./actions")
 beforeEach(() => {
-  direct.mockClear()
+  direct.mockReset().mockResolvedValue({ conversationId: "direct-1", created: true })
+  scheduleActivityDispatch.mockClear()
   group.mockClear()
-  getSession.mockResolvedValue({ session: { impersonatedBy: null } })
 })
 function form(members: string[]) {
   const data = new FormData()
@@ -57,13 +57,21 @@ test("no selected members cannot create a Conversation", async () => {
   expect(direct).not.toHaveBeenCalled()
   expect(group).not.toHaveBeenCalled()
 })
-test("unified creation blocks support impersonation for both kinds", async () => {
-  getSession.mockResolvedValue({ session: { impersonatedBy: "admin" } })
+test("unified creation reports missing authentication for both kinds", async () => {
+  const denied = new AuthorizationDeniedError({ action: "app.access" }, null)
+  direct.mockRejectedValueOnce(denied)
+  group.mockRejectedValueOnce(denied)
   for (const ids of [["member-1"], ["member-1", "member-2"]])
     await expect(startConversationAction({ status: "idle" }, form(ids))).resolves.toMatchObject({
       status: "error",
-      error: "impersonation-unavailable"
+      error: "sign-in-required"
     })
-  expect(direct).not.toHaveBeenCalled()
-  expect(group).not.toHaveBeenCalled()
+  expect(direct).toHaveBeenCalledTimes(1)
+  expect(group).toHaveBeenCalledTimes(1)
+})
+
+test("retrying a first Direct Message does not schedule new delivery", async () => {
+  direct.mockResolvedValueOnce({ conversationId: "direct-1", created: false })
+  await startConversationAction({ status: "idle" }, form(["member-1"]))
+  expect(scheduleActivityDispatch).not.toHaveBeenCalled()
 })

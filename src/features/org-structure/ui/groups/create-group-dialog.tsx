@@ -8,7 +8,7 @@ import { InputField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
-import { CommandDialog } from "../command-dialog"
+import { GroupCommandDialog } from "../group-command-dialog"
 import { NAME_MAX_LENGTH } from "../limits"
 import { createGroupAction } from "./actions"
 
@@ -24,7 +24,7 @@ export function CreateGroupDialog({ choirs }: { choirs: { id: string; name: stri
   const types = useTranslations("Groups.types")
 
   return (
-    <CommandDialog
+    <GroupCommandDialog
       trigger={<Button type="button">{t("create")}</Button>}
       title={t("create")}
       description={t("createDescription")}
@@ -67,6 +67,6 @@ export function CreateGroupDialog({ choirs }: { choirs: { id: string; name: stri
           options={choirs.map((choir) => ({ value: choir.id, label: choir.name }))}
         />
       ) : null}
-    </CommandDialog>
+    </GroupCommandDialog>
   )
 }

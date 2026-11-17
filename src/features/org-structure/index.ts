@@ -28,14 +28,20 @@ export {
 } from "./effective-reads"
 export { listOrganisationGroups } from "./group-management"
 export { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
-export type { OrgStructureDatabase } from "./operation"
+export type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 export {
   getCurrentPositionHolder,
+  getGroupAuthorizationFacts,
+  listActiveGroups,
   listChoirMembersByVoiceFamily,
   listCurrentChoirAffiliationsOfUsers,
   listCurrentGroupMembers,
   listCurrentGroupsOfUser,
-  listCurrentPositionsOfUser
+  listCurrentPositionsOfUser,
+  listGroupNames,
+  listMembershipsOfUser,
+  lockGroupAuthorizationFacts,
+  lockGroupForReference
 } from "./reads"
 export {
   archiveGroup,

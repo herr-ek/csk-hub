@@ -13,6 +13,7 @@ import {
 } from "./appointments"
 import { addDirectMembership, endDirectMembership } from "./direct-membership"
 import { listEffectiveParticipationOfUserAt } from "./effective-reads"
+import { listMembershipsOfUser } from "./reads"
 import {
   createOrgStructureTestDatabase,
   expectSuccess,
@@ -63,6 +64,14 @@ describe.skipIf(!database)("appointment foundation", () => {
       { userId, appointments: [{ id: appointment.id, contextGroupId: board.id, endDate: "2027-07-01" }] }
     ])
     expect(await listAppointmentMembersAt(t.db, board.id, "2027-07-01")).toEqual([])
+    const audienceMemberships = await listMembershipsOfUser(t.db, userId, { from: "2026-09-01" })
+    expect(audienceMemberships.map(({ groupId }) => groupId).sort()).toEqual([board.id, committee.id].sort())
+    expect(audienceMemberships).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ groupId: board.id, startDate: "2026-09-01", endDate: "2027-07-01" })
+      ])
+    )
+    expect(await listMembershipsOfUser(t.db, userId, { from: "2027-07-01" })).toEqual([])
   })
 
   test("a Board concert master stores one appointment and derives both memberships", async () => {

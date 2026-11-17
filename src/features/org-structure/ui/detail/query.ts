@@ -1,6 +1,7 @@
 import "server-only"
 
 import { and, asc, eq, gt, isNotNull, isNull, lte, or } from "drizzle-orm"
+import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
@@ -27,6 +28,7 @@ export type GroupDetail = NonNullable<Awaited<ReturnType<typeof getGroupDetail>>
 
 /** Adapts dated participation to the existing Group detail screen. */
 export async function getGroupDetail(groupId: string, date: IsoDate = cskToday()) {
+  await requirePermission({ action: "org.manage" })
   const [groups, labels, positions, memberships, appointments, members, candidates, sections] = await Promise.all([
     listOrganisationGroups(db, date),
     listLocalizedGroupLabels(),
@@ -138,6 +140,7 @@ export async function getGroupDetail(groupId: string, date: IsoDate = cskToday()
 
 /** The Choir a group belongs to, for commands that are addressed by Choir. */
 export async function getChoirIdOf(groupId: string) {
+  await requirePermission({ action: "org.manage" })
   const [row] = await db
     .select({ choirId: group.choirId })
     .from(group)

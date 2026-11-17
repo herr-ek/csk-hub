@@ -87,6 +87,8 @@ use the same Conversation lock, so a concurrent departure and send have one unam
   scan is needed, and committed sequences stay contiguous.
 - Message insertion and the sender's `conversation_read_state` update occur in the same transaction.
   A failure in either rolls back both.
+- With realtime configured, recipient activity and notification intents are also written in that
+  transaction. Redis publication occurs only after commit, with retries from the durable outbox.
 - Only a newly created Message advances the read cursor. An idempotent retry returns the original
   result without allocating another sequence.
 
@@ -118,10 +120,11 @@ Validation and access failures use stable `MessagingErrorKind` values from `mode
 Unexpected database and programming errors are not converted here; they propagate so the UI adapter
 can present a generic failure while server observability retains the original error.
 
-Server Actions are transport adapters. They enforce request-context availability rules such as the
-support-impersonation restriction, parse `FormData`, call this module, invalidate affected routes,
-and translate errors. They must not duplicate sender, Conversation, recipient, or transaction
-behavior owned here.
+Server Actions are transport adapters: they parse `FormData`, call this module, invalidate routes
+and translate errors. Commands derive fresh active identity through `app.access` and recheck
+inside their transaction. Conversation locks, recipient checks and departure cutoffs remain
+feature-owned. A fresh actor check does not itself lock the User or Session against a later
+revocation. Keep Conversation and recipient rules here rather than duplicating them in the transport.
 
 ## Tests
 

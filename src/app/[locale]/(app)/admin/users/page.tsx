@@ -1,11 +1,11 @@
 import { Suspense } from "react"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { UsersScreen, UsersScreenSkeleton } from "@/features/user-management"
 
 export const maxDuration = 60
 
 async function AdminUsers() {
-  await requireAdmin()
+  await requirePermission({ action: "admin.access" })
 
   return <UsersScreen />
 }

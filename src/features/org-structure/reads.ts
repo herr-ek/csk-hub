@@ -1,16 +1,17 @@
 import "server-only"
 
-import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import { GroupType, type PositionCode } from "@/core/org-structure"
+import { GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
+import { appointmentMemberships } from "./appointment-memberships"
 import { listEffectiveMembersAt } from "./appointments"
 import {
   cskToday,
   listEffectiveChoirAffiliationsOfUsersAt,
   listEffectiveParticipationOfUserAt
 } from "./effective-reads"
-import type { OrgStructureDatabase } from "./operation"
+import { lockUser, type OrgStructureDatabase, type OrgStructureTransaction } from "./operation"
 
 /** The current members of a group, with the Voice each sings when the group is a Section. */
 export function listCurrentGroupMembers(database: OrgStructureDatabase, groupId: string) {
@@ -63,6 +64,58 @@ export async function listCurrentChoirAffiliationsOfUsers(
   return listEffectiveChoirAffiliationsOfUsersAt(database, userIds, date)
 }
 
+/**
+ * Effective dated Memberships whose exclusive end lies after `from`, including appointment
+ * grants. Archived Groups remain available for historical Event audiences.
+ */
+export async function listMembershipsOfUser(
+  database: OrgStructureDatabase,
+  userId: string,
+  { from }: { from: IsoDate }
+) {
+  const derived = appointmentMemberships(database)
+  const [direct, granted] = await Promise.all([
+    database
+      .select({
+        groupId: group.id,
+        groupType: group.type,
+        choirId: group.choirId,
+        voice: directMembership.voice,
+        startDate: directMembership.startDate,
+        endDate: directMembership.endDate
+      })
+      .from(directMembership)
+      .innerJoin(group, eq(group.id, directMembership.groupId))
+      .where(
+        and(
+          eq(directMembership.userId, userId),
+          or(isNull(directMembership.endDate), gt(directMembership.endDate, from))
+        )
+      ),
+    database
+      .select({
+        groupId: group.id,
+        groupType: group.type,
+        choirId: group.choirId,
+        voice: sql<null>`NULL`,
+        startDate: positionAppointment.startDate,
+        endDate: positionAppointment.endDate
+      })
+      .from(derived)
+      .innerJoin(group, eq(group.id, derived.groupId))
+      .innerJoin(positionAppointment, eq(positionAppointment.id, derived.appointmentId))
+      .where(
+        and(
+          eq(positionAppointment.userId, userId),
+          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, from))
+        )
+      )
+  ])
+  return [...direct, ...granted].sort(
+    (a, b) => a.startDate.localeCompare(b.startDate) || a.groupId.localeCompare(b.groupId)
+  )
+}
+
 /** Who currently holds a Position in a group, or null when it is vacant. */
 export async function getCurrentPositionHolder(
   database: OrgStructureDatabase,
@@ -113,4 +166,66 @@ export async function listChoirMembersByVoiceFamily(
   return [...new Map(rows.map((row) => [`${row.userId}:${row.sectionId}`, row])).values()].sort((a, b) =>
     a.userId.localeCompare(b.userId)
   )
+}
+
+/**
+ * Every active group, plus the given ones even if archived, for a picker that must keep a group
+ * it already shows. Unordered; the caller decides how to present them.
+ */
+export function listActiveGroups(database: OrgStructureDatabase, alsoGroupIds: string[] = []) {
+  return database
+    .select({ id: group.id, name: group.name, type: group.type, active: group.active })
+    .from(group)
+    .where(or(eq(group.active, true), alsoGroupIds.length > 0 ? inArray(group.id, alsoGroupIds) : undefined))
+}
+
+/** The names and types of the given groups, archived or not, for showing what refers to them. */
+export async function listGroupNames(database: OrgStructureDatabase, groupIds: string[]) {
+  if (groupIds.length === 0) return []
+  return database
+    .select({ id: group.id, name: group.name, type: group.type })
+    .from(group)
+    .where(inArray(group.id, [...new Set(groupIds)]))
+}
+
+/**
+ * Whether a group exists and is active, for another feature's command about to refer to it. The
+ * group stays locked against concurrent archiving until the caller's transaction ends. Null when
+ * there is no such group.
+ */
+export async function lockGroupForReference(tx: OrgStructureTransaction, groupId: string) {
+  const [row] = await tx.select({ active: group.active }).from(group).where(eq(group.id, groupId)).for("share")
+  return row ?? null
+}
+
+/**
+ * Complete Group relationship facts for authorization, without deciding permissions.
+ * Unlike summary reads, these retain User IDs and both period boundaries.
+ */
+export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
+  const groups = await database.select({ id: group.id, type: group.type, active: group.active }).from(group)
+  const positionAppointments = await database
+    .select()
+    .from(positionAppointment)
+    .where(eq(positionAppointment.userId, userId))
+  return { groups, positionAppointments }
+}
+
+/**
+ * Lock the actor's organisational relationships against departure/handover, then the named
+ * Groups against archival, until the transaction ends. Call before taking Event locks.
+ * Uses the same User advisory lock as organisational commands; acquires no Position slot locks.
+ */
+export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, userId: string, groupIds: string[]) {
+  await lockUser(tx, userId)
+  if (groupIds.length > 0) {
+    await tx
+      .select({ id: group.id })
+      .from(group)
+      .where(inArray(group.id, [...new Set(groupIds)].sort()))
+      // Choir archival locks its Choir before updating Sections; preserve that order here.
+      .orderBy(sql`case when ${group.type} = ${GroupType.Choir} then 0 else 1 end`, asc(group.id))
+      .for("share")
+  }
+  return getGroupAuthorizationFacts(tx, userId)
 }

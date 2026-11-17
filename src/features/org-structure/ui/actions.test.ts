@@ -15,7 +15,7 @@ const database = await createOrgStructureTestDatabase()
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
 const revalidatePath = mock(() => undefined)
 mock.module("@/core/db", () => ({ db: database?.db }))
-mock.module("@/core/auth/permissions.server", () => ({ requireAdmin }))
+mock.module("@/core/authz", () => ({ requirePermission: requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
 const { createGroupAction, renameGroupAction, archiveGroupAction } = await import("./groups/actions")
 const { addMemberAction, endMembershipAction, changeVoiceAction, assignHolderAction, endHoldingAction } = await import(

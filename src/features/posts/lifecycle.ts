@@ -3,12 +3,14 @@ import "server-only"
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm"
 import { db } from "@/core/db"
 import { post } from "@/core/db/schema/posts"
+import { queuePublicActivity } from "@/core/realtime/outbox"
 import type { RichTextDocument } from "@/features/rich-text"
 import { isPostId, type PostsDatabase } from "./service"
 
 /**
- * A Post is a draft while `publishedAt` is null and published once it is set. Drafts belong
- * to their author alone; a published Post belongs to the choir, so any Admin may change it.
+ * Persistence operations used by the authorized Post commands. Callers must establish current
+ * resource permission in the same transaction before invoking them. Drafts belong to their author
+ * alone; a published personal Post may be changed by its author or an explicitly authorized Admin.
  * Unpublishing is a recall: the Post becomes its author's draft again. Nothing deletes one;
  * an author who no longer wants a draft discards it, which hides it for good.
  *
@@ -32,17 +34,20 @@ export async function createPost(
   input: { authorId: string; content: PostContent; publish: boolean },
   database: PostsDatabase = db
 ): Promise<SavedPost> {
-  const [created] = await database
-    .insert(post)
-    .values({
-      ...input.content,
-      authorId: input.authorId,
-      publishedAt: input.publish ? new Date() : null
-    })
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(post)
+      .values({
+        ...input.content,
+        authorId: input.authorId,
+        publishedAt: input.publish ? new Date() : null
+      })
+      .returning({ id: post.id })
 
-  if (!created) throw new Error("The post insert returned no row.")
-  return created
+    if (!created) throw new Error("The post insert returned no row.")
+    if (input.publish) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return created
+  })
 }
 
 /**
@@ -55,13 +60,16 @@ export async function saveDraft(
 ): Promise<SavedPost | null> {
   if (!isPostId(input.postId)) return null
 
-  const [saved] = await database
-    .update(post)
-    .set({ ...input.content, ...(input.publish ? { publishedAt: new Date() } : {}) })
-    .where(draftOf(input.postId, input.authorId))
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const [saved] = await tx
+      .update(post)
+      .set({ ...input.content, ...(input.publish ? { publishedAt: new Date() } : {}) })
+      .where(draftOf(input.postId, input.authorId))
+      .returning({ id: post.id })
 
-  return saved ?? null
+    if (saved && input.publish) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return saved ?? null
+  })
 }
 
 /**
@@ -82,30 +90,40 @@ export async function editPublishedPost(
     when ${post.title} is distinct from ${title} or ${post.body} is distinct from ${JSON.stringify(body)}::jsonb
     then now() else ${post.editedAt} end`
 
-  const [saved] = await database
-    .update(post)
-    .set({ title, body, editedAt })
-    .where(and(eq(post.id, input.postId), isNotNull(post.publishedAt)))
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const [saved] = await tx
+      .update(post)
+      .set({ title, body, editedAt })
+      .where(and(eq(post.id, input.postId), isNotNull(post.publishedAt)))
+      .returning({ id: post.id })
 
-  return saved ?? null
+    if (saved) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return saved ?? null
+  })
 }
 
 /**
  * Recalls a published Post: it leaves the feed and its permalink and is its author's
- * draft again, so republishing dates it afresh and it carries no edited mark. False when
- * the Post is not published.
+ * draft again, so republishing dates it afresh and it carries no edited mark. Resolves whose
+ * drafts it went back to — null as `authorId` after the author's Erasure — or null when the
+ * Post is not published.
  */
-export async function unpublishPost(postId: string, database: PostsDatabase = db): Promise<boolean> {
-  if (!isPostId(postId)) return false
+export async function unpublishPost(
+  postId: string,
+  database: PostsDatabase = db
+): Promise<{ authorId: string | null } | null> {
+  if (!isPostId(postId)) return null
 
-  const recalled = await database
-    .update(post)
-    .set({ publishedAt: null, editedAt: null })
-    .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
-    .returning({ id: post.id })
+  return database.transaction(async (tx) => {
+    const [recalled] = await tx
+      .update(post)
+      .set({ publishedAt: null, editedAt: null })
+      .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
+      .returning({ authorId: post.authorId })
 
-  return recalled.length > 0
+    if (recalled) await queuePublicActivity(tx, { kind: "posts.changed" })
+    return recalled ?? null
+  })
 }
 
 /**

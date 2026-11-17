@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test"
+import { AuthorizationDeniedError } from "@/core/authz/authorization"
 
-const getSession = mock(async () => ({ session: {}, user: { id: "sender" } }))
-const requestHeaders = mock(async () => new Headers())
+const requirePermission = mock(async () => ({ userId: "sender", isAdmin: false }))
 const execute = mock(async () => undefined)
 const updateSet = mock(() => ({ where: mock(async () => undefined) }))
 
@@ -15,8 +15,7 @@ function selectRows(rows: unknown[]) {
   return query
 }
 
-mock.module("@/core/auth/auth", () => ({ auth: { api: { getSession } } }))
-mock.module("next/headers", () => ({ headers: requestHeaders }))
+mock.module("@/core/authz", () => ({ requirePermission, AuthorizationDeniedError }))
 mock.module("server-only", () => ({}))
 
 const db = {
@@ -29,7 +28,6 @@ const { startDirectConversation } = await import("./start-direct-conversation")
 
 describe("startDirectConversation", () => {
   test("advances the sender's read cursor in the Message transaction", async () => {
-    db.select.mockReturnValueOnce(selectRows([{ id: "sender" }]))
     const transactionSelect = mock()
     transactionSelect
       .mockReturnValueOnce(selectRows([{ id: "recipient", banned: false }]))

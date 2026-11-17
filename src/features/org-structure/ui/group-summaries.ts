@@ -1,6 +1,7 @@
 import "server-only"
 
-import { io } from "next/cache"
+import { requirePermission } from "@/core/authz"
+
 import { db } from "@/core/db"
 import { section } from "@/core/db/schema/org-structure"
 import { getTranslations } from "@/core/i18n/server"
@@ -23,7 +24,7 @@ export type GroupSummary = {
 
 /** Keeps the existing overview shape while counting effective dated Memberships. */
 export async function listGroupSummaries(): Promise<GroupSummary[]> {
-  await io()
+  await requirePermission({ action: "org.manage" })
   const date = cskToday()
   const [groups, sections, labels, positionLabel] = await Promise.all([
     listOrganisationGroups(db, date),

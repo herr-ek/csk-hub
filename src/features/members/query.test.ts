@@ -1,18 +1,16 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
-import * as session from "@/core/auth/session.server"
+import * as session from "@/core/authz"
 import { db } from "@/core/db"
 import * as messaging from "@/features/messaging/reading"
 import * as organisation from "@/features/org-structure"
 import { getProfile } from "./query"
 import * as service from "./service"
 
-const viewer = {
-  user: { id: "viewer" },
-  session: { impersonatedBy: null }
-} as NonNullable<Awaited<ReturnType<typeof session.getRequestSession>>>
+const viewer = { userId: "viewer", isAdmin: false } as Awaited<ReturnType<typeof session.requirePermission>>
 
 const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> = {
   id: "member",
+  banned: false,
   name: "Member",
   username: null,
   image: null,
@@ -25,13 +23,15 @@ const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> 
   positions: []
 }
 
-const sessionRead = spyOn(session, "getRequestSession")
+const capability = spyOn(session, "can")
+const sessionRead = spyOn(session, "requirePermission")
 const profileRead = spyOn(service, "getMemberProfile")
 const conversationRead = spyOn(messaging, "findDirectConversation")
 const labelsRead = spyOn(organisation, "listLocalizedGroupLabels")
 
 beforeEach(() => {
   labelsRead.mockReset().mockResolvedValue(new Map())
+  capability.mockReset().mockResolvedValue(false)
   sessionRead.mockReset().mockResolvedValue(viewer)
   profileRead.mockReset().mockResolvedValue(member)
   conversationRead.mockReset().mockResolvedValue("conversation-1")
@@ -39,6 +39,7 @@ beforeEach(() => {
 
 afterAll(() => {
   labelsRead.mockRestore()
+  capability.mockRestore()
   sessionRead.mockRestore()
   profileRead.mockRestore()
   conversationRead.mockRestore()
@@ -61,11 +62,5 @@ describe("profile conversation visibility", () => {
   test("does not expose a Conversation to an inactive viewer", async () => {
     profileRead.mockRejectedValueOnce(new service.InactiveViewerError())
     await expect(getProfile("member")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" })
-  })
-
-  test("does not look up Conversations while impersonating", async () => {
-    sessionRead.mockResolvedValueOnce({ ...viewer, session: { ...viewer.session, impersonatedBy: "admin" } })
-    expect(await getProfile("member")).toMatchObject({ canMessage: false, messageConversationId: null })
-    expect(conversationRead).not.toHaveBeenCalled()
   })
 })

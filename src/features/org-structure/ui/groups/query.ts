@@ -1,5 +1,7 @@
 import "server-only"
 
+import { requirePermission } from "@/core/authz"
+
 import { GroupType } from "@/core/org-structure"
 
 import { type GroupSummary, listGroupSummaries } from "../group-summaries"
@@ -13,6 +15,7 @@ export type GroupsOverview = {
 
 /** Every group but the Choirs and their Sections, archived ones included, for the groups page. */
 export async function getGroupsOverview(): Promise<GroupsOverview> {
+  await requirePermission({ action: "org.manage" })
   const summaries = await listGroupSummaries()
   return {
     cskWide: summaries

@@ -33,12 +33,12 @@ describe("application logger", () => {
     const entries: string[] = []
     const logger = createApplicationLogger({ write: (entry) => entries.push(entry) })
 
-    logger.audit("auth.impersonation.started", { adminUserId: "admin-1", impersonatedUserId: "user-1" })
+    logger.audit("admin.users.deactivated", { adminUserId: "admin-1", targetUserId: "user-1" })
 
     expect(JSON.parse(entries[0])).toMatchObject({
       level: "audit",
-      event: "auth.impersonation.started",
-      context: { adminUserId: "admin-1", impersonatedUserId: "user-1" }
+      event: "admin.users.deactivated",
+      context: { adminUserId: "admin-1", targetUserId: "user-1" }
     })
   })
 })

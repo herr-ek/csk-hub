@@ -3,7 +3,7 @@ import { createTestDatabase } from "@test/database"
 import { user } from "@/core/db/schema/auth"
 import { post } from "@/core/db/schema/posts"
 
-type TestSession = { user: { id: string }; session: { impersonatedBy: string | null } }
+type TestSession = { user: { id: string } }
 
 const database = await createTestDatabase()
 let currentSession: TestSession | null = null
@@ -112,7 +112,7 @@ describe.skipIf(!database)("unread Posts", () => {
   test("opening a Post refreshes the badges and the feed the User came from", async () => {
     const userId = await createUser()
     const postId = await publish(daysAgo(1))
-    currentSession = { user: { id: userId }, session: { impersonatedBy: null } }
+    currentSession = { user: { id: userId } }
 
     await markPostReadAction(postId)
 
@@ -122,16 +122,5 @@ describe.skipIf(!database)("unread Posts", () => {
 
     await markPostReadAction(postId)
     expect(refresh).toHaveBeenCalledTimes(1)
-  })
-
-  test("an Admin impersonating a User does not mark Posts read for them", async () => {
-    const userId = await createUser()
-    const postId = await publish(daysAgo(1))
-    currentSession = { user: { id: userId }, session: { impersonatedBy: "admin" } }
-
-    await markPostReadAction(postId)
-
-    expect(await countUnreadPosts(userId)).toBe(1)
-    expect(refresh).not.toHaveBeenCalled()
   })
 })

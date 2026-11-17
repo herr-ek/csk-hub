@@ -59,13 +59,22 @@ if (process.env.CSK_NOTIFICATION_TEST_FILE !== import.meta.path) {
       await t.drop()
     })
 
+    test("the push recipient picker searches wildcard characters literally", async () => {
+      await subscribe(firstUser, subscription)
+      await subscribe(secondUser, { ...subscription, endpoint: `${subscription.endpoint}-second` })
+      await t.db.update(user).set({ name: "Singer %_\\" }).where(eq(user.id, firstUser))
+      for (const search of ["%", "_", "\\"]) {
+        expect((await listUsersWithActiveSubscriptions(search)).map(({ id }) => id)).toEqual([firstUser])
+      }
+    })
+
     test("inactive Users are excluded from every delivery operation and the picker", async () => {
       await subscribe(firstUser, subscription)
       await t.db.update(user).set({ banned: true }).where(eq(user.id, firstUser))
       for (const send of [
-        () => delivery.sendToAll("Hello"),
-        () => delivery.sendToUsers([firstUser], "Hello"),
-        () => delivery.sendToUser(firstUser, "Hello")
+        () => delivery.sendToAll({ body: "Hello" }),
+        () => delivery.sendToUsers([firstUser], { body: "Hello" }),
+        () => delivery.sendToUser(firstUser, { body: "Hello" })
       ]) {
         expect(await send()).toMatchObject({ accepted: 0, error: "noActiveSubscriptions" })
       }
@@ -79,9 +88,9 @@ if (process.env.CSK_NOTIFICATION_TEST_FILE !== import.meta.path) {
       await subscribe(firstUser, subscription)
       await subscribe(secondUser, { ...subscription, endpoint: `${subscription.endpoint}-second` })
       await t.db.update(user).set({ banned: null }).where(eq(user.id, secondUser))
-      expect(await delivery.sendToAll("Hello")).toMatchObject({ accepted: 2, failed: 0 })
-      expect(await delivery.sendToUsers([secondUser], "Hello")).toMatchObject({ accepted: 1, failed: 0 })
-      expect(await delivery.sendToUser(firstUser, "Hello")).toMatchObject({ accepted: 1, failed: 0 })
+      expect(await delivery.sendToAll({ body: "Hello" })).toMatchObject({ accepted: 2, failed: 0 })
+      expect(await delivery.sendToUsers([secondUser], { body: "Hello" })).toMatchObject({ accepted: 1, failed: 0 })
+      expect(await delivery.sendToUser(firstUser, { body: "Hello" })).toMatchObject({ accepted: 1, failed: 0 })
       expect((await listUsersWithActiveSubscriptions()).map(({ id }) => id).sort()).toEqual(
         [firstUser, secondUser].sort()
       )
@@ -89,20 +98,20 @@ if (process.env.CSK_NOTIFICATION_TEST_FILE !== import.meta.path) {
         firstUser
       ])
       await t.db.update(user).set({ banned: true }).where(eq(user.id, secondUser))
-      expect(await delivery.sendToUsers([firstUser, secondUser], "Hello")).toMatchObject({ accepted: 1 })
+      expect(await delivery.sendToUsers([firstUser, secondUser], { body: "Hello" })).toMatchObject({ accepted: 1 })
     })
 
     test("reactivation restores eligibility without changing healthy device bindings", async () => {
       await subscribe(firstUser, subscription)
       await t.db.update(user).set({ banned: true }).where(eq(user.id, firstUser))
-      expect(await delivery.sendToUser(firstUser, "Hello")).toMatchObject({ accepted: 0 })
+      expect(await delivery.sendToUser(firstUser, { body: "Hello" })).toMatchObject({ accepted: 0 })
       await t.db.update(user).set({ banned: false }).where(eq(user.id, firstUser))
-      expect(await delivery.sendToUser(firstUser, "Hello")).toMatchObject({ accepted: 1 })
+      expect(await delivery.sendToUser(firstUser, { body: "Hello" })).toMatchObject({ accepted: 1 })
       expect(await listUsersWithActiveSubscriptions()).toHaveLength(1)
       await t.db.update(pushSubscription).set({ status: "disabled" })
       await t.db.update(user).set({ banned: true }).where(eq(user.id, firstUser))
       await t.db.update(user).set({ banned: false }).where(eq(user.id, firstUser))
-      expect(await delivery.sendToUser(firstUser, "Hello")).toMatchObject({ accepted: 0 })
+      expect(await delivery.sendToUser(firstUser, { body: "Hello" })).toMatchObject({ accepted: 0 })
       expect(await listUsersWithActiveSubscriptions()).toEqual([])
     })
 

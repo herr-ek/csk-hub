@@ -1,3 +1,3 @@
+export { PostUnreadExpiry } from "./PostUnreadExpiry"
 export { PostReadMarker } from "./post-read-marker"
-export { listUnreadPostIds } from "./service"
-export { UnreadPostsBadge } from "./unread-posts-badge"
+export { countUnreadPosts, listUnreadPostIds } from "./service"

@@ -6,17 +6,14 @@ class MessagingAccessError extends Error {
   }
 }
 
-const requireAuthenticatedUser = mock(async () => "sender")
+const requirePermission = mock(async () => ({ userId: "sender", isAdmin: false }))
 const requireActiveDirectRecipient = mock()
 const resolveActiveDirectCounterpart = mock()
 const appendMessage = mock()
 const db = { select: mock(), transaction: mock() }
 
 mock.module("@/core/db", () => ({ db }))
-mock.module("@/core/auth/session.server", () => ({
-  AUTHENTICATION_REQUIRED: "AUTHENTICATION_REQUIRED",
-  requireAuthenticatedUser
-}))
+mock.module("@/core/authz", () => ({ requirePermission }))
 mock.module("../model/messaging-error", () => ({ MessagingAccessError }))
 mock.module("./direct-recipient", () => ({ requireActiveDirectRecipient, resolveActiveDirectCounterpart }))
 mock.module("./append-message", () => ({ appendMessage }))
@@ -33,6 +30,8 @@ describe("sendMessage", () => {
       sendMessage({ conversationId: "conversation-1", text: "Hello", idempotencyKey: "request-1" })
     ).rejects.toMatchObject({ kind: "conversation-recipient-inactive" })
 
+    expect(requirePermission).toHaveBeenCalledTimes(1)
+    expect(requirePermission).toHaveBeenCalledWith({ action: "app.access" }, tx)
     expect(appendMessage).not.toHaveBeenCalled()
   })
 })

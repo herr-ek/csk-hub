@@ -1,11 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { scheduleActivityDispatch } from "@/features/messaging/activity"
 import { createGroupConversation } from "../../group-conversations"
 import { groupMemberIds } from "../../model/group-conversation"
 import { startDirectConversation } from "../../sending"
 import type { MessageCommandState } from "../composer/message-command-state"
-import { requireMessageSendingAvailable } from "../message-command-access"
 import { messageCommandErrorState } from "../message-command-result"
 import { searchMembers } from "./member-search"
 
@@ -20,7 +20,6 @@ export async function startConversationAction(
 ): Promise<MessageCommandState> {
   const text = String(formData.get("text") ?? "")
   try {
-    await requireMessageSendingAvailable()
     const memberIds = groupMemberIds(formData.getAll("memberIds").map(String))
     const result =
       memberIds.length === 1
@@ -35,6 +34,7 @@ export async function startConversationAction(
             idempotencyKey: String(formData.get("idempotencyKey") ?? "")
           })
     revalidatePath("/[locale]/(app)/messages", "page")
+    if (!("created" in result) || result.created) scheduleActivityDispatch()
     return { status: "success", conversationId: result.conversationId }
   } catch (error) {
     return messageCommandErrorState(error, text)

@@ -1,7 +1,7 @@
-import { Bell, Music, User, Users } from "lucide-react"
+import { Bell, CalendarDays, Music, User, Users } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
-import { requireAdmin } from "@/core/auth/permissions.server"
+import { requirePermission } from "@/core/authz"
 import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -45,7 +45,7 @@ function AdminResourcesSkeleton({ resources }: { resources: AdminResource[] }) {
 }
 
 async function AdminResources({ resources }: { resources: AdminResource[] }) {
-  await requireAdmin()
+  await requirePermission({ action: "admin.access" })
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -62,6 +62,7 @@ export default async function AdminRoot() {
     { href: ROUTES.adminUsers, title: t("members"), description: t("membersDescription"), icon: User },
     { href: ROUTES.adminOrgStructure, title: t("choirs"), description: t("choirsDescription"), icon: Music },
     { href: ROUTES.adminOrgStructureGroups, title: t("groups"), description: t("groupsDescription"), icon: Users },
+    { href: ROUTES.adminEvents, title: t("events"), description: t("eventsDescription"), icon: CalendarDays },
     {
       href: ROUTES.adminNotifications,
       title: t("notifications"),

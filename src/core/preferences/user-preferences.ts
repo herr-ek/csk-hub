@@ -1,7 +1,7 @@
 import "server-only"
 
 import { eq, sql } from "drizzle-orm"
-import { db } from "@/core/db"
+import { type Database, db } from "@/core/db"
 import { userPreferences } from "@/core/db/schema/user-preferences"
 import {
   type UserPreferences,
@@ -38,10 +38,14 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
  * @param input - A partial preferences object validated by `userPreferencesUpdateSchema`.
  * @throws A Zod error when `input` is invalid, or a database error when the upsert fails.
  */
-export async function updateUserPreferences(userId: string, input: UserPreferencesUpdate): Promise<void> {
+export async function updateUserPreferences(
+  userId: string,
+  input: UserPreferencesUpdate,
+  database: Database = db
+): Promise<void> {
   const preferences = userPreferencesUpdateSchema.parse(input)
 
-  await db
+  await database
     .insert(userPreferences)
     .values({ userId, preferences })
     .onConflictDoUpdate({

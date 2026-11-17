@@ -9,10 +9,10 @@ function canReadMemberEmail(actor: AuthorizationActor, { member }: PermissionCon
 }
 
 function canEditMemberProfile(actor: AuthorizationActor, { member }: PermissionContext["member.editProfile"]): boolean {
-  return member !== null && member.banned !== true && member.id === actor.userId && actor.impersonatedBy === null
+  return member !== null && member.banned !== true && member.id === actor.userId
 }
 
-/** Shared-profile privacy has no implicit Admin or support-impersonation bypass. */
+/** Shared-profile privacy has no implicit Admin bypass. */
 export const memberPolicies = {
   "member.read": canReadMember,
   "member.readEmail": canReadMemberEmail,
