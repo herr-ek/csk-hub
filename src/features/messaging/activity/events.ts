@@ -14,6 +14,7 @@ import {
 import { conversationPath } from "@/core/navigation/navigation-utils"
 import type { ActivityTransaction } from "@/core/realtime/outbox"
 import { queueActivity } from "@/core/realtime/outbox"
+import type { ActivityToastText } from "@/core/realtime/toast-text"
 import { messageSnippet } from "./message-snippet"
 
 async function activeConversationUsers(tx: ActivityTransaction, conversationId: string) {
@@ -56,6 +57,7 @@ export async function queueMessageActivity(
     .select({ name: groupConversation.name })
     .from(groupConversation)
     .where(eq(groupConversation.conversationId, input.conversationId))
+  const sender: ActivityToastText = author?.name || { key: "newMessage" }
   const others = members.filter(({ id }) => id !== input.authorUserId).map(({ id }) => id)
   await queueActivity(
     tx,
@@ -64,7 +66,10 @@ export async function queueMessageActivity(
       kind: "message.created",
       conversationId: input.conversationId,
       sequence: input.sequence,
-      messagePreview: { snippet: messageSnippet(input.text), conversationName: group?.name }
+      toast: {
+        title: group?.name ? { key: "groupMessage", values: { sender, conversation: group.name } } : sender,
+        description: messageSnippet(input.text)
+      }
     },
     { body: [...input.text].slice(0, 400).join(""), title: author?.name, href: conversationPath(input.conversationId) }
   )

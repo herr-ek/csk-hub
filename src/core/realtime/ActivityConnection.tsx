@@ -7,6 +7,7 @@ import { parseSafeInternalPath } from "@/core/navigation/navigation-utils"
 import { type ActivityEvent, activityEventSchema, activityReadySchema } from "@/core/realtime/events"
 import { toast } from "@/shared/ui/base/toast"
 import { canPresentActivity } from "./presentation"
+import { resolveActivityToastText } from "./toast-text"
 
 /** One SSE connection for this session. Hidden clients never acknowledge notifications. */
 export function ActivityConnection({ userId }: { userId: string }) {
@@ -63,26 +64,18 @@ export function ActivityConnection({ userId }: { userId: string }) {
           /* Storage can be disabled. */
         }
         if (!alreadyShown) {
-          const isMessage = event.kind === "message.created"
-          const sender = event.title || translate.current("newMessage")
           toast.add({
             id: event.id,
-            title: isMessage ? (
+            title: (
               <span className="line-clamp-2 [overflow-wrap:anywhere]">
-                {event.messagePreview?.conversationName
-                  ? translate.current("groupMessage", { sender, conversation: event.messagePreview.conversationName })
-                  : sender}
+                {event.toast
+                  ? resolveActivityToastText(event.toast.title, translate.current)
+                  : translate.current("notification")}
               </span>
-            ) : (
-              translate.current("notification")
             ),
-            description: isMessage ? (
-              <span className="line-clamp-2 [overflow-wrap:anywhere]">
-                {event.messagePreview?.snippet ?? event.body?.replace(/\s+/gu, " ").trim()}
-              </span>
-            ) : (
-              event.body
-            ),
+            description: event.toast?.description ? (
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">{event.toast.description}</span>
+            ) : undefined,
             ...(href ? { actionProps: { children: translate.current("open"), onClick: () => router.push(href) } } : {})
           })
           try {
