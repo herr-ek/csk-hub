@@ -147,13 +147,48 @@ local copy before using the normal guarded production migration command.
 
 ## Organisation model cutover
 
-The `20261116194645_redesign-organisation-appointments` migration drops the old Membership,
-Position catalogue, and holding tables without converting their records. The cutover assumes
-disposable organisation data. It also renames Group type enum values to stable codes and clears
-redundant Section names. This replaces both unmerged PR migrations; databases that applied the
-earlier versions need a deliberate local reset/reseed or a separately planned upgrade, rather than
-editing their migration ledger. For a fresh local example, explicitly run `bun run ops reset`,
-then `bun run ops seed-demo`. Reset refuses production and non-local database targets.
+The `20261116194645_redesign-organisation-appointments` migration requires an **empty
+`group` table**. Its first statement refuses any retained Group, including archived Groups,
+before changing enum values, dropping legacy tables or recording the migration as applied.
+An ordinary `bun run ops migrate --prod` against existing reference Groups therefore stops
+with an explicit cutover error; it does not prepare or reset the database for you.
+
+The migration drops the old Membership, Position catalogue and holding tables without
+converting their records. It does not preserve existing Group or Section identities. The
+legacy enum values must still be renamed even on an empty organisation because earlier
+migrations created the old PostgreSQL enum definition. Reference setup then creates fresh
+Choirs, Sections, continuing Groups and annual Groups with valid organisational years.
+
+For an intentionally disposable local database, run `bun run ops reset`, then
+`bun run ops seed-demo`. Reset erases the whole local database, including Users, Posts and
+Events; use it only when all of that data is disposable. Reset refuses production and
+non-local database targets. Seed commands do not reset or clear existing Groups.
+
+For a database with data to retain, prepare a separate, reviewed cutover before applying
+this migration:
+
+1. Stop application writes, take a backup and verify that it can be restored. Rehearse the
+   cutover on a local copy.
+2. Inventory the Groups, Sections, Choir relationships and legacy participation, plus references
+   from other data such as Event organisers and Targets. Decide explicitly which data is
+   discarded and which references must be retained or remapped to newly seeded Groups.
+3. Prepare the empty Group table through that reviewed data plan. Do not use a blanket
+   `CASCADE`, delete unrelated records or erase the migration ledger to bypass the guard.
+   Users, Posts and Post reads need not be removed; an empty Group table is the prerequisite,
+   not an empty database. This PR supplies no automatic production cleanup or reference remapping.
+4. Verify that the Group table is empty, apply `bun run ops migrate --prod`, then run
+   `bun run ops reference-data --prod`. Both commands retain their production confirmation.
+   Restore planned participation and remap retained references explicitly; local demo seeding
+   is unavailable in production. Check Group labels, rosters and affected Events before
+   resuming writes.
+
+If retained Group identities or participation require an in-place upgrade, implement and test
+that migration separately instead of disabling this guard.
+
+This migration replaces the earlier unmerged PR migrations. Databases that applied an earlier
+version, including a pre-guard version of this same migration, will not rerun it automatically.
+They require a deliberate local reset/reseed or a separately planned upgrade. Do not edit their
+migration ledger to force a replay.
 
 ## Section identities
 

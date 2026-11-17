@@ -1,4 +1,11 @@
--- Rename enum values in place so existing Group IDs, references and type checks survive.
+-- Refuse retained organisation data before renaming types or dropping legacy tables.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM "group") THEN
+    RAISE EXCEPTION 'Organisation redesign requires an empty Group table; see scripts/ops/README.md (PR #130).';
+  END IF;
+END $$;
+--> statement-breakpoint
+-- The previous schema still defines legacy enum values even when the Group table is empty.
 ALTER TYPE "public"."group_type" RENAME VALUE 'Choir' TO 'choir';
 --> statement-breakpoint
 ALTER TYPE "public"."group_type" RENAME VALUE 'Section' TO 'section';
@@ -83,9 +90,6 @@ ALTER TABLE "position_appointment" ADD CONSTRAINT "position_appointment_user_id_
 ALTER TABLE "position_appointment" ADD CONSTRAINT "position_appointment_context_group_id_group_id_fkey" FOREIGN KEY ("context_group_id") REFERENCES "group"("id") ON DELETE RESTRICT;--> statement-breakpoint
 ALTER TABLE "group" ADD CONSTRAINT "group_organisation_year_check" CHECK ("organisation_year" IS NULL OR "organisation_year" BETWEEN 1000 AND 9998);--> statement-breakpoint
 ALTER TABLE "group" ADD CONSTRAINT "group_annual_active_check" CHECK ("organisation_year" IS NULL OR "active");--> statement-breakpoint
--- Fixed Group labels are derived from type, year and Choir; preserve explicit names and IDs.
-UPDATE "group" SET "name" = NULL WHERE "type" NOT IN ('choir', 'gig-group', 'other');
---> statement-breakpoint
 ALTER TABLE "group" ADD CONSTRAINT "group_name_policy_check" CHECK (
       CASE WHEN "type" IN ('choir', 'gig-group', 'other')
         THEN "name" IS NOT NULL AND length(btrim("name")) > 0

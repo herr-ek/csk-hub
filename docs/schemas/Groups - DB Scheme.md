@@ -630,28 +630,34 @@ erDiagram
 
 ## Migration and maintenance
 
-Migrations already on `master`, through `20261018183236_post-read`, remain unchanged. The single
+Migrations already on `master` remain unchanged. The single
 `20261116194645_redesign-organisation-appointments` migration replaces the legacy participation and
 Position catalogue tables with `direct_membership` and `position_appointment`. It adds
 explicit organisational years, fixed-name policy, date-based annual lifecycle constraints,
 range exclusions and fixed-policy triggers directly, without transitional tables or flags.
 
-Legacy `group_type` enum values are renamed in place to stable lowercase kebab-case codes.
-Group IDs, Section Voice rows, Choir references, and explicit names are retained;
-fixed labels are cleared and derived by the application. The active-name index retains `NULLS NOT DISTINCT` for Choir scope, but excludes
-null names so distinct fixed Groups cannot collide through their absent names. Appointment
-memberships are derived from the current catalogue for every year; no grant rows are stored.
+The first statement requires an empty `group` table and refuses retained Groups before schema
+changes or legacy table drops. Group and Section identities are not preserved by this cutover;
+reference setup creates fresh organisation structure after migration. Users, Posts and Post reads
+can remain. Legacy `group_type` enum values are still renamed to stable lowercase kebab-case
+codes because earlier migrations define the old enum even when there are no Group rows.
+The active-name index retains `NULLS NOT DISTINCT` for Choir scope, but excludes null names so
+distinct fixed Groups cannot collide through their absent names. Appointment memberships are
+derived from the current catalogue for every year; no grant rows are stored.
 
-The configured local database was explicitly declared disposable for this branch. The agreed
-cutover is an empty-database migration followed by fresh reference/demo data, not conversion
-of existing holdings. The cutover migration drops legacy participation tables without copying
-their data. There is no reconciliation subsystem, audit ledger, or production reset workflow
-in this change.
+The cutover drops legacy participation tables without converting their data. For an intentionally
+disposable local database, `bun run ops reset` clears the entire database, runs migrations and
+creates reference data; `bun run ops seed-demo` then adds local examples. Reset is local-only.
+A database with data to retain needs a separately reviewed cutover that backs up the data,
+accounts for Group references (including Event organisers and Targets), prepares an empty Group
+table and explicitly remaps retained references after reference seeding. There is no automatic
+production cleanup or reconciliation workflow in this change. See the
+[Ops cutover guide](../../scripts/ops/README.md#organisation-model-cutover).
 
-For an intentionally disposable local database, `bun run ops reset` clears it, runs migrations,
-and creates reference data; `bun run ops seed-demo` then adds the local examples. These commands
-are documented in the [Ops guide](../../scripts/ops/README.md). Reset is local-only and seed
-commands never reset a database themselves. Documentation updates do not require running them.
+Databases that applied an earlier version of the migration need a deliberate reset/reseed or a
+separately planned upgrade; changing the SQL does not rerun an applied migration. Do not edit the
+migration ledger to bypass this. Tests verify early refusal without changes and successful
+migration/reseeding of an empty organisation with unrelated data retained.
 
 Drizzle snapshots do not capture every hand-written invariant. Preserve the Voice domains,
 `NULLS NOT DISTINCT` name index, `btree_gist` exclusions, policy functions, and triggers when

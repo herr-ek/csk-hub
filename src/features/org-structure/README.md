@@ -61,14 +61,17 @@ and appointment assignment/end through this model. There is no runtime editor fo
 
 ## Migration and verification
 
-The redesign migration drops the legacy participation and Position tables without converting their
-records. Its cutover assumes disposable organisation data and a fresh reset/reseed. Do not apply it
-to retained participation data expecting an automatic conversion.
+The redesign migration requires an empty Group table and refuses retained Groups before any
+schema or data changes. It drops the legacy participation and Position tables without converting
+their records; Group and Section identities are recreated by reference seeding after the cutover.
+Users, Posts and Post reads can remain when the organisation has been deliberately cleared.
+The [Ops cutover guide](../../../scripts/ops/README.md#organisation-model-cutover) distinguishes
+a whole disposable local reset from a reviewed cutover preserving unrelated data and accounting
+for Event and other Group references. No automatic production cleanup or remapping is provided.
 
 Database tests create, migrate, and drop disposable PostgreSQL databases using the local
 `POSTGRES_URL`. Skipped database tests do not establish that migrations or constraints work.
-
-The consolidated redesign migration also renames legacy Group type enum values to stable codes
-and clears redundant Section names. It retains Group and Section UUIDs, Voice rows, and Choir
-relationships. Legacy participation is dropped as described above. Reference seeding matches Sections by Choir and Voice and
-retains the existing UUID tokens.
+The cutover tests cover refusal with unchanged legacy data/schema/ledger and migration of an empty
+organisation followed by repeatable reference seeding with valid annual years. Enum renames
+remain necessary because earlier migrations define the legacy PostgreSQL enum even without rows.
+Reference seeding matches Sections by Choir and Voice and retains stable seed UUID tokens.
