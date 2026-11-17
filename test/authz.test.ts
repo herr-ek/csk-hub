@@ -159,7 +159,6 @@ describe.skipIf(!database)("authorization server enforcement", () => {
       const [resource] = await t.db.select().from(group).where(eq(group.id, g.id))
       const context: PermissionContext["group.manageContent"] = {
         group: resource,
-        memberships: await t.db.select().from(directMembership).where(eq(directMembership.userId, holder.id)),
         positionAppointments: await t.db
           .select()
           .from(positionAppointment)

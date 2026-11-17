@@ -1,8 +1,7 @@
 import { Client, type ClientBase } from "pg"
 import type { voice } from "@/core/db/schema/voice"
 import { secureConnection } from "@/core/db/tls"
-import { timeZone } from "@/core/i18n/time-zone"
-import { currentOrganisationYear, GroupType, hasExplicitGroupName, sectionName } from "@/core/org-structure"
+import { cskToday, currentOrganisationYear, GroupType, hasExplicitGroupName, sectionName } from "@/core/org-structure"
 import { confirmProductionWrite } from "./guards"
 import { referenceChoirId, referenceContinuingGroupId, referenceSectionId } from "./seed-data"
 import { announce, type Database } from "./target"
@@ -84,7 +83,7 @@ export async function createReferenceData(
  */
 export async function insertReferenceData(
   client: ClientBase,
-  currentYear = currentOrganisationYear(new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date()))
+  currentYear = currentOrganisationYear(cskToday())
 ): Promise<string[]> {
   const created: string[] = []
   await client.query("BEGIN")

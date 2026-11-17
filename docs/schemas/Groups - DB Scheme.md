@@ -207,7 +207,7 @@ from `POSITION_DEFINITIONS`, the appointment's context, and its explicit organis
 Archived targets remain included for historical reads. The same catalogue applies to current,
 future, and historical appointments; policy changes deliberately reinterpret all years. There
 are no policy snapshots or versions. Creation and correction still validate that every required
-concrete target exists and is available, and perform any Helper conversion atomically.
+concrete target exists and is available, and refuse overlapping Helper participation.
 
 The context does not automatically grant Membership. For a Board Position it is a granted
 Group; for a choir responsibility it is an eligibility prerequisite. These meanings are
@@ -354,7 +354,7 @@ The database checks important local invariants; it is not a complete substitute 
 | Grant type is allowed, annual target year agrees, and a target of the context type is the exact context Group. | App: one shared catalogue-derived membership query, using unique Group identities |
 | Every required target Group exists and is available at assignment/correction. | App: catalogue-driven target validation inside the command transaction |
 | Prerequisite direct Membership covers the whole tenure. | App: coverage checks on assignment/correction and Membership changes |
-| Overlapping Helper participation is converted when the appointment grants that committee. | App: same transaction as the appointment |
+| Overlapping Helper participation is refused when the appointment grants that committee. | App: participation validation in the appointment transaction |
 | Ending an appointment never restores a Helper Membership. | App: explicit new direct addition required |
 | Archival preserves Membership and appointment periods, including current and future participation. | App: archival changes Group visibility only; Choir archival also covers its Sections |
 
@@ -375,7 +375,7 @@ Organisation commands run in a transaction, or a nested savepoint when given a t
 They use User/appointment/year advisory locks and row locks where appropriate to serialize
 conflicting operations. Known constraint errors become typed rule violations such as
 `position-taken`, `already-holding-elected-post`, and `period-conflict`. A refused command
-rolls back its writes, including appointment changes and Helper conversion.
+rolls back its writes, including appointment changes. Helper records are never changed by appointment commands.
 
 Appointment corrections retain the appointment UUID, validate the proposed person, code,
 context, year, and period, then update the single appointment atomically. Its derived
@@ -384,9 +384,9 @@ are explicit operations. Cancelling a prepared appointment deletes it and remove
 Memberships. Ending an existing appointment updates its tenure; earlier dated reads still derive
 its historical Memberships from the retained appointment.
 
-When an appointment replaces a Helper period, the prior portion is retained by ending it at
-the appointment start. An overlapping Helper row beginning at or after that boundary is
-removed. No later Helper period is implicitly restored when the appointment ends.
+Before appointing a Helper, an Admin must explicitly end the overlapping Helper period.
+Appointment commands refuse overlaps without changing Helper records, preserving both past
+and scheduled participation. No later Helper period is implicitly restored when the appointment ends.
 
 Annual Groups become current on 1 July of their `organisation_year` and historical on the
 following 1 July. They cannot be manually archived: `group_annual_active_check` requires
@@ -540,7 +540,7 @@ Gigledare has the same zero-grant pattern with a prerequisite in its concrete Gi
 Before appointment:
   direct_membership M6: Cecilia, Sexmasteri26, [2026-07-01, 2027-07-01)
 
-After appointing Cecilia as Sexmästare from September:
+After explicitly ending M6 at September and appointing Cecilia as Sexmästare:
   direct_membership M6: Cecilia, Sexmasteri26, [2026-07-01, 2026-09-01)
   appointment A8: Cecilia, sexmastare, Board26, year=2026, [2026-09-01, 2027-07-01)
   derived Memberships (not stored): A8 -> Board26, Sexmasteri26

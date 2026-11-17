@@ -1,5 +1,5 @@
 import type { user } from "@/core/db/schema/auth"
-import type { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import type { group, positionAppointment } from "@/core/db/schema/org-structure"
 import type { post } from "@/core/db/schema/posts"
 
 /** Minimal resource facts, loaded on the server by the feature performing the operation. */
@@ -7,10 +7,7 @@ export type PostAttributes = Readonly<Pick<typeof post.$inferSelect, "id" | "aut
 export type GroupAttributes = Readonly<Pick<typeof group.$inferSelect, "id" | "type" | "active">>
 export type MemberAttributes = Readonly<Pick<typeof user.$inferSelect, "id" | "banned">>
 
-/** Dated participation uses Stockholm calendar dates and exclusive end boundaries. */
-export type MembershipAttributes = Readonly<
-  Pick<typeof directMembership.$inferSelect, "userId" | "groupId" | "startDate" | "endDate">
->
+/** Dated appointments use Stockholm calendar dates and exclusive end boundaries. */
 export type PositionAppointmentAttributes = Readonly<
   Pick<typeof positionAppointment.$inferSelect, "userId" | "contextGroupId" | "positionCode" | "startDate" | "endDate">
 >
@@ -19,7 +16,6 @@ type PostContext = Readonly<{ post: PostAttributes | null }>
 type GroupContext = Readonly<{ group: GroupAttributes | null }>
 type GroupWorkContext = GroupContext &
   Readonly<{
-    memberships: readonly MembershipAttributes[]
     positionAppointments: readonly PositionAppointmentAttributes[]
   }>
 type MemberContext = Readonly<{ member: MemberAttributes | null }>

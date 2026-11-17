@@ -59,8 +59,9 @@ extend or add focused org-structure read helpers that expose the required attrib
 pass summary rows directly or replace missing facts with precomputed permission booleans.
 
 Positions have fixed semantic codes and appointments identify the concrete Group context.
-Current Group policies require a current appointment in that exact context, together with
-current effective Membership there. Membership granted in a different Group does not imply
+Current Group policies require a current appointment in that exact context. The catalogue
+either grants context Membership or requires independent Membership covering the tenure, so
+no separate Membership input is needed. Membership granted in a different Group does not imply
 representation authority. Specific Choir Position grants remain deferred.
 
 ## Policies available against today's schema
@@ -79,7 +80,7 @@ These are implemented module policies; production features still use their legac
 | `post.publish` | Own live Draft |
 | `post.unpublish` | Published personal content by its author or an Admin |
 | `post.discard` | Own live Draft |
-| `group.publishPost`, `group.manageContent`, `group.manageEvents` | Admin, or a current Position holder with current Membership in that exact active non-Choir Group |
+| `group.publishPost`, `group.manageContent`, `group.manageEvents` | Admin, or a current Position holder in that exact active non-Choir Group |
 | `group.manageMemberships`, `group.managePositions` | Admin, for an existing active Group |
 | `org.manage`, `user.administer`, `notification.broadcast`, `admin.access` | Explicit Admin grants; feature-specific safeguards still apply |
 | `member.read` | Active Users may read other active Users' shared profiles |

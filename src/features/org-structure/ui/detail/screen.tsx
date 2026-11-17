@@ -1,19 +1,13 @@
 import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
-import { timeZone } from "@/core/i18n/time-zone"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
-import { GroupType, groupTypeKey } from "@/core/org-structure"
+import { cskToday, GroupType, groupTypeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { GroupHeaderActions } from "./group-header-actions"
 import { MembersSection } from "./members-section"
 import { PositionsSection } from "./positions-section"
 import { getGroupDetail } from "./query"
-
-/** Today in CSK's time zone, as the default date for new Memberships and holdings. */
-function today() {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date())
-}
 
 export async function GroupDetailScreen({ groupId }: { groupId: string }) {
   const [detail, t, types] = await Promise.all([
@@ -24,7 +18,7 @@ export async function GroupDetailScreen({ groupId }: { groupId: string }) {
   if (!detail) notFound()
   const { group } = detail
   const isChoirOrSection = group.type === GroupType.Choir || group.type === GroupType.Section
-  const date = today()
+  const date = cskToday()
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">

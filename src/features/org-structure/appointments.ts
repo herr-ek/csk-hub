@@ -4,7 +4,6 @@ import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizz
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import { timeZone } from "@/core/i18n/time-zone"
 import {
   GROUP_POLICIES,
   GroupType,
@@ -18,6 +17,7 @@ import {
   sectionName
 } from "@/core/org-structure"
 import { appointmentMemberships } from "./appointment-memberships"
+import { validateUserParticipation } from "./direct-membership"
 import { cskToday } from "./effective-reads"
 import { requireChoirTeamAvailable } from "./group-cardinality"
 import { requireActiveGroup, requireChoir, type requireGroup } from "./lookup"
@@ -60,33 +60,6 @@ async function resolveGrantGroups(
     ids.push(target.id)
   }
   return ids
-}
-
-async function convertHelpers(
-  tx: OrgStructureTransaction,
-  userId: string,
-  grantIds: string[],
-  startDate: IsoDate,
-  endDate: IsoDate | null
-) {
-  const targets = await tx.select({ id: group.id, type: group.type }).from(group).where(inArray(group.id, grantIds))
-  for (const target of targets.filter(({ type }) => GROUP_POLICIES[type].directMembership === "helpers")) {
-    const helpers = await tx
-      .select()
-      .from(directMembership)
-      .where(
-        and(
-          eq(directMembership.userId, userId),
-          eq(directMembership.groupId, target.id),
-          lt(directMembership.startDate, endDate ?? "9999-12-31"),
-          or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate))
-        )
-      )
-    for (const helper of helpers) {
-      if (helper.startDate >= startDate) await tx.delete(directMembership).where(eq(directMembership.id, helper.id))
-      else await tx.update(directMembership).set({ endDate: startDate }).where(eq(directMembership.id, helper.id))
-    }
-  }
 }
 
 async function requirePrerequisiteCoverage(
@@ -158,6 +131,7 @@ export function createOrganisationGroup(
  * Records one appointment and resolves its grants from the fixed definitions in one savepoint.
  * Dates are inclusive/exclusive. Annual Choir appointments need an explicit year; annual
  * Group contexts supply their year. Prerequisite participation must cover the entire tenure.
+ * Overlapping Helper participation is refused; end it explicitly before appointing.
  * All organisation Positions are appointments with one shared tenure across their grants.
  */
 export function appointPosition(
@@ -194,7 +168,7 @@ export function appointPosition(
       throw new RuleViolation("period-conflict")
     if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
 
-    const grantIds = await resolveGrantGroups(tx, definition, context, year ?? undefined)
+    await resolveGrantGroups(tx, definition, context, year ?? undefined)
     const [created] = await tx
       .insert(positionAppointment)
       .values({
@@ -207,9 +181,7 @@ export function appointPosition(
       })
       .returning({ id: positionAppointment.id })
     if (!created) throw new Error("Appointment creation returned no record.")
-    // Helper membership is a separate, voluntary record. Convert only overlapping direct
-    // membership in helper-enabled companion groups; preserve the earlier period.
-    await convertHelpers(tx, input.userId, grantIds, startDate, endDate)
+    await validateUserParticipation(tx, input.userId)
     return created
   })
 }
@@ -422,7 +394,7 @@ export async function listEffectiveMembersAt(database: OrgStructureDatabase, gro
 
 /** Today's effective roster in CSK's calendar time zone. */
 export function listEffectiveMembersCurrent(database: OrgStructureDatabase, groupId: string) {
-  const date = new Intl.DateTimeFormat("sv-SE", { timeZone }).format(new Date()) as IsoDate
+  const date = cskToday()
   return listEffectiveMembersAt(database, groupId, date)
 }
 

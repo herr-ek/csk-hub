@@ -139,44 +139,61 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(batched.get(sex.id)).toMatchObject([{ userId, positions: [{ id: appointment.id }] }])
   })
 
-  test("appointing a committee officer converts an overlapping Helper and preserves the earlier period", async () => {
-    const board = expectSuccess(
-      await createOrganisationGroup(
-        t.db,
-        { name: "Board 37/38 helper", type: GroupType.Board, organisationYear: 2037 },
-        "4000-10-22"
+  test.each(["2037-07-01", "2037-09-01"])(
+    "appointment refuses an overlapping Helper starting %s without changing history",
+    async (start) => {
+      const year = start === "2037-07-01" ? 2037 : 2039
+      const helperStart = start.replace("2037", String(year))
+      const board = expectSuccess(
+        await createOrganisationGroup(
+          t.db,
+          { name: "Board 37/38 helper", type: GroupType.Board, organisationYear: year },
+          "4000-10-22"
+        )
       )
-    )
-    const committee = expectSuccess(
-      await createOrganisationGroup(
-        t.db,
-        {
-          name: "Sexmästeriet 37/38 helper",
-          type: GroupType.SocialCommittee,
-          organisationYear: 2037
-        },
-        "4000-10-22"
+      const committee = expectSuccess(
+        await createOrganisationGroup(
+          t.db,
+          {
+            name: "Sexmästeriet 37/38 helper",
+            type: GroupType.SocialCommittee,
+            organisationYear: year
+          },
+          "4000-10-22"
+        )
       )
-    )
-    const userId = await t.user()
-    await t.db.insert(directMembership).values({
-      userId,
-      groupId: committee.id,
-      startDate: "2037-07-01",
-      endDate: "2038-07-01"
-    })
-    expectSuccess(
-      await appointPosition(t.db, {
+      const userId = await t.user()
+      const [helper] = await t.db
+        .insert(directMembership)
+        .values({
+          userId,
+          groupId: committee.id,
+          startDate: helperStart,
+          endDate: `${year + 1}-07-01`
+        })
+        .returning()
+      if (!helper) throw new Error("Missing Helper fixture")
+      const input = {
         userId,
         positionCode: PositionCode.SocialCoordinator,
         contextGroupId: board.id,
-        startDate: "2037-09-15"
-      })
-    )
-    const helper = await t.db.select().from(directMembership).where(eq(directMembership.groupId, committee.id))
-    expect(helper).toMatchObject([{ startDate: "2037-07-01", endDate: "2037-09-15" }])
-    expect(await listAppointmentMembersAt(t.db, committee.id, "2037-09-15")).toMatchObject([{ userId }])
-  })
+        startDate: `${year}-08-01`
+      }
+      expect(await appointPosition(t.db, input)).toEqual({ success: false, error: "already-holding-position" })
+      expect(await t.db.select().from(directMembership).where(eq(directMembership.id, helper.id))).toEqual([helper])
+      expect(await t.db.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))).toEqual([])
+
+      expect(await listEffectiveMembersAt(t.db, committee.id, `${year}-10-01`)).toMatchObject([{ userId }])
+      expectSuccess(await endDirectMembership(t.db, { membershipId: helper.id, endDate: `${year}-10-01` }))
+      const appointment = expectSuccess(await appointPosition(t.db, { ...input, startDate: `${year}-10-01` }))
+      expectSuccess(await endAppointment(t.db, { appointmentId: appointment.id, endDate: `${year + 1}-01-01` }))
+      expect(await t.db.select().from(directMembership).where(eq(directMembership.id, helper.id))).toEqual([
+        { ...helper, endDate: `${year}-10-01` }
+      ])
+      expect(await listEffectiveMembersAt(t.db, committee.id, `${year}-09-30`)).toMatchObject([{ userId }])
+      expect(await listEffectiveMembersAt(t.db, committee.id, `${year + 1}-01-01`)).toEqual([])
+    }
+  )
 
   test("concurrent handovers preserve the started appointment and allow one successor", async () => {
     const board = expectSuccess(

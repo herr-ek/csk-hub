@@ -39,10 +39,10 @@ access. Types and minimal attribute projections are available through `@/core/au
 without importing the server entrypoint.
 
 Supply resource attributes such as `authorId` and `publishedAt`, not a decision such as
-`isOwnerOrAdmin`. Group work requires the Group, Membership records and Position appointment
-records. Policies match each relationship's User and Group and decide whether it is current;
-callers must not turn an appointment or membership fact into a separate permission fallback.
-Membership and appointment periods use Stockholm calendar dates: `startDate <= today` and
+`isOwnerOrAdmin`. Group work requires the Group and Position appointment records.
+Policies match each appointment's User and context Group and decide whether it is current;
+callers must not turn an appointment fact into a separate permission fallback.
+Appointment periods use Stockholm calendar dates: `startDate <= today` and
 `endDate === null || endDate > today`. Prepared appointments confer no current authority;
 current annual appointments remain valid until their exclusive end date.
 Appointment context IDs must match the represented Group; derived Membership in another
