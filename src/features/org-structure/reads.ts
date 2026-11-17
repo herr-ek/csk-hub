@@ -1,6 +1,7 @@
 import "server-only"
 
 import { type AnyColumn, and, asc, eq, gt, inArray, isNull, lte, or, type SQL, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
@@ -228,19 +229,10 @@ export async function lockGroupForReference(tx: OrgStructureTransaction, groupId
  * Unlike summary reads, these retain User IDs and both period boundaries.
  */
 export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
-  const today = cskToday()
   const groups = await database
     .select({ id: group.id, type: group.type, active: group.active, choirId: group.choirId })
     .from(group)
-  const positionAppointments = await database
-    .select()
-    .from(positionAppointment)
-    .where(eq(positionAppointment.userId, userId))
-  const memberships = (await listMembershipsOfUser(database, userId, { from: today })).map((membership) => ({
-    ...membership,
-    userId
-  }))
-  return { today, groups, memberships, positionAppointments }
+  return { groups, ...(await getPostRelationshipFacts(database, userId)) }
 }
 
 /**
@@ -250,14 +242,54 @@ export async function getGroupAuthorizationFacts(database: OrgStructureDatabase,
  */
 export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, userId: string, groupIds: string[]) {
   await lockUser(tx, userId)
-  if (groupIds.length > 0) {
-    await tx
-      .select({ id: group.id })
+  if (groupIds.length > 0) await lockAuthorizationGroups(tx, inArray(group.id, [...new Set(groupIds)]))
+  return getGroupAuthorizationFacts(tx, userId)
+}
+
+/** Load current relationships and lock their Groups plus any explicitly selected Groups. */
+export async function lockCurrentGroupAuthorizationFacts(
+  tx: OrgStructureTransaction,
+  userId: string,
+  selectedGroupIds: string[]
+) {
+  await lockUser(tx, userId)
+  const facts = await getPostRelationshipFacts(tx, userId)
+  const ids = [...new Set([
+    ...facts.memberships.filter((membership) => membership.startDate <= facts.today).map((membership) => membership.groupId),
+    ...facts.positionAppointments.map((appointment) => appointment.contextGroupId),
+    ...selectedGroupIds
+  ])]
+  if (ids.length === 0) return { groups: [], ...facts }
+  const selectedSection = alias(group, "selected_section")
+  const sectionChoirs = tx
+    .select({ id: selectedSection.choirId })
+    .from(selectedSection)
+    .where(and(inArray(selectedSection.id, ids), eq(selectedSection.type, GroupType.Section)))
+  const groups = await lockAuthorizationGroups(tx, or(inArray(group.id, ids), inArray(group.id, sectionChoirs)))
+  return { groups, ...facts }
+}
+
+async function getPostRelationshipFacts(database: OrgStructureDatabase, userId: string) {
+  const today = cskToday()
+  const positionAppointments = await database
+    .select()
+    .from(positionAppointment)
+    .where(eq(positionAppointment.userId, userId))
+  const memberships = (await listMembershipsOfUser(database, userId, { from: today })).map((membership) => ({
+    ...membership,
+    userId
+  }))
+  return { today, memberships, positionAppointments }
+}
+
+function lockAuthorizationGroups(tx: OrgStructureTransaction, filter: SQL | undefined) {
+  return (
+    tx
+      .select({ id: group.id, type: group.type, active: group.active, choirId: group.choirId })
       .from(group)
-      .where(inArray(group.id, [...new Set(groupIds)].sort()))
+      .where(filter)
       // Choir archival locks its Choir before updating Sections; preserve that order here.
       .orderBy(sql`case when ${group.type} = ${GroupType.Choir} then 0 else 1 end`, asc(group.id))
       .for("share")
-  }
-  return getGroupAuthorizationFacts(tx, userId)
+  )
 }

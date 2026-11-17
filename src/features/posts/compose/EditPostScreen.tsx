@@ -15,7 +15,10 @@ export async function EditPostScreen({ postId }: { postId: string }) {
   // Someone else's draft, and a Post the reader may not change, look like no Post at all.
   if (!post) notFound()
 
-  const [t, options] = await Promise.all([getTranslations("Posts"), getPostComposeOptions()])
+  const [t, options] = await Promise.all([
+    getTranslations("Posts"),
+    getPostComposeOptions({ fixedPublisherId: post.identityFixed ? post.publisherGroupId : null })
+  ])
   const draft = post.state === "draft"
 
   return (
@@ -36,13 +39,8 @@ export async function EditPostScreen({ postId }: { postId: string }) {
             )}
           </p>
         </div>
-        {draft ? (
-          <ConfirmPostCommand
-            revision={post.revision}
-            recalled={post.recalled}
-            command="discard"
-            action={discardDraft.bind(null, post.id)}
-          />
+        {draft && !post.recalled ? (
+          <ConfirmPostCommand revision={post.revision} command="discard" action={discardDraft.bind(null, post.id)} />
         ) : null}
       </div>
       {/* Keyed on the save, so a reloaded draft starts the editor from what was stored. */}

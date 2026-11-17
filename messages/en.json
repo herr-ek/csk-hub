@@ -299,7 +299,6 @@
     "unpublishedToGroup": "The post was recalled. Current group representatives and Admins can revise or republish it.",
     "editRecalled": "Edit recalled group post",
     "saveRecalled": "Save recalled post",
-    "discardPost": "Discard post",
     "selectedTargets": "Selected groups / voice families",
     "audienceTargets": "Audience targets",
     "targetsDescription": "Targets are combined with OR. Within each target, Group and Voice family must both match. Voices follow current Section assignments, not self-reported capabilities.",

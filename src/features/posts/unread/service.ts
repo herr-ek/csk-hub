@@ -7,8 +7,9 @@ import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { post, postRead } from "@/core/db/schema/posts"
 import { queueActivity } from "@/core/realtime/outbox"
+import { lockCurrentGroupAuthorizationFacts, type OrgStructureTransaction } from "@/features/org-structure"
 import { hasAdminRole } from "@/shared/roles"
-import { lockPostRelationships, publishedPostVisibility } from "../access"
+import { publishedPostVisibility } from "../access"
 import { isPostId } from "../service"
 
 const UNREAD_HORIZON_DAYS = 30
@@ -17,15 +18,12 @@ const UNREAD_HORIZON_DAYS = 30
 async function withReader<T>(
   userId: string,
   empty: T,
-  work: (
-    tx: Parameters<typeof lockPostRelationships>[0],
-    visible: ReturnType<typeof publishedPostVisibility>
-  ) => Promise<T>
+  work: (tx: OrgStructureTransaction, visible: ReturnType<typeof publishedPostVisibility>) => Promise<T>
 ): Promise<T> {
   return db.transaction(async (tx) => {
     const [reader] = await tx.select({ role: user.role, banned: user.banned }).from(user).where(eq(user.id, userId))
     if (!reader || reader.banned) return empty
-    const relationships = await lockPostRelationships(tx, userId)
+    const relationships = await lockCurrentGroupAuthorizationFacts(tx, userId, [])
     return work(tx, publishedPostVisibility(tx, { userId, isAdmin: hasAdminRole(reader.role) }, relationships))
   })
 }
@@ -61,7 +59,6 @@ export async function listUnreadPostIds(userId: string): Promise<Set<string>> {
       .select({ id: post.id })
       .from(post)
       .where(and(visible, unreadBy(tx, userId)))
-      .for("share")
     return new Set(rows.map((row) => row.id))
   })
 }
@@ -70,12 +67,11 @@ export async function listUnreadPostIds(userId: string): Promise<Set<string>> {
 export async function markPostRead(userId: string, postId: string): Promise<boolean> {
   if (!isPostId(postId)) return false
   return withReader(userId, false, async (tx, visible) => {
-    // Lock the Post before inserting so a concurrent audience edit/recall cannot pass a stale check.
-    const [readable] = await tx
-      .select({ id: post.id })
-      .from(post)
-      .where(and(eq(post.id, postId), visible))
-      .for("share")
+    const matches = and(eq(post.id, postId), visible)
+    const [locked] = await tx.select({ id: post.id }).from(post).where(matches).for("share")
+    if (!locked) return false
+    // Use a fresh statement after the lock so the target subquery sees any committed edit.
+    const [readable] = await tx.select({ id: post.id }).from(post).where(matches)
     if (!readable) return false
     const inserted = await tx
       .insert(postRead)

@@ -299,7 +299,6 @@
     "unpublishedToGroup": "Der Beitrag wurde zurückgezogen. Aktuelle Gruppenvertreter und Administratoren können ihn bearbeiten oder erneut veröffentlichen.",
     "editRecalled": "Zurückgezogenen Gruppenbeitrag bearbeiten",
     "saveRecalled": "Zurückgezogenen Beitrag speichern",
-    "discardPost": "Beitrag verwerfen",
     "selectedTargets": "Ausgewählte Gruppen / Stimmfamilien",
     "audienceTargets": "Zielgruppen",
     "targetsDescription": "Es genügt, eine Zielgruppe zu erfüllen. Innerhalb jeder Zielgruppe müssen Gruppe und Stimmfamilie übereinstimmen. Stimmen richten sich nach der aktuellen Stimmgruppenzuordnung, nicht nach selbst angegebenen Fähigkeiten.",

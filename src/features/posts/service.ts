@@ -16,6 +16,7 @@ import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { group } from "@/core/db/schema/org-structure"
 import { post, postTarget } from "@/core/db/schema/posts"
+import { getGroupAuthorizationFacts } from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
 import { editableUnpublishedVisibility, getPostScope, publishedPostVisibility } from "./access"
 
@@ -102,10 +103,11 @@ async function publishedReadModels<Row extends PublishedRow>(
   return rows.flatMap((row) => {
     if (!row.publishedAt) return []
     const audience = targets.filter((target) => target.postId === row.id)
-    const showAuthor = access.can({
-      action: "post.readAttribution",
-      context: { post: row, relationships, targets: audience }
-    })
+    // Recheck after locking the Post and loading its current targets in a fresh statement.
+    const context = { post: row, relationships, targets: audience }
+    if (!access.can({ action: "post.read", context })) return []
+    const showAuthor = access.can({ action: "post.readAttribution", context })
+    const showEditor = showAuthor && row.publisherGroupId !== null
     const {
       authorId: _authorId,
       publisherGroupId: _publisherGroupId,
@@ -119,8 +121,8 @@ async function publishedReadModels<Row extends PublishedRow>(
         publishedAt: row.publishedAt,
         showAuthor,
         authorName: showAuthor ? row.authorName : null,
-        lastEditorName: showAuthor ? row.lastEditorName : null,
-        lastEditorRecorded: showAuthor && row.lastEditorRecorded,
+        lastEditorName: showEditor ? row.lastEditorName : null,
+        lastEditorRecorded: showEditor && row.lastEditorRecorded,
         targets: audience
           .filter((target) => access.actor !== null && matchesPostTarget(access.actor, target, relationships))
           .map(({ groupName, voiceFamily }) => ({ groupName, voiceFamily }))
@@ -303,16 +305,28 @@ export async function getEditablePost(
 }
 
 /** Presentation options only: every write independently reloads and validates the selected facts. */
-export async function getPostComposeOptions(database: PostsDatabase = db, withAccess = withCurrentRequest) {
+export async function getPostComposeOptions({
+  database = db,
+  withAccess = withCurrentRequest,
+  fixedPublisherId
+}: {
+  database?: PostsDatabase
+  withAccess?: typeof withCurrentRequest
+  fixedPublisherId?: string | null
+} = {}) {
   return withAccess(async (access, tx) => {
-    const { actor, relationships } = await getPostScope(tx, access)
+    const actor = access.requirePermission({ action: "app.access" })
+    const relationships = await getGroupAuthorizationFacts(tx, actor.userId)
     const groups = await tx
       .select({ id: group.id, name: group.name, active: group.active })
       .from(group)
       .orderBy(group.name)
     const publishers = relationships.groups.filter((g) => canRepresentPostGroup(actor, g, relationships))
+    const fixedPublisher = actor.isAdmin
+      ? relationships.groups.find((g) => g.id === fixedPublisherId && !g.active)
+      : undefined
     const audiencesByPublisher: Record<string, string[]> = {}
-    for (const publisher of [null, ...publishers]) {
+    for (const publisher of [null, ...publishers, ...(fixedPublisher ? [fixedPublisher] : [])]) {
       audiencesByPublisher[publisher?.id ?? ""] = relationships.groups
         .filter((target) => canAddressPostGroup(actor, target, publisher, relationships))
         .map((g) => g.id)

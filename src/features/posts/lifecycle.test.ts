@@ -209,14 +209,14 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
 
     expect(await feedIds()).not.toContain(id)
     expect(await getPublishedPost(id, db)).toBeNull()
-    expect(await row(id)).toMatchObject({ publishedAt: null, editedAt: expect.any(Date), authorId: author })
+    expect(await row(id)).toMatchObject({ publishedAt: null, editedAt: null, authorId: author })
     expect((await listDraftsByAuthor(author, db)).map((draft) => draft.id)).toContain(id)
     expect(await getEditablePost(id, recaller, db)).toBeNull()
 
     await saveDraft({ postId: id, authorId: author, content: content("Rätt datum"), publish: true }, db)
     const republished = await row(id)
     expect(republished?.publishedAt?.getTime()).toBeGreaterThan(firstPublishedAt?.getTime() ?? Number.POSITIVE_INFINITY)
-    expect(republished?.editedAt).toBeInstanceOf(Date)
+    expect(republished?.editedAt).toBeNull()
   })
 
   test("a draft cannot be unpublished, and a published Post is not saved as a draft", async () => {
