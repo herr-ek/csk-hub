@@ -14,15 +14,19 @@ import { getGroupAuthorizationFacts } from "@/features/org-structure"
 import { createTestDatabase } from "./database"
 
 const database = await createTestDatabase()
-mock.module("@/core/db", () => ({ db: database?.db }))
+if (database) mock.module("@/core/db", () => ({ db: database.db }))
 const commands = await import("@/features/posts/compose/commands")
 const reads = await import("@/features/posts/service")
 const unread = await import("@/features/posts/unread/service")
 const body = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Notice" }] }] }
 
 // Commands use a trusted test session resolver; no browser-supplied identities or relationship facts.
-describe.skipIf(!database)("Group Post access end to end", () => {
-  const { db, drop } = database as NonNullable<typeof database>
+describe("Group Post access end to end", () => {
+  if (!database) {
+    test.skip("requires a local PostgreSQL database", () => {})
+    return
+  }
+  const { db, drop } = database
   afterAll(drop)
   let alice: string, bob: string, singer: string, outsider: string, admin: string
   let kk: string, mk: string, publisherGroup: string
