@@ -5,10 +5,11 @@ and relationship attributes. Features supply facts from trusted server reads; au
 owns the decisions. Better Auth retains authentication and its native account permissions.
 The module never imports features and does not load their resources itself.
 
-Stages one through three are implemented: personal Posts, Members, Messaging, account settings,
-administrative workflows (including Events and Locations), routes and navigation use these policies. Better Auth no longer carries
-application Post grants; the legacy application permission guards have been removed. Group-authored
-Posts, Post audience targets and Recalled Group Posts remain unimplemented.
+Personal and Group Posts, Members, Messaging, account settings, administrative workflows
+(including Events and Locations), routes and navigation use these policies. Better Auth
+retains its native grants. Post audience targets and Recalled Group Posts use the same
+policy catalogue as published Posts.
+See [the human-readable Post access guide](POLICIES.md) for the rules and examples.
 Event audience visibility is implemented. Participant field privacy and Section-scoped attendance
 remain deferred until those workflows exist.
 Event management uses organiser-bound `event.*` policies; `event.administer` remains Admin-only
@@ -92,12 +93,26 @@ other permission-changing commands. Keep existing lifecycle predicates and lock 
 Neither a snapshot nor a successful `can` is a durable grant. Rendering callers still need
 Suspense and must keep actor resolution outside Next.js cache scopes.
 
+### Session validation and transaction connections
+
+For protected Post operations, use `withCurrentRequest(async (access, tx) => { ... })`.
+It validates the session **before** leasing a transaction connection, then loads the
+current User inside the transaction. All checks use `access.requirePermission` or
+`access.can` from that one operation snapshot. Acquire relationship and resource locks
+inside the callback; never call the standalone session-resolving guards while holding them.
+
+Better Auth may need another connection for session validation. Starting many transactions
+before checking sessions, or rechecking sessions after taking a Member's relationship lock,
+can exhaust the pool while every waiter holds a connection. The wrapper avoids that cycle
+without caching permission decisions across operations. Call it on a database client,
+not from an already-open transaction that has leased a connection.
+
 ## Editing policies
 
 Policies are ordinary synchronous TypeScript functions with boolean expressions:
 
 - `app-policies.ts`: baseline application access for active Users.
-- `post-policies.ts`: personal Post creation, reading and lifecycle permissions.
+- `post-policies.ts`: Post creation, audiences, Group attribution, reading and lifecycle permissions.
 - `event-policies.ts`: organiser management and audience viewing.
 - `event-audience.ts`: shared start-time audience and future-departure rules.
 - `group-policies.ts`: exact-Group representation and administration.
@@ -128,10 +143,7 @@ For example, the existing `post.publish` action connects these declarations:
 // model.ts — entry inside PermissionContext
 "post.publish": PostContext
 
-// post-policies.ts — policy implementation
-function canPublishPost(actor: AuthorizationActor, { post }: PermissionContext["post.publish"]): boolean {
-  return post !== null && post.discardedAt === null && post.publishedAt === null && post.authorId === actor.userId
-}
+// post-policies.ts contains the implementation; see POLICIES.md for its rules.
 
 // post-policies.ts — entry inside the exported postPolicies object
 "post.publish": canPublishPost
@@ -151,9 +163,9 @@ file discovery. Add the new family to the reading order and policy list above.
 ### Resource changes and feature adoption
 
 New operations that change authorization-relevant fields must include the proposed values in
-their context and check those values in the policy, as well as the existing resource. Event updates include both existing and proposed organiser facts. Current
-Post policies do not implement Group attribution, audience changes or recall, and Group work
-grants do not authorize arbitrary Post or Event instances.
+their context and check those values in the policy, as well as the existing resource. Event updates include both existing and proposed organiser facts. Post contexts include trusted Group relationships, current targets and proposed publication values.
+`post.address` checks changes and publication audiences; instance policies check the existing Post.
+Group work grants do not authorize arbitrary Post or Event instances.
 
 ## Tests
 

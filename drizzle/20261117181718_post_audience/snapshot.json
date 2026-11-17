@@ -1,0 +1,609 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "12a54281-c2df-4a4c-a5b5-9b56bf73174e",
+  "prevIds": [
+    "db0dfe5b-8368-4eaf-bd97-cba55b0e69d5"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "post_target"
+      ],
+      "writes": [
+        "s|tbl|public.post_target",
+        "n|tbl|public.post_target",
+        "e|tbl|public.post_target",
+        "n|rel|public.post_target",
+        "n|type|public.post_target",
+        "n|rel|public.post_target_pkey",
+        "n|rel|public.post_target_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "publisher_group_id"
+      ],
+      "writes": [
+        "s|col|public.post.publisher_group_id",
+        "n|col|public.post.publisher_group_id",
+        "e|col|public.post.publisher_group_id"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "last_editor_id"
+      ],
+      "writes": [
+        "s|col|public.post.last_editor_id",
+        "n|col|public.post.last_editor_id",
+        "e|col|public.post.last_editor_id"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "last_editor_recorded"
+      ],
+      "writes": [
+        "s|col|public.post.last_editor_recorded",
+        "n|col|public.post.last_editor_recorded",
+        "e|col|public.post.last_editor_recorded"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "first_published_at"
+      ],
+      "writes": [
+        "s|col|public.post.first_published_at",
+        "n|col|public.post.first_published_at",
+        "e|col|public.post.first_published_at"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "audience_all"
+      ],
+      "writes": [
+        "s|col|public.post.audience_all",
+        "n|col|public.post.audience_all",
+        "e|col|public.post.audience_all"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "post",
+        "revision"
+      ],
+      "writes": [
+        "s|col|public.post.revision",
+        "n|col|public.post.revision",
+        "e|col|public.post.revision"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "post_target",
+        "post_target_post_idx"
+      ],
+      "writes": [
+        "s|idx|public.post_target_post_idx",
+        "n|idx|public.post_target_post_idx",
+        "e|idx|public.post_target_post_idx",
+        "n|rel|public.post_target_post_idx"
+      ],
+      "reads": [
+        "n|tbl|public.post_target",
+        "n|sch|public",
+        "n|col|public.post_target.post_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "post_target",
+        "post_target_group_idx"
+      ],
+      "writes": [
+        "s|idx|public.post_target_group_idx",
+        "n|idx|public.post_target_group_idx",
+        "e|idx|public.post_target_group_idx",
+        "n|rel|public.post_target_group_idx"
+      ],
+      "reads": [
+        "n|tbl|public.post_target",
+        "n|sch|public",
+        "n|col|public.post_target.group_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "post"
+      ],
+      "writes": [
+        "s|fk|public.post.post_publisher_group_id_group_id_fkey",
+        "n|fk|public.post.post_publisher_group_id_group_id_fkey",
+        "e|fk|public.post.post_publisher_group_id_group_id_fkey",
+        "n|con|public.post.post_publisher_group_id_group_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.post.publisher_group_id",
+        "n|col|public.group.id",
+        "e|uniqueness|public.group.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "post"
+      ],
+      "writes": [
+        "s|fk|public.post.post_last_editor_id_user_id_fkey",
+        "n|fk|public.post.post_last_editor_id_user_id_fkey",
+        "e|fk|public.post.post_last_editor_id_user_id_fkey",
+        "n|con|public.post.post_last_editor_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.post.last_editor_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "post_target"
+      ],
+      "writes": [
+        "s|fk|public.post_target.post_target_post_id_post_id_fkey",
+        "n|fk|public.post_target.post_target_post_id_post_id_fkey",
+        "e|fk|public.post_target.post_target_post_id_post_id_fkey",
+        "n|con|public.post_target.post_target_post_id_post_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.post_target",
+        "n|sch|public",
+        "n|tbl|public.post",
+        "n|sch|public",
+        "n|col|public.post_target.post_id",
+        "n|col|public.post.id",
+        "e|uniqueness|public.post.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "post_target"
+      ],
+      "writes": [
+        "s|fk|public.post_target.post_target_group_id_group_id_fkey",
+        "n|fk|public.post_target.post_target_group_id_group_id_fkey",
+        "e|fk|public.post_target.post_target_group_id_group_id_fkey",
+        "n|con|public.post_target.post_target_group_id_group_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.post_target",
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.post_target.group_id",
+        "n|col|public.group.id",
+        "e|uniqueness|public.group.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "post_target",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "publisher_group_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "last_editor_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "last_editor_recorded",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "first_published_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "audience_all",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "revision",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "group_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "voice_family",
+        "type": "voice_family",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_target_post_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "post_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_target_group_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "group_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "post_publisher_group_id_group_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "publisher_group_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post",
+        "name": "post_last_editor_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "last_editor_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_target_post_id_post_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "post_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "post",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_target_group_id_group_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "group_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "group",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_target_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_target_unique",
+        "nameExplicit": true,
+        "columns": [
+          "post_id",
+          "group_id",
+          "voice_family"
+        ],
+        "nullsNotDistinct": true,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "post_target",
+        "name": "post_target_not_empty_check",
+        "value": "\"group_id\" IS NOT NULL OR \"voice_family\" IS NOT NULL",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

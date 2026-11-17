@@ -1,154 +1,277 @@
 import "server-only"
 
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm"
+import { and, desc, eq, inArray, isNull } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { z } from "zod"
-import { type AuthorizationDatabase, AuthorizationDeniedError, requirePermission } from "@/core/authz"
+import {
+  type AuthorizationDatabase,
+  AuthorizationDeniedError,
+  type RequestAuthorization,
+  withCurrentRequest
+} from "@/core/authz"
+import type { PostAttributes, PostAudienceTarget, PostRelationships } from "@/core/authz/model"
+import { matchesPostTarget } from "@/core/authz/post-audience"
+import { canAddressPostGroup, canRepresentPostGroup } from "@/core/authz/post-policies"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
-import { post } from "@/core/db/schema/posts"
+import { group } from "@/core/db/schema/org-structure"
+import { post, postTarget } from "@/core/db/schema/posts"
+import { getGroupAuthorizationFacts } from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
+import { editableUnpublishedVisibility, getPostScope, publishedPostVisibility } from "./access"
 
-/** The application database client. Tests hand the reads and writes a throwaway one. */
 export type PostsDatabase = AuthorizationDatabase
-
 export type NewsFeedEntry = {
   id: string
   title: string
-  /** Null once the author has been erased; the Post itself survives them. */
   authorName: string | null
+  showAuthor: boolean
+  audienceAll: boolean
+  /** Only audience targets matched by the current reader; management alone adds no chip. */
+  targets: { groupName: string | null; voiceFamily: PostAudienceTarget["voiceFamily"] }[]
+  publisherName: string | null
+  lastEditorName: string | null
+  lastEditorRecorded: boolean
   publishedAt: Date
-  /** When the title or body last changed after publishing; null if they have not. */
   editedAt: Date | null
-  /** The feed renders this too, so a reader sees what a Post says before opening it. */
   body: RichTextDocument
 }
-
-/** A Post read on its own page. The feed carries the same fields, so this is that type. */
 export type PublishedPost = NewsFeedEntry
-
-/** One of an author's drafts, as their list of drafts shows it. */
-export type DraftSummary = { id: string; title: string; savedAt: Date }
-
-/** A Post as the edit page loads it: a draft of the reader's own, or a published Post. */
+export type DraftSummary = { id: string; title: string; savedAt: Date; recalled: boolean }
 export type EditablePost = {
   id: string
   title: string
   body: RichTextDocument
   state: "draft" | "published"
   savedAt: Date
+  publisherGroupId: string | null
+  audienceAll: boolean
+  targets: PostAudienceTarget[]
+  revision: number
+  identityFixed: boolean
+  recalled: boolean
 }
-
 const postIdSchema = z.uuid()
-
-/** Whether `value` could name a Post. Ids arrive from URLs and forms, so anything may. */
 export function isPostId(value: string): boolean {
   return postIdSchema.safeParse(value).success
 }
-
+const editor = alias(user, "post_editor")
 const publishedPostColumns = {
   id: post.id,
   title: post.title,
   body: post.body,
   authorName: user.name,
+  publisherName: group.name,
+  lastEditorName: editor.name,
+  lastEditorRecorded: post.lastEditorRecorded,
   publishedAt: post.publishedAt,
-  editedAt: post.editedAt
+  editedAt: post.editedAt,
+  authorId: post.authorId,
+  publisherGroupId: post.publisherGroupId,
+  firstPublishedAt: post.firstPublishedAt,
+  discardedAt: post.discardedAt,
+  audienceAll: post.audienceAll
 }
 
-/** The whole feed, newest first. Every signed-in User sees the same one, and no drafts. */
+type PublishedRow = PostAttributes &
+  Omit<NewsFeedEntry, "showAuthor" | "targets" | "publishedAt"> & { publishedAt: Date | null }
+
+/** Shape protected metadata only after the Posts and relationship facts have been locked. */
+async function publishedReadModels(
+  rows: PublishedRow[],
+  database: PostsDatabase,
+  access: RequestAuthorization,
+  relationships: PostRelationships
+): Promise<NewsFeedEntry[]> {
+  if (rows.length === 0) return []
+  const targets = await database
+    .select({
+      postId: postTarget.postId,
+      groupId: postTarget.groupId,
+      groupName: group.name,
+      voiceFamily: postTarget.voiceFamily
+    })
+    .from(postTarget)
+    .leftJoin(group, eq(postTarget.groupId, group.id))
+    .where(
+      inArray(
+        postTarget.postId,
+        rows.map((row) => row.id)
+      )
+    )
+    .orderBy(postTarget.id)
+  return rows.flatMap((row) => {
+    if (!row.publishedAt) return []
+    const audience = targets.filter((target) => target.postId === row.id)
+    // Recheck after locking the Post and loading its current targets in a fresh statement.
+    const context = { post: row, relationships, targets: audience }
+    if (!access.can({ action: "post.read", context })) return []
+    const showAuthor = access.can({ action: "post.readAttribution", context })
+    const showEditor = showAuthor && row.publisherGroupId !== null
+    const {
+      authorId: _authorId,
+      publisherGroupId: _publisherGroupId,
+      firstPublishedAt: _firstPublishedAt,
+      discardedAt: _discardedAt,
+      ...visible
+    } = row
+    return [
+      {
+        ...visible,
+        publishedAt: row.publishedAt,
+        showAuthor,
+        authorName: showAuthor ? row.authorName : null,
+        lastEditorName: showEditor ? row.lastEditorName : null,
+        lastEditorRecorded: showEditor && row.lastEditorRecorded,
+        targets: audience
+          .filter((target) => access.actor !== null && matchesPostTarget(access.actor, target, relationships))
+          .map(({ groupName, voiceFamily }) => ({ groupName, voiceFamily }))
+      }
+    ]
+  })
+}
+
+/** Filter in SQL before returning any protected content. */
 export async function listNewsFeed(
   database: PostsDatabase = db,
-  authorize = requirePermission
+  withAccess = withCurrentRequest
 ): Promise<NewsFeedEntry[]> {
-  await authorize({ action: "app.access" }, database)
-  const rows = await database
-    .select(publishedPostColumns)
-    .from(post)
-    // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
-    // in the feed.
-    .leftJoin(user, eq(post.authorId, user.id))
-    .where(isNotNull(post.publishedAt))
-    .orderBy(desc(post.publishedAt))
-
-  return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
+  return withAccess(async (access, tx) => {
+    const { actor, relationships } = await getPostScope(tx, access)
+    const rows = await tx
+      .select(publishedPostColumns)
+      .from(post)
+      .leftJoin(user, eq(post.authorId, user.id))
+      .leftJoin(editor, eq(post.lastEditorId, editor.id))
+      .leftJoin(group, eq(post.publisherGroupId, group.id))
+      .where(publishedPostVisibility(tx, actor, relationships))
+      .orderBy(desc(post.publishedAt))
+      .for("share", { of: post })
+    return publishedReadModels(rows, tx, access, relationships)
+  }, database)
 }
 
-/** One Post by its opaque id, or null when it does not exist or is not published. */
+/** Missing and forbidden resources are indistinguishable; serialize with recall and audience edits. */
 export async function getPublishedPost(
   postId: string,
   database: PostsDatabase = db,
-  authorize = requirePermission
+  withAccess = withCurrentRequest
 ): Promise<PublishedPost | null> {
   if (!isPostId(postId)) return null
   try {
-    return await database.transaction(async (tx) => {
+    return await withAccess(async (access, tx) => {
+      const { actor, relationships } = await getPostScope(tx, access)
       const [row] = await tx
-        .select({ ...publishedPostColumns, authorId: post.authorId, discardedAt: post.discardedAt })
+        .select(publishedPostColumns)
         .from(post)
         .leftJoin(user, eq(post.authorId, user.id))
-        .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
-        .limit(1)
+        .leftJoin(editor, eq(post.lastEditorId, editor.id))
+        .leftJoin(group, eq(post.publisherGroupId, group.id))
+        .where(and(eq(post.id, postId), publishedPostVisibility(tx, actor, relationships)))
         .for("share", { of: post })
-
-      await authorize({ action: "post.read", context: { post: row ?? null } }, tx)
-      if (!row?.publishedAt) return null
-      const { authorId: _authorId, discardedAt: _discardedAt, ...published } = row
-      return { ...published, publishedAt: row.publishedAt }
-    })
+      return row ? ((await publishedReadModels([row], tx, access, relationships))[0] ?? null) : null
+    }, database)
   } catch (error) {
     if (error instanceof AuthorizationDeniedError) return null
     throw error
   }
 }
 
-/** The author's own drafts, most recently saved first. Nobody else's, and none they discarded. */
+/** Private Drafts plus Recalled Group Posts currently managed by the actor. */
 export async function listOwnDrafts(
   database: PostsDatabase = db,
-  authorize = requirePermission
+  withAccess = withCurrentRequest
 ): Promise<DraftSummary[]> {
-  const { userId: authorId } = await authorize({ action: "app.access" }, database)
-  return database
-    .select({ id: post.id, title: post.title, savedAt: post.updatedAt })
-    .from(post)
-    .where(and(eq(post.authorId, authorId), isNull(post.publishedAt), isNull(post.discardedAt)))
-    .orderBy(desc(post.updatedAt))
+  return withAccess(async (access, tx) => {
+    const { actor, relationships } = await getPostScope(tx, access)
+    const rows = await tx
+      .select({
+        id: post.id,
+        title: post.title,
+        savedAt: post.updatedAt,
+        firstPublishedAt: post.firstPublishedAt,
+        publisherGroupId: post.publisherGroupId
+      })
+      .from(post)
+      .where(editableUnpublishedVisibility(actor, relationships))
+      .orderBy(desc(post.updatedAt))
+      .for("share")
+    return rows.map(({ firstPublishedAt, publisherGroupId, ...row }) => ({
+      ...row,
+      recalled: firstPublishedAt !== null && publisherGroupId !== null
+    }))
+  }, database)
 }
 
-/**
- * The current actor's editable Post. The resource guard and content read share a transaction
- * and Post lock, so an intervening Unpublish cannot expose another author's private Draft.
- * Missing or forbidden Posts both return null.
- */
+/** Load complete trusted facts and establish editing authority in the same locked transaction. */
 export async function getEditablePost(
   postId: string,
   database: PostsDatabase = db,
-  authorize = requirePermission
+  withAccess = withCurrentRequest
 ): Promise<EditablePost | null> {
   if (!isPostId(postId)) return null
-
   try {
-    return await database.transaction(async (tx) => {
+    return await withAccess(async (access, tx) => {
+      const { relationships } = await getPostScope(tx, access)
       const [row] = await tx
-        .select({
-          id: post.id,
-          title: post.title,
-          body: post.body,
-          publishedAt: post.publishedAt,
-          authorId: post.authorId,
-          discardedAt: post.discardedAt,
-          savedAt: post.updatedAt
-        })
+        .select()
         .from(post)
         .where(and(eq(post.id, postId), isNull(post.discardedAt)))
-        .limit(1)
         .for("share")
-
-      await authorize({ action: "post.update", context: { post: row ?? null } }, tx)
+      access.requirePermission({ action: "post.update", context: { post: row ?? null, relationships } })
       if (!row) return null
-      const { publishedAt, authorId: _authorId, discardedAt: _discardedAt, ...editable } = row
-      return { ...editable, state: publishedAt ? "published" : "draft" }
-    })
+      const targets = await tx
+        .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
+        .from(postTarget)
+        .where(eq(postTarget.postId, postId))
+      return {
+        id: row.id,
+        title: row.title,
+        body: row.body,
+        savedAt: row.updatedAt,
+        state: row.publishedAt ? "published" : "draft",
+        publisherGroupId: row.publisherGroupId,
+        audienceAll: row.audienceAll,
+        targets,
+        revision: row.revision,
+        identityFixed: row.firstPublishedAt !== null || row.publishedAt !== null,
+        recalled: row.firstPublishedAt !== null && row.publisherGroupId !== null && row.publishedAt === null
+      }
+    }, database)
   } catch (error) {
     if (error instanceof AuthorizationDeniedError) return null
     throw error
   }
 }
+
+/** Presentation options only: every write independently reloads and validates the selected facts. */
+export async function getPostComposeOptions({
+  database = db,
+  withAccess = withCurrentRequest,
+  fixedPublisherId
+}: {
+  database?: PostsDatabase
+  withAccess?: typeof withCurrentRequest
+  fixedPublisherId?: string | null
+} = {}) {
+  return withAccess(async (access, tx) => {
+    const actor = access.requirePermission({ action: "app.access" })
+    const relationships = await getGroupAuthorizationFacts(tx, actor.userId)
+    const groups = await tx
+      .select({ id: group.id, name: group.name, active: group.active })
+      .from(group)
+      .orderBy(group.name)
+    const publishers = relationships.groups.filter((g) => canRepresentPostGroup(actor, g, relationships))
+    const fixedPublisher = actor.isAdmin
+      ? relationships.groups.find((g) => g.id === fixedPublisherId && !g.active)
+      : undefined
+    const audiencesByPublisher: Record<string, string[]> = {}
+    for (const publisher of [null, ...publishers, ...(fixedPublisher ? [fixedPublisher] : [])]) {
+      audiencesByPublisher[publisher?.id ?? ""] = relationships.groups
+        .filter((target) => canAddressPostGroup(actor, target, publisher, relationships))
+        .map((g) => g.id)
+    }
+    return { groups, publishers: groups.filter((g) => publishers.some((p) => p.id === g.id)), audiencesByPublisher }
+  }, database)
+}
+export type PostComposeOptions = Awaited<ReturnType<typeof getPostComposeOptions>>

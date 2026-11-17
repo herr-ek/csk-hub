@@ -1,39 +1,135 @@
-import type { AuthorizationActor, AuthorizationPolicies, PermissionContext } from "./model"
+import { groupPolicies } from "./group-policies"
+import type {
+  AuthorizationActor,
+  AuthorizationPolicies,
+  PermissionContext,
+  PostGroupAttributes,
+  PostRelationships
+} from "./model"
+import { matchesPostTarget, samePostTargets } from "./post-audience"
 
-function canReadPost(actor: AuthorizationActor, { post }: PermissionContext["post.read"]): boolean {
-  if (!post || post.discardedAt !== null) return false
-  return post.publishedAt !== null || post.authorId === actor.userId
+/** Exact active Group representation; Choirs cannot publish Posts, including for Admins. */
+export function canRepresentPostGroup(
+  actor: AuthorizationActor,
+  group: PostGroupAttributes | null | undefined,
+  relationships?: PostRelationships
+): boolean {
+  return groupPolicies["group.publishPost"](actor, {
+    group: group ?? null,
+    memberships: relationships?.memberships ?? [],
+    positionHoldings: relationships?.positionHoldings ?? []
+  })
 }
 
-function canUpdatePost(actor: AuthorizationActor, { post }: PermissionContext["post.update"]): boolean {
-  if (!post || post.discardedAt !== null) return false
-  // Admin authority applies to published content, never another author's private Draft.
-  return post.authorId === actor.userId || (post.publishedAt !== null && actor.isAdmin)
-}
-
-function canPublishPost(actor: AuthorizationActor, { post }: PermissionContext["post.publish"]): boolean {
-  return post !== null && post.discardedAt === null && post.publishedAt === null && post.authorId === actor.userId
-}
-
-function canUnpublishPost(actor: AuthorizationActor, { post }: PermissionContext["post.unpublish"]): boolean {
+/** Current audience-selection authority. This never grants ordinary readership. */
+export function canAddressPostGroup(
+  actor: AuthorizationActor,
+  target: PostGroupAttributes,
+  publisher: PostGroupAttributes | null | undefined,
+  relationships: PostRelationships
+): boolean {
+  if (!target.active) return false
+  if (actor.isAdmin) return true
+  if (publisher?.type === "Board" && canRepresentPostGroup(actor, publisher, relationships)) return true
+  const memberOf = (id: string | null) =>
+    relationships.memberships.some((m) => m.userId === actor.userId && m.groupId === id && m.endDate === null)
   return (
-    post !== null &&
-    post.discardedAt === null &&
-    post.publishedAt !== null &&
-    (post.authorId === actor.userId || actor.isAdmin)
+    memberOf(target.id) ||
+    (target.type === "Section" && memberOf(target.choirId)) ||
+    (target.type === "Choir" && publisher?.choirId === null && canRepresentPostGroup(actor, publisher, relationships))
   )
 }
 
-function canDiscardPost(actor: AuthorizationActor, { post }: PermissionContext["post.discard"]): boolean {
-  return post !== null && post.discardedAt === null && post.publishedAt === null && post.authorId === actor.userId
+function managesGroup(actor: AuthorizationActor, context: PermissionContext["post.read"]): boolean {
+  const id = context.post?.publisherGroupId
+  return Boolean(
+    id &&
+      (actor.isAdmin ||
+        canRepresentPostGroup(
+          actor,
+          context.relationships?.groups.find((g) => g.id === id),
+          context.relationships
+        ))
+  )
 }
 
-/** Personal Post policies. The evaluator requires an active actor before invoking any policy. */
+function canUpdatePost(actor: AuthorizationActor, context: PermissionContext["post.update"]): boolean {
+  const { post } = context
+  if (!post || post.discardedAt !== null) return false
+  if (post.firstPublishedAt === null && post.publishedAt === null) return post.authorId === actor.userId
+  if (post.publisherGroupId) return managesGroup(actor, context)
+  return post.authorId === actor.userId || (post.publishedAt !== null && actor.isAdmin)
+}
+
+function canReadPost(actor: AuthorizationActor, context: PermissionContext["post.read"]): boolean {
+  const { post, relationships, targets } = context
+  if (!post || post.discardedAt !== null) return false
+  if (post.publishedAt === null) return canUpdatePost(actor, context)
+  if (
+    actor.isAdmin ||
+    (post.publisherGroupId === null && post.authorId === actor.userId) ||
+    managesGroup(actor, context)
+  )
+    return true
+  return (
+    post.audienceAll ||
+    Boolean(relationships && targets?.some((target) => matchesPostTarget(actor, target, relationships)))
+  )
+}
+
+function canPublishPost(actor: AuthorizationActor, context: PermissionContext["post.publish"]): boolean {
+  const { post, relationships } = context
+  if (!post || post.publishedAt !== null || !canUpdatePost(actor, context)) return false
+  return (
+    post.publisherGroupId === null ||
+    canRepresentPostGroup(
+      actor,
+      relationships?.groups.find((g) => g.id === post.publisherGroupId),
+      relationships
+    )
+  )
+}
+
+function canAddressPost(actor: AuthorizationActor, context: PermissionContext["post.address"]): boolean {
+  const { post, proposed, relationships, publishing, targets = [] } = context
+  if (!relationships) return false
+  if (post && !canUpdatePost(actor, context)) return false
+  const publisher = relationships.groups.find((g) => g.id === proposed.publisherGroupId)
+  const fixed = post && (post.firstPublishedAt !== null || post.publishedAt !== null)
+  if (fixed && post.publisherGroupId !== proposed.publisherGroupId) return false
+  // Existing archived publishers may be edited or recalled by Admin, but never republished.
+  if (
+    proposed.publisherGroupId !== null &&
+    (publishing || !fixed) &&
+    !canRepresentPostGroup(actor, publisher, relationships)
+  )
+    return false
+  if (proposed.audienceAll && proposed.targets.length > 0) return false
+  if ((publishing || post?.publishedAt) && !proposed.audienceAll && proposed.targets.length === 0) return false
+  const unchanged =
+    post &&
+    post.publisherGroupId === proposed.publisherGroupId &&
+    post.audienceAll === proposed.audienceAll &&
+    samePostTargets(targets, proposed.targets)
+  if (!publishing && unchanged) return true
+  return proposed.targets.every((rule) => {
+    if (rule.groupId === null) return rule.voiceFamily !== null
+    const target = relationships.groups.find((g) => g.id === rule.groupId)
+    return target && canAddressPostGroup(actor, target, publisher, relationships)
+  })
+}
+
 export const postPolicies = {
   "post.create": () => true,
   "post.read": canReadPost,
+  "post.readAttribution": (actor, context) =>
+    canReadPost(actor, context) && (context.post?.publisherGroupId === null || managesGroup(actor, context)),
   "post.update": canUpdatePost,
   "post.publish": canPublishPost,
-  "post.unpublish": canUnpublishPost,
-  "post.discard": canDiscardPost
+  "post.address": canAddressPost,
+  "post.unpublish": (actor, context) => context.post?.publishedAt != null && canUpdatePost(actor, context),
+  "post.discard": (actor, context) =>
+    context.post?.publishedAt === null &&
+    (context.post.publisherGroupId === null || context.post.firstPublishedAt === null) &&
+    canUpdatePost(actor, context)
 } satisfies Pick<AuthorizationPolicies, `post.${string}` & keyof AuthorizationPolicies>

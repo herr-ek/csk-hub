@@ -3,22 +3,45 @@ import { PostTime } from "./PostTime"
 
 export function PostByline({
   authorName,
+  showAuthor,
+  publisherName,
+  lastEditorName,
+  lastEditorRecorded,
   publishedAt,
   editedAt
 }: {
   authorName: string | null
+  showAuthor: boolean
+  publisherName: string | null
+  lastEditorName: string | null
+  lastEditorRecorded: boolean
   publishedAt: Date
   editedAt: Date | null
 }) {
   const t = useTranslations("Posts")
+  const author = authorName ?? t("formerMember")
   return (
     <>
-      {authorName ?? t("formerMember")} {t("bylineSeparator")} <PostTime date={publishedAt} />
-      {/* A reader who saw the Post before must be able to tell it has changed since. */}
+      {publisherName ? (
+        <>
+          {publisherName}
+          {showAuthor ? (
+            <>
+              {" "}
+              {t("bylineSeparator")} {t("postedBy", { name: author })}
+            </>
+          ) : null}
+        </>
+      ) : (
+        author
+      )}{" "}
+      {t("bylineSeparator")} <PostTime date={publishedAt} />
       {editedAt ? (
         <>
           {" "}
-          {t("bylineSeparator")} {t("edited")} <PostTime date={editedAt} withTime />
+          {t("bylineSeparator")}{" "}
+          {lastEditorRecorded ? t("lastEditedBy", { name: lastEditorName ?? t("formerMember") }) : t("edited")}{" "}
+          <PostTime date={editedAt} withTime />
         </>
       ) : null}
     </>
