@@ -1,8 +1,13 @@
 import { z } from "zod"
-import { groupType } from "@/core/db/schema/org-structure"
 import { voice } from "@/core/db/schema/voice"
+import { GroupType, PositionCode } from "@/core/org-structure"
 import { isVoiceDivision, type VoiceDivision } from "@/features/voice/model"
 import { NAME_MAX_LENGTH } from "./limits"
+
+const creatableGroupTypes = Object.values(GroupType).filter(
+  (type): type is Exclude<GroupType, GroupType.Choir | GroupType.Section> =>
+    type !== GroupType.Choir && type !== GroupType.Section
+)
 
 /** Form field schemas shared by the admin groups Server Actions. */
 export const fields = {
@@ -12,9 +17,10 @@ export const fields = {
   date: z.iso.date(),
   /** A singer's Voice, which is always a division. */
   voice: z.enum(voice.enumValues.filter(isVoiceDivision) as [VoiceDivision, ...VoiceDivision[]]),
-  groupType: z.enum(groupType.enumValues),
+  groupType: z.enum(GroupType),
+  positionCode: z.enum(PositionCode),
   /** A type a group can be created with; Choirs and Sections are created only with their Choir. */
-  creatableGroupType: z.enum(groupType.enumValues).exclude(["Choir", "Section"])
+  creatableGroupType: z.enum(creatableGroupTypes)
 }
 
 /** A form value, with an empty string read as absent. */

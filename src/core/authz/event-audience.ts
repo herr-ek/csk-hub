@@ -1,8 +1,7 @@
-import type { groupType } from "@/core/db/schema/org-structure"
 import type { voice } from "@/core/db/schema/voice"
 import { timeZone } from "@/core/i18n/time-zone"
+import type { GroupType } from "@/core/org-structure"
 
-type GroupType = (typeof groupType.enumValues)[number]
 type VoiceDivision = Exclude<(typeof voice.enumValues)[number], VoiceFamily>
 type VoiceFamily = Extract<(typeof voice.enumValues)[number], "S" | "A" | "T" | "B">
 type IsoDate = string
@@ -26,7 +25,7 @@ export type AudienceMembership = {
   /** Set exactly on a Section Membership. */
   voice: VoiceDivision | null
   startDate: IsoDate
-  /** Null while the Membership is current; the last day it counts. */
+  /** Exclusive end boundary; null means unbounded. */
   endDate: IsoDate | null
 }
 
@@ -41,7 +40,7 @@ export type AudienceTarget = {
 export type AudienceEvent = { startsAt: Date; targets: readonly AudienceTarget[] }
 
 /**
- * When now is supplied, closed Memberships stop granting future Event access immediately.
+ * When now is supplied, Memberships whose end has passed stop granting future Event access.
  * At or after startsAt, historical Memberships apply, including for multi-day Events.
  * Omitting now computes the audience at Event start without the future-view gate.
  *
@@ -55,13 +54,15 @@ export function inAudience(memberships: readonly AudienceMembership[], event: Au
   if (event.targets.length === 0) return true
   const day = eventMembershipDate(event.startsAt)
   const active = memberships.filter(
-    (membership) => isActiveOn(membership, day) && (!now || event.startsAt <= now || membership.endDate === null)
+    (membership) =>
+      isActiveOn(membership, day) &&
+      (!now || event.startsAt <= now || membership.endDate === null || membership.endDate > eventMembershipDate(now))
   )
   return event.targets.some((target) => matches(target, active))
 }
 
 function isActiveOn(membership: AudienceMembership, day: IsoDate) {
-  return membership.startDate <= day && (membership.endDate === null || membership.endDate >= day)
+  return membership.startDate <= day && (membership.endDate === null || membership.endDate > day)
 }
 
 function matches(target: AudienceTarget, active: readonly AudienceMembership[]) {
@@ -70,7 +71,7 @@ function matches(target: AudienceTarget, active: readonly AudienceMembership[]) 
     target.voiceFamily === null ||
     active.some(
       (membership) =>
-        membership.groupType === "Section" &&
+        membership.groupType === "section" &&
         membership.voice !== null &&
         membership.voice.slice(0, 1) === target.voiceFamily &&
         inScope(membership, target)
@@ -81,7 +82,7 @@ function matches(target: AudienceTarget, active: readonly AudienceMembership[]) 
 /** Whether a Section Membership lies within the Sections a Target's group covers. */
 function inScope(sectionMembership: AudienceMembership, target: AudienceTarget) {
   if (target.groupId === null) return true
-  if (target.groupType === "Choir") return sectionMembership.choirId === target.groupId
-  if (target.groupType === "Section") return sectionMembership.groupId === target.groupId
+  if (target.groupType === "choir") return sectionMembership.choirId === target.groupId
+  if (target.groupType === "section") return sectionMembership.groupId === target.groupId
   return true
 }

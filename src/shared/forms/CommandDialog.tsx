@@ -58,7 +58,7 @@ export function CommandDialog<Error extends string>({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
-      <DialogContent>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] min-h-0 overflow-y-auto overscroll-contain">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}

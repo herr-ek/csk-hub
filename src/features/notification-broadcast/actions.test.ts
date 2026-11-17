@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, mock, spyOn, test } from "bun:test"
 import { createECDH } from "node:crypto"
 import https from "node:https"
+import * as intlServer from "@/core/i18n/server"
 
 const requireAdmin = mock(async () => undefined)
 let subscriptions: Record<string, unknown>[] = []
@@ -33,7 +34,7 @@ mock.module("@/core/authz", () => ({
     return { userId: session.user.id }
   }
 }))
-mock.module("@/core/i18n/server", () => ({ getTranslations }))
+mock.module("@/core/i18n/server", () => ({ ...intlServer, getTranslations }))
 mock.module("@/core/auth/session.server", () => ({
   getRequestSession: getSession
 }))

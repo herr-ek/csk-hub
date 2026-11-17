@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { groupTypeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
@@ -47,7 +48,11 @@ export function GroupsOverview({ overview }: { overview: Overview }) {
         <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {cskWideTypes.length === 0 ? <p className="text-sm text-muted-foreground">{t("noGroups")}</p> : null}
           {cskWideTypes.map((type) => (
-            <TypeGroups key={type} title={types(type)} groups={cskWide.filter((group) => group.type === type)} />
+            <TypeGroups
+              key={type}
+              title={types(groupTypeKey(type))}
+              groups={cskWide.filter((group) => group.type === type)}
+            />
           ))}
         </CardContent>
       </Card>

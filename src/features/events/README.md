@@ -60,7 +60,7 @@ never surface as thrown errors.
 
 **Commands check no permissions.** Callers must establish authority before invoking them.
 The UI requires fresh `event.*` authority at each protected read and command.
-Admin and current member/Position holders of the exact active non-Choir organiser Group may
+Admin and current Position appointment holders of the exact active non-Choir organiser Group may
 manage Events in every lifecycle state. Updates check current and proposed organisers.
 Creator identity and Targets do not grant management. Missing/archived organisers and Choirs
 remain Admin-only. Shared Location management uses Admin-only `event.administer`.
@@ -72,8 +72,7 @@ Delegated form options contain User names and IDs without emails; Admin retains 
 Who an Event is for is computed, never stored: `inAudience` in `audience.ts` is the scheme's
 "Targets and audience" pseudo-code as a pure function of a User's dated Memberships and an Event's
 Targets. Only Memberships active on the Event's start date in Europe/Stockholm count, so a singer
-who has left stops seeing later Events and a new one sees Events from their first day. Positions
-and permission roles play no part. The Memberships come from org-structure's
+who has left stops seeing later Events and a new one sees Events from their first day. Appointment grants count as effective Memberships; permission roles play no part. The Memberships come from org-structure's
 `listMembershipsOfUser`, since that module is the only reader of its tables. Responses and
 Registrations are meant to check their Audience through the same function.
 
@@ -130,11 +129,10 @@ database's own constraints by writing the tables directly.
 ## Agreed audience and participation access
 
 The registered `event.view` policy and calendar list/detail share the same audience calculation.
-For multi-day Events too, Membership is evaluated at Event start. Before start, closed Memberships
-stop granting access immediately; from start onward, historical Membership preserves viewing after
-departure. Membership dates retain inclusive boundaries and Stockholm calendar-day precision.
+For multi-day Events too, Membership is evaluated at Event start. Before start, Memberships whose exclusive end has passed stop granting access; scheduled
+ends remain effective until that boundary. From start onward, historical Membership preserves
+viewing after departure. Membership dates use exclusive end boundaries and Stockholm calendar-day precision.
 
 Response, Registration and Attendance policies and operations are deferred until those workflows
 exist. The agreed privacy and Section-parent scope remain future-work requirements in the
-[authorization guide](../../../docs/authorization.md#deferred-participation-workflows). This PR
-adds no Position-code migration; that work belongs to the separate Position-code PR.
+[authorization guide](../../../docs/authorization.md#deferred-participation-workflows). Position authority uses the fixed catalogue and contextual appointments.

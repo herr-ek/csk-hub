@@ -3,10 +3,12 @@ import { eq, sql } from "drizzle-orm"
 import { AUTHORIZATION_DENIED, AuthorizationDeniedError, createAuthorization } from "@/core/authz/authorization"
 import { user } from "@/core/db/schema/auth"
 import { event } from "@/core/db/schema/events"
-import { groupMember, positionHolder } from "@/core/db/schema/org-structure"
-import { archiveGroup, endMembership, endPositionHolding } from "@/features/org-structure"
+import { directMembership, positionAppointment } from "@/core/db/schema/org-structure"
+import { archiveGroup, endAppointment, endMembership } from "@/features/org-structure"
 import { createEvent } from "../events"
 import { createEventsTestDatabase, eventInput, expectSuccess } from "../test-support"
+
+mock.module("@/core/i18n/server", () => ({ getTranslations: async () => (key: string) => key }))
 
 const database = await createEventsTestDatabase()
 let viewer: string | null = null
@@ -80,8 +82,8 @@ describe.skipIf(!database)("Event delegation at protected entrypoints", () => {
   test("exact organiser delegation covers reads, creation, edits, lifecycle and deletion; targets and creator confer no authority", async () => {
     const holder = await t.user()
     const stranger = await t.user()
-    const organiser = await t.group("Board")
-    const otherGroup = await t.group("GigGroup")
+    const organiser = await t.group("board")
+    const otherGroup = await t.group("gig-group")
     const choir = await t.choir()
     await t.representative(holder, organiser)
     await t.representative(holder, choir)
@@ -149,7 +151,7 @@ describe.skipIf(!database)("Event delegation at protected entrypoints", () => {
 
   test("Event authorization locks serialize with departure, Position termination, archival and organiser reassignment", async () => {
     const holder = await t.user()
-    const organiser = await t.group("GigGroup")
+    const organiser = await t.group("gig-group")
     const positionId = await t.representative(holder, organiser)
     const stored = expectSuccess(
       await createEvent(t.db, { ...eventInput({ organiserGroupId: organiser }), createdBy: holder })
@@ -158,7 +160,7 @@ describe.skipIf(!database)("Event delegation at protected entrypoints", () => {
     await withEventPermission("event.update", stored.id, undefined, async () => {
       for (const operation of [
         (tx: Parameters<Parameters<typeof t.db.transaction>[0]>[0]) =>
-          endPositionHolding(tx, { userId: holder, groupId: organiser, positionId, endDate: "2026-11-16" }),
+          endAppointment(tx, { appointmentId: positionId, endDate: "2026-11-16" }),
         (tx: Parameters<Parameters<typeof t.db.transaction>[0]>[0]) =>
           endMembership(tx, { userId: holder, groupId: organiser, endDate: "2026-11-16" }),
         (tx: Parameters<Parameters<typeof t.db.transaction>[0]>[0]) => archiveGroup(tx, organiser),
@@ -173,28 +175,37 @@ describe.skipIf(!database)("Event delegation at protected entrypoints", () => {
         ).rejects.toMatchObject({ cause: { code: "55P03" } })
       }
     })
-    expect(
-      await endPositionHolding(t.db, { userId: holder, groupId: organiser, positionId, endDate: "2026-11-16" })
-    ).toMatchObject({ success: true })
+    expect(await endAppointment(t.db, { appointmentId: positionId, endDate: "2026-11-16" })).toMatchObject({
+      success: true
+    })
     expect(await getEventEditor(stored.id)).toBeNull()
   })
 
   test("departure, handover, archival and User deactivation remove delegated authority", async () => {
     const holder = await t.user()
-    const organiser = await t.group("GigGroup")
+    const organiser = await t.group("gig-group")
     await t.representative(holder, organiser)
     const stored = expectSuccess(
       await createEvent(t.db, { ...eventInput({ organiserGroupId: organiser }), createdBy: holder })
     )
     viewer = holder
     expect(await getEventEditor(stored.id)).toMatchObject({ id: stored.id })
-    await t.db.update(positionHolder).set({ endDate: "2026-11-16" }).where(eq(positionHolder.userId, holder))
+    await t.db.update(positionAppointment).set({ endDate: "2026-11-16" }).where(eq(positionAppointment.userId, holder))
     expect(await getEventEditor(stored.id)).toBeNull()
     expect(await updateEventAction(stored.id, idle, form({ organiserGroupId: organiser }))).toEqual(denied)
-    await t.db.update(positionHolder).set({ endDate: null }).where(eq(positionHolder.userId, holder))
-    await t.db.update(groupMember).set({ endDate: "2026-11-16" }).where(eq(groupMember.userId, holder))
+    await t.db.update(positionAppointment).set({ endDate: null }).where(eq(positionAppointment.userId, holder))
+    expect(await endMembership(t.db, { userId: holder, groupId: organiser, endDate: "2026-11-16" })).toMatchObject({
+      success: false,
+      error: "membership-dependency"
+    })
+    expect(await getEventEditor(stored.id)).toMatchObject({ id: stored.id })
+    await t.db.update(positionAppointment).set({ endDate: "2026-11-16" }).where(eq(positionAppointment.userId, holder))
+    expect(await endMembership(t.db, { userId: holder, groupId: organiser, endDate: "2026-11-16" })).toMatchObject({
+      success: true
+    })
     expect(await getEventEditor(stored.id)).toBeNull()
-    await t.db.update(groupMember).set({ endDate: null }).where(eq(groupMember.userId, holder))
+    await t.db.update(directMembership).set({ endDate: null }).where(eq(directMembership.userId, holder))
+    await t.db.update(positionAppointment).set({ endDate: null }).where(eq(positionAppointment.userId, holder))
     await t.archiveGroup(organiser)
     expect(await getEventEditor(stored.id)).toBeNull()
     const admin = await t.user()
