@@ -107,6 +107,19 @@ cache, at connection, heartbeat and before exposing a received batch. Message-re
 events also recheck current Conversation access. Impersonation cannot subscribe or
 acknowledge on another User's behalf. Redis payloads contain no Message text.
 
+## Toast payload
+
+Features provide an optional `toast: { title, description? }` on the queued ActivityChange.
+The browser renders the same bounded layout for every kind. A title is literal text or a
+`{ key, values? }` descriptor for the `Realtime` translation namespace; parameters may themselves
+be descriptors, such as the translated missing-sender fallback. Translation happens in the
+viewing browser's locale, while names and message content remain literal text. Messaging captures
+its Group Conversation name and normalized snippet when sending. Broadcasts use the same payload.
+
+Outbox `title`/`body` and push scheduling retain their existing contract; toast previews do not
+replace push content. SSE normalizes older queued deliveries without a toast at its boundary.
+Invalidation-only events do not need a toast.
+
 ## Notification behavior
 
 - In the visible current Conversation, activity refreshes the timeline. The existing

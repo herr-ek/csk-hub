@@ -261,7 +261,7 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           const update = await stream.read()
           expect(update).toContain("event: activity")
           expect(update).toContain('"kind":"message.created"')
-          expect(update).toContain('"snippet":"Private Message"')
+          expect(update).toContain('"description":"Private Message"')
           expect(update).toContain('"title":"Singer"')
           expect(push).not.toHaveBeenCalled()
         } finally {
@@ -289,22 +289,61 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           .set({ name: "Renamed" })
           .where(eq(groupConversation.conversationId, group.conversationId))
         const delivery = await messageDelivery(recipient.userId)
-        expect(delivery.change.messagePreview).toEqual({
-          snippet: "Hello choir 👨‍👩‍👧‍👦",
-          conversationName: "Planning"
+        expect(delivery.change.toast).toEqual({
+          title: { key: "groupMessage", values: { sender: "Singer", conversation: "Planning" } },
+          description: "Hello choir 👨‍👩‍👧‍👦"
         })
         expect(delivery.body).toBe(text.trim())
+        expect(delivery.title).toBe("Singer")
         const stream = await streamAs(recipient)
         try {
           await stream.read()
           await dispatchActivity(conversationActivityPolicy)
-          const update = await stream.read()
-          expect(update).toContain('"conversationName":"Planning"')
-          expect(update).toContain('"title":"Singer"')
+          // Group creation can arrive in a separate SSE chunk before its first Message.
+          let update = ""
+          while (!update.includes('"kind":"message.created"')) update += await stream.read()
+          expect(update).toContain('"conversation":"Planning"')
+          expect(update).toContain('"sender":"Singer"')
+          expect(update).not.toContain('"messagePreview"')
         } finally {
           stream.close()
         }
+        await makePushDue()
+        await dispatchActivity(conversationActivityPolicy)
+        expect(push).toHaveBeenCalledWith(recipient.userId, {
+          body: text.trim(),
+          url: delivery.href,
+          tag: delivery.id
+        })
       })
+
+      test.each([false, true])(
+        "pending legacy Message previews normalize to the common toast (preview: %s)",
+        async (hasPreview) => {
+          const { recipient } = await direct()
+          const delivery = await messageDelivery(recipient.userId)
+          const { toast: _toast, ...change } = delivery.change
+          await testDatabase.db
+            .update(activityDelivery)
+            .set({
+              change: {
+                ...change,
+                ...(hasPreview ? { messagePreview: { snippet: "Legacy snippet", conversationName: "Old Group" } } : {})
+              }
+            })
+            .where(eq(activityDelivery.id, delivery.id))
+          const stream = await streamAs(recipient)
+          try {
+            await stream.read()
+            await dispatchActivity(conversationActivityPolicy)
+            const update = await stream.read()
+            expect(update).toContain(hasPreview ? '"key":"groupMessage"' : '"title":"Singer"')
+            expect(update).toContain(hasPreview ? '"description":"Legacy snippet"' : '"description":"Private Message"')
+          } finally {
+            stream.close()
+          }
+        }
+      )
 
       test("a visible toast cancels fallback without advancing the unread cursor", async () => {
         const { recipient, sent } = await direct()
@@ -514,8 +553,16 @@ if (!process.env.CSK_ACTIVITY_TEST) {
         expect((await testDatabase.db.select().from(activityDelivery)).every((row) => row.pushAfter === null)).toBe(
           true
         )
-        await dispatchActivity(conversationActivityPolicy)
-        expect(push).toHaveBeenCalledTimes(1)
+        const stream = await streamAs(recipients[0])
+        try {
+          await stream.read()
+          await dispatchActivity(conversationActivityPolicy)
+          const update = await stream.read()
+          expect(update).toContain('"toast":{"title":{"key":"notification"},"description":"Rehearsal moved"}')
+          expect(push).toHaveBeenCalledTimes(1)
+        } finally {
+          stream.close()
+        }
       })
 
       test("revoking a connected session prevents the next event from being exposed", async () => {
