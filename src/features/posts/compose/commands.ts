@@ -39,7 +39,7 @@ async function writePost<Saved extends { id: string }>(
 ): Promise<PostWriteResult<Omit<Saved, "id">>> {
   try {
     return await withAccess(async (access, tx) => {
-      const { actor, relationships } = await getPostScope(tx, access)
+      const { actor, relationships } = await getPostScope(tx, access, content)
       if (postId !== null && !isPostId(postId)) return { status: "unavailable" as const }
       const [resource] = postId ? await tx.select().from(post).where(eq(post.id, postId)).for("update") : []
       const targets = postId

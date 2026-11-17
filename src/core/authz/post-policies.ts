@@ -127,5 +127,8 @@ export const postPolicies = {
   "post.publish": canPublishPost,
   "post.address": canAddressPost,
   "post.unpublish": (actor, context) => context.post?.publishedAt != null && canUpdatePost(actor, context),
-  "post.discard": (actor, context) => context.post?.publishedAt === null && canUpdatePost(actor, context)
+  "post.discard": (actor, context) =>
+    context.post?.publishedAt === null &&
+    (context.post.publisherGroupId === null || context.post.firstPublishedAt === null) &&
+    canUpdatePost(actor, context)
 } satisfies Pick<AuthorizationPolicies, `post.${string}` & keyof AuthorizationPolicies>

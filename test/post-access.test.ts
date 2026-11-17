@@ -10,7 +10,7 @@ import { user } from "@/core/db/schema/auth"
 import { choir, group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
 import { post, postTarget } from "@/core/db/schema/posts"
 import { voiceCapability } from "@/core/db/schema/voice"
-import { getGroupAuthorizationFacts } from "@/features/org-structure"
+import { getGroupAuthorizationFacts, lockCurrentGroupAuthorizationFacts } from "@/features/org-structure"
 import { createTestDatabase } from "./database"
 
 const database = await createTestDatabase()
@@ -209,7 +209,7 @@ describe("Group Post access end to end", () => {
       .where(and(eq(positionHolder.userId, alice), eq(positionHolder.groupId, publisherGroup)))
   })
 
-  test("stale content, recall and discard cannot overwrite newer changes", async () => {
+  test("stale content, recall and private Draft discard cannot overwrite newer changes", async () => {
     const address = { ...personal(), publisherGroupId: publisherGroup }
     const id = await publish(alice, address)
     expect((await commands.editPublishedPostCommand(id, content(address, "First"), 0, dependencies(bob))).status).toBe(
@@ -220,12 +220,17 @@ describe("Group Post access end to end", () => {
     ).toBe("conflict")
     expect((await commands.unpublishPostCommand(id, 0, dependencies(alice))).status).toBe("conflict")
     expect((await commands.unpublishPostCommand(id, 1, dependencies(bob))).status).toBe("success")
-    expect((await commands.discardDraftCommand(id, 1, dependencies(alice))).status).toBe("conflict")
-    expect((await commands.discardDraftCommand(id, 2, dependencies(bob))).status).toBe("success")
-    expect(await resource(id)).toMatchObject({ title: "First", discardedAt: expect.any(Date) })
+    for (const actor of [alice, bob, admin]) {
+      expect((await commands.discardDraftCommand(id, 2, dependencies(actor))).status).toBe("unauthorized")
+    }
+    expect(await resource(id)).toMatchObject({ title: "First", discardedAt: null })
+    const draftId = await publish()
+    expect((await commands.unpublishPostCommand(draftId, 0, dependencies(alice))).status).toBe("success")
+    expect((await commands.discardDraftCommand(draftId, 0, dependencies(alice))).status).toBe("conflict")
+    expect((await commands.discardDraftCommand(draftId, 1, dependencies(alice))).status).toBe("success")
   })
 
-  test("audience changes count as edits and immediately revoke prior readers; no-op saves preserve editor metadata", async () => {
+  test("personal audience changes revoke prior readers and update only the edit timestamp", async () => {
     const id = await publish()
     await unread.markPostRead(singer, id)
     const address = personal([publisherGroup])
@@ -234,12 +239,12 @@ describe("Group Post access end to end", () => {
     )
     const first = await resource(id)
     expect(first.editedAt).toBeInstanceOf(Date)
-    expect(first.lastEditorId).toBe(alice)
+    expect(first).toMatchObject({ lastEditorId: null, lastEditorRecorded: false })
     expect(await reads.getPublishedPost(id, db, dependencies(singer).withAccess)).toBeNull()
     expect((await unread.listUnreadPostIds(singer)).has(id)).toBe(false)
     await commands.editPublishedPostCommand(id, content(address), 1, dependencies(admin))
     const second = await resource(id)
-    expect(second.lastEditorId).toBe(alice)
+    expect(second).toMatchObject({ lastEditorId: null, lastEditorRecorded: false })
     expect(second.editedAt).toEqual(first.editedAt)
   })
 
@@ -370,8 +375,8 @@ describe("Group Post access end to end", () => {
     ])
     await commands.editPublishedPostCommand(csk, content(address(null, "S")), 0, dependencies(alice))
     expect(await resource(csk)).toMatchObject({
-      lastEditorId: alice,
-      lastEditorRecorded: true,
+      lastEditorId: null,
+      lastEditorRecorded: false,
       editedAt: expect.any(Date)
     })
     expect(await reads.getPublishedPost(csk, db, dependencies(kkBass).withAccess)).toBeNull()
@@ -401,11 +406,18 @@ describe("Group Post access end to end", () => {
     const id = await publish(alice, address)
     await db.update(group).set({ active: false }).where(eq(group.id, publisherGroup))
     expect(await reads.getEditablePost(id, db, dependencies(alice).withAccess)).toBeNull()
-    expect((await commands.unpublishPostCommand(id, 0, dependencies(admin))).status).toBe("success")
-    expect((await commands.saveDraftCommand(id, content(address), true, 1, dependencies(admin))).status).toBe(
+    const options = await reads.getPostComposeOptions({ ...dependencies(admin), fixedPublisherId: publisherGroup })
+    expect(options.audiencesByPublisher[publisherGroup]).toContain(mk)
+    expect(options.publishers.map((publisher) => publisher.id)).not.toContain(publisherGroup)
+    const retargeted = { ...personal([mk]), publisherGroupId: publisherGroup }
+    expect((await commands.editPublishedPostCommand(id, content(retargeted), 0, dependencies(admin))).status).toBe(
+      "success"
+    )
+    expect((await commands.unpublishPostCommand(id, 1, dependencies(admin))).status).toBe("success")
+    expect((await commands.saveDraftCommand(id, content(retargeted), true, 2, dependencies(admin))).status).toBe(
       "unauthorized"
     )
-    expect((await commands.discardDraftCommand(id, 1, dependencies(admin))).status).toBe("success")
+    expect((await commands.discardDraftCommand(id, 2, dependencies(admin))).status).toBe("unauthorized")
     await db.update(group).set({ active: true }).where(eq(group.id, publisherGroup))
   })
 
@@ -532,9 +544,7 @@ describe("Group Post access end to end", () => {
       .insert(positionHolder)
       .values({ userId: holder, groupId: board.id, positionId: office.id, startDate: "2026-01-01" })
     const address = { publisherGroupId: null, audienceAll: false, targets: [{ groupId: target.id, voiceFamily: null }] }
-    expect((await reads.getPostComposeOptions(db, dependencies(holder).withAccess)).audiencesByPublisher[""]).toContain(
-      target.id
-    )
+    expect((await reads.getPostComposeOptions(dependencies(holder))).audiencesByPublisher[""]).toContain(target.id)
     await publish(holder, address)
     expect(
       (
@@ -547,12 +557,26 @@ describe("Group Post access end to end", () => {
     ).toBe("unauthorized")
     await db.update(positionHolder).set({ endDate: "2026-11-17" }).where(eq(positionHolder.userId, holder))
     expect((await commands.createPostCommand(content(address), true, dependencies(holder))).status).toBe("unauthorized")
-    expect(
-      (await reads.getPostComposeOptions(db, dependencies(holder).withAccess)).audiencesByPublisher[""]
-    ).not.toContain(target.id)
+    expect((await reads.getPostComposeOptions(dependencies(holder))).audiencesByPublisher[""]).not.toContain(target.id)
     await db.update(positionHolder).set({ endDate: null }).where(eq(positionHolder.userId, holder))
     await db.update(group).set({ active: false }).where(eq(group.id, board.id))
     expect((await commands.createPostCommand(content(address), true, dependencies(holder))).status).toBe("unauthorized")
+  })
+
+  test("Post authorization locks membership and selected Groups while leaving unrelated Groups free", async () => {
+    const [unrelated] = await db.insert(group).values({ name: "Unrelated Group", type: "Board" }).returning()
+    if (!unrelated) throw new Error("Missing unrelated Group")
+    await db.transaction(async (tx) => {
+      await lockCurrentGroupAuthorizationFacts(tx, alice, [mk])
+      for (const groupId of [kk, mk]) {
+        await expect(
+          db.select({ id: group.id }).from(group).where(eq(group.id, groupId)).for("update", { noWait: true }).execute()
+        ).rejects.toMatchObject({ cause: { code: "55P03" } })
+      }
+      expect(
+        await db.select({ id: group.id }).from(group).where(eq(group.id, unrelated.id)).for("update", { noWait: true })
+      ).toEqual([{ id: unrelated.id }])
+    })
   })
 
   test("parallel reads and competing saves complete when session validation uses another connection", async () => {

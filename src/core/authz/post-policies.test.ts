@@ -150,10 +150,17 @@ describe("Post publisher and audience policies", () => {
       ).toBe(false)
     expect(evaluatePermission(alice, { action: "post.update", context: { post: draft } })).toBe(true)
     const recalled = resource({ publishedAt: null })
-    for (const action of ["post.read", "post.update", "post.publish", "post.discard"] as const)
+    for (const action of ["post.read", "post.update", "post.publish"] as const)
       expect(evaluatePermission(bob, { action, context: { post: recalled, relationships: relationships(bob) } })).toBe(
         true
       )
+    for (const actor of [alice, bob, admin])
+      expect(
+        evaluatePermission(actor, {
+          action: "post.discard",
+          context: { post: recalled, relationships: relationships(actor) }
+        })
+      ).toBe(false)
   })
   test("ordinary readership uses exact audience membership, with explicit personal-author and group-manager grants", () => {
     const context = {

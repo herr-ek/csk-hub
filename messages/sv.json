@@ -264,7 +264,6 @@
     "unpublishedToGroup": "Inlägget har återkallats. Gruppens nuvarande företrädare och administratörer kan ändra eller publicera det igen.",
     "editRecalled": "Ändra återkallat gruppinlägg",
     "saveRecalled": "Spara återkallat inlägg",
-    "discardPost": "Kasta inlägg",
     "selectedTargets": "Valda grupper / stämfamiljer",
     "audienceTargets": "Målgrupper",
     "targetsDescription": "Det räcker att matcha en målgrupp. Inom varje målgrupp måste både grupp och stämfamilj matcha. Stämmor följer nuvarande stämplaceringar, inte självrapporterad sångförmåga.",

@@ -2,31 +2,24 @@ import "server-only"
 
 import { and, eq, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm"
 import type { AuthorizationDatabase, RequestAuthorization } from "@/core/authz"
-import type { AuthorizationActor, PostRelationships } from "@/core/authz/model"
+import type { AuthorizationActor, PostAddress, PostRelationships } from "@/core/authz/model"
 import { matchesPostTarget } from "@/core/authz/post-audience"
 import { canRepresentPostGroup } from "@/core/authz/post-policies"
 import { post, postTarget } from "@/core/db/schema/posts"
-import { getGroupAuthorizationFacts, lockGroupAuthorizationFacts } from "@/features/org-structure"
+import { lockCurrentGroupAuthorizationFacts, type OrgStructureTransaction } from "@/features/org-structure"
 
 /** Fresh identity and relationship/archive locks, acquired before any Post lock. */
 export async function getPostScope(
-  database: Parameters<typeof lockGroupAuthorizationFacts>[0],
-  access: RequestAuthorization
+  database: OrgStructureTransaction,
+  access: RequestAuthorization,
+  address?: PostAddress
 ) {
   const actor = access.requirePermission({ action: "app.access" })
-  const relationships = await lockPostRelationships(database, actor.userId)
+  const groupIds = address
+    ? [address.publisherGroupId, ...address.targets.map((target) => target.groupId)].filter((id) => id !== null)
+    : []
+  const relationships = await lockCurrentGroupAuthorizationFacts(database, actor.userId, groupIds)
   return { actor, relationships }
-}
-
-export async function lockPostRelationships(
-  database: Parameters<typeof lockGroupAuthorizationFacts>[0],
-  userId: string
-) {
-  const initial = await getGroupAuthorizationFacts(database, userId)
-  const lockedIds = initial.groups.map((g) => g.id)
-  const relationships = await lockGroupAuthorizationFacts(database, userId, lockedIds)
-  relationships.groups = relationships.groups.filter((g) => lockedIds.includes(g.id))
-  return relationships
 }
 
 export function managedPostGroupIds(actor: AuthorizationActor, relationships: PostRelationships) {

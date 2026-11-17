@@ -33,11 +33,9 @@ const COPY = {
 export function ConfirmPostCommand({
   command,
   action,
-  revision,
-  recalled = false
+  revision
 }: {
   command: PostCommand
-  recalled?: boolean
   revision: number
   action: (state: PostCommandState, formData: FormData) => Promise<PostCommandState>
 }) {
@@ -57,7 +55,7 @@ export function ConfirmPostCommand({
       </form>
       <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
         <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
-          {t(recalled && command === "discard" ? "discardPost" : copy.label)}
+          {t(copy.label)}
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -72,7 +70,7 @@ export function ConfirmPostCommand({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>{common("cancel")}</AlertDialogCancel>
             <AlertDialogAction type="submit" form={formId} variant="destructive" disabled={pending}>
-              {pending ? t(copy.pending) : t(recalled && command === "discard" ? "discardPost" : copy.label)}
+              {pending ? t(copy.pending) : t(copy.label)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -16,6 +16,7 @@ export {
   listCurrentPositionsOfUser,
   listGroupNames,
   listMembershipsOfUser,
+  lockCurrentGroupAuthorizationFacts,
   lockGroupAuthorizationFacts,
   lockGroupForReference
 } from "./reads"

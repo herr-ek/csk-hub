@@ -182,7 +182,7 @@ export async function unpublishPost(
   )
 }
 
-/** Throws away the authorized unpublished Post. It is hidden for good, never deleted. */
+/** Discards the author's private Draft and leaves the retained row hidden. */
 export async function discardDraft(
   postId: string,
   _state: PostCommandState,

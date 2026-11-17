@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, isNull, or, type SQL, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
@@ -180,14 +180,44 @@ export async function getGroupAuthorizationFacts(database: OrgStructureDatabase,
  */
 export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, userId: string, groupIds: string[]) {
   await lockUser(tx, userId)
-  if (groupIds.length > 0) {
-    await tx
-      .select({ id: group.id })
+  if (groupIds.length > 0) await lockAuthorizationGroups(tx, inArray(group.id, [...new Set(groupIds)]))
+  return getGroupAuthorizationFacts(tx, userId)
+}
+
+/** Load current relationships and lock their Groups plus any explicitly selected Groups. */
+export async function lockCurrentGroupAuthorizationFacts(
+  tx: OrgStructureTransaction,
+  userId: string,
+  selectedGroupIds: string[]
+) {
+  await lockUser(tx, userId)
+  const memberships = await tx
+    .select()
+    .from(groupMember)
+    .where(and(eq(groupMember.userId, userId), isNull(groupMember.endDate)))
+  const positionHoldings = await tx
+    .select()
+    .from(positionHolder)
+    .where(and(eq(positionHolder.userId, userId), isNull(positionHolder.endDate)))
+  const ids = [...new Set([...memberships.map((membership) => membership.groupId), ...selectedGroupIds])]
+  if (ids.length === 0) return { groups: [], memberships, positionHoldings }
+  const selectedSection = alias(group, "selected_section")
+  const sectionChoirs = tx
+    .select({ id: selectedSection.choirId })
+    .from(selectedSection)
+    .where(and(inArray(selectedSection.id, ids), eq(selectedSection.type, "Section")))
+  const groups = await lockAuthorizationGroups(tx, or(inArray(group.id, ids), inArray(group.id, sectionChoirs)))
+  return { groups, memberships, positionHoldings }
+}
+
+function lockAuthorizationGroups(tx: OrgStructureTransaction, filter: SQL | undefined) {
+  return (
+    tx
+      .select({ id: group.id, type: group.type, active: group.active, choirId: group.choirId })
       .from(group)
-      .where(inArray(group.id, [...new Set(groupIds)].sort()))
+      .where(filter)
       // Choir archival locks its Choir before updating Sections; preserve that order here.
       .orderBy(sql`case when ${group.type} = 'Choir' then 0 else 1 end`, asc(group.id))
       .for("share")
-  }
-  return getGroupAuthorizationFacts(tx, userId)
+  )
 }

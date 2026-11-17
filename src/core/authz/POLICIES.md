@@ -14,7 +14,7 @@ The original human creator is retained. A Group Post shows its publishing Group 
 Only Admins and current representatives who may publish for that Group see “Posted by” the
 original creator and named editor attribution. Other readers receive neither name in the
 feed/detail data and see edit timestamps without editor names. Personal Post attribution
-remains visible to its readers.
+remains visible to its readers. Personal edits show an edit timestamp without naming the editor.
 The publishing identity becomes fixed at first publication, including after recall.
 
 To represent a Group, a Member must have both a current Membership and any current
@@ -82,8 +82,8 @@ There are three additional grounds for access:
 Historical credit grants no special access to a Group Post: a former representative
 must qualify through the audience or current management authority.
 
-These rules apply equally to the feed, direct links, editor, unread counts, unread IDs
-and unread expiry information. Read markers do not bypass them.
+These readership rules apply equally to the feed, direct links, unread counts, unread IDs
+and unread expiry information. The editor requires the editing authority shown below.
 
 ## Editing, recall and discard
 
@@ -97,11 +97,12 @@ and unread expiry information. Read markers do not bypass them.
 
 Everyone who may edit a published Post may recall it. Personal recall creates a private
 Draft; Group recall creates a shared Recalled Group Post. Current managers can find
-Recalled Group Posts alongside their private Drafts. Recalling does not clear creator,
-publisher or editor attribution. Republication receives a new publication time.
+Recalled Group Posts alongside their private Drafts. Group recall preserves creator, publisher
+and editor attribution. Personal recall clears the edit timestamp. Republication receives a
+new publication time.
 
-Those who may edit unpublished content may discard it. Discard is irreversible in the
-application, although the database record remains. Published Posts must be recalled first.
+Only the author can discard a private Draft. That removes it from application views and
+retains the database record. Recalled Group Posts remain available to their managers.
 
 A handover applies to existing Group Posts: new representatives gain management access;
 former representatives lose it, including the original creator. A private Draft is never
@@ -116,17 +117,16 @@ Draft, publish as a Choir, publish as an archived Group, or select an archived a
 
 Archiving an audience Group preserves historical access for its remaining current Members.
 Archiving a publishing Group preserves its published Posts and attribution, but removes
-representative management rights. Admins may edit, recall or discard that Group's content;
-nobody may republish it while its publishing Group is archived.
+representative management rights. Admins may edit, retarget to active audiences and recall
+that Group's content. Republication requires an active publisher.
 
 ## Attribution, conflicting edits and unread status
 
-Meaningful changes to title, body or audience after first publication record the acting
-Member as last editor. Identical saves, private Draft edits and publication-status changes
-alone do not. Recall and republication preserve editor information. Account inactivation
-retains names; Erasure removes creator/editor identities and displays “former member”
-while preserving timestamps. A legacy edit whose editor was never recorded is labelled
-as an edit without inventing an editor identity.
+Meaningful changes to title, body or audience update the edit timestamp on published Posts
+and on Recalled Group Posts. Group Posts also record the acting Member as last editor.
+Group recall and republication preserve editor information. Account inactivation retains
+names. Erasure removes creator/editor identities and displays “former member” while
+preserving timestamps.
 
 An open editor retains its loaded version through background live updates. Saving,
 recalling or discarding from an outdated screen is rejected rather than silently

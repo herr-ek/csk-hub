@@ -5,10 +5,10 @@ and relationship attributes. Features supply facts from trusted server reads; au
 owns the decisions. Better Auth retains authentication and its native account permissions.
 The module never imports features and does not load their resources itself.
 
-Stages one through three are implemented: personal Posts, Members, Messaging, account settings,
-administrative workflows (including Events and Locations), routes and navigation use these policies. Better Auth no longer carries
-application Post grants; the legacy application permission guards have been removed. Group-authored
-Posts, audience targets and Recalled Group Posts use the same policy catalogue.
+Personal and Group Posts, Members, Messaging, account settings, administrative workflows
+(including Events and Locations), routes and navigation use these policies. Better Auth
+retains its native grants. Post audience targets and Recalled Group Posts use the same
+policy catalogue as published Posts.
 See [the human-readable Post access guide](POLICIES.md) for the rules and examples.
 Event audience visibility is implemented. Participant field privacy and Section-scoped attendance
 remain deferred until those workflows exist.

@@ -56,7 +56,8 @@ async function saveContent(
     const audienceChanged = targets !== undefined && !samePostTargets(oldTargets, targets)
     const changed = sql`(${post.title} is distinct from ${content.title} or ${post.body} is distinct from ${JSON.stringify(content.body)}::jsonb
       or ${audienceChanged} or ${post.audienceAll} is distinct from ${content.audienceAll ?? sql`${post.audienceAll}`})`
-    const edited = sql`(${post.firstPublishedAt} is not null or ${post.publishedAt} is not null) and ${changed}`
+    const edited = sql`${changed} and (${post.publishedAt} is not null or (${post.publisherGroupId} is not null and ${post.firstPublishedAt} is not null))`
+    const groupEdit = sql`${post.publisherGroupId} is not null and ${edited}`
     const state = input.draft
       ? and(
           isNull(post.publishedAt),
@@ -68,8 +69,8 @@ async function saveContent(
       .set({
         ...content,
         editedAt: sql`case when ${edited} then now() else ${post.editedAt} end`,
-        lastEditorId: sql`case when ${edited} then ${input.actorId} else ${post.lastEditorId} end`,
-        lastEditorRecorded: sql`case when ${edited} then true else ${post.lastEditorRecorded} end`,
+        lastEditorId: sql`case when ${groupEdit} then ${input.actorId} else ${post.lastEditorId} end`,
+        lastEditorRecorded: sql`case when ${groupEdit} then true else ${post.lastEditorRecorded} end`,
         revision: sql`${post.revision} + 1`,
         ...(input.publish
           ? { publishedAt: new Date(), firstPublishedAt: sql`coalesce(${post.firstPublishedAt}, now())` }
@@ -92,7 +93,7 @@ export async function saveDraft(
   return saveContent({ ...input, actorId: input.authorId, draft: true }, database)
 }
 
-/** Preserve original authorship, tracking meaningful edits against the actual acting Member. */
+/** Preserve original authorship and record the acting editor for meaningful Group Post edits. */
 export async function editPublishedPost(
   input: { postId: string; content: PostContent; actorId: string },
   database: PostsDatabase = db
@@ -100,7 +101,7 @@ export async function editPublishedPost(
   return saveContent({ ...input, draft: false, publish: false }, database)
 }
 
-/** Recall without clearing publication history or editor attribution. Group content remains shared. */
+/** Recall into a private Draft or a shared Recalled Group Post with its editor history. */
 export async function unpublishPost(
   postId: string,
   database: PostsDatabase = db
@@ -112,6 +113,7 @@ export async function unpublishPost(
       .set({
         publishedAt: null,
         firstPublishedAt: sql`coalesce(${post.firstPublishedAt}, ${post.publishedAt})`,
+        editedAt: sql`case when ${post.publisherGroupId} is not null then ${post.editedAt} end`,
         revision: sql`${post.revision} + 1`
       })
       .where(and(eq(post.id, postId), isNotNull(post.publishedAt)))
@@ -121,7 +123,7 @@ export async function unpublishPost(
   })
 }
 
-/** Discard authorized unpublished content. Rows survive, but no application view exposes them. */
+/** Discard the author's private Draft. The row remains hidden from application views. */
 export async function discardDraft(
   input: { postId: string; authorId: string },
   database: PostsDatabase = db
@@ -135,7 +137,8 @@ export async function discardDraft(
         eq(post.id, input.postId),
         isNull(post.publishedAt),
         isNull(post.discardedAt),
-        or(eq(post.authorId, input.authorId), and(isNotNull(post.firstPublishedAt), isNotNull(post.publisherGroupId)))
+        eq(post.authorId, input.authorId),
+        or(isNull(post.publisherGroupId), isNull(post.firstPublishedAt))
       )
     )
     .returning({ id: post.id })

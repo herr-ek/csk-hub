@@ -17,8 +17,8 @@ subject to the team discussion required by CONTRIBUTING.md.
 3. **Existing feature adoption — implemented.** Members, Messaging, organisational administration,
    User management, notification broadcast and local account settings use fresh central authority.
    Native Better Auth account endpoints retain their own permissions.
-4. **Group Posts — deferred.** Attribution, audiences and Recalled Group Posts require a coordinated
-   schema/read/write/UI change. Event instance policies also await feature implementation.
+4. **Group Posts — implemented.** Group attribution, audience targeting, Recalled Group Posts,
+   and current representative handover use the Post policies. See the [Post access guide](../src/core/authz/POLICIES.md).
 
 There are no schema changes or organisational period changes in stages two and three.
 `core/auth/permissions.server.ts` and the cached identity-only guard are removed. Better Auth's
@@ -80,12 +80,13 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 | Request | Grant |
 | --- | --- |
 | `app.access` | Any active User |
-| `post.create` | Any active User may create/publish personal content |
-| `post.read` | Published Posts by active Users; private Drafts only by their author |
-| `post.update` | Own Draft; published personal content by its author or Admin |
-| `post.publish`, `post.discard` | Own live Draft |
-| `post.unpublish` | Published personal content by its author or Admin |
-| `group.publishPost`, `group.manageContent`, `group.manageEvents` | Admin, or current Position holder with current Membership in that exact active non-Choir Group |
+| `post.create` | Any active User may start a Post |
+| `post.read`, `post.readAttribution` | Audience, authorship and management grants depend on the Post's state and publisher. Group creator/editor names are restricted. |
+| `post.update`, `post.unpublish` | Author of a private Draft or personal Post, Admin for a published personal Post, or current representative/Admin for published or Recalled Group Posts. Recall requires a published Post. |
+| `post.address`, `post.publish` | Applicable management authority plus valid publisher and audience selections at publication |
+| `post.discard` | Author of a private Draft |
+| `group.publishPost` | Admin or current Position holder with current Membership in the exact active non-Choir Group |
+| `group.manageContent`, `group.manageEvents` | Admin for an active Group, or current Position holder with current Membership in the exact active non-Choir Group |
 | `group.manageMemberships`, `group.managePositions` | Admin, for an existing active Group |
 | `org.manage`, `user.administer`, `notification.broadcast`, `admin.access` | Explicit Admin grants; feature-specific safeguards still apply |
 | `memberId.issue` | Active Users may present their own temporary ID |
@@ -95,10 +96,9 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 | `member.readEmail` | Profile owner only; no Admin bypass |
 | `member.editProfile` | Profile owner |
 
-Discarded Posts are inaccessible. Group requests express authority to represent a Group; they
-cannot authorize an arbitrary Post, Event or Conversation ID. Event instance policies bind
-the resource to its organiser Group; future Group Post policies must do the same. Choir operations remain Admin-only. No grant
-propagates through `choirId`, linked holdings or the Board to unrelated Groups.
+Discarded Drafts are inaccessible. Post and Event instance policies bind management to the exact
+publishing or organising Group. The [Post access guide](../src/core/authz/POLICIES.md) describes
+the separate rules for selecting audiences, including Board and Choir exceptions.
 
 ## Freshness, locks and limitations
 
@@ -112,11 +112,13 @@ operation; never cache or reuse it across operations. Fresh checks reject alread
 sessions or deactivated Users, but do not serialize a later revocation/deactivation with a write.
 Features must coordinate any stronger guarantees with their permission-changing writers.
 
-Post reads load facts under `FOR SHARE`; Post commands load facts under `FOR UPDATE` before
-checking the policy and writing in the same transaction. This prevents an intervening Unpublish
-from exposing a foreign private Draft to an editor and keeps lifecycle authorization aligned
-with the write. Preserve the persistence predicates as well as the guard. A successful `can` is
-never a durable grant.
+Post operations take the actor's organisational advisory lock, then shared locks on their current
+Membership Groups, any Group IDs selected in a write, and the owning Choirs of locked
+Sections. Compose options are presentation hints.
+Feed and detail reads share-lock candidate Posts and recheck readership against targets loaded
+after the lock. Writing a read marker also rechecks visibility after locking the Post. Post commands
+take `FOR UPDATE` on the Post before authorizing and writing. The guard and persistence predicates
+both enforce the lifecycle rules.
 
 Features retain their additional coordination:
 
@@ -126,20 +128,19 @@ Features retain their additional coordination:
 - Messaging keeps recipient locks, Conversation locks, Group Membership shared read locks,
   departure cutoffs and authorization callbacks before retry lookup/append.
 - Org-structure retains savepoints, per-User advisory locks, archiving locks and invariants.
-  Group grant checks currently do not lock Memberships or holdings. Before adding Group-authorized
-  content writes, coordinate them with the existing handover/departure writers; passing `tx`
-  alone is insufficient. Review lock ordering before introducing a new sequence.
+  Posts share the actor lock with Membership and Position changes and lock Groups in Choir-first
+  order to coordinate with archival.
 - Better Auth API mutations run their own transactions, and notification delivery is external.
   Their preliminary central checks do not make those later effects atomic with session revocation.
 
-## Personal Posts: implemented boundaries
+## Posts: implemented boundaries
 
 | Seam | Current behavior |
 | --- | --- |
 | `posts/compose/actions.ts`, `commands.ts` | Actions validate input; commands load/lock Post facts, check the exact `post.*` request and persist in one transaction; actor comes from the guard |
 | `posts/lifecycle.ts` | Low-level server persistence; caller must establish authority in the same transaction; author/state/discard predicates retained |
-| `posts/service.ts/listNewsFeed` | Fresh active reader; published collection only |
-| `posts/service.ts/listOwnDrafts` | Derives author from authority; no arbitrary author-ID input |
+| `posts/service.ts/listNewsFeed` | Published Posts visible to the current reader |
+| `posts/service.ts/listOwnDrafts` | Current author's private Drafts and Recalled Group Posts they can manage |
 | `posts/service.ts/getPublishedPost`, `getEditablePost` | Guard and content read share a transaction/Post lock; forbidden or absent returns null |
 | News, detail and compose screens | Resource capabilities shape controls; direct reads and action submissions check independently |
 | `core/auth/route-access.ts` | Composition route available to authenticated Users; no per-resource queries in Proxy |
@@ -332,11 +333,10 @@ capabilities remain deferred to #159.
 Post operations use `withCurrentRequest` to validate the session before leasing a transaction
 connection, then reload the User inside the transaction and reuse one actor snapshot.
 This avoids pool starvation from session lookups while relationship locks are held.
-They lock actor relationships and Group archival before Post rows. Writes
-recheck current policies and reject stale revisions before changing content, targets or
-state. Feed/detail and unread queries share one database visibility predicate; audience
-Membership is current, while personal authorship and current Group management supply
-separate access grounds. Archived audience Membership preserves historical reading.
+Writes recheck current policies and reject stale revisions before changing content, targets
+or state. Feed, detail and unread queries share a database visibility predicate. Audience
+Membership is current, and personal authorship and current Group management supply separate
+access grounds. Archived audience Membership preserves historical reading.
 
 ## Future organisational period change: always coordinated
 
