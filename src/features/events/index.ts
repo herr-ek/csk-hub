@@ -1,6 +1,7 @@
 import "server-only"
 
 export { EventPageScreen, EventPageScreenSkeleton } from "./calendar/EventPageScreen"
+export { ComingUpCard, NextEventCard } from "./calendar/NextEvents"
 export { UpcomingEventsScreen, UpcomingEventsScreenSkeleton } from "./calendar/UpcomingEventsScreen"
 export {
   createEvent,

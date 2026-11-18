@@ -1,8 +1,23 @@
 {
   "HomePage": {
-    "title": "Willkommen bei CSK Hub",
-    "description": "Alles, was der Chor veröffentlicht, hat jetzt hier ein Zuhause.",
-    "readNews": "Neuigkeiten lesen"
+    "greeting": "Hallo {name}",
+    "greetingAnonymous": "Willkommen",
+    "events": {
+      "title": "Als Nächstes",
+      "seeAll": "Alle Termine",
+      "today": "Heute",
+      "comingUp": "Demnächst",
+      "allDay": "Ganztägig",
+      "cancelledToday": "Abgesagt. Nicht kommen.",
+      "empty": "Gerade steht für dich nichts an.",
+      "tomorrow": "Morgen",
+      "nextUpWhen": "Als Nächstes · {when}"
+    },
+    "news": {
+      "title": "Neuigkeiten",
+      "seeAll": "Alle Neuigkeiten",
+      "empty": "Noch wurde nichts veröffentlicht."
+    }
   },
   "Metadata": {
     "description": "Das digitale Zentrum von Chalmers Sångkör"

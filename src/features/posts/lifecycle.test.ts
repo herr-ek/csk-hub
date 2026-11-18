@@ -25,6 +25,9 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
   function listNewsFeed(database = db) {
     return reads.listNewsFeed(database, authorizeAs(viewerId))
   }
+  function listLatestPosts(count: number, database = db) {
+    return reads.listLatestPosts(count, database, authorizeAs(viewerId))
+  }
   function getPublishedPost(id: string, database = db) {
     return reads.getPublishedPost(id, database, authorizeAs(viewerId))
   }
@@ -81,6 +84,33 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     ).toBeNull()
     expect(await editPublishedPost({ postId: id, content: content("Kapat") }, db)).toBeNull()
     expect(await row(id)).toMatchObject({ title: "Privat", publishedAt: null })
+  })
+
+  test("the latest Posts are the newest published ones, without drafts or bodies", async () => {
+    const author = await newAdmin()
+    const publishAt = async (title: string, at: string) => {
+      const { id } = await createPost({ authorId: author, content: content(title), publish: true }, db)
+      await db
+        .update(post)
+        .set({ publishedAt: new Date(at) })
+        .where(eq(post.id, id))
+      return id
+    }
+    await publishAt("Äldre", "2999-01-01T10:00:00Z")
+    const newest = await publishAt("Nyast", "2999-01-03T10:00:00Z")
+    const newer = await publishAt("Nyare", "2999-01-02T10:00:00Z")
+    const { id: draft } = await createPost({ authorId: author, content: content("Ej klar"), publish: false }, db)
+
+    const latest = await listLatestPosts(2, db)
+    expect(latest.map((entry) => entry.id)).toEqual([newest, newer])
+    expect(latest.map((entry) => entry.id)).not.toContain(draft)
+    expect(latest[0]).toEqual({
+      id: newest,
+      title: "Nyast",
+      authorName: "Admin",
+      publishedAt: expect.any(Date),
+      editedAt: null
+    })
   })
 
   test("saving a draft never marks it edited", async () => {
