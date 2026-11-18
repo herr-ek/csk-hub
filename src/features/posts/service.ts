@@ -76,7 +76,12 @@ export async function listNewsFeed(
 export type LatestPost = Omit<NewsFeedEntry, "body">
 
 /** The `count` newest published Posts, newest first, without their bodies. */
-export async function listLatestPosts(count: number, database: PostsDatabase = db): Promise<LatestPost[]> {
+export async function listLatestPosts(
+  count: number,
+  database: PostsDatabase = db,
+  authorize = requirePermission
+): Promise<LatestPost[]> {
+  await authorize({ action: "app.access" }, database)
   const { body: _body, ...columns } = publishedPostColumns
   const rows = await database
     .select(columns)

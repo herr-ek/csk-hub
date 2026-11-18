@@ -6,7 +6,6 @@ import { post } from "@/core/db/schema/posts"
 import { createTestDatabase } from "../../../test/database"
 import { createPost, discardDraft, editPublishedPost, type PostContent, saveDraft, unpublishPost } from "./lifecycle"
 import * as reads from "./service"
-import { listLatestPosts } from "./service"
 
 const database = await createTestDatabase()
 
@@ -25,6 +24,9 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
   }
   function listNewsFeed(database = db) {
     return reads.listNewsFeed(database, authorizeAs(viewerId))
+  }
+  function listLatestPosts(count: number, database = db) {
+    return reads.listLatestPosts(count, database, authorizeAs(viewerId))
   }
   function getPublishedPost(id: string, database = db) {
     return reads.getPublishedPost(id, database, authorizeAs(viewerId))

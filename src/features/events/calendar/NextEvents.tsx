@@ -1,7 +1,6 @@
+import { io } from "next/cache"
 import Link from "next/link"
 import { cache } from "react"
-import { requireAuthenticatedUser } from "@/core/auth/session.server"
-import { db } from "@/core/db"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
 import { eventPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
@@ -12,16 +11,16 @@ import { addDays, stockholmDate } from "../model"
 import { StatusBadge } from "../ui/StatusBadge"
 import { happensOn } from "./days"
 import { EventKind } from "./EventKind"
-import { listUpcomingEventsForUser, type UpcomingEvent } from "./query"
+import { listCurrentUpcomingEvents, type UpcomingEvent } from "./query"
 
 /** How many Events "Coming up" lists after the next one. */
 const COMING_UP = 4
 
 /** The User's upcoming Events and today's date, read once per render however many cards ask. */
 const upcomingForHome = cache(async () => {
-  const userId = await requireAuthenticatedUser()
+  await io()
   const now = new Date()
-  const { events } = await listUpcomingEventsForUser(db, userId, now)
+  const { events } = await listCurrentUpcomingEvents(now)
   return { events, today: stockholmDate(now) }
 })
 
