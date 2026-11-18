@@ -3,16 +3,18 @@ import { Suspense } from "react"
 import { getRequestSession } from "@/core/auth/session.server"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
-import { NextEventsCard } from "@/features/events"
+import { ComingUpCard, NextEventCard } from "@/features/events"
 import { LatestPostsCard } from "@/features/posts"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { OverviewCardSkeleton } from "@/shared/layouts/overview-card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 
+const WIDE = "md:col-span-2"
+
 /**
- * The signed-in home page: a greeting, then the User's next Events beside the latest News, each
- * card linking on to its full page. Every card loads under its own boundary, so a slow read never
- * holds up the rest.
+ * The signed-in home page: a greeting, the User's next Event across the top, then
+ * what's coming up beside the latest News, each card linking on to its full page. Every card loads
+ * under its own boundary, so a slow read never holds up the rest.
  */
 export async function HomeScreen() {
   const info = await getTranslations("Public.info")
@@ -23,8 +25,11 @@ export async function HomeScreen() {
         <Greeting />
       </Suspense>
       <div className="grid gap-4 md:grid-cols-2">
+        <Suspense fallback={<OverviewCardSkeleton rows={1} className={WIDE} />}>
+          <NextEventCard className={WIDE} />
+        </Suspense>
         <Suspense fallback={<OverviewCardSkeleton rows={4} />}>
-          <NextEventsCard />
+          <ComingUpCard />
         </Suspense>
         <Suspense fallback={<OverviewCardSkeleton />}>
           <LatestPostsCard />

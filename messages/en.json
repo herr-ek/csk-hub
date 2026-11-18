@@ -9,7 +9,9 @@
       "comingUp": "Coming up",
       "allDay": "All day",
       "cancelledToday": "Cancelled. Don't come.",
-      "empty": "Nothing coming up for you right now."
+      "empty": "Nothing coming up for you right now.",
+      "tomorrow": "Tomorrow",
+      "nextUpWhen": "Next up · {when}"
     },
     "news": {
       "title": "Latest news",

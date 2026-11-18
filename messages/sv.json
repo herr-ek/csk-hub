@@ -9,7 +9,9 @@
       "comingUp": "Framöver",
       "allDay": "Heldag",
       "cancelledToday": "Inställt. Kom inte.",
-      "empty": "Inget på gång för dig just nu."
+      "empty": "Inget på gång för dig just nu.",
+      "tomorrow": "Imorgon",
+      "nextUpWhen": "Härnäst · {when}"
     },
     "news": {
       "title": "Senaste nytt",
