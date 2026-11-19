@@ -1,3 +1,4 @@
+import { oauthProviderClient } from "@better-auth/oauth-provider/client"
 import { passkeyClient } from "@better-auth/passkey/client"
 import {
   adminClient,
@@ -13,6 +14,7 @@ import { adminPluginOptions } from "./permissions"
 
 export const authClient = createAuthClient({
   plugins: [
+    oauthProviderClient(),
     inferAdditionalFields<typeof auth>(),
     twoFactorClient(),
     usernameClient(),

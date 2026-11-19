@@ -50,7 +50,7 @@ export function useTwoFactorForm() {
         if ("unavailable" in result) {
           try {
             const session = await authClient.getSession()
-            if (session.data?.user) {
+            if (session.data?.user && !searchParams.has("sig")) {
               router.replace(getPostLoginPath(session.data.user.role, returnTo))
               return
             }
@@ -65,7 +65,7 @@ export function useTwoFactorForm() {
         return
       }
 
-      router.replace(getPostLoginPath(result.role, returnTo))
+      if (!result.redirecting) router.replace(getPostLoginPath(result.role, returnTo))
     } finally {
       setPending(false)
       operationInProgress.current = false

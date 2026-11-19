@@ -208,7 +208,8 @@
       "adminEventsNew": "Nytt evenemang",
       "adminEventLocations": "Platser",
       "eventsNew": "Nytt evenemang",
-      "eventsManage": "Hantera evenemang"
+      "eventsManage": "Hantera evenemang",
+      "adminOidcClients": "OIDC-klienter"
     },
     "members": "Medlemmar",
     "quickAccess": "Snabbåtkomst",
@@ -281,7 +282,9 @@
     "groups": "Grupper och poster",
     "groupsDescription": "Styrelsen, kommittéer och andra grupper, med medlemmar och poster.",
     "events": "Evenemang",
-    "eventsDescription": "Skapa evenemang i CSK:s kalender, publicera, ställ in och radera dem, och håll ordning på platserna."
+    "eventsDescription": "Skapa evenemang i CSK:s kalender, publicera, ställ in och radera dem, och håll ordning på platserna.",
+    "oidcClients": "OIDC-klienter",
+    "oidcClientsDescription": "Hantera betrodda applikationer som erbjuder inloggning med CSK Hub."
   },
   "Members": {
     "title": "Medlemmar",
@@ -1094,5 +1097,33 @@
     "newMessage": "Nytt meddelande",
     "notification": "Avisering",
     "open": "Öppna"
+  },
+  "OidcClients": {
+    "title": "OIDC-klienter",
+    "description": "Hantera betrodda applikationer som erbjuder inloggning med CSK Hub.",
+    "discoveryUrl": "Discovery-URL",
+    "create": "Skapa klient",
+    "edit": "Redigera klient",
+    "rotate": "Byt klienthemlighet",
+    "enable": "Aktivera",
+    "disable": "Inaktivera",
+    "enabled": "Aktiverad",
+    "disabled": "Inaktiverad",
+    "empty": "Inga klienter registrerade.",
+    "name": "Namn",
+    "redirectUrls": "Omdirigeringsadresser",
+    "redirectHelp": "En exakt callback-adress per rad. HTTPS krävs i produktion.",
+    "save": "Spara",
+    "error": "Åtgärden kunde inte slutföras. Kontrollera värdena och försök igen.",
+    "rotateWarning": "Den nuvarande hemligheten slutar fungera direkt. Uppdatera applikationen med den nya hemligheten.",
+    "credentials": "Klientuppgifter",
+    "secretWarning": "Kopiera hemligheten nu. Den visas inte igen.",
+    "clientId": "Klient-ID",
+    "secret": "Klienthemlighet",
+    "copy": "Kopiera hemlighet",
+    "consentTitle": "Logga in på {name}",
+    "consentDescription": "Tillåt att applikationen får den begärda identitetsinformationen?",
+    "allow": "Tillåt",
+    "deny": "Neka"
   }
 }

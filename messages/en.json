@@ -208,7 +208,8 @@
       "adminEventsNew": "New Event",
       "adminEventLocations": "Locations",
       "eventsNew": "New Event",
-      "eventsManage": "Manage Events"
+      "eventsManage": "Manage Events",
+      "adminOidcClients": "OIDC clients"
     },
     "members": "Members",
     "quickAccess": "Quick access",
@@ -281,7 +282,9 @@
     "groups": "Groups and positions",
     "groupsDescription": "The Board, committees and other groups, with their members and Positions.",
     "events": "Events",
-    "eventsDescription": "Create Events in the CSK calendar, publish, cancel and delete them, and keep the Locations."
+    "eventsDescription": "Create Events in the CSK calendar, publish, cancel and delete them, and keep the Locations.",
+    "oidcClients": "OIDC clients",
+    "oidcClientsDescription": "Manage trusted applications that offer Sign in with CSK Hub."
   },
   "Members": {
     "title": "Members",
@@ -1094,5 +1097,33 @@
     "newMessage": "New Message",
     "notification": "Notification",
     "open": "Open"
+  },
+  "OidcClients": {
+    "title": "OIDC clients",
+    "description": "Manage trusted applications that offer Sign in with CSK Hub.",
+    "discoveryUrl": "Discovery URL",
+    "create": "Create client",
+    "edit": "Edit client",
+    "rotate": "Rotate secret",
+    "enable": "Enable",
+    "disable": "Disable",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "empty": "No clients registered.",
+    "name": "Name",
+    "redirectUrls": "Redirect URLs",
+    "redirectHelp": "One exact callback URL per line. HTTPS is required in production.",
+    "save": "Save",
+    "error": "The action could not be completed. Check the values and try again.",
+    "rotateWarning": "The current secret stops working immediately. Update the application with the new secret.",
+    "credentials": "Client credentials",
+    "secretWarning": "Copy this secret now. It will not be displayed again.",
+    "clientId": "Client ID",
+    "secret": "Client secret",
+    "copy": "Copy secret",
+    "consentTitle": "Sign in to {name}",
+    "consentDescription": "Allow this application to receive the requested identity information?",
+    "allow": "Allow",
+    "deny": "Deny"
   }
 }

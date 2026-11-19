@@ -246,6 +246,7 @@ describe("member and administrative policies", () => {
 
   test("administrative grants are explicit and unavailable to other actors", () => {
     for (const action of [
+      "oidcClient.manage",
       "admin.access",
       "event.administer",
       "org.manage",
