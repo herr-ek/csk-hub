@@ -1,4 +1,4 @@
-import type { GroupType } from "@/features/org-structure/model"
+import type { GroupType } from "@/core/org-structure"
 import type { VoiceFamily } from "@/features/voice/model"
 
 /** How a Rehearsal is labelled, derived from its Targets and Series, never stored. */
@@ -13,11 +13,11 @@ type KindTarget = { groupType: GroupType | null; voiceFamily: VoiceFamily | null
  */
 export function rehearsalKind(rehearsal: { seriesId: string | null; targets: readonly KindTarget[] }): RehearsalKind {
   const [only, ...others] = rehearsal.targets
-  const choirOnly = only !== undefined && others.length === 0 && only.groupType === "Choir" && only.voiceFamily === null
+  const choirOnly = only !== undefined && others.length === 0 && only.groupType === "choir" && only.voiceFamily === null
   if (choirOnly) return rehearsal.seriesId === null ? "ExtraRehearsal" : "ChoirRehearsal"
 
   const sectional =
     rehearsal.targets.length > 0 &&
-    rehearsal.targets.every(({ groupType, voiceFamily }) => groupType === "Section" || voiceFamily !== null)
+    rehearsal.targets.every(({ groupType, voiceFamily }) => groupType === "section" || voiceFamily !== null)
   return sectional ? "SectionalRehearsal" : "Rehearsal"
 }

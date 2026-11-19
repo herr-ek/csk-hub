@@ -2,6 +2,8 @@ import "server-only"
 
 import { requirePermission } from "@/core/authz"
 
+import { GroupType } from "@/core/org-structure"
+
 import { compareVoices, type Voice } from "@/features/voice/model"
 import { type GroupSummary, listGroupSummaries } from "../group-summaries"
 
@@ -14,9 +16,11 @@ export async function getChoirPlacement(): Promise<ChoirPlacement> {
   await requirePermission({ action: "org.manage" })
   const summaries = await listGroupSummaries()
   return summaries
-    .filter(({ type }) => type === "Choir")
+    .filter(({ type }) => type === GroupType.Choir)
     .map((choir) => ({
       choir,
-      sections: summaries.filter(({ choirId, type }) => choirId === choir.id && type === "Section").sort(bySectionVoice)
+      sections: summaries
+        .filter(({ choirId, type }) => choirId === choir.id && type === GroupType.Section)
+        .sort(bySectionVoice)
     }))
 }

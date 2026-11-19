@@ -8,7 +8,7 @@ import { seedGroups } from "./seed-groups"
 import { seedPosts } from "./seed-posts"
 import { seedUsers } from "./seed-users"
 
-/** Seeds people, placements, group history, Posts and Events together; any fixture conflict rolls back this demo transaction. */
+/** Seeds people, placements, Posts and Events together; any fixture conflict rolls back this demo transaction. */
 export async function seedDemo(database: SeedDatabase) {
   return database.transaction(async (tx) => ({
     users: await seedUsers(tx),

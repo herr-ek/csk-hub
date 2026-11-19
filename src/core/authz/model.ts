@@ -1,6 +1,6 @@
 import type { user } from "@/core/db/schema/auth"
 import type { event } from "@/core/db/schema/events"
-import type { group, groupMember, positionHolder } from "@/core/db/schema/org-structure"
+import type { group, positionAppointment } from "@/core/db/schema/org-structure"
 import type { post } from "@/core/db/schema/posts"
 import type { AudienceMembership, AudienceTarget } from "./event-audience"
 
@@ -9,20 +9,16 @@ export type PostAttributes = Readonly<Pick<typeof post.$inferSelect, "id" | "aut
 export type GroupAttributes = Readonly<Pick<typeof group.$inferSelect, "id" | "type" | "active">>
 export type MemberAttributes = Readonly<Pick<typeof user.$inferSelect, "id" | "banned">>
 
-/** Period facts retain today's endDate === null semantics, including future start dates. */
-export type MembershipAttributes = Readonly<
-  Pick<typeof groupMember.$inferSelect, "userId" | "groupId" | "startDate" | "endDate">
->
-export type PositionHoldingAttributes = Readonly<
-  Pick<typeof positionHolder.$inferSelect, "userId" | "groupId" | "positionId" | "startDate" | "endDate">
+/** Dated appointments use Stockholm calendar dates and exclusive end boundaries. */
+export type PositionAppointmentAttributes = Readonly<
+  Pick<typeof positionAppointment.$inferSelect, "userId" | "contextGroupId" | "positionCode" | "startDate" | "endDate">
 >
 
 type PostContext = Readonly<{ post: PostAttributes | null }>
 type GroupContext = Readonly<{ group: GroupAttributes | null }>
 type GroupWorkContext = GroupContext &
   Readonly<{
-    memberships: readonly MembershipAttributes[]
-    positionHoldings: readonly PositionHoldingAttributes[]
+    positionAppointments: readonly PositionAppointmentAttributes[]
   }>
 export type EventAttributes = Readonly<Pick<typeof event.$inferSelect, "id" | "organiserGroupId">>
 type EventContext = GroupWorkContext & Readonly<{ event: EventAttributes | null }>

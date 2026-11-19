@@ -1,23 +1,30 @@
 "use server"
 
 import { z } from "zod"
-import { archiveGroup, createGroup, renameGroup } from "../../structure"
+import { createOrganisationGroup } from "../../appointments"
+import { archiveGroup, renameGroup } from "../../structure"
 import type { GroupCommandState } from "../command-state"
 import { fields, value } from "../fields"
 import { runGroupCommand } from "../run-command"
 
 const createGroupSchema = z.object({
-  name: fields.name,
+  name: fields.name.optional(),
   type: fields.creatableGroupType,
-  choirId: fields.id.optional()
+  choirId: fields.id.optional(),
+  organisationYear: z.coerce.number().int().min(1000).max(9998).optional()
 })
 
 export async function createGroupAction(_state: GroupCommandState, formData: FormData) {
   return runGroupCommand(
     "create",
     createGroupSchema,
-    { name: value(formData, "name"), type: value(formData, "type"), choirId: value(formData, "choirId") },
-    (input, tx) => createGroup(tx, { name: input.name, type: input.type, choirId: input.choirId ?? null })
+    {
+      name: value(formData, "name"),
+      type: value(formData, "type"),
+      choirId: value(formData, "choirId"),
+      organisationYear: value(formData, "organisationYear")
+    },
+    (input, tx) => createOrganisationGroup(tx, input)
   )
 }
 

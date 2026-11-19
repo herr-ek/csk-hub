@@ -1,6 +1,15 @@
 import { eq } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { choir, group, groupMember, position, positionHolder } from "@/core/db/schema/org-structure"
+import { choir, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import {
+  cskToday,
+  currentOrganisationYear,
+  GROUP_POLICIES,
+  GroupType,
+  hasExplicitGroupName,
+  organisationYearPeriod,
+  PositionCode
+} from "@/core/org-structure"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
 import type { EventInput } from "./events"
 import type { EventResult } from "./model"
@@ -28,32 +37,60 @@ function fixture({ db, drop }: TestDatabase) {
     },
 
     /** A new Choir group, named uniquely unless a name is given. */
-    async choir(name = uniqueName("Choir")) {
-      const [row] = await db.insert(group).values({ name, type: "Choir" }).returning({ id: group.id })
+    async choir(name = uniqueName("choir")) {
+      const [row] = await db.insert(group).values({ name, type: GroupType.Choir }).returning({ id: group.id })
       if (!row) throw new Error("No Choir created.")
       await db.insert(choir).values({ groupId: row.id })
       return row.id
     },
 
     /** A new group of another type; a Section needs its Choir. */
-    async group(type: Exclude<(typeof group.type.enumValues)[number], "Choir">, choirId: string | null = null) {
+    async group(type: `${Exclude<GroupType, GroupType.Choir>}`, choirId: string | null = null) {
       const [row] = await db
         .insert(group)
-        .values({ name: uniqueName(type), type, choirId })
+        .values({
+          name: hasExplicitGroupName(type as GroupType) ? uniqueName(type) : null,
+          type: type as GroupType,
+          choirId,
+          organisationYear:
+            GROUP_POLICIES[type as GroupType].lifetime === "annual" ? currentOrganisationYear(cskToday()) : null
+        })
         .returning({ id: group.id })
       if (!row) throw new Error("No group created.")
+      if (type === GroupType.Section) await db.insert(section).values({ groupId: row.id, voice: "B" })
       return row.id
     },
 
-    /** A complete direct relationship, for authorization fixtures independent of org workflows. */
+    /** A valid contextual appointment, with independent singing where required. */
     async representative(userId: string, groupId: string) {
-      const [role] = await db
-        .insert(position)
-        .values({ name: uniqueName("Position") })
+      const [context] = await db.select().from(group).where(eq(group.id, groupId))
+      if (!context) throw new Error("Missing Group")
+      const annual = context.type === GroupType.Board
+      if (!annual)
+        await db.insert(directMembership).values({
+          userId,
+          groupId,
+          startDate: "2020-01-01",
+          voice: context.type === GroupType.GigGroup ? "B1" : null
+        })
+      const [appointment] = await db
+        .insert(positionAppointment)
+        .values({
+          userId,
+          contextGroupId: groupId,
+          positionCode: annual
+            ? PositionCode.Chair
+            : context.type === GroupType.Choir
+              ? PositionCode.Conductor
+              : PositionCode.GigLeader,
+          organisationYear: annual ? context.organisationYear : null,
+          ...(annual
+            ? organisationYearPeriod(context.organisationYear as number)
+            : { startDate: "2020-01-01", endDate: null })
+        })
         .returning()
-      await db.insert(groupMember).values({ userId, groupId, startDate: "2020-01-01" })
-      await db.insert(positionHolder).values({ userId, groupId, positionId: role.id, startDate: "2020-01-01" })
-      return role.id
+      if (!appointment) throw new Error("No appointment created")
+      return appointment.id
     },
 
     async archiveGroup(groupId: string) {
