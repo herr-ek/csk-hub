@@ -23,7 +23,7 @@ export async function notifyUsers(message: string, userIds?: string[]): Promise<
       const inserted = await queueActivity(
         tx,
         recipients.map(({ id }) => id),
-        { kind: "notification.created" },
+        { kind: "notification.created", toast: { title: { key: "notification" }, description: message } },
         { body: message, href: "/", push: false }
       )
       return inserted ? recipients.length : 0

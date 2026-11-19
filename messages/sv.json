@@ -1091,6 +1091,7 @@
     }
   },
   "Realtime": {
+    "groupMessage": "{sender} · {conversation}",
     "newMessage": "Nytt meddelande",
     "notification": "Avisering",
     "open": "Öppna"

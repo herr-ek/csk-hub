@@ -1,9 +1,11 @@
 import { z } from "zod"
+import { activityToastTextSchema } from "./toast-text"
 
 export const activityChangeSchema = z.object({
   kind: z.enum(["message.created", "conversation.changed", "unread.changed", "posts.changed", "notification.created"]),
   conversationId: z.uuid().optional(),
-  sequence: z.number().int().positive().optional()
+  sequence: z.number().int().positive().optional(),
+  toast: z.object({ title: activityToastTextSchema, description: z.string().optional() }).optional()
 })
 
 export type ActivityChange = z.infer<typeof activityChangeSchema>
@@ -12,8 +14,7 @@ export const activityEventSchema = activityChangeSchema.extend({
   id: z.uuid(),
   notify: z.boolean(),
   notifyUntil: z.number().finite().optional(),
-  href: z.string().optional(),
-  body: z.string().optional()
+  href: z.string().optional()
 })
 
 export const activityReadySchema = z.object({ reset: z.boolean() })
