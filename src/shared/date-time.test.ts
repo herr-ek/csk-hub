@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { completeTime, followStart, maskTime, stepTime } from "./date-time"
+import { completeTime, followStart, maskTime, overwriteTime, stepTime } from "./date-time"
 
 /** Types `keys` one at a time into an empty time box. */
 function type(keys: string) {
@@ -28,6 +28,19 @@ describe("time mask", () => {
 
   test("lets the colon go when deleting", () => {
     expect(maskTime("18", "18:", true)).toBe("18")
+  })
+
+  test("overwrites the digit at the caret when typing inside the time", () => {
+    expect(overwriteTime("18:30", 1, "9")).toEqual({ text: "19:30", caret: 3 })
+    expect(overwriteTime("18:30", 2, "4")).toEqual({ text: "18:40", caret: 4 })
+    expect(overwriteTime("18:30", 4, "5")).toEqual({ text: "18:35", caret: 5 })
+    expect(overwriteTime("18:30", 0, "9")).toEqual({ text: "09:30", caret: 3 })
+    expect(overwriteTime("18:30", 0, "2")).toEqual({ text: "20:30", caret: 1 })
+  })
+
+  test("ignores an overwrite that cannot make a real time", () => {
+    expect(overwriteTime("18:30", 3, "7")).toBeNull()
+    expect(overwriteTime("20:30", 1, "5")).toBeNull()
   })
 
   test("completes partly typed times on leaving the box", () => {

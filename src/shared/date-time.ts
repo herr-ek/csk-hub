@@ -25,6 +25,26 @@ export function maskTime(text: string, previous: string, deleting: boolean): str
   return digits
 }
 
+/**
+ * A digit typed with the caret at `caret`, inside `text` rather than at its end: it replaces the
+ * digit there, stepping over the colon, instead of pushing the rest along. A 3–9 over the hour's
+ * first digit becomes `0` and that digit; a 2 over `18` gives `20`. Returns the new text and the
+ * caret after the digit, or null for a keystroke that cannot make a real time.
+ */
+export function overwriteTime(text: string, caret: number, digit: string) {
+  if (!/^\d$/.test(digit)) return null
+  let at = text[caret] === ":" ? caret + 1 : caret
+  let next = text.slice(0, at) + digit + text.slice(at + 1)
+  if (at === 0 && /[3-9]/.test(digit)) {
+    next = `0${digit}${text.slice(2)}`
+    at = 1
+  } else if (at === 0 && !possibleTimeDigits(next.replace(/\D/g, ""))) {
+    next = `${digit}0${text.slice(2)}`
+  }
+  if (!possibleTimeDigits(next.replace(/\D/g, ""))) return null
+  return { text: next, caret: next[at + 1] === ":" ? at + 2 : at + 1 }
+}
+
 /** Partly typed text completed to `HH:mm` (`9` → `09:00`, `18:3` → `18:30`), `""` for none, or null. */
 export function completeTime(text: string): string | null {
   const digits = text.replace(/\D/g, "")
