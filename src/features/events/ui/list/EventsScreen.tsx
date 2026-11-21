@@ -1,4 +1,4 @@
-import { CalendarPlus, MapPin } from "lucide-react"
+import { CalendarPlus, ListChecks, MapPin } from "lucide-react"
 import { io } from "next/cache"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
@@ -70,6 +70,12 @@ async function EventsHeader() {
             <Link href={ROUTES.adminEventLocations} className={buttonVariants({ variant: "outline" })}>
               <MapPin aria-hidden="true" />
               {t("list.locations")}
+            </Link>
+          ) : null}
+          {canAdminister ? (
+            <Link href={ROUTES.adminAbsenceReasons} className={buttonVariants({ variant: "outline" })}>
+              <ListChecks aria-hidden="true" />
+              {t("list.absenceReasons")}
             </Link>
           ) : null}
           {canCreate ? (

@@ -45,6 +45,18 @@ export const ERROR_FIELD: Record<EventCommandError, EventFormField> = {
   "target-duplicate": "targets",
   "detail-incomplete": "details",
   "user-not-found": "extension",
+  // Responses and Absence reasons have one-field forms of their own, so all show below them.
+  "not-in-audience": "form",
+  "responses-closed": "form",
+  "event-started": "form",
+  "maybe-not-allowed": "form",
+  "absence-reason-required": "form",
+  "absence-reason-conflict": "form",
+  "reason-only-with-no": "form",
+  "absence-reason-not-found": "form",
+  "absence-reason-archived": "form",
+  "absence-reason-label-required": "form",
+  "absence-reason-label-taken": "form",
   "invalid-input": "form",
   "access-denied": "form",
   unexpected: "form"

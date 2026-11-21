@@ -7,7 +7,16 @@ import { forCurrentRequest } from "@/core/authz"
 import { evaluatePermission } from "@/core/authz/policy-registry"
 import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
-import { event, eventDetail, eventTarget, gig, location, rehearsal, socialEvent } from "@/core/db/schema/events"
+import {
+  event,
+  eventDetail,
+  eventResponse,
+  eventTarget,
+  gig,
+  location,
+  rehearsal,
+  socialEvent
+} from "@/core/db/schema/events"
 import {
   getGroupAuthorizationFacts,
   listGroupNames,
@@ -18,16 +27,20 @@ import {
 import type { RichTextDocument } from "@/features/rich-text"
 import type { VoiceFamily } from "@/features/voice/model"
 import { eventGroupContext } from "../access"
-import type { AudienceTarget } from "../audience"
+import { type AudienceTarget, inAudience } from "../audience"
 import {
   byPresentValue,
+  collectsResponses,
   type EventStatus,
   type EventType,
+  type ParticipationMode,
   type RehearsalKind,
+  type RsvpAnswer,
   rehearsalKind,
   stockholmDate
 } from "../model"
 import type { EventsDatabase } from "../operation"
+import { listActiveAudience, listPickableAbsenceReasons, listResponses } from "../responses"
 
 /** A Target as the calendar shows it: the group's name for the words, its type for the rules. */
 export type CalendarTarget = AudienceTarget & { groupName: string | null }
@@ -45,6 +58,8 @@ export type UpcomingEvent = {
   allDay: boolean
   /** The Event's own location text when set, otherwise its Location's name. */
   location: string | null
+  /** Set exactly on a Published Event that collects Responses: the User's answer, null before one. */
+  response: { answer: RsvpAnswer | null; respondBy: Date | null } | null
 }
 
 export type UpcomingEvents = { events: UpcomingEvent[] }
@@ -72,10 +87,14 @@ export async function listUpcomingEventsForUser(
       organiserGroupId: event.organiserGroupId,
       seriesId: event.seriesId,
       locationText: event.locationText,
-      locationName: location.name
+      locationName: location.name,
+      participationMode: event.participationMode,
+      respondBy: event.respondBy,
+      answer: eventResponse.answer
     })
     .from(event)
     .leftJoin(location, eq(location.id, event.locationId))
+    .leftJoin(eventResponse, and(eq(eventResponse.eventId, event.id), eq(eventResponse.userId, userId)))
     .where(and(ne(event.status, "Draft"), gt(event.endsAt, now)))
     .orderBy(asc(event.startsAt), asc(event.title), asc(event.id))
     .for("share", { of: event })
@@ -119,7 +138,11 @@ export async function listUpcomingEventsForUser(
         startsAt: row.startsAt,
         endsAt: row.endsAt,
         allDay: row.allDay,
-        location: row.locationText ?? row.locationName
+        location: row.locationText ?? row.locationName,
+        response:
+          row.status === "Published" && collectsResponses(row.participationMode)
+            ? { answer: row.answer, respondBy: row.respondBy }
+            : null
       }
     ]
   })
@@ -161,6 +184,8 @@ export async function getEventPage(
       endsAt: event.endsAt,
       allDay: event.allDay,
       callTime: event.callTime,
+      respondBy: event.respondBy,
+      participationMode: event.participationMode,
       seriesId: event.seriesId,
       locationText: event.locationText,
       locationName: location.name,
@@ -225,7 +250,64 @@ export async function getEventPage(
     leaderName: row.type === "Rehearsal" ? row.leaderName : null,
     responsibleName: row.type === "Gig" ? row.responsibleName : null,
     costInfo: row.type === "Social" ? row.costInfo : null,
-    targets: targets.map(({ groupName, voiceFamily }) => ({ groupName, voiceFamily }))
+    targets: targets.map(({ groupName, voiceFamily }) => ({ groupName, voiceFamily })),
+    responses: collectsResponses(row.participationMode)
+      ? await responsesForAudience(database, row, viewer.userId, {
+          inAudience: inAudience(memberships, { ...row, targets }, now),
+          // Who comes to a Rehearsal is for those who run it; other Events show it to their Audience.
+          seesAnswers: row.type !== "Rehearsal" || canManage,
+          now
+        })
+      : null
+  }
+}
+
+/**
+ * An Event's Responses as its Audience sees them: names per answer and how many have not answered,
+ * never comments or reasons, which only the viewer's own Response carries. The summary is null
+ * for a viewer who may not see it. The viewer may answer while the Event is Published and has not
+ * started, if they are in its Audience; an organiser outside it may only look.
+ */
+async function responsesForAudience(
+  database: EventsDatabase,
+  row: {
+    id: string
+    status: EventStatus
+    participationMode: ParticipationMode
+    startsAt: Date
+    respondBy: Date | null
+  },
+  viewerId: string,
+  viewer: { inAudience: boolean; seesAnswers: boolean; now: Date }
+) {
+  const { now } = viewer
+  const [responses, audience] = await Promise.all([
+    listResponses(database, row.id),
+    viewer.seesAnswers ? listActiveAudience(database, row, now) : []
+  ])
+  const own = responses.find(({ userId }) => userId === viewerId) ?? null
+  const answered = new Set(responses.map(({ userId }) => userId))
+  const names = (answer: RsvpAnswer) =>
+    responses.flatMap((response) => (response.answer === answer && response.name ? [response.name] : []))
+  return {
+    mode: row.participationMode,
+    respondBy: row.respondBy,
+    canRespond: viewer.inAudience && row.status === "Published" && now < row.startsAt,
+    own: own && {
+      answer: own.answer,
+      comment: own.comment,
+      absenceReasonId: own.absenceReasonId,
+      reasonText: own.reasonText,
+      respondedAt: own.respondedAt,
+      late: row.respondBy !== null && own.respondedAt > row.respondBy
+    },
+    reasons: await listPickableAbsenceReasons(database, own?.absenceReasonId ?? null),
+    summary: viewer.seesAnswers
+      ? {
+          byAnswer: { Yes: names("Yes"), No: names("No"), Maybe: names("Maybe") },
+          notAnswered: audience.filter(({ id }) => !answered.has(id)).length
+        }
+      : null
   }
 }
 

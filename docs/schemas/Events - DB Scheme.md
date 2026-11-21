@@ -313,7 +313,7 @@ scope(g):  g IS NULL                          -> all sections
 - [app] In `ResponseRequired`: any answer; a reason with No is optional.
 - [app] Only active `AbsenceReasons` can be selected. Archived ones stay on old rows.
 - [app] A response after `respondBy` is accepted but flagged late (`respondedAt > respondBy`). It is not blocked.
-- [app] **Visibility**: the answer itself is visible to the audience. `comment`, `absenceReasonId` and `reasonText` are visible only to the singer, Admins and current Event managers.
+- [app] **Visibility**: the answer itself is visible to the audience, except on a Rehearsal, where only Admins and current Event managers see who answered what. `comment`, `absenceReasonId` and `reasonText` are visible only to the singer, Admins and current Event managers.
 - [app] A response is kept when the singer later leaves (Inactive User).
 
 **Registrations (future application workflow)**
@@ -467,7 +467,7 @@ Common queries:
 2. **Late responses and registrations** are flagged, not blocked.
 3. **Lifecycle**: Cancelled can be reinstated; Published can't go back to Draft.
 4. **Edit rights**: any position on a choir counts (not just Conductor/Notfiskal), per the groups spec.
-5. **Answer visibility**: the audience sees who answered what and who is registered; only comments, reasons and registration answers are restricted.
+5. **Answer visibility**: the audience sees who answered what (except on Rehearsals, where only Event managers do) and who is registered; only comments, reasons and registration answers are restricted.
 6. **Gig contact**: `responsibleUserId` is optional, also for publishing.
 7. **Erasure** keeps the preset absence reason and choice/checkbox registration answers (anonymous) and wipes custom text and comments.
 

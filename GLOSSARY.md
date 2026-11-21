@@ -269,6 +269,21 @@ or strictly Yes or No with attendance expected), or a Registration from whoever 
 Each Event type has a default the organiser may override.
 _Avoid_: RSVP type, invitation type
 
+**Response**:
+A User's answer in advance to an Event in one of the two response modes: Yes, No or Maybe, or
+strictly Yes or No, where a No needs an Absence reason. Only the Audience answers, and only
+until the Event starts; an answer after the respond-by deadline counts but is late. Who
+answered what is visible to the Audience, except on a Rehearsal, where only those who manage it
+see it; a comment or reason only to the User and the organisers.
+No Response means "not answered yet", never a No. Shown as "RSVP" in the Hub.
+_Avoid_: RSVP (outside the Hub's copy), reply, Registration, Attendance
+
+**Absence reason**:
+Why a User answers No: one of the Admins' preset reasons, such as Sick or Exam, or their own
+words. A reason is required in the strict response mode and optional otherwise. Preset reasons
+are archived, never deleted, and an archived one stays on the Responses that give it.
+_Avoid_: Excuse, apology
+
 **Event detail**:
 A labelled value an organiser shows on an Event, such as "Dress code: Kavaj" or "Bring: Music
 folder". Information to the Audience, in the organiser's order; never something the Hub

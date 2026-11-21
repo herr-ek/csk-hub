@@ -212,6 +212,7 @@
       "adminEvents": "Events",
       "adminEventsNew": "New Event",
       "adminEventLocations": "Locations",
+      "adminAbsenceReasons": "Absence reasons",
       "eventsNew": "New Event",
       "eventsManage": "Manage Events",
       "adminOidcClients": "OIDC clients"
@@ -921,6 +922,11 @@
       "ResponseRequiredStrictDescription": "The audience answers Yes or No and is expected to attend; a No needs a reason.",
       "RegistrationDescription": "Whoever wants to attend registers. The audience is not expected to attend."
     },
+    "answers": {
+      "Yes": "Yes",
+      "No": "No",
+      "Maybe": "Maybe"
+    },
     "errors": {
       "event-not-found": "This Event no longer exists.",
       "title-required": "Give the Event a title.",
@@ -945,6 +951,17 @@
       "target-duplicate": "Two Targets are the same. Remove one of them.",
       "detail-incomplete": "Each Event detail needs both a label and a value.",
       "user-not-found": "That User no longer exists.",
+      "not-in-audience": "Only the people this Event is for can answer it.",
+      "responses-closed": "This Event takes no answers.",
+      "event-started": "The Event has started, so answers can no longer be changed.",
+      "maybe-not-allowed": "This Event needs a Yes or a No.",
+      "absence-reason-required": "Choose a reason, or describe one under Other.",
+      "absence-reason-conflict": "Give one reason: a listed one or your own, not both.",
+      "reason-only-with-no": "A reason goes only with No.",
+      "absence-reason-not-found": "That reason no longer exists. Choose another.",
+      "absence-reason-archived": "That reason is no longer offered. Choose another.",
+      "absence-reason-label-required": "Enter a reason.",
+      "absence-reason-label-taken": "An active reason already has that wording.",
       "invalid-input": "Some of the values are not valid. Check the form and try again.",
       "unexpected": "Something went wrong. Please try again.",
       "access-denied": "You no longer have permission to manage this Event."
@@ -1048,6 +1065,7 @@
       "title": "Events",
       "description": "Events you can manage, in any status.",
       "locations": "Locations",
+      "absenceReasons": "Absence reasons",
       "new": "New Event",
       "when": "Which Events",
       "upcoming": "Upcoming",
@@ -1089,6 +1107,26 @@
       "eventCount": "{count, plural, =0 {Used by no Events} one {Used by # Event} other {Used by # Events}}",
       "openMap": "Map"
     },
+    "absenceReasons": {
+      "title": "Absence reasons",
+      "description": "The preset reasons for declining an Event. An archived reason stays on the answers that give it, but is not offered for new ones.",
+      "create": "New reason",
+      "label": "Reason",
+      "saved": "The reason has been saved.",
+      "rename": "Rename",
+      "renameTitle": "Rename {label}",
+      "renameAffectsResponses": "{count, plural, one {# answer gives} other {# answers give}} this reason and will show the change.",
+      "save": "Save",
+      "archive": "Archive",
+      "archiveTitle": "Archive {label}?",
+      "archiveExplanation": "Answers that give it keep it, but it is no longer offered. Reasons are never deleted.",
+      "archived": "The reason has been archived.",
+      "none": "There are no active reasons yet.",
+      "showArchived": "Archived reasons ({count})",
+      "noneArchived": "No reason has been archived.",
+      "archivedBadge": "Archived",
+      "responseCount": "{count, plural, =0 {Not given in any answer} one {Given in # answer} other {Given in # answers}}"
+    },
     "calendar": {
       "title": "Upcoming Events",
       "description": "What is coming up for you in the CSK calendar.",
@@ -1127,6 +1165,51 @@
         "cost": "Cost",
         "edit": "Edit Event"
       }
+    },
+    "respond": {
+      "title": "Who's coming",
+      "respondBy": "Answer by {deadline}",
+      "yourAnswer": "Your answer: {answer}",
+      "late": "Late",
+      "answerCount": "{answer} ({count})",
+      "nobody": "Nobody yet",
+      "notAnswered": "{count, plural, =0 {Everyone has answered.} one {# person has not answered yet.} other {# people have not answered yet.}}",
+      "notAnsweredBy": "Not answered · answer by {deadline}",
+      "notAnsweredYet": "Not answered",
+      "answer": "Are you coming?",
+      "reason": "Reason",
+      "reasonOptional": "Reason (optional)",
+      "noReason": "No reason given",
+      "otherReason": "Other",
+      "reasonText": "Your reason",
+      "comment": "Comment (optional)",
+      "privacy": "Your comment and reason are visible only to you and the organisers.",
+      "saved": "Your answer has been saved.",
+      "noTitle": "Why can't you come?",
+      "commentTitle": "Comment on your answer",
+      "addComment": "Add a comment",
+      "editComment": "Edit comment",
+      "save": "Save",
+      "answered": {
+        "Yes": "You're coming",
+        "No": "You can't come",
+        "Maybe": "You might come"
+      },
+      "changeAnswer": "Change your answer"
+    },
+    "responses": {
+      "title": "Responses",
+      "counts": "Yes {Yes} · No {No} · Maybe {Maybe} · Not answered {notAnswered}",
+      "none": "Nobody has answered yet.",
+      "member": "Member",
+      "answer": "Answer",
+      "reason": "Reason",
+      "comment": "Comment",
+      "answeredAt": "Answered",
+      "erased": "Erased member",
+      "late": "Late",
+      "notAnsweredTitle": "Not answered ({count})",
+      "everyoneAnswered": "Everyone has answered."
     }
   },
   "Realtime": {

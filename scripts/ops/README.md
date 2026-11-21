@@ -17,7 +17,7 @@ bun run ops seed-admin           # admin@example.com with a generated password; 
 bun run ops seed-users           # 100 verified local example accounts, including three Admins
 bun run ops seed-groups          # balanced placements, groups, Positions and their history
 bun run ops seed-posts           # 24 published example Posts, after seed-users
-bun run ops seed-events          # example Events, Locations and a gig group, after seed-groups
+bun run ops seed-events          # example Events, Locations, a gig group, Absence reasons and Responses, after seed-groups
 bun run ops seed-demo            # reference data + all of the above, after migrating
 
 bun run ops --prod               # the menu, targeting production

@@ -13,19 +13,23 @@ import type { EventCommandState } from "./command-state"
 
 /**
  * Require active identity, validate input, then check the exact Event policy in its write
- * transaction. Location commands require Admin-only event.administer. Domain commands remain independent
- * of request sessions for transactional composition and operational use.
+ * transaction. Location and Absence reason commands require Admin-only event.administer. A
+ * Response needs only active identity (`"app.access"`): the command itself refuses anyone outside
+ * the Audience. Domain commands remain independent of request sessions for transactional
+ * composition and operational use.
  */
 export async function runEventsCommand<Schema extends z.ZodType, T>(
   name: string,
   schema: Schema,
   values: unknown,
   command: (input: z.infer<Schema>, actorId: string, database: Database) => Promise<EventResult<T>>,
-  permission?: (input: z.infer<Schema>) => {
-    action: "event.create" | "event.update" | "event.changeStatus" | "event.delete"
-    eventId: string | null
-    proposed?: { organiserGroupId: string | null }
-  }
+  permission?:
+    | "app.access"
+    | ((input: z.infer<Schema>) => {
+        action: "event.create" | "event.update" | "event.changeStatus" | "event.delete"
+        eventId: string | null
+        proposed?: { organiserGroupId: string | null }
+      })
 ): Promise<{ state: EventCommandState; data?: T }> {
   const { userId } = await requirePermission({ action: permission ? "app.access" : "event.administer" })
 
@@ -34,7 +38,7 @@ export async function runEventsCommand<Schema extends z.ZodType, T>(
 
   let result: EventResult<T>
   try {
-    const request = permission?.(input.data)
+    const request = typeof permission === "function" ? permission(input.data) : undefined
     result = request
       ? await withEventPermission(request.action, request.eventId, request.proposed, (database, actorId) =>
           command(input.data, actorId, database)

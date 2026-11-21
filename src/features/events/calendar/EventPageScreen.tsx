@@ -8,13 +8,15 @@ import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
-import { stockholmInstant } from "../model"
+import { answersFor, stockholmInstant } from "../model"
 import { eventManagementPath } from "../ui/command-state"
 import { StatusBadge } from "../ui/StatusBadge"
 import { eventDays } from "./days"
 import { EventKind } from "./EventKind"
 import { type EventPage, getCurrentEventPage } from "./query"
+import { ResponseBar } from "./ResponseBar"
 
 /**
  * One Event as its Audience reads it. Anything the viewer may not see, including every Draft, is
@@ -55,8 +57,12 @@ export async function EventPageScreen({ eventId }: { eventId: string }) {
             </Badge>
           </div>
         </header>
+        {page.responses ? <ResponseRow eventId={page.id} responses={page.responses} /> : null}
         <EventFacts page={page} />
         {page.description ? <RichTextContent document={page.description} /> : null}
+        {page.responses?.summary ? (
+          <ResponseSummary mode={page.responses.mode} summary={page.responses.summary} />
+        ) : null}
       </article>
     </ContentPage>
   )
@@ -116,6 +122,80 @@ async function EventFacts({ page }: { page: EventPage }) {
         </Fact>
       ))}
     </dl>
+  )
+}
+
+type PageResponses = NonNullable<EventPage["responses"]>
+
+/** Answering the Event, first on the page, on one line; after the start, only the answer. */
+async function ResponseRow({ eventId, responses }: { eventId: string; responses: PageResponses }) {
+  const { own, canRespond } = responses
+  if (!canRespond && !own) return null
+  const [t, format] = await Promise.all([getTranslations("Events.respond"), getFormatter()])
+  const deadline = responses.respondBy
+    ? t("respondBy", { deadline: format.dateTime(responses.respondBy, { dateStyle: "medium", timeStyle: "short" }) })
+    : null
+
+  return (
+    <section className="rounded-xl border bg-card px-4 py-3 text-sm">
+      {canRespond ? (
+        <ResponseBar
+          eventId={eventId}
+          mode={responses.mode}
+          reasons={responses.reasons}
+          own={own}
+          deadline={deadline}
+        />
+      ) : own ? (
+        // Once the Event has started, or is cancelled, the answer is only shown.
+        <p className="flex flex-wrap items-center gap-2 font-medium">
+          {t(`answered.${own.answer}`)}
+          {own.late ? <Badge variant="destructive">{t("late")}</Badge> : null}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+/**
+ * Who has answered what, last on the page, when the read lets the viewer see it: on a Rehearsal
+ * only its managers do. Names only: comments and reasons are for the User and the organisers,
+ * and the page never reads anyone else's.
+ */
+async function ResponseSummary({
+  mode,
+  summary
+}: {
+  mode: PageResponses["mode"]
+  summary: NonNullable<PageResponses["summary"]>
+}) {
+  const [t, answers, format] = await Promise.all([
+    getTranslations("Events.respond"),
+    getTranslations("Events.answers"),
+    getFormatter()
+  ])
+  const { byAnswer } = summary
+  // Maybe stays listed if it was given before the mode became strict.
+  const shown = (["Yes", "No", "Maybe"] as const).filter(
+    (answer) => answersFor(mode).includes(answer) || byAnswer[answer].length > 0
+  )
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("title")}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+          {shown.map((answer) => (
+            <Fact key={answer} label={t("answerCount", { answer: answers(answer), count: byAnswer[answer].length })}>
+              {byAnswer[answer].length > 0 ? format.list(byAnswer[answer]) : t("nobody")}
+            </Fact>
+          ))}
+        </dl>
+        <p className="text-sm text-muted-foreground">{t("notAnswered", { count: summary.notAnswered })}</p>
+      </CardContent>
+    </Card>
   )
 }
 

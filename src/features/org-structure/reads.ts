@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm"
+import { type AnyColumn, and, asc, eq, gt, inArray, isNull, lte, or, type SQL, sql } from "drizzle-orm"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
@@ -73,10 +73,40 @@ export async function listMembershipsOfUser(
   userId: string,
   { from }: { from: IsoDate }
 ) {
+  const rows = await datedMemberships(database, userId, (period) =>
+    or(isNull(period.endDate), gt(period.endDate, from))
+  )
+  return rows.map(({ userId: _, ...membership }) => membership)
+}
+
+/**
+ * Every User's effective Memberships active on `date`, appointment grants included, for the Users
+ * who are members of one of `groupIds` that day; null means members of any group. Each User comes
+ * with all their Memberships of the day, not only the matching ones, so a caller can apply the
+ * Event audience rule, whose Voice families are found through Section Memberships.
+ */
+export async function listMembershipsOnDate(database: OrgStructureDatabase, date: IsoDate, groupIds: string[] | null) {
+  // shortcut: reads every Membership of the day and filters here; fine at CSK's size, push the
+  // group filter into SQL if Membership counts grow into the tens of thousands.
+  const rows = await datedMemberships(database, undefined, (period) =>
+    and(lte(period.startDate, date), or(isNull(period.endDate), gt(period.endDate, date)))
+  )
+  if (groupIds === null) return rows
+  const members = new Set(rows.filter(({ groupId }) => groupIds.includes(groupId)).map(({ userId }) => userId))
+  return rows.filter(({ userId }) => members.has(userId))
+}
+
+/** Direct and appointment-derived Memberships, optionally of one User, whose period `within` accepts. */
+async function datedMemberships(
+  database: OrgStructureDatabase,
+  userId: string | undefined,
+  within: (period: { startDate: AnyColumn; endDate: AnyColumn }) => SQL | undefined
+) {
   const derived = appointmentMemberships(database)
   const [direct, granted] = await Promise.all([
     database
       .select({
+        userId: directMembership.userId,
         groupId: group.id,
         groupType: group.type,
         choirId: group.choirId,
@@ -86,14 +116,10 @@ export async function listMembershipsOfUser(
       })
       .from(directMembership)
       .innerJoin(group, eq(group.id, directMembership.groupId))
-      .where(
-        and(
-          eq(directMembership.userId, userId),
-          or(isNull(directMembership.endDate), gt(directMembership.endDate, from))
-        )
-      ),
+      .where(and(userId ? eq(directMembership.userId, userId) : undefined, within(directMembership))),
     database
       .select({
+        userId: positionAppointment.userId,
         groupId: group.id,
         groupType: group.type,
         choirId: group.choirId,
@@ -104,12 +130,7 @@ export async function listMembershipsOfUser(
       .from(derived)
       .innerJoin(group, eq(group.id, derived.groupId))
       .innerJoin(positionAppointment, eq(positionAppointment.id, derived.appointmentId))
-      .where(
-        and(
-          eq(positionAppointment.userId, userId),
-          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, from))
-        )
-      )
+      .where(and(userId ? eq(positionAppointment.userId, userId) : undefined, within(positionAppointment)))
   ])
   return [...direct, ...granted].sort(
     (a, b) => a.startDate.localeCompare(b.startDate) || a.groupId.localeCompare(b.groupId)

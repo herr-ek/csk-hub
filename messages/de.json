@@ -212,6 +212,7 @@
       "adminEvents": "Veranstaltungen",
       "adminEventsNew": "Neue Veranstaltung",
       "adminEventLocations": "Orte",
+      "adminAbsenceReasons": "Abwesenheitsgründe",
       "eventsNew": "Neue Veranstaltung",
       "eventsManage": "Veranstaltungen verwalten",
       "adminOidcClients": "OIDC-Clients"
@@ -921,6 +922,11 @@
       "ResponseRequiredStrictDescription": "Das Publikum antwortet mit Ja oder Nein und wird erwartet; ein Nein braucht einen Grund.",
       "RegistrationDescription": "Wer kommen möchte, meldet sich an. Vom Publikum wird keine Teilnahme erwartet."
     },
+    "answers": {
+      "Yes": "Ja",
+      "No": "Nein",
+      "Maybe": "Vielleicht"
+    },
     "errors": {
       "event-not-found": "Diese Veranstaltung gibt es nicht mehr.",
       "title-required": "Gib der Veranstaltung einen Titel.",
@@ -945,6 +951,17 @@
       "target-duplicate": "Zwei Zielgruppen sind gleich. Entferne eine davon.",
       "detail-incomplete": "Jedes Detail braucht eine Bezeichnung und einen Wert.",
       "user-not-found": "Diesen Benutzer gibt es nicht mehr.",
+      "not-in-audience": "Nur die Personen, für die diese Veranstaltung ist, können antworten.",
+      "responses-closed": "Diese Veranstaltung nimmt keine Antworten an.",
+      "event-started": "Die Veranstaltung hat begonnen, die Antwort kann nicht mehr geändert werden.",
+      "maybe-not-allowed": "Diese Veranstaltung braucht ein Ja oder ein Nein.",
+      "absence-reason-required": "Wähle einen Grund oder beschreibe ihn unter Anderes.",
+      "absence-reason-conflict": "Gib einen Grund an: einen aus der Liste oder einen eigenen, nicht beides.",
+      "reason-only-with-no": "Ein Grund gehört nur zu einem Nein.",
+      "absence-reason-not-found": "Diesen Grund gibt es nicht mehr. Wähle einen anderen.",
+      "absence-reason-archived": "Dieser Grund wird nicht mehr angeboten. Wähle einen anderen.",
+      "absence-reason-label-required": "Gib einen Grund ein.",
+      "absence-reason-label-taken": "Ein aktiver Grund hat bereits diesen Wortlaut.",
       "invalid-input": "Einige Werte sind ungültig. Prüfe das Formular und versuche es erneut.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
       "access-denied": "Du hast keine Berechtigung mehr, diese Veranstaltung zu verwalten."
@@ -1048,6 +1065,7 @@
       "title": "Veranstaltungen",
       "description": "Veranstaltungen, die du verwalten kannst, in jedem Status.",
       "locations": "Orte",
+      "absenceReasons": "Abwesenheitsgründe",
       "new": "Neue Veranstaltung",
       "when": "Welche Veranstaltungen",
       "upcoming": "Anstehend",
@@ -1089,6 +1107,26 @@
       "eventCount": "{count, plural, =0 {Von keiner Veranstaltung genutzt} one {Von # Veranstaltung genutzt} other {Von # Veranstaltungen genutzt}}",
       "openMap": "Karte"
     },
+    "absenceReasons": {
+      "title": "Abwesenheitsgründe",
+      "description": "Die vorgegebenen Gründe, eine Veranstaltung abzusagen. Ein archivierter Grund bleibt bei den Antworten, die ihn angeben, wird aber für neue nicht angeboten.",
+      "create": "Neuer Grund",
+      "label": "Grund",
+      "saved": "Der Grund wurde gespeichert.",
+      "rename": "Umbenennen",
+      "renameTitle": "{label} umbenennen",
+      "renameAffectsResponses": "{count, plural, one {# Antwort gibt} other {# Antworten geben}} diesen Grund an und zeigen die Änderung.",
+      "save": "Speichern",
+      "archive": "Archivieren",
+      "archiveTitle": "{label} archivieren?",
+      "archiveExplanation": "Antworten, die ihn angeben, behalten ihn, aber er wird nicht mehr angeboten. Gründe werden nie gelöscht.",
+      "archived": "Der Grund wurde archiviert.",
+      "none": "Es gibt noch keine aktiven Gründe.",
+      "showArchived": "Archivierte Gründe ({count})",
+      "noneArchived": "Es wurde noch kein Grund archiviert.",
+      "archivedBadge": "Archiviert",
+      "responseCount": "{count, plural, =0 {In keiner Antwort angegeben} one {In # Antwort angegeben} other {In # Antworten angegeben}}"
+    },
     "calendar": {
       "title": "Kommende Veranstaltungen",
       "description": "Was im CSK-Kalender für dich ansteht.",
@@ -1127,6 +1165,51 @@
         "cost": "Kosten",
         "edit": "Veranstaltung bearbeiten"
       }
+    },
+    "respond": {
+      "title": "Wer kommt",
+      "respondBy": "Antworte bis {deadline}",
+      "yourAnswer": "Deine Antwort: {answer}",
+      "late": "Verspätet",
+      "answerCount": "{answer} ({count})",
+      "nobody": "Noch niemand",
+      "notAnswered": "{count, plural, =0 {Alle haben geantwortet.} one {# Person hat noch nicht geantwortet.} other {# Personen haben noch nicht geantwortet.}}",
+      "notAnsweredBy": "Nicht geantwortet · antworte bis {deadline}",
+      "notAnsweredYet": "Nicht geantwortet",
+      "answer": "Kommst du?",
+      "reason": "Grund",
+      "reasonOptional": "Grund (optional)",
+      "noReason": "Kein Grund angegeben",
+      "otherReason": "Anderes",
+      "reasonText": "Dein Grund",
+      "comment": "Kommentar (optional)",
+      "privacy": "Dein Kommentar und dein Grund sind nur für dich und die Organisatoren sichtbar.",
+      "saved": "Deine Antwort wurde gespeichert.",
+      "noTitle": "Warum kannst du nicht kommen?",
+      "commentTitle": "Kommentar zu deiner Antwort",
+      "addComment": "Kommentar hinzufügen",
+      "editComment": "Kommentar bearbeiten",
+      "save": "Speichern",
+      "answered": {
+        "Yes": "Du kommst",
+        "No": "Du kannst nicht kommen",
+        "Maybe": "Du kommst vielleicht"
+      },
+      "changeAnswer": "Antwort ändern"
+    },
+    "responses": {
+      "title": "Antworten",
+      "counts": "Ja {Yes} · Nein {No} · Vielleicht {Maybe} · Nicht geantwortet {notAnswered}",
+      "none": "Noch niemand hat geantwortet.",
+      "member": "Mitglied",
+      "answer": "Antwort",
+      "reason": "Grund",
+      "comment": "Kommentar",
+      "answeredAt": "Geantwortet",
+      "erased": "Gelöschtes Mitglied",
+      "late": "Verspätet",
+      "notAnsweredTitle": "Nicht geantwortet ({count})",
+      "everyoneAnswered": "Alle haben geantwortet."
     }
   },
   "Realtime": {

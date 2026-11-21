@@ -27,5 +27,16 @@ export type EventViolation =
   | "target-duplicate"
   | "detail-incomplete"
   | "user-not-found"
+  | "not-in-audience"
+  | "responses-closed"
+  | "event-started"
+  | "maybe-not-allowed"
+  | "absence-reason-required"
+  | "absence-reason-conflict"
+  | "reason-only-with-no"
+  | "absence-reason-not-found"
+  | "absence-reason-archived"
+  | "absence-reason-label-required"
+  | "absence-reason-label-taken"
 
 export type EventResult<T> = { success: true; data: T } | { success: false; error: EventViolation }

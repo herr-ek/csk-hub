@@ -31,8 +31,9 @@ type SearchParams = Record<string, string | string[] | undefined>
 /** The signed-in User's upcoming Events, by month and day in Europe/Stockholm, optionally of one type. */
 export async function UpcomingEventsScreen({ searchParams }: { searchParams: SearchParams }) {
   await io()
+  const now = new Date()
   const [{ events: upcoming }, t, format] = await Promise.all([
-    listCurrentUpcomingEvents(new Date()),
+    listCurrentUpcomingEvents(now),
     getTranslations("Events.calendar"),
     getFormatter()
   ])
@@ -72,7 +73,7 @@ export async function UpcomingEventsScreen({ searchParams }: { searchParams: Sea
                 <ul className="flex flex-col divide-y rounded-xl border">
                   {events.map((event) => (
                     <li key={event.id}>
-                      <UpcomingEventEntry event={event} />
+                      <UpcomingEventEntry event={event} now={now} />
                     </li>
                   ))}
                 </ul>
@@ -85,7 +86,7 @@ export async function UpcomingEventsScreen({ searchParams }: { searchParams: Sea
   )
 }
 
-async function UpcomingEventEntry({ event }: { event: UpcomingEvent }) {
+async function UpcomingEventEntry({ event, now }: { event: UpcomingEvent; now: Date }) {
   const [t, format] = await Promise.all([getTranslations("Events.calendar"), getFormatter()])
   const { firstDay, lastDay } = eventDays(event)
   const multiDay = lastDay !== firstDay
@@ -128,9 +129,30 @@ async function UpcomingEventEntry({ event }: { event: UpcomingEvent }) {
           </span>
           {event.location ? <span className="break-words">{event.location}</span> : null}
           {until ? <span>{until}</span> : null}
+          {event.response ? <ResponseStatus response={event.response} now={now} /> : null}
         </div>
       </div>
     </Link>
+  )
+}
+
+/** The User's own answer, or that they have not answered and by when, highlighted once that has passed. */
+async function ResponseStatus({ response, now }: { response: NonNullable<UpcomingEvent["response"]>; now: Date }) {
+  const [t, answers, format] = await Promise.all([
+    getTranslations("Events.respond"),
+    getTranslations("Events.answers"),
+    getFormatter()
+  ])
+  if (response.answer) return <span>{t("yourAnswer", { answer: answers(response.answer) })}</span>
+  const overdue = response.respondBy !== null && response.respondBy < now
+  return (
+    <span className={cn(overdue && "font-medium text-destructive")}>
+      {response.respondBy
+        ? t("notAnsweredBy", {
+            deadline: format.dateTime(response.respondBy, { dateStyle: "medium", timeStyle: "short" })
+          })
+        : t("notAnsweredYet")}
+    </span>
   )
 }
 
