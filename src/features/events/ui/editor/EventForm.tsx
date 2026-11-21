@@ -5,8 +5,9 @@ import Link from "next/link"
 import { type FormEvent, startTransition, useActionState, useEffect, useId, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { RichTextEditor } from "@/features/rich-text"
+import { followStart } from "@/shared/date-time"
 import { IDLE } from "@/shared/forms/command-state"
-import { InputField, SelectField } from "@/shared/forms/fields"
+import { DateField, DateTimeField, InputField, SelectField } from "@/shared/forms/fields"
 import { useUnsavedForm } from "@/shared/hooks/use-unsaved-form"
 import { Alert, AlertAction, AlertDescription } from "@/shared/ui/base/alert"
 import { Button, buttonVariants } from "@/shared/ui/base/button"
@@ -31,6 +32,8 @@ import type { EventFormOptions, EventFormValues } from "./query"
 import { eventFormVersion, parseStoredEvent, snapshotEventForm } from "./unsaved-event"
 
 const VOICE_FAMILIES = ["S", "A", "T", "B"]
+/** How long a new timed Event lasts until its end is changed. */
+const DEFAULT_LENGTH_MINUTES = 120
 
 type EventFormProps = {
   action: (state: EventCommandState, formData: FormData) => Promise<EventCommandState>
@@ -155,7 +158,26 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
   const [type, setType] = useState<EventType>(initial.type)
   const [mode, setMode] = useState<ParticipationMode>(initial.participationMode)
   const [allDay, setAllDay] = useState(initial.allDay)
+  const [schedule, setSchedule] = useState(() => ({
+    startsAt: initial.startsAt,
+    endsAt: initial.endsAt,
+    firstDay: initial.firstDay,
+    lastDay: initial.lastDay
+  }))
   const descriptionLabelId = useId()
+
+  // The end follows the start and keeps the Event's length; a first start gets the default length.
+  const changeSchedule = (field: keyof typeof schedule, value: string) => {
+    setSchedule((current) => {
+      const next = { ...current, [field]: value }
+      if (field === "startsAt")
+        next.endsAt = followStart(current.startsAt, value, current.endsAt, DEFAULT_LENGTH_MINUTES)
+      if (field === "firstDay") next.lastDay = followStart(current.firstDay, value, current.lastDay, 0)
+      return next
+    })
+    onEdit()
+  }
+  const startDay = allDay ? schedule.firstDay : schedule.startsAt
 
   // Choosing the type sets its default mode, which the Admin may then override.
   const changeType = (next: string) => {
@@ -242,18 +264,19 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
             <div className="grid gap-4 sm:grid-cols-2">
               {allDay ? (
                 <>
-                  <InputField
+                  <DateField
                     label={t("firstDay")}
                     name="firstDay"
-                    type="date"
-                    defaultValue={initial.firstDay}
+                    value={schedule.firstDay}
+                    onValueChange={(value) => changeSchedule("firstDay", value)}
                     required
                   />
-                  <InputField
+                  <DateField
                     label={t("lastDay")}
                     name="lastDay"
-                    type="date"
-                    defaultValue={initial.lastDay}
+                    value={schedule.lastDay}
+                    onValueChange={(value) => changeSchedule("lastDay", value)}
+                    min={schedule.firstDay}
                     required
                     invalid={Boolean(errorFor("schedule"))}
                     error={errorFor("schedule")}
@@ -261,18 +284,19 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
                 </>
               ) : (
                 <>
-                  <InputField
+                  <DateTimeField
                     label={t("startsAt")}
                     name="startsAt"
-                    type="datetime-local"
-                    defaultValue={initial.startsAt}
+                    value={schedule.startsAt}
+                    onValueChange={(value) => changeSchedule("startsAt", value)}
                     required
                   />
-                  <InputField
+                  <DateTimeField
                     label={t("endsAt")}
                     name="endsAt"
-                    type="datetime-local"
-                    defaultValue={initial.endsAt}
+                    value={schedule.endsAt}
+                    onValueChange={(value) => changeSchedule("endsAt", value)}
+                    min={schedule.startsAt}
                     required
                     invalid={Boolean(errorFor("schedule"))}
                     error={errorFor("schedule")}
@@ -280,12 +304,13 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
                 </>
               )}
             </div>
-            <InputField
+            <DateTimeField
               label={t("callTime")}
               description={t("callTimeDescription")}
               name="callTime"
-              type="datetime-local"
               defaultValue={initial.callTime}
+              defaultMonth={startDay}
+              onValueChange={onEdit}
               invalid={Boolean(errorFor("callTime"))}
               error={errorFor("callTime")}
             />
@@ -314,11 +339,12 @@ function EventFields({ initial, options, errorFor, onEdit }: EventFieldsProps) {
               error={errorFor("participationMode")}
             />
             {collectsParticipation(mode) ? (
-              <InputField
+              <DateTimeField
                 label={t("respondBy")}
                 name="respondBy"
-                type="datetime-local"
                 defaultValue={initial.respondBy}
+                defaultMonth={startDay}
+                onValueChange={onEdit}
                 invalid={Boolean(errorFor("respondBy"))}
                 error={errorFor("respondBy")}
               />

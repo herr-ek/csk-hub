@@ -175,7 +175,10 @@
     "morePages": "Weitere Seiten",
     "sidebarTitle": "Seitenleiste",
     "mobileSidebarDescription": "Zeigt die mobile Seitenleiste an.",
-    "toggleSidebar": "Seitenleiste umschalten"
+    "toggleSidebar": "Seitenleiste umschalten",
+    "pickDate": "Datum wählen",
+    "clearDate": "Leeren",
+    "time": "Uhrzeit"
   },
   "Navigation": {
     "admin": "Verwaltung",

@@ -175,7 +175,10 @@
     "morePages": "More pages",
     "sidebarTitle": "Sidebar",
     "mobileSidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle sidebar"
+    "toggleSidebar": "Toggle sidebar",
+    "pickDate": "Pick a date",
+    "clearDate": "Clear",
+    "time": "Time"
   },
   "Navigation": {
     "admin": "Admin",
