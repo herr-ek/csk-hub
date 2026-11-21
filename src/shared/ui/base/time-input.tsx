@@ -24,9 +24,10 @@ export function TimeInput({ value, onValueChange, className, onBlur, onKeyDown, 
   const setText = (next: string, caret: number | null = null) => setEdit({ text: next, caret })
   const [shown, setShown] = useState(value)
   // A new value from outside, such as an end that followed its start, replaces what is typed.
+  // The one just typed comes back too; it must keep its caret.
   if (value !== shown) {
     setShown(value)
-    setText(value)
+    if (value !== text) setText(value)
   }
 
   useLayoutEffect(() => {
