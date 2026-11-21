@@ -4,10 +4,11 @@ import { parseArgs } from "node:util"
 import { intro, isCancel, log, outro, select, spinner, text } from "@clack/prompts"
 import { openStudio, runMigrations } from "./drizzle-kit"
 import { grantAdmin } from "./grant-admin"
+import { confirmProductionWrite } from "./guards"
 import { statusFor, type TargetStatus } from "./migration-status"
 import { createReferenceData } from "./reference-data"
 import { resetLocalDatabase } from "./reset"
-import { childEnvironment, databaseOrExit, type Target, variableFor } from "./target"
+import { announce, childEnvironment, databaseOrExit, type Target, variableFor } from "./target"
 
 /**
  * The single entrypoint for database operations.
@@ -15,6 +16,7 @@ import { childEnvironment, databaseOrExit, type Target, variableFor } from "./ta
  *   bun run ops [command] [--prod] [--yes]
  *   bun run ops grant-admin <email> [--prod] [--yes]
  *   bun run ops reference-data [--prod] [--yes]
+ *   bun run ops seed-admin [--prod] [--yes]
  *   bun run ops reset [--yes]
  *
  * With no command it shows the status and, in a terminal, opens a menu. `--prod` is the
@@ -89,6 +91,15 @@ async function run(choice: Command): Promise<number> {
     return resetLocalDatabase(databaseOrExit("local"), { skipConfirmation: flags.yes })
   }
 
+  // The one seed allowed in production: it creates a single admin with a generated password.
+  if (choice === "seed-admin") {
+    const database = databaseOrExit(target)
+    announce(database)
+    if (!(await confirmProductionWrite("Seed admin", database, { skip: flags.yes }))) return 1
+    const seed = spawnSync("bun", SEED_SCRIPTS[choice], { stdio: "inherit", env: childEnvironment(database) })
+    return seed.status ?? 1
+  }
+
   if (choice in SEED_SCRIPTS) {
     if (target !== "local") {
       log.error("Seeding is local-only and never runs against production. Run without --prod.")
@@ -150,7 +161,7 @@ async function menu(): Promise<void> {
           hint: `Choirs, Sections, Styret, Positions, against ${target}`
         },
         localOnlyOption("reset", "Reset local database"),
-        localOnlyOption("seed-admin", "Seed admin"),
+        { value: "seed-admin", label: "Seed admin", hint: `generated password, against ${target}` },
         localOnlyOption("seed-users", "Seed users"),
         localOnlyOption("seed-groups", "Seed groups"),
         localOnlyOption("seed-posts", "Seed Posts"),
