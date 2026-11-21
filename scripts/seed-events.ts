@@ -1,11 +1,13 @@
 #!/usr/bin/env bun
-import { and, asc, eq, isNull, or, type SQL, sql } from "drizzle-orm"
+import { and, asc, eq, isNotNull, isNull, or, type SQL, sql } from "drizzle-orm"
 import type { PgInsertValue } from "drizzle-orm/pg-core"
 import type { db as applicationDb } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import {
+  absenceReason,
   event,
   eventDetail,
+  eventResponse,
   eventSeries,
   eventTarget,
   gig,
@@ -13,7 +15,7 @@ import {
   rehearsal,
   socialEvent
 } from "@/core/db/schema/events"
-import { group, section } from "@/core/db/schema/org-structure"
+import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { currentOrganisationYear, GroupType } from "@/core/org-structure"
 import { assertLocalDatabase } from "./ops/guards"
 
@@ -22,10 +24,14 @@ import { assertLocalDatabase } from "./ops/guards"
  * seed-groups`): for each Choir a weekly rehearsal series, a sectional rehearsal, a Draft concert
  * and a Cancelled extra rehearsal; for all of CSK the Alumnikväll gig with Event details, the
  * Höstsittning, a Körmöte for everyone and a room Booking. They are dated from the coming week, so there is always something upcoming.
+ * It also adds the scheme's Absence reasons and its example Responses: three of KK's singers answer
+ * KK's first rehearsal, and the first of them, placed in the Alumnikväll gig group, answers Maybe to
+ * the gig.
  *
  * It writes the tables directly, so scripts never depend on a feature, and keeps the Events rules
  * by hand: every Rehearsal, Gig and Social has its extension row, the Participation mode is the
- * type's default, and the database turns Stockholm wall-clock times into instants.
+ * type's default, the database turns Stockholm wall-clock times into instants, and every Response
+ * comes from the Event's Audience.
  */
 
 type Database = typeof applicationDb | Parameters<Parameters<typeof applicationDb.transaction>[0]>[0]
@@ -33,6 +39,7 @@ type Database = typeof applicationDb | Parameters<Parameters<typeof applicationD
 type EventValues = PgInsertValue<typeof event> & { title: string }
 
 const TIME_ZONE = "Europe/Stockholm"
+const ABSENCE_REASONS = ["Sick", "Exam", "Work", "Travelling"] as const
 const SERIES_WEEKS = 4
 
 /** What each Choir gets, as days after the first Monday; each rehearses on its own weekday. */
@@ -301,7 +308,79 @@ async function seed(database: Database, monday: string) {
     })
   }
 
+  await seedResponses(database, gigGroup, monday)
   return { created }
+}
+
+/** The scheme's example Responses, from KK's first singers; each is given once. */
+async function seedResponses(database: Database, gigGroup: string, monday: string) {
+  const reasons = new Map<string, string>()
+  for (const label of ABSENCE_REASONS) reasons.set(label, await findOrCreateAbsenceReason(database, label))
+  const kk = await requireGroup(database, "KK", GroupType.Choir)
+  const [lucas, olof, maja] = await currentSingers(database, kk)
+  const rehearsal = await eventTitled(database, "KK rehearsal")
+  const answers = [
+    lucas && { userId: lucas.id, answer: "No" as const, absenceReasonId: reasons.get("Exam") },
+    olof && { userId: olof.id, answer: "Yes" as const },
+    maja && { userId: maja.id, answer: "No" as const, reasonText: "Moving apartment" }
+  ].flatMap((answer) => (answer ? [answer] : []))
+  if (rehearsal && answers.length > 0) {
+    await database
+      .insert(eventResponse)
+      .values(answers.map((answer) => ({ eventId: rehearsal, ...answer })))
+      .onConflictDoNothing()
+  }
+
+  const gig = await eventTitled(database, "Alumnikväll")
+  if (!lucas || !gig) return
+  // The gig is for its gig group, so the singer joins it, in their own Voice, before answering.
+  const [member] = await database
+    .select({ id: directMembership.id })
+    .from(directMembership)
+    .where(
+      and(
+        eq(directMembership.userId, lucas.id),
+        eq(directMembership.groupId, gigGroup),
+        isNull(directMembership.endDate)
+      )
+    )
+  if (!member) {
+    await database
+      .insert(directMembership)
+      .values({ userId: lucas.id, groupId: gigGroup, startDate: monday, voice: lucas.voice })
+  }
+  await database.insert(eventResponse).values({ eventId: gig, userId: lucas.id, answer: "Maybe" }).onConflictDoNothing()
+}
+
+/** A Choir's active singers, earliest Users first, with the Voice each currently sings. */
+async function currentSingers(database: Database, choirId: string) {
+  return database
+    .select({ id: user.id, voice: directMembership.voice })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .innerJoin(user, eq(user.id, directMembership.userId))
+    .where(
+      and(
+        eq(group.choirId, choirId),
+        eq(group.type, GroupType.Section),
+        isNull(directMembership.endDate),
+        isNotNull(directMembership.voice),
+        or(isNull(user.banned), eq(user.banned, false))
+      )
+    )
+    .orderBy(user.createdAt, user.id)
+    .limit(3)
+}
+
+async function findOrCreateAbsenceReason(database: Database, label: string) {
+  const [found] = await database
+    .select({ id: absenceReason.id })
+    .from(absenceReason)
+    .where(and(eq(absenceReason.label, label), eq(absenceReason.active, true)))
+  if (found) return found.id
+  const [created] = await database.insert(absenceReason).values({ label }).returning({ id: absenceReason.id })
+  if (!created) throw new Error(`No Absence reason created for ${label}.`)
+  return created.id
 }
 
 /** "autumn 2026" from August, "spring 2027" before it. */
@@ -374,8 +453,14 @@ async function activeUsers(database: Database) {
   return rows.map(({ id }) => id)
 }
 
+/** The earliest Event with the title. */
 async function eventTitled(database: Database, title: string) {
-  const [row] = await database.select({ id: event.id }).from(event).where(eq(event.title, title)).limit(1)
+  const [row] = await database
+    .select({ id: event.id })
+    .from(event)
+    .where(eq(event.title, title))
+    .orderBy(asc(event.startsAt))
+    .limit(1)
   return row?.id
 }
 

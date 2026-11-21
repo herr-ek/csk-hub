@@ -11,6 +11,7 @@ import {
 import { createEvent, type EventInput } from "../events"
 import { changeEventStatus } from "../lifecycle"
 import { stockholmInstant } from "../model"
+import { respondToEvent } from "../responses"
 import { createEventsTestDatabase, expectSuccess } from "../test-support"
 import { getEventPage, listUpcomingEventsForUser } from "./query"
 
@@ -274,6 +275,76 @@ describe.skipIf(!database)("calendar reads", () => {
         targets: []
       })
       expect(await getEventPage(t.db, socialId, viewer("Sara"))).not.toBeNull()
+    })
+  })
+
+  describe("Responses", () => {
+    let eventId: string
+    const respondBy = at("2026-10-18T23:59")
+
+    beforeAll(async () => {
+      // KK's Audience on the 28th is Olof and Maja: Lucas left on the 16th.
+      eventId = await event(
+        {
+          title: "Körmöte for KK",
+          type: "Körmöte",
+          participationMode: "ResponseRequired",
+          respondBy,
+          schedule: { allDay: false, startsAt: at("2026-10-28T18:30"), endsAt: at("2026-10-28T20:00") },
+          targets: [{ groupId: groups.KK as string, voiceFamily: null }]
+        },
+        "Published"
+      )
+      expectSuccess(
+        await respondToEvent(
+          t.db,
+          users.Maja as string,
+          eventId,
+          { answer: "No", comment: "Private note", reasonText: "Secret reason" },
+          NOW
+        )
+      )
+    })
+
+    test("the Event page shows names per answer and who has not answered, never others' comments or reasons", async () => {
+      const page = await getEventPage(t.db, eventId, { userId: users.Olof as string, isAdmin: false }, NOW)
+      expect(page?.responses).toMatchObject({
+        mode: "ResponseRequired",
+        canRespond: true,
+        own: null,
+        byAnswer: { Yes: [], No: ["Maja"], Maybe: [] },
+        notAnswered: 1
+      })
+      expect(JSON.stringify(page)).not.toContain("Private note")
+      expect(JSON.stringify(page)).not.toContain("Secret reason")
+
+      const own = await getEventPage(t.db, eventId, { userId: users.Maja as string, isAdmin: false }, NOW)
+      expect(own?.responses?.own).toEqual({
+        answer: "No",
+        comment: "Private note",
+        absenceReasonId: null,
+        reasonText: "Secret reason",
+        late: true
+      })
+      // An Admin outside the Audience sees the answers but has none to give.
+      const admin = await getEventPage(t.db, eventId, { userId: users.Admin as string, isAdmin: true }, NOW)
+      expect(admin?.responses?.canRespond).toBe(false)
+      expect(
+        (await getEventPage(t.db, eventId, { userId: users.Olof as string, isAdmin: false }, at("2026-10-28T18:30")))
+          ?.responses?.canRespond
+      ).toBe(false)
+    })
+
+    test("the list shows each User's own status, and none on Events that take no Responses", async () => {
+      const statusOf = async (name: string) =>
+        (await listUpcomingEventsForUser(t.db, users[name] as string, NOW)).events.map(({ title, response }) => [
+          title,
+          response
+        ])
+      expect(await statusOf("Maja")).toContainEqual(["Körmöte for KK", { answer: "No", respondBy }])
+      expect(await statusOf("Olof")).toContainEqual(["Körmöte for KK", { answer: null, respondBy }])
+      // A Cancelled Event takes no answers, so it shows no status.
+      expect(await statusOf("Olof")).toContainEqual(["Extra rehearsal", null])
     })
   })
 })

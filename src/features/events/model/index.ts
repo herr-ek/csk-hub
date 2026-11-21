@@ -1,4 +1,4 @@
-import type { eventStatus, eventType, participationMode } from "@/core/db/schema/events"
+import type { eventStatus, eventType, participationMode, rsvpAnswer } from "@/core/db/schema/events"
 
 export { type RehearsalKind, rehearsalKind } from "./rehearsal-kind"
 export type { EventResult, EventViolation } from "./result"
@@ -16,6 +16,7 @@ export {
 export type EventType = (typeof eventType.enumValues)[number]
 export type EventStatus = (typeof eventStatus.enumValues)[number]
 export type ParticipationMode = (typeof participationMode.enumValues)[number]
+export type RsvpAnswer = (typeof rsvpAnswer.enumValues)[number]
 
 /** The Participation mode an Event of each type starts with, which the organiser may override. */
 export const DEFAULT_PARTICIPATION_MODE: Record<EventType, ParticipationMode> = {
@@ -52,6 +53,16 @@ export function hasExtension(type: EventType): type is ExtendedEventType {
 /** Whether the mode collects anything in advance, and so whether a respond-by deadline means anything. */
 export function collectsParticipation(mode: ParticipationMode) {
   return mode !== "None"
+}
+
+/** Whether the mode collects Responses, the Yes, No or Maybe of the Audience. */
+export function collectsResponses(mode: ParticipationMode) {
+  return mode === "ResponseRequired" || mode === "ResponseRequiredStrict"
+}
+
+/** The answers a mode offers: Maybe only where the Audience need not commit. */
+export function answersFor(mode: ParticipationMode): readonly RsvpAnswer[] {
+  return mode === "ResponseRequiredStrict" ? ["Yes", "No"] : ["Yes", "No", "Maybe"]
 }
 
 /**

@@ -9,7 +9,7 @@ Stages one through three are implemented: personal Posts, Members, Messaging, ac
 administrative workflows (including Events and Locations), routes and navigation use these policies. Better Auth no longer carries
 application Post grants; the legacy application permission guards have been removed. Group-authored
 Posts, Post audience targets and Recalled Group Posts remain unimplemented.
-Event audience visibility is implemented. Participant field privacy and Section-scoped attendance
+Event audience visibility and Responses are implemented. Delegated Response privacy and Section-scoped attendance
 remain deferred until those workflows exist.
 Event management uses organiser-bound `event.*` policies; `event.administer` remains Admin-only
 for Locations and Admin routes. See the adoption guide for the explicit policy list.

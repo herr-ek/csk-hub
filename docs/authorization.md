@@ -279,9 +279,13 @@ for composition/testing, never browser authority.
 
 ### Deferred participation workflows
 
-Responses, Registrations and Attendance have no application workflows yet. Their policies and
-unused data-access operations are deliberately deferred. Position identity uses the fixed
-catalogue and contextual appointments; appointment-derived Memberships count toward Event audiences.
+Responses exist: answering requires `app.access`, and the Events module refuses anyone outside the
+Audience (the shared `inAudience` rule) and any Event that is not Published, not in a response
+mode or already started. Response comments and reasons are read only by their own User and by
+Admins through `event.administer`; the full view for current Event managers is still future work.
+Registrations and Attendance have no application workflows yet. Their policies and unused
+data-access operations are deliberately deferred. Position identity uses the fixed catalogue and
+contextual appointments; appointment-derived Memberships count toward Event audiences.
 
 The following agreed rules are future-work requirements, not registered permission grants:
 

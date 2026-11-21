@@ -2,7 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "b
 import { asc, eq } from "drizzle-orm"
 import { AUTHORIZATION_DENIED, AuthorizationDeniedError } from "@/core/authz/authorization"
 import { user } from "@/core/db/schema/auth"
-import { event, eventDetail, location } from "@/core/db/schema/events"
+import { absenceReason, event, eventDetail, eventResponse, eventTarget, location } from "@/core/db/schema/events"
+import { directMembership } from "@/core/db/schema/org-structure"
 import { createEventsTestDatabase, uniqueName } from "../test-support"
 
 // The admin Server Actions against a real, throwaway database: only the authorization guard, cache
@@ -48,6 +49,10 @@ const { createEventAction, updateEventAction, changeEventStatusAction, deleteEve
   "./editor/actions"
 )
 const { createLocationAction, updateLocationAction, archiveLocationAction } = await import("./locations/actions")
+const { createAbsenceReasonAction, renameAbsenceReasonAction, archiveAbsenceReasonAction } = await import(
+  "./absence-reasons/actions"
+)
+const { respondToEventAction } = await import("../calendar/actions")
 
 const IDLE = { status: "idle" } as const
 
@@ -110,10 +115,21 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
 
       await expect(createEventAction(IDLE, eventForm({ title }))).rejects.toBe(denied)
       await expect(createLocationAction(IDLE, form({ name: title }))).rejects.toBe(denied)
+      await expect(createAbsenceReasonAction(IDLE, form({ label: title }))).rejects.toBe(denied)
 
       expect(await t.db.select().from(event).where(eq(event.title, title))).toEqual([])
       expect(await t.db.select().from(location).where(eq(location.name, title))).toEqual([])
+      expect(await t.db.select().from(absenceReason).where(eq(absenceReason.label, title))).toEqual([])
       expect(revalidatePath).not.toHaveBeenCalled()
+    })
+
+    test("requires event.administer for Absence reasons, and only active identity to respond", async () => {
+      await createAbsenceReasonAction(IDLE, form({ label: uniqueName("Sick") }))
+      await respondToEventAction(IDLE, form({}))
+      expect(requirePermission.mock.calls.map(([request]) => request.action)).toEqual([
+        "event.administer",
+        "app.access"
+      ])
     })
 
     test("guards every action", async () => {
@@ -124,7 +140,11 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
         deleteEventAction,
         createLocationAction,
         updateLocationAction,
-        archiveLocationAction
+        archiveLocationAction,
+        createAbsenceReasonAction,
+        renameAbsenceReasonAction,
+        archiveAbsenceReasonAction,
+        respondToEventAction
       ]
       for (const action of actions) await action(IDLE, form({}))
       expect(requirePermission).toHaveBeenCalledTimes(actions.length)
@@ -228,6 +248,93 @@ describe.skipIf(!database)("admin Events Server Actions", () => {
       expect(await archiveLocationAction(IDLE, form({ locationId }))).toEqual({
         status: "error",
         error: "location-archived"
+      })
+    })
+  })
+
+  describe("Absence reasons", () => {
+    test("creates, renames and archives a reason, passing violations through", async () => {
+      const label = uniqueName("Exam")
+      expect(await createAbsenceReasonAction(IDLE, form({ label }))).toMatchObject({ status: "success" })
+      expect(await createAbsenceReasonAction(IDLE, form({ label }))).toEqual({
+        status: "error",
+        error: "absence-reason-label-taken"
+      })
+      const [row] = await t.db.select().from(absenceReason).where(eq(absenceReason.label, label))
+      const reasonId = row?.id as string
+      expect(await renameAbsenceReasonAction(IDLE, form({ reasonId, label: " " }))).toEqual({
+        status: "error",
+        error: "absence-reason-label-required"
+      })
+      expect(await archiveAbsenceReasonAction(IDLE, form({ reasonId }))).toMatchObject({ status: "success" })
+      expect(await archiveAbsenceReasonAction(IDLE, form({ reasonId }))).toEqual({
+        status: "error",
+        error: "absence-reason-archived"
+      })
+    })
+  })
+
+  describe("Responses", () => {
+    async function choirEvent(participationMode: "ResponseRequired" | "ResponseRequiredStrict") {
+      const choirId = await t.choir()
+      const [row] = await t.db
+        .insert(event)
+        .values({
+          type: "Concert",
+          status: "Published",
+          title: uniqueName("Concert"),
+          // The action answers at the real time, so the Event lies well ahead of it.
+          startsAt: new Date("2030-01-10T17:00:00Z"),
+          endsAt: new Date("2030-01-10T19:00:00Z"),
+          participationMode
+        })
+        .returning({ id: event.id })
+      const eventId = row?.id as string
+      await t.db.insert(eventTarget).values({ eventId, groupId: choirId })
+      return { eventId, choirId }
+    }
+
+    async function signedIn(name: string, choirId?: string) {
+      const userId = await t.user(name)
+      if (choirId) await t.db.insert(directMembership).values({ userId, groupId: choirId, startDate: "2020-01-01" })
+      requirePermission.mockImplementation(async () => ({ state: "authenticated" as const, userId }))
+      return userId
+    }
+
+    test("records the signed-in User's answer, and refuses anyone outside the Audience", async () => {
+      const { eventId, choirId } = await choirEvent("ResponseRequired")
+
+      await signedIn("Outsider")
+      expect(await respondToEventAction(IDLE, form({ eventId, answer: "Yes" }))).toEqual({
+        status: "error",
+        error: "not-in-audience"
+      })
+      expect(await t.db.select().from(eventResponse).where(eq(eventResponse.eventId, eventId))).toEqual([])
+
+      const singer = await signedIn("Singer", choirId)
+      expect(
+        await respondToEventAction(IDLE, form({ eventId, answer: "No", reason: "other", reasonText: "Exam" }))
+      ).toMatchObject({ status: "success" })
+      expect(await t.db.select().from(eventResponse).where(eq(eventResponse.eventId, eventId))).toMatchObject([
+        { userId: singer, answer: "No", reasonText: "Exam", absenceReasonId: null }
+      ])
+    })
+
+    test("passes the module's typed failures through, and refuses malformed input", async () => {
+      const { eventId, choirId } = await choirEvent("ResponseRequiredStrict")
+      await signedIn("Singer", choirId)
+
+      expect(await respondToEventAction(IDLE, form({ eventId, answer: "Maybe" }))).toEqual({
+        status: "error",
+        error: "maybe-not-allowed"
+      })
+      expect(await respondToEventAction(IDLE, form({ eventId, answer: "No" }))).toEqual({
+        status: "error",
+        error: "absence-reason-required"
+      })
+      expect(await respondToEventAction(IDLE, form({ eventId, answer: "Perhaps" }))).toEqual({
+        status: "error",
+        error: "invalid-input"
       })
     })
   })

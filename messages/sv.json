@@ -212,6 +212,7 @@
       "adminEvents": "Evenemang",
       "adminEventsNew": "Nytt evenemang",
       "adminEventLocations": "Platser",
+      "adminAbsenceReasons": "Frånvaroanledningar",
       "eventsNew": "Nytt evenemang",
       "eventsManage": "Hantera evenemang",
       "adminOidcClients": "OIDC-klienter"
@@ -921,6 +922,11 @@
       "ResponseRequiredStrictDescription": "Målgruppen svarar Ja eller Nej och förväntas komma; ett Nej kräver en anledning.",
       "RegistrationDescription": "Den som vill komma anmäler sig. Målgruppen förväntas inte komma."
     },
+    "answers": {
+      "Yes": "Ja",
+      "No": "Nej",
+      "Maybe": "Kanske"
+    },
     "errors": {
       "event-not-found": "Evenemanget finns inte längre.",
       "title-required": "Ge evenemanget en titel.",
@@ -945,6 +951,17 @@
       "target-duplicate": "Två målgrupper är likadana. Ta bort en av dem.",
       "detail-incomplete": "Varje detalj behöver både en rubrik och ett värde.",
       "user-not-found": "Användaren finns inte längre.",
+      "not-in-audience": "Bara de som evenemanget är till för kan svara.",
+      "responses-closed": "Det här evenemanget tar inte emot svar.",
+      "event-started": "Evenemanget har börjat, så svaret kan inte längre ändras.",
+      "maybe-not-allowed": "Det här evenemanget kräver ja eller nej.",
+      "absence-reason-required": "Välj en anledning, eller beskriv den under Annat.",
+      "absence-reason-conflict": "Ange en anledning: en ur listan eller en egen, inte båda.",
+      "reason-only-with-no": "En anledning hör bara till ett nej.",
+      "absence-reason-not-found": "Den anledningen finns inte längre. Välj en annan.",
+      "absence-reason-archived": "Den anledningen erbjuds inte längre. Välj en annan.",
+      "absence-reason-label-required": "Ange en anledning.",
+      "absence-reason-label-taken": "Det finns redan en aktiv anledning med den formuleringen.",
       "invalid-input": "Några av värdena är ogiltiga. Kontrollera formuläret och försök igen.",
       "unexpected": "Något gick fel. Försök igen.",
       "access-denied": "Du har inte längre behörighet att hantera detta evenemang."
@@ -1048,6 +1065,7 @@
       "title": "Evenemang",
       "description": "Evenemang du kan hantera, oavsett status.",
       "locations": "Platser",
+      "absenceReasons": "Frånvaroanledningar",
       "new": "Nytt evenemang",
       "when": "Vilka evenemang",
       "upcoming": "Kommande",
@@ -1089,6 +1107,26 @@
       "eventCount": "{count, plural, =0 {Används inte av något evenemang} one {Används av # evenemang} other {Används av # evenemang}}",
       "openMap": "Karta"
     },
+    "absenceReasons": {
+      "title": "Frånvaroanledningar",
+      "description": "De förvalda anledningarna till att tacka nej till ett evenemang. En arkiverad anledning finns kvar på svaren som anger den, men erbjuds inte för nya.",
+      "create": "Ny anledning",
+      "label": "Anledning",
+      "saved": "Anledningen har sparats.",
+      "rename": "Byt namn",
+      "renameTitle": "Byt namn på {label}",
+      "renameAffectsResponses": "{count, plural, one {# svar anger} other {# svar anger}} den här anledningen och visar ändringen.",
+      "save": "Spara",
+      "archive": "Arkivera",
+      "archiveTitle": "Arkivera {label}?",
+      "archiveExplanation": "Svar som anger den behåller den, men den erbjuds inte längre. Anledningar raderas aldrig.",
+      "archived": "Anledningen har arkiverats.",
+      "none": "Det finns inga aktiva anledningar ännu.",
+      "showArchived": "Arkiverade anledningar ({count})",
+      "noneArchived": "Ingen anledning har arkiverats.",
+      "archivedBadge": "Arkiverad",
+      "responseCount": "{count, plural, =0 {Inte angiven i något svar} one {Angiven i # svar} other {Angiven i # svar}}"
+    },
     "calendar": {
       "title": "Kommande evenemang",
       "description": "Det som väntar dig i CSK:s kalender.",
@@ -1127,6 +1165,43 @@
         "cost": "Kostnad",
         "edit": "Redigera evenemang"
       }
+    },
+    "respond": {
+      "title": "OSA",
+      "respondBy": "Svara senast {deadline}",
+      "yourAnswer": "Ditt svar: {answer}",
+      "late": "Sent",
+      "answerCount": "{answer} ({count})",
+      "nobody": "Ingen än",
+      "notAnswered": "{count, plural, =0 {Alla har svarat.} one {# person har inte svarat än.} other {# personer har inte svarat än.}}",
+      "notAnsweredBy": "Inte svarat · svara senast {deadline}",
+      "notAnsweredYet": "Inte svarat",
+      "answer": "Kommer du?",
+      "reason": "Anledning",
+      "reasonOptional": "Anledning (valfritt)",
+      "noReason": "Ingen anledning",
+      "otherReason": "Annat",
+      "reasonText": "Din anledning",
+      "comment": "Kommentar (valfritt)",
+      "privacy": "Din kommentar och anledning syns bara för dig och arrangörerna.",
+      "saving": "Sparar…",
+      "change": "Ändra svar",
+      "submit": "Svara",
+      "saved": "Ditt svar har sparats."
+    },
+    "responses": {
+      "title": "Svar",
+      "counts": "Ja {Yes} · Nej {No} · Kanske {Maybe} · Inte svarat {notAnswered}",
+      "none": "Ingen har svarat än.",
+      "member": "Medlem",
+      "answer": "Svar",
+      "reason": "Anledning",
+      "comment": "Kommentar",
+      "answeredAt": "Svarade",
+      "erased": "Raderad medlem",
+      "late": "Sent",
+      "notAnsweredTitle": "Inte svarat ({count})",
+      "everyoneAnswered": "Alla har svarat."
     }
   },
   "Realtime": {

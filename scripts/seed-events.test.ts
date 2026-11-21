@@ -1,7 +1,17 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { eq, sql } from "drizzle-orm"
 import { Client } from "pg"
-import { event, eventDetail, eventTarget, gig, rehearsal, socialEvent } from "@/core/db/schema/events"
+import { user } from "@/core/db/schema/auth"
+import {
+  absenceReason,
+  event,
+  eventDetail,
+  eventResponse,
+  eventTarget,
+  gig,
+  rehearsal,
+  socialEvent
+} from "@/core/db/schema/events"
 import { createTestDatabase } from "../test/database"
 import { insertReferenceData } from "./ops/reference-data"
 import { seedEvents } from "./seed-events"
@@ -22,6 +32,15 @@ describe.skipIf(!database)("seedEvents", () => {
     await client.connect()
     await insertReferenceData(client)
     await client.end()
+    // Enough singers for three in each Choir, so KK's example Responses have someone to give them.
+    await t.db.insert(user).values(
+      Array.from({ length: 9 }, (_, index) => ({
+        id: `singer-${index}`,
+        name: `Singer ${index}`,
+        email: `singer-${index}@example.com`,
+        createdAt: new Date(Date.UTC(2026, 0, 1 + index))
+      }))
+    )
     await seedGroups(t.db)
 
     // A Sunday: the examples start from the next Monday, 19 October.
@@ -82,6 +101,44 @@ describe.skipIf(!database)("seedEvents", () => {
       .orderBy(eventDetail.sortOrder)
     expect(details.map(({ label }) => label)).toEqual(["Dress code", "Bring"])
 
+    expect((await t.db.select().from(absenceReason)).map(({ label }) => label).sort()).toEqual([
+      "Exam",
+      "Sick",
+      "Travelling",
+      "Work"
+    ])
+    const responses = async () =>
+      t.db
+        .select({
+          title: event.title,
+          startsAt: event.startsAt,
+          answer: eventResponse.answer,
+          reason: absenceReason.label,
+          reasonText: eventResponse.reasonText
+        })
+        .from(eventResponse)
+        .innerJoin(event, eq(event.id, eventResponse.eventId))
+        .leftJoin(absenceReason, eq(absenceReason.id, eventResponse.absenceReasonId))
+        .orderBy(event.title, eventResponse.answer, eventResponse.reasonText)
+    const given = await responses()
+    expect(given.map(({ startsAt: _, ...response }) => response)).toEqual([
+      { title: "Alumnikväll", answer: "Maybe", reason: null, reasonText: null },
+      { title: "KK rehearsal", answer: "Yes", reason: null, reasonText: null },
+      { title: "KK rehearsal", answer: "No", reason: null, reasonText: "Moving apartment" },
+      { title: "KK rehearsal", answer: "No", reason: "Exam", reasonText: null }
+    ])
+    // All to the first of KK's rehearsals.
+    const [firstKk] = await t.db
+      .select({ startsAt: event.startsAt })
+      .from(event)
+      .where(eq(event.title, "KK rehearsal"))
+      .orderBy(event.startsAt)
+      .limit(1)
+    for (const { title, startsAt } of given) {
+      if (title === "KK rehearsal") expect(startsAt).toEqual(firstKk?.startsAt as Date)
+    }
+
     expect(await seedEvents(t.db, "2026-10-18")).toEqual({ created: [] })
+    expect(await responses()).toHaveLength(4)
   })
 })

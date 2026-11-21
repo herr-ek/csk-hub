@@ -42,7 +42,16 @@ const CONSTRAINT_VIOLATIONS: Record<string, EventViolation> = {
   gig_responsible_user_id_user_id_fk: "user-not-found",
   social_event_event_id_type_event_id_type_fk: "event-not-found",
   location_name_active_unique: "location-name-taken",
-  location_name_not_blank_check: "location-name-required"
+  location_name_not_blank_check: "location-name-required",
+  absence_reason_label_active_unique: "absence-reason-label-taken",
+  absence_reason_label_not_blank_check: "absence-reason-label-required",
+  event_response_mode_check: "responses-closed",
+  event_response_strict_check: "absence-reason-required",
+  event_response_one_reason_check: "absence-reason-conflict",
+  event_response_reason_only_with_no_check: "reason-only-with-no",
+  event_response_event_id_event_id_fk: "event-not-found",
+  event_response_user_id_user_id_fk: "user-not-found",
+  event_response_absence_reason_id_absence_reason_id_fk: "absence-reason-not-found"
 }
 
 function violationOf(error: unknown): EventViolation | undefined {
