@@ -1,3 +1,4 @@
+import { GroupType } from "@/core/org-structure"
 import { groupPolicies } from "./group-policies"
 import type {
   AuthorizationActor,
@@ -6,7 +7,7 @@ import type {
   PostGroupAttributes,
   PostRelationships
 } from "./model"
-import { matchesPostTarget, samePostTargets } from "./post-audience"
+import { currentPostMemberships, matchesPostTarget, samePostTargets } from "./post-audience"
 
 /** Exact active Group representation; Choirs cannot publish Posts, including for Admins. */
 export function canRepresentPostGroup(
@@ -16,8 +17,7 @@ export function canRepresentPostGroup(
 ): boolean {
   return groupPolicies["group.publishPost"](actor, {
     group: group ?? null,
-    memberships: relationships?.memberships ?? [],
-    positionHoldings: relationships?.positionHoldings ?? []
+    positionAppointments: relationships?.positionAppointments ?? []
   })
 }
 
@@ -30,13 +30,15 @@ export function canAddressPostGroup(
 ): boolean {
   if (!target.active) return false
   if (actor.isAdmin) return true
-  if (publisher?.type === "Board" && canRepresentPostGroup(actor, publisher, relationships)) return true
-  const memberOf = (id: string | null) =>
-    relationships.memberships.some((m) => m.userId === actor.userId && m.groupId === id && m.endDate === null)
+  if (publisher?.type === GroupType.Board && canRepresentPostGroup(actor, publisher, relationships)) return true
+  const memberships = currentPostMemberships(actor, relationships)
+  const memberOf = (id: string | null) => memberships.some((m) => m.groupId === id)
   return (
     memberOf(target.id) ||
-    (target.type === "Section" && memberOf(target.choirId)) ||
-    (target.type === "Choir" && publisher?.choirId === null && canRepresentPostGroup(actor, publisher, relationships))
+    (target.type === GroupType.Section && memberOf(target.choirId)) ||
+    (target.type === GroupType.Choir &&
+      publisher?.choirId === null &&
+      canRepresentPostGroup(actor, publisher, relationships))
   )
 }
 

@@ -1,4 +1,13 @@
+import { GroupType } from "@/core/org-structure"
 import type { AuthorizationActor, PostAudienceTarget, PostRelationships } from "./model"
+
+/** Memberships effective on this operation's Stockholm calendar date. */
+export function currentPostMemberships(actor: AuthorizationActor, relationships: PostRelationships) {
+  const { today } = relationships
+  return relationships.memberships.filter(
+    (m) => m.userId === actor.userId && m.startDate <= today && (m.endDate === null || m.endDate > today)
+  )
+}
 
 /** Current Section assignments, scoped like Event targets; self-reported capabilities play no part. */
 export function matchesPostTarget(
@@ -6,7 +15,7 @@ export function matchesPostTarget(
   target: PostAudienceTarget,
   relationships: PostRelationships
 ): boolean {
-  const current = relationships.memberships.filter((m) => m.userId === actor.userId && m.endDate === null)
+  const current = currentPostMemberships(actor, relationships)
   if (target.groupId === null && target.voiceFamily === null) return false
   if (target.groupId !== null && !current.some((m) => m.groupId === target.groupId)) return false
   if (target.voiceFamily === null) return true
@@ -14,9 +23,13 @@ export function matchesPostTarget(
   return current.some((membership) => {
     const group = relationships.groups.find((g) => g.id === membership.groupId)
     return (
-      group?.type === "Section" &&
+      group?.type === GroupType.Section &&
       membership.voice?.slice(0, 1) === target.voiceFamily &&
-      (scope?.type === "Choir" ? group.choirId === scope.id : scope?.type === "Section" ? group.id === scope.id : true)
+      (scope?.type === GroupType.Choir
+        ? group.choirId === scope.id
+        : scope?.type === GroupType.Section
+          ? group.id === scope.id
+          : true)
     )
   })
 }

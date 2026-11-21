@@ -112,9 +112,9 @@ sessions or deactivated Users, but do not serialize a later revocation/deactivat
 Features must coordinate any stronger guarantees with their permission-changing writers.
 
 Post operations take the actor's organisational advisory lock, then shared locks on their current
-Membership Groups, any Group IDs selected in a write, and the owning Choirs of locked
+Membership and appointment Groups, any Group IDs selected in a write, and the owning Choirs of locked
 Sections. Compose options are presentation hints.
-Feed and detail reads share-lock candidate Posts and recheck readership against targets loaded
+Home, News home, News feed and detail reads share-lock candidate Posts and recheck readership against targets loaded
 after the lock. Writing a read marker also rechecks visibility after locking the Post. Post commands
 take `FOR UPDATE` on the Post before authorizing and writing. The guard and persistence predicates
 both enforce the lifecycle rules.
@@ -346,7 +346,7 @@ Current representatives of an active Board may select any active Group audience 
 publishing on behalf of that Board. Personal Posts and Posts for other Groups use their
 ordinary selection rules.
 `post.readAttribution` restricts Group creator/editor names to Admins and current representatives
-of that exact publishing Group; feed and detail reads omit those names for other readers.
+of that exact publishing Group; home, News feed and detail reads omit those names for other readers.
 Voice-only targets are available to every active Member. Group/Voice criteria within a target
 are AND'ed and targets are OR'ed. Post Voice-family matching uses current Section assignment
 voices with Choir/Section scope, separately from Event start-time policy. Self-reported voice
@@ -356,7 +356,7 @@ Post operations use `withCurrentRequest` to validate the session before leasing 
 connection, then reload the User inside the transaction and reuse one actor snapshot.
 This avoids pool starvation from session lookups while relationship locks are held.
 Writes recheck current policies and reject stale revisions before changing content, targets
-or state. Feed, detail and unread queries share a database visibility predicate. Audience
+or state. Home, News feed, detail and unread queries share a database visibility predicate. Audience
 Membership is current, and personal authorship and current Group management supply separate
 access grounds. Archived audience Membership preserves historical reading.
 

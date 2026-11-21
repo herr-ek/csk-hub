@@ -3,7 +3,7 @@ import "server-only"
 import { type AnyColumn, and, asc, eq, gt, inArray, isNull, lte, or, type SQL, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import { GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
+import { currentOrganisationYear, GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
 import { appointmentMemberships } from "./appointment-memberships"
 import { listEffectiveMembersAt } from "./appointments"
@@ -229,10 +229,16 @@ export async function lockGroupForReference(tx: OrgStructureTransaction, groupId
  * Unlike summary reads, these retain User IDs and both period boundaries.
  */
 export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
-  const groups = await database
-    .select({ id: group.id, type: group.type, active: group.active, choirId: group.choirId })
-    .from(group)
-  return { groups, ...(await getPostRelationshipFacts(database, userId)) }
+  const groups = await database.select({ id: group.id, type: group.type, active: group.active }).from(group)
+  const positionAppointments = await listPositionAppointments(database, userId)
+  return { groups, positionAppointments }
+}
+
+/** Organisational facts for Post audience and publisher selection, including the Stockholm date. */
+export async function getPostAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
+  const facts = await getPostRelationshipFacts(database, userId)
+  const groups = await database.select(postGroupColumns).from(group)
+  return { ...facts, groups: postGroupsAt(groups, facts.today) }
 }
 
 /**
@@ -254,11 +260,15 @@ export async function lockCurrentGroupAuthorizationFacts(
 ) {
   await lockUser(tx, userId)
   const facts = await getPostRelationshipFacts(tx, userId)
-  const ids = [...new Set([
-    ...facts.memberships.filter((membership) => membership.startDate <= facts.today).map((membership) => membership.groupId),
-    ...facts.positionAppointments.map((appointment) => appointment.contextGroupId),
-    ...selectedGroupIds
-  ])]
+  const ids = [
+    ...new Set([
+      ...facts.memberships
+        .filter((membership) => membership.startDate <= facts.today)
+        .map((membership) => membership.groupId),
+      ...facts.positionAppointments.map((appointment) => appointment.contextGroupId),
+      ...selectedGroupIds
+    ])
+  ]
   if (ids.length === 0) return { groups: [], ...facts }
   const selectedSection = alias(group, "selected_section")
   const sectionChoirs = tx
@@ -266,15 +276,12 @@ export async function lockCurrentGroupAuthorizationFacts(
     .from(selectedSection)
     .where(and(inArray(selectedSection.id, ids), eq(selectedSection.type, GroupType.Section)))
   const groups = await lockAuthorizationGroups(tx, or(inArray(group.id, ids), inArray(group.id, sectionChoirs)))
-  return { groups, ...facts }
+  return { ...facts, groups: postGroupsAt(groups, facts.today) }
 }
 
 async function getPostRelationshipFacts(database: OrgStructureDatabase, userId: string) {
   const today = cskToday()
-  const positionAppointments = await database
-    .select()
-    .from(positionAppointment)
-    .where(eq(positionAppointment.userId, userId))
+  const positionAppointments = await listPositionAppointments(database, userId)
   const memberships = (await listMembershipsOfUser(database, userId, { from: today })).map((membership) => ({
     ...membership,
     userId
@@ -282,10 +289,30 @@ async function getPostRelationshipFacts(database: OrgStructureDatabase, userId: 
   return { today, memberships, positionAppointments }
 }
 
+function listPositionAppointments(database: OrgStructureDatabase, userId: string) {
+  return database.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))
+}
+
+const postGroupColumns = {
+  id: group.id,
+  type: group.type,
+  active: group.active,
+  choirId: group.choirId,
+  organisationYear: group.organisationYear
+}
+
+function postGroupsAt(groups: Pick<typeof group.$inferSelect, keyof typeof postGroupColumns>[], date: IsoDate) {
+  const currentYear = currentOrganisationYear(date)
+  return groups.map(({ organisationYear, ...group }) => ({
+    ...group,
+    active: group.active && (organisationYear === null || organisationYear === currentYear)
+  }))
+}
+
 function lockAuthorizationGroups(tx: OrgStructureTransaction, filter: SQL | undefined) {
   return (
     tx
-      .select({ id: group.id, type: group.type, active: group.active, choirId: group.choirId })
+      .select(postGroupColumns)
       .from(group)
       .where(filter)
       // Choir archival locks its Choir before updating Sections; preserve that order here.

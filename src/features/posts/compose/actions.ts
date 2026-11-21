@@ -100,6 +100,7 @@ async function submitPost(
 
 function revalidatePost(postId: string, publishedChanged: boolean) {
   if (publishedChanged) scheduleActivityDispatch()
+  revalidatePath(ROUTES.home)
   revalidatePath(ROUTES.news)
   revalidatePath(newsPostPath(postId))
 }

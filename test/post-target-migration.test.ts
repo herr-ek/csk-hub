@@ -1,6 +1,7 @@
 import { afterAll, expect, test } from "bun:test"
 import { group } from "@/core/db/schema/org-structure"
 import { post, postTarget } from "@/core/db/schema/posts"
+import { GroupType } from "@/core/org-structure"
 import { createTestDatabase } from "./database"
 
 const database = await createTestDatabase()
@@ -9,7 +10,10 @@ afterAll(() => database?.drop())
 test.skipIf(!database)("freshly migrated databases enforce Post target constraints", async () => {
   if (!database) throw new Error("Missing test database")
   const { db } = database
-  const [target] = await db.insert(group).values({ name: "Audience", type: "Board" }).returning({ id: group.id })
+  const [target] = await db
+    .insert(group)
+    .values({ name: "Audience", type: GroupType.Other })
+    .returning({ id: group.id })
   const [notice] = await db
     .insert(post)
     .values({ title: "Notice", body: { type: "doc" }, audienceAll: false })

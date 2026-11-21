@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { cskToday, GroupType, PositionCode } from "@/core/org-structure"
 import type {
   AuthorizationActor,
   PermissionContext,
@@ -14,15 +15,16 @@ const alice: AuthorizationActor = { userId: "alice", isAdmin: false }
 const bob: AuthorizationActor = { userId: "bob", isAdmin: false }
 const admin: AuthorizationActor = { userId: "admin", isAdmin: true }
 const groups: PostGroupAttributes[] = [
-  { id: "KK", type: "Choir", active: true, choirId: null },
-  { id: "MK", type: "Choir", active: true, choirId: null },
-  { id: "KKS", type: "Section", active: true, choirId: "KK" },
-  { id: "MKS", type: "Section", active: true, choirId: "MK" },
-  { id: "csk-group", type: "Övrig", active: true, choirId: null },
-  { id: "committee", type: "Övrig", active: true, choirId: "KK" }
+  { id: "KK", type: GroupType.Choir, active: true, choirId: null },
+  { id: "MK", type: GroupType.Choir, active: true, choirId: null },
+  { id: "KKS", type: GroupType.Section, active: true, choirId: "KK" },
+  { id: "MKS", type: GroupType.Section, active: true, choirId: "MK" },
+  { id: "csk-group", type: GroupType.Other, active: true, choirId: null },
+  { id: "committee", type: GroupType.Other, active: true, choirId: "KK" }
 ]
 function relationships(actor = alice, memberships = ["KK", "csk-group"], holdings = ["csk-group"]): PostRelationships {
   return {
+    today: cskToday(),
     groups,
     memberships: memberships.map((groupId) => ({
       userId: actor.userId,
@@ -31,10 +33,10 @@ function relationships(actor = alice, memberships = ["KK", "csk-group"], holding
       startDate: "2026-01-01",
       endDate: null
     })),
-    positionHoldings: holdings.map((groupId) => ({
+    positionAppointments: holdings.map((groupId) => ({
       userId: actor.userId,
-      groupId,
-      positionId: "position",
+      contextGroupId: groupId,
+      positionCode: PositionCode.GigLeader,
       startDate: "2026-01-01",
       endDate: null
     }))
@@ -100,12 +102,8 @@ describe("Post publisher and audience policies", () => {
     expect(address({}, { publishing: false })).toBe(true)
     expect(address({ audienceAll: true, targets: [{ groupId: "KK", voiceFamily: null }] })).toBe(false)
   })
-  test("representation requires membership and a position in the exact group", () => {
-    for (const facts of [
-      relationships(alice, [], ["csk-group"]),
-      relationships(alice, ["csk-group"], []),
-      relationships(alice, ["KK"], ["KK"])
-    ]) {
+  test("representation requires a current appointment in the exact group", () => {
+    for (const facts of [relationships(alice, ["csk-group"], []), relationships(alice, ["KK"], ["KK"])]) {
       expect(address({ publisherGroupId: "csk-group", audienceAll: true }, { relationships: facts })).toBe(false)
     }
     expect(address({ publisherGroupId: "KK", audienceAll: true }, {}, admin)).toBe(false)
@@ -231,8 +229,8 @@ describe("Post publisher and audience policies", () => {
 describe("Post Group/Voice-family audiences", () => {
   const bassGroups: PostGroupAttributes[] = [
     ...groups,
-    { id: "KKB", type: "Section", active: true, choirId: "KK" },
-    { id: "MKB", type: "Section", active: true, choirId: "MK" }
+    { id: "KKB", type: GroupType.Section, active: true, choirId: "KK" },
+    { id: "MKB", type: GroupType.Section, active: true, choirId: "MK" }
   ]
   const facts: PostRelationships = {
     ...relationships(bob, ["KK", "KKB", "committee"], []),
@@ -253,7 +251,7 @@ describe("Post Group/Voice-family audiences", () => {
     expect(
       read([{ groupId: null, voiceFamily: "B" }], {
         ...facts,
-        memberships: facts.memberships.map((m) => ({ ...m, endDate: "2026-11-17" }))
+        memberships: facts.memberships.map((m) => ({ ...m, endDate: cskToday() }))
       })
     ).toBe(false)
     expect(
@@ -316,7 +314,7 @@ describe("Board audience selection", () => {
     const publisherGroupId = "active-board"
     const facts: PostRelationships = {
       ...relationships(alice, [publisherGroupId, "committee"], [publisherGroupId, "committee"]),
-      groups: [...groups, { id: publisherGroupId, type: "Board", active: true, choirId: null }]
+      groups: [...groups, { id: publisherGroupId, type: GroupType.Board, active: true, choirId: null }]
     }
     for (const groupId of ["MK", "MKS"]) {
       const targets = [{ groupId, voiceFamily: "B" as const }]
@@ -338,9 +336,8 @@ describe("Board audience selection", () => {
     ).toBe(false)
     for (const changed of [
       { ...facts, groups: facts.groups.map((g) => (g.id === publisherGroupId ? { ...g, active: false } : g)) },
-      { ...facts, memberships: [] },
-      { ...facts, positionHoldings: [] },
-      { ...facts, positionHoldings: facts.positionHoldings.map((p) => ({ ...p, endDate: "2026-11-17" })) }
+      { ...facts, positionAppointments: [] },
+      { ...facts, positionAppointments: facts.positionAppointments.map((p) => ({ ...p, endDate: cskToday() })) }
     ])
       expect(address({ publisherGroupId, targets }, { relationships: changed })).toBe(false)
     expect(

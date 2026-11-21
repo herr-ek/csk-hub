@@ -17,10 +17,9 @@ feed/detail data and see edit timestamps without editor names. Personal Post att
 remains visible to its readers. Personal edits show an edit timestamp without naming the editor.
 The publishing identity becomes fixed at first publication, including after recall.
 
-To represent a Group, a Member must have both a current Membership and any current
-Position in that exact active Group. Membership alone, a position in another Group,
-a linked position or membership of the owning Choir does not suffice. A CSK-wide Group
-belongs to no particular Choir; its name and type do not determine its scope.
+To represent a Group, a Member needs a current Position appointment in that exact
+active Group. The organisation catalogue controls which appointments grant or require
+Membership. A CSK-wide Group has no owning Choir.
 
 ## Choosing an audience
 
@@ -42,8 +41,8 @@ does not apply to personal Posts or Posts published for a different Group. For e
 a CSK-wide Board representative can publish as the Board to KK without belonging to KK.
 A KK tenor can personally address the KK sopranos without belonging to that Section.
 
-When publishing on behalf of an active Board, a Member with current Membership and a current
-Position in that Board may choose any active Group, including Sections and committees.
+When publishing on behalf of an active Board, a current appointee in that Board may
+choose any active Group, including Sections and committees.
 Personal Posts and Posts for other Groups follow their ordinary audience-selection rules.
 
 A Voice-only target is available to every active Member: selecting B with no Group means
@@ -136,6 +135,6 @@ Existing read markers survive edits, recall and republication. A new audience Me
 unread if they have no marker and the Post falls within the existing 30-day unread window.
 A new announcement should be a new Post.
 
-“Current” follows the organisation's existing convention: a Membership or Position
-holding has no end date. Future start dates do not postpone permission, and a future
-end date already ends current permission. This feature does not change that convention.
+Memberships and appointments use Stockholm calendar dates. A term starts on its
+start date and ends before its end date. An annual Group can be newly selected as
+publisher or audience during its organisational year.

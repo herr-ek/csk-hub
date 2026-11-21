@@ -23,7 +23,7 @@ export type PostGroupAttributes = GroupAttributes & Readonly<{ choirId: string |
 export type PostRelationships = Readonly<{
   today: string
   groups: readonly PostGroupAttributes[]
-  memberships: readonly (AudienceMembership & { userId: string })[]
+  memberships: readonly (Pick<AudienceMembership, "groupId" | "voice" | "startDate" | "endDate"> & { userId: string })[]
   positionAppointments: readonly PositionAppointmentAttributes[]
 }>
 export type PostAudienceTarget = Pick<typeof postTarget.$inferSelect, "groupId" | "voiceFamily">

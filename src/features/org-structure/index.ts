@@ -38,6 +38,7 @@ export type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 export {
   getCurrentPositionHolder,
   getGroupAuthorizationFacts,
+  getPostAuthorizationFacts,
   listActiveGroups,
   listChoirMembersByVoiceFamily,
   listCurrentChoirAffiliationsOfUsers,

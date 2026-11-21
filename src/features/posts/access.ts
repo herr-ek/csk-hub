@@ -3,7 +3,7 @@ import "server-only"
 import { and, eq, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm"
 import type { AuthorizationDatabase, RequestAuthorization } from "@/core/authz"
 import type { AuthorizationActor, PostAddress, PostRelationships } from "@/core/authz/model"
-import { matchesPostTarget } from "@/core/authz/post-audience"
+import { currentPostMemberships, matchesPostTarget } from "@/core/authz/post-audience"
 import { canRepresentPostGroup } from "@/core/authz/post-policies"
 import { post, postTarget } from "@/core/db/schema/posts"
 import { lockCurrentGroupAuthorizationFacts, type OrgStructureTransaction } from "@/features/org-structure"
@@ -32,9 +32,7 @@ export function publishedPostVisibility(
   actor: AuthorizationActor,
   relationships: PostRelationships
 ) {
-  const memberIds = relationships.memberships
-    .filter((m) => m.userId === actor.userId && m.endDate === null)
-    .map((m) => m.groupId)
+  const memberIds = currentPostMemberships(actor, relationships).map((m) => m.groupId)
   const voiceMatches = (["S", "A", "T", "B"] as const).map((voiceFamily) => {
     const scopes = relationships.groups
       .filter((g) => matchesPostTarget(actor, { groupId: g.id, voiceFamily }, relationships))

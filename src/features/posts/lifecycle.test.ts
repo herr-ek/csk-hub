@@ -107,7 +107,8 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     const latest = await listLatestPosts(2, db)
     expect(latest.map((entry) => entry.id)).toEqual([newest, newer])
     expect(latest.map((entry) => entry.id)).not.toContain(draft)
-    expect(latest[0]).toEqual({
+    expect(latest[0]).not.toHaveProperty("body")
+    expect(latest[0]).toMatchObject({
       id: newest,
       title: "Nyast",
       authorName: "Admin",

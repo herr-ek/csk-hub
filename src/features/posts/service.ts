@@ -16,7 +16,7 @@ import { db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { group } from "@/core/db/schema/org-structure"
 import { post, postTarget } from "@/core/db/schema/posts"
-import { getGroupAuthorizationFacts } from "@/features/org-structure"
+import { getPostAuthorizationFacts, listLocalizedGroupLabels } from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
 import { editableUnpublishedVisibility, getPostScope, publishedPostVisibility } from "./access"
 
@@ -100,6 +100,11 @@ async function publishedReadModels<Row extends PublishedRow>(
       )
     )
     .orderBy(postTarget.id)
+  const labels =
+    rows.some((row) => row.publisherGroupId !== null && row.publisherName === null) ||
+    targets.some((target) => target.groupId !== null && target.groupName === null)
+      ? await listLocalizedGroupLabels(database)
+      : undefined
   return rows.flatMap((row) => {
     if (!row.publishedAt) return []
     const audience = targets.filter((target) => target.postId === row.id)
@@ -120,12 +125,16 @@ async function publishedReadModels<Row extends PublishedRow>(
         ...visible,
         publishedAt: row.publishedAt,
         showAuthor,
+        publisherName: row.publisherGroupId ? (row.publisherName ?? labels?.get(row.publisherGroupId) ?? null) : null,
         authorName: showAuthor ? row.authorName : null,
         lastEditorName: showEditor ? row.lastEditorName : null,
         lastEditorRecorded: showEditor && row.lastEditorRecorded,
         targets: audience
           .filter((target) => access.actor !== null && matchesPostTarget(access.actor, target, relationships))
-          .map(({ groupName, voiceFamily }) => ({ groupName, voiceFamily }))
+          .map(({ groupId, groupName, voiceFamily }) => ({
+            groupName: groupId ? (groupName ?? labels?.get(groupId) ?? null) : null,
+            voiceFamily
+          }))
       }
     ]
   })
@@ -316,11 +325,11 @@ export async function getPostComposeOptions({
 } = {}) {
   return withAccess(async (access, tx) => {
     const actor = access.requirePermission({ action: "app.access" })
-    const relationships = await getGroupAuthorizationFacts(tx, actor.userId)
-    const groups = await tx
-      .select({ id: group.id, name: group.name, active: group.active })
-      .from(group)
-      .orderBy(group.name)
+    const relationships = await getPostAuthorizationFacts(tx, actor.userId)
+    const labels = await listLocalizedGroupLabels(tx)
+    const groups = relationships.groups
+      .map(({ id, active }) => ({ id, active, name: labels.get(id) ?? "" }))
+      .sort((a, b) => a.name.localeCompare(b.name))
     const publishers = relationships.groups.filter((g) => canRepresentPostGroup(actor, g, relationships))
     const fixedPublisher = actor.isAdmin
       ? relationships.groups.find((g) => g.id === fixedPublisherId && !g.active)
