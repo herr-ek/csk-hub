@@ -11,14 +11,20 @@ import { Switch } from "@/shared/ui/base/switch"
 import { groupDetailPath } from "./command-state"
 import type { GroupSummary } from "./group-summaries"
 
-/** The switch both overviews use to include archived groups. */
-export function ShowArchivedToggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
-  const t = useTranslations("Groups")
+export function GroupVisibilityToggle({
+  label,
+  checked,
+  onChange
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
   const toggleId = useId()
   return (
-    <div className="flex items-center gap-2 self-end">
+    <div className="flex items-center gap-2">
       <Switch id={toggleId} checked={checked} onCheckedChange={onChange} />
-      <Label htmlFor={toggleId}>{t("showArchived")}</Label>
+      <Label htmlFor={toggleId}>{label}</Label>
     </div>
   )
 }
