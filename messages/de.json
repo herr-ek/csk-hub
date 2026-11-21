@@ -71,6 +71,7 @@
       "forgotPassword": "Passwort vergessen?",
       "errors": {
         "invalidCredentials": "Anmeldung nicht möglich. Prüfe deine E-Mail-Adresse oder deinen Benutzernamen und dein Passwort und versuche es erneut.",
+        "oauthRequestExpired": "Diese Anmeldeanfrage ist abgelaufen. Kehre zur Anwendung zurück und versuche es erneut.",
         "unavailable": "Anmeldung derzeit nicht möglich. Prüfe deine Verbindung und versuche es erneut.",
         "passkeyFailed": "Anmeldung mit deinem Passkey nicht möglich. Versuche es erneut oder nutze E-Mail und Passwort.",
         "passkeyUnavailable": "Anmeldung mit einem Passkey derzeit nicht möglich. Prüfe deine Verbindung und versuche es erneut."
@@ -128,6 +129,7 @@
       "requestFailed": "Die Verifizierungsanfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
       "errors": {
         "sendFailed": "Der Bestätigungscode konnte nicht gesendet werden.",
+        "oauthRequestExpired": "Diese Anmeldeanfrage ist abgelaufen. Kehre zur Anwendung zurück und versuche es erneut.",
         "verifyFailed": "Der Code konnte nicht bestätigt werden."
       }
     }
@@ -1106,6 +1108,8 @@
     "clientId": "Client-ID",
     "secret": "Client-Geheimnis",
     "copy": "Geheimnis kopieren",
+    "copied": "Das Geheimnis wurde kopiert.",
+    "copyFailed": "Das Geheimnis konnte nicht kopiert werden. Markiere und kopiere es manuell.",
     "consentTitle": "Bei {name} anmelden",
     "consentDescription": "Dieser Anwendung die angeforderten Identitätsinformationen übermitteln?",
     "allow": "Erlauben",

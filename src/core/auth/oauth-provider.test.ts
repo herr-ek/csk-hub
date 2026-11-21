@@ -1,10 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
 import { betterAuth } from "better-auth"
-import { admin, jwt, twoFactor } from "better-auth/plugins"
+import { admin, jwt } from "better-auth/plugins"
 import { eq } from "drizzle-orm"
 import * as schema from "@/core/db/schema/auth"
 import { createTestDatabase } from "../../../test/database"
+import { createAuthPlugins } from "./auth-plugins"
+import { getOAuthResumePath } from "./oauth-continuation"
 import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
 
 const database = await createTestDatabase()
@@ -20,16 +22,9 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     disabledPaths: ["/token", ...oauthDisabledPaths],
     emailAndPassword: { enabled: true },
     plugins: [
-      admin(),
-      jwt({ disableSettingJwtHeader: true }),
-      twoFactor({
-        otpOptions: {
-          async sendOTP({ otp: value }) {
-            otp = value
-          }
-        }
-      }),
-      createOAuthProvider(t?.db, true)
+      ...createAuthPlugins(t?.db, true, async ({ otp: value }) => {
+        otp = value
+      })
     ]
   })
   afterAll(() => t.drop())
@@ -38,7 +33,8 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     path: string,
     body?: Record<string, unknown> | URLSearchParams,
     cookie = "",
-    authorizationHeader = ""
+    authorizationHeader = "",
+    accept = body ? "application/json" : "text/html"
   ) {
     return auth.handler(
       new Request(`${origin}/api/auth${path}`, {
@@ -47,7 +43,7 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
           origin,
           cookie,
           ...(authorizationHeader ? { authorization: authorizationHeader } : {}),
-          accept: body ? "application/json" : "text/html",
+          accept,
           ...(body
             ? {
                 "content-type":
@@ -129,6 +125,18 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     )
   }
 
+  test("discovery metadata uses the allowed preview request host and auth path", async () => {
+    const deployment = "https://deployment.example.test"
+    const branch = "branch.example.test"
+    const preview = betterAuth({
+      ...auth.options,
+      baseURL: { allowedHosts: [new URL(deployment).host, branch], fallback: deployment, protocol: "https" },
+      plugins: [...createAuthPlugins(t.db, true, async () => {})]
+    })
+    const metadata = await preview.api.getOpenIdConfig({ headers: new Headers({ host: branch }) })
+    expect(metadata.issuer).toBe(`https://${branch}/api/auth`)
+  })
+
   test("shared Admin management, fresh permissions, rotation, disabling and discovery", async () => {
     const first = await account("admin")
     const second = await account("admin")
@@ -165,7 +173,10 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
       await expect(auth.api.getOAuthClients({ headers })).rejects.toThrow()
       await expect(auth.api.rotateClientSecret({ headers, body: { client_id: client.client_id } })).rejects.toThrow()
       await expect(
-        auth.api.adminUpdateOAuthClient({ headers, body: { client_id: client.client_id, update: { disabled: true } } })
+        auth.api.adminUpdateOAuthClient({
+          headers,
+          body: { client_id: client.client_id, update: { disabled: true } }
+        })
       ).rejects.toThrow()
     }
     expect(
@@ -268,14 +279,33 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     await auth.api.enableTwoFactor({ headers: member.headers, body: { password: member.password } })
     await auth.api.sendTwoFactorOTP({ headers: member.headers })
     await auth.api.verifyTwoFactorOTP({ headers: member.headers, body: { code: otp } })
-    const start = await request(authorization(client.client_id))
+    const start = await request(authorization(client.client_id, { prompt: "login", max_age: "0" }))
     const login = new URL(start.headers.get("location") as string, origin)
     const oauth_query = login.search.slice(1)
-    const password = await request("/sign-in/email", { email: member.email, password: member.password, oauth_query })
+    const password = await request(
+      "/sign-in/email",
+      { email: member.email, password: member.password, oauth_query },
+      "",
+      "",
+      "text/html"
+    )
+    expect(password.headers.get("location")).toBeNull()
     expect(await password.json()).toMatchObject({ twoFactorRedirect: true })
     const cookie = cookies(password)
     expect((await request("/two-factor/send-otp", { oauth_query }, cookie)).status).toBe(200)
     const verified = await request("/two-factor/verify-otp", { code: otp, oauth_query }, cookie)
     expect(await verified.json()).toMatchObject({ redirect: true, url: expect.stringContaining("code=") })
+
+    const sessionCookie = cookies(verified)
+    const sessionResponse = await request("/get-session", undefined, sessionCookie)
+    const session: typeof auth.$Infer.Session | null = await sessionResponse.json()
+    if (!session) throw new Error("Expected a session after two-factor verification")
+    const resume = getOAuthResumePath(login.search, new Date(session.session.createdAt))
+    if (!resume) throw new Error("Expected an authorization URL for the recovered session")
+    const resumed = await auth.handler(new Request(new URL(resume, origin), { headers: { cookie: sessionCookie } }))
+    const callback = new URL(resumed.headers.get("location") as string, origin)
+    expect(callback.origin).toBe("http://localhost:8787")
+    expect(callback.searchParams.get("state")).toBe("test-state")
+    expect(callback.searchParams.get("code")).toBeTruthy()
   })
 })

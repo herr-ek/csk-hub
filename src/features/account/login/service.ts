@@ -1,5 +1,5 @@
 import { authClient } from "@/core/auth/auth-client"
-import { isOAuthRedirect } from "@/core/auth/oauth-continuation"
+import { isInvalidOAuthSignature, isOAuthRedirect } from "@/core/auth/oauth-continuation"
 
 export type EmailPasswordSignInInput = {
   email: string
@@ -12,7 +12,10 @@ export type IdentifierPasswordSignInInput = Omit<EmailPasswordSignInInput, "emai
 
 export type LoginResult =
   | { success: true; redirecting?: boolean; role?: string | null }
-  | { success: false; error: "invalidCredentials" | "unavailable" | "passkeyFailed" | "passkeyUnavailable" }
+  | {
+      success: false
+      error: "invalidCredentials" | "unavailable" | "passkeyFailed" | "passkeyUnavailable" | "oauthRequestExpired"
+    }
   | { success: false; requiresTwoFactor: true; methods: string[] }
 
 function requiresTwoFactor(result: { data: unknown }) {
@@ -42,7 +45,7 @@ export async function signInWithEmailPassword(input: EmailPasswordSignInInput): 
     if (result.error) {
       return {
         success: false,
-        error: "invalidCredentials"
+        error: isInvalidOAuthSignature(result.error) ? "oauthRequestExpired" : "invalidCredentials"
       }
     }
 
@@ -76,7 +79,7 @@ export async function signInWithUsernamePassword(input: UsernamePasswordSignInIn
     if (result.error) {
       return {
         success: false,
-        error: "invalidCredentials"
+        error: isInvalidOAuthSignature(result.error) ? "oauthRequestExpired" : "invalidCredentials"
       }
     }
 
@@ -112,7 +115,7 @@ export async function signInWithPasskey(): Promise<LoginResult> {
     if (result.error) {
       return {
         success: false,
-        error: "passkeyFailed"
+        error: isInvalidOAuthSignature(result.error) ? "oauthRequestExpired" : "passkeyFailed"
       }
     }
 

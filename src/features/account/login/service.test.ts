@@ -8,7 +8,7 @@ type MockSignInResponse = {
     twoFactorRedirect?: boolean
     twoFactorMethods?: unknown
   } | null
-  error: null | { message: string }
+  error: null | { message?: string; error?: string }
 }
 
 const signInEmail = mock(
@@ -56,6 +56,21 @@ describe("login service", () => {
       expect(result).toEqual({ success: true, redirecting: true })
     }
   })
+  test("identifies expired OAuth authorization across sign-in methods", async () => {
+    const response = { data: null, error: { error: "invalid_signature" } }
+    signInEmail.mockResolvedValue(response)
+    signInUsername.mockResolvedValue(response)
+    signInPasskey.mockResolvedValue(response)
+    const input = { password: "password", rememberMe: true }
+    for (const result of [
+      await signInWithEmailPassword({ ...input, email: "user@example.com" }),
+      await signInWithUsernamePassword({ ...input, username: "user" }),
+      await signInWithPasskey()
+    ]) {
+      expect(result).toEqual({ success: false, error: "oauthRequestExpired" })
+    }
+  })
+
   test("signs in with a username when the identifier is not an email", async () => {
     signInUsername.mockResolvedValue({ data: { user: { id: "user-1", role: "user" } }, error: null })
 

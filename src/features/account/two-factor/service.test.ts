@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
-type Response = { error: null | { message: string }; data?: { redirect: boolean; url: string } }
+type Response = { error: null | { message?: string; error?: string }; data?: { redirect: boolean; url: string } }
 
 const sendOtp = mock(async (): Promise<Response> => ({ error: null }))
 const verifyTotp = mock(async (): Promise<Response> => ({ error: null }))
@@ -32,6 +32,16 @@ describe("two-factor verification", () => {
       await expect(verifyTwoFactorMethod(method, "code", false)).resolves.toEqual({ success: true, redirecting: true })
     }
   })
+  test("identifies expired OAuth authorization when sending or verifying a code", async () => {
+    const response = { error: { error: "invalid_signature" } }
+    sendOtp.mockResolvedValue(response)
+    verifyOtp.mockResolvedValue(response)
+
+    const expected = { success: false, error: "oauthRequestExpired" } as const
+    await expect(sendTwoFactorOtp()).resolves.toEqual(expected)
+    await expect(verifyTwoFactorMethod("otp", "123456", false)).resolves.toEqual(expected)
+  })
+
   test("keeps supported methods and ignores unknown methods", () => {
     expect(getAvailableMethods(["totp", "sms", "otp", "backup"])).toEqual(["totp", "otp"])
   })

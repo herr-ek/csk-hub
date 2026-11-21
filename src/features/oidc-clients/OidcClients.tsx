@@ -38,14 +38,6 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
     })
   }
 
-  async function copySecret() {
-    try {
-      await navigator.clipboard.writeText(credentials?.secret ?? "")
-    } catch {
-      setError(true)
-    }
-  }
-
   return (
     <div className="flex flex-col gap-4" aria-busy={pending}>
       <Button
@@ -58,7 +50,7 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
       >
         {t("create")}
       </Button>
-      {error && (
+      {error && !editor && !rotation && (
         <Alert variant="destructive">
           <AlertDescription>{t("error")}</AlertDescription>
         </Alert>
@@ -112,7 +104,10 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
       <Dialog
         open={editor !== undefined}
         onOpenChange={(open) => {
-          if (!open && !pending) setEditor(undefined)
+          if (!open && !pending) {
+            setEditor(undefined)
+            setError(false)
+          }
         }}
       >
         <DialogContent>
@@ -166,7 +161,10 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
       <Dialog
         open={!!rotation}
         onOpenChange={(open) => {
-          if (!open && !pending) setRotation(undefined)
+          if (!open && !pending) {
+            setRotation(undefined)
+            setError(false)
+          }
         }}
       >
         <DialogContent>
@@ -192,10 +190,31 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
           </DialogHeader>
           <p>{t("secretWarning")}</p>
           <InputField label={t("clientId")} value={credentials?.clientId ?? ""} readOnly />
-          <InputField label={t("secret")} value={credentials?.secret ?? ""} readOnly autoComplete="off" />
-          <Button onClick={copySecret}>{t("copy")}</Button>
+          {credentials?.secret && <ClientSecret secret={credentials.secret} />}
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+function ClientSecret({ secret }: { secret: string }) {
+  const t = useTranslations("OidcClients")
+  const [feedback, setFeedback] = useState<"copied" | "copyFailed">()
+
+  async function copySecret() {
+    try {
+      await navigator.clipboard.writeText(secret)
+      setFeedback("copied")
+    } catch {
+      setFeedback("copyFailed")
+    }
+  }
+
+  return (
+    <>
+      <InputField label={t("secret")} value={secret} readOnly autoComplete="off" />
+      <Button onClick={copySecret}>{t("copy")}</Button>
+      {feedback && <p role={feedback === "copyFailed" ? "alert" : "status"}>{t(feedback)}</p>}
+    </>
   )
 }

@@ -1,57 +1,14 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
-import { i18n, locales } from "@better-auth/i18n"
-import { passkey } from "@better-auth/passkey"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
-import { admin, emailOTP, jwt, magicLink, openAPI, testUtils, twoFactor, username } from "better-auth/plugins"
+import { testUtils } from "better-auth/plugins"
 import { app } from "@/core/config/app"
 import { env, isProduction } from "@/core/config/env"
 import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
+import { createAuthPlugins } from "./auth-plugins"
 import { getBaseURL } from "./base-url"
-import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
-import { adminPluginOptions } from "./permissions"
-
-const authPlugins = [
-  jwt({ disableSettingJwtHeader: true }),
-  createOAuthProvider(db, env.ENVIRONMENT === "development" && process.env.NODE_ENV !== "production"),
-  username(),
-  admin(adminPluginOptions),
-  openAPI(),
-  twoFactor({
-    issuer: app.name,
-    otpOptions: {
-      async sendOTP({ user, otp }) {
-        const { sendTwoFactorOtpEmail } = await import("@/core/email")
-        await sendTwoFactorOtpEmail({ email: user.email, otp })
-      }
-    }
-  }),
-  passkey(),
-  emailOTP({
-    disableSignUp: true,
-    expiresIn: 60 * 5,
-    async sendVerificationOTP({ email, otp, type }) {
-      const { sendVerificationOtpEmail } = await import("@/core/email")
-      await sendVerificationOtpEmail({ email, otp, type })
-    }
-  }),
-  magicLink({
-    disableSignUp: true,
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    async sendMagicLink({ email, url }) {
-      const { sendMagicLinkEmail } = await import("@/core/email")
-      await sendMagicLinkEmail({ email, url })
-    }
-  }),
-  i18n({
-    translations: {
-      en: locales.en,
-      sv: locales.sv,
-      de: locales.de
-    }
-  })
-] as const
+import { oauthDisabledPaths } from "./oauth-provider"
 
 export const authOptions = {
   appName: app.name,
@@ -77,7 +34,18 @@ export const authOptions = {
       maxAge: 300 // 5 minutes
     }
   },
-  plugins: [...authPlugins, ...(isProduction ? [] : [testUtils()]), nextCookies()]
+  plugins: [
+    ...createAuthPlugins(
+      db,
+      env.ENVIRONMENT === "development" && process.env.NODE_ENV !== "production",
+      async ({ user, otp }) => {
+        const { sendTwoFactorOtpEmail } = await import("@/core/email")
+        await sendTwoFactorOtpEmail({ email: user.email, otp })
+      }
+    ),
+    ...(isProduction ? [] : [testUtils()]),
+    nextCookies()
+  ]
 } satisfies BetterAuthOptions
 
 export const auth = betterAuth(authOptions)
