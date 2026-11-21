@@ -62,7 +62,9 @@ export function GroupLink({ group }: { group: GroupSummary }) {
       <Link href={groupDetailPath(group.id)} className="font-medium underline-offset-4 hover:underline">
         {group.name}
       </Link>
-      {group.active ? null : <Badge variant="secondary">{t("archived")}</Badge>}
+      {group.active ? null : (
+        <Badge variant="secondary">{t(group.phase === "future" ? "management.future" : "archived")}</Badge>
+      )}
     </span>
   )
 }

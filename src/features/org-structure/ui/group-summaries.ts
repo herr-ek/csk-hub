@@ -17,6 +17,7 @@ export type GroupSummary = {
   type: GroupType
   choirId: string | null
   active: boolean
+  phase: "future" | "current" | "completed"
   memberCount: number
   voices: Voice[]
   holders: { position: string; holder: string }[]
@@ -37,18 +38,17 @@ export async function listGroupSummaries(): Promise<GroupSummary[]> {
     listEffectiveMembersForGroupsAt(db, ids, date),
     listAppointmentsForGroups(db, ids)
   ])
-  return groups
-    .filter((row) => row.phase !== "future")
-    .map((row) => ({
-      id: row.id,
-      name: labels.get(row.id) ?? row.id,
-      type: row.type,
-      choirId: row.choirId,
-      active: row.active && row.phase === "current",
-      memberCount: members.get(row.id)?.length ?? 0,
-      voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
-      holders: (appointments.get(row.id) ?? [])
-        .filter((entry) => entry.startDate <= date && (entry.endDate === null || entry.endDate > date))
-        .map((entry) => ({ position: positionLabel(positionCodeKey(entry.positionCode)), holder: entry.name }))
-    }))
+  return groups.map((row) => ({
+    id: row.id,
+    name: labels.get(row.id) ?? row.id,
+    type: row.type,
+    choirId: row.choirId,
+    active: row.active && row.phase === "current",
+    phase: row.phase,
+    memberCount: members.get(row.id)?.length ?? 0,
+    voices: sections.filter(({ groupId }) => groupId === row.id).map(({ voice }) => voice),
+    holders: (appointments.get(row.id) ?? [])
+      .filter((entry) => entry.startDate <= date && (entry.endDate === null || entry.endDate > date))
+      .map((entry) => ({ position: positionLabel(positionCodeKey(entry.positionCode)), holder: entry.name }))
+  }))
 }

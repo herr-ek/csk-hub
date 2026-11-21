@@ -15,7 +15,8 @@ export function GroupsOverview({ overview }: { overview: Overview }) {
   const t = useTranslations("Groups")
   const types = useTranslations("Groups.types")
   const [showArchived, setShowArchived] = useState(false)
-  const visible = (groups: GroupSummary[]) => groups.filter(({ active }) => showArchived || active)
+  const visible = (groups: GroupSummary[]) =>
+    groups.filter(({ active, phase }) => showArchived || active || phase === "future")
 
   const cskWide = visible(overview.cskWide)
   const cskWideTypes = [...new Set(cskWide.map(({ type }) => type))]

@@ -1,15 +1,21 @@
 import { afterAll, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
+import { renderToStaticMarkup } from "react-dom/server"
+import * as authz from "@/core/authz"
 import { directMembership, group } from "@/core/db/schema/org-structure"
+import { NextIntlClientProvider } from "@/core/i18n/client"
+import { getMessages } from "@/core/i18n/messages"
 import * as intlServer from "@/core/i18n/server"
 import { GroupType, organisationYearPeriod, PositionCode } from "@/core/org-structure"
 import { createOrgStructureTestDatabase, expectSuccess } from "../test-support"
+import { groupDetailPath } from "./command-state"
+import { GroupsOverview } from "./groups/overview"
 
 const database = await createOrgStructureTestDatabase()
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
 const revalidatePath = mock(() => undefined)
 mock.module("@/core/db", () => ({ db: database?.db }))
-mock.module("@/core/authz", () => ({ requirePermission: requireAdmin }))
+mock.module("@/core/authz", () => ({ ...authz, requirePermission: requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
 mock.module("@/core/i18n/server", () => ({ ...intlServer, getTranslations: async () => (key: string) => key }))
 
@@ -18,6 +24,7 @@ const { createGroupAction, renameGroupAction, archiveGroupAction, prepareYearAct
 )
 const { addMemberAction, endMembershipAction, changeVoiceAction } = await import("./detail/actions")
 const { getGroupDetail } = await import("./detail/query")
+const { getGroupsOverview } = await import("./groups/query")
 const {
   assignAppointmentAction,
   replaceAppointmentAction,
@@ -168,6 +175,22 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
       error: "section-archived-with-choir"
     })
     expect(revalidatePath).toHaveBeenCalled()
+  })
+
+  test("next year's prepared Groups appear on the default Groups overview", async () => {
+    setSystemTime(new Date("2026-11-21T12:00:00Z"))
+    expect(await prepareYearAction(IDLE, form({ organisationYear: "2027" }))).toMatchObject({ status: "success" })
+    const prepared = await t.db.select().from(group).where(eq(group.organisationYear, 2027))
+    expect(prepared.length).toBeGreaterThan(0)
+
+    const overview = await getGroupsOverview()
+    const markup = renderToStaticMarkup(
+      <NextIntlClientProvider locale="en" timeZone="Europe/Stockholm" messages={getMessages("en")}>
+        <GroupsOverview overview={overview} />
+      </NextIntlClientProvider>
+    )
+    for (const { id } of prepared) expect(markup).toContain(`href="${groupDetailPath(id)}"`)
+    expect(markup).toContain(getMessages("en").Groups.management.future)
   })
 
   test("prepares annual groups and applies inclusive dates to direct membership actions", async () => {
