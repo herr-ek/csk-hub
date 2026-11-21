@@ -173,7 +173,10 @@
     "morePages": "Fler sidor",
     "sidebarTitle": "Sidofält",
     "mobileSidebarDescription": "Visar det mobila sidofältet.",
-    "toggleSidebar": "Växla sidofält"
+    "toggleSidebar": "Växla sidofält",
+    "pickDate": "Välj datum",
+    "clearDate": "Rensa",
+    "time": "Tid"
   },
   "Navigation": {
     "admin": "Administratör",

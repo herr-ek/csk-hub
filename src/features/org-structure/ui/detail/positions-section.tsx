@@ -2,7 +2,7 @@
 
 import { useTranslations } from "@/core/i18n/translations"
 import { holdsElectedPosts } from "@/core/org-structure"
-import { InputField, SelectField } from "@/shared/forms/fields"
+import { DateField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
@@ -145,7 +145,7 @@ function AssignHolderDialog({
           options={candidates.map((member) => ({ value: member.id, label: member.name }))}
         />
       )}
-      <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
+      <DateField label={t("startDate")} name="startDate" defaultValue={today} required />
     </GroupCommandDialog>
   )
 }
@@ -178,7 +178,7 @@ function EndHoldingDialog({
       <input type="hidden" name="groupId" value={detail.group.id} />
       <input type="hidden" name="positionId" value={position.id} />
       <input type="hidden" name="appointmentId" value={position.holder.appointmentId} />
-      <InputField label={t("endDate")} name="endDate" defaultValue={today} type="date" required />
+      <DateField label={t("endDate")} name="endDate" defaultValue={today} required />
     </GroupCommandDialog>
   )
 }

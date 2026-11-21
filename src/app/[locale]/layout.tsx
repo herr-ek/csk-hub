@@ -100,7 +100,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           its own instead of to the window (see `ContentPage`'s `fill`). */}
       <body className="h-full flex flex-col">
         <NextIntlClientProvider locale={locale} messages={messages} formats={{}} timeZone={timeZone}>
-          <UiLabelsProvider labels={messages.Ui}>
+          <UiLabelsProvider labels={messages.Ui} locale={locale}>
             <LocalizedFormProvider>
               <ThemeProvider>
                 {children}

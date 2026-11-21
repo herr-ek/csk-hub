@@ -3,7 +3,7 @@
 import { useTranslations } from "@/core/i18n/translations"
 import { GroupType } from "@/core/org-structure"
 import { compareVoices, VOICE_DIVISIONS, type Voice } from "@/features/voice/model"
-import { InputField, SelectField } from "@/shared/forms/fields"
+import { DateField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
@@ -192,7 +192,7 @@ function AddMemberDialog({ detail, today }: { detail: GroupDetail; today: string
           }))}
         />
       ) : null}
-      <InputField label={t("startDate")} name="startDate" defaultValue={today} type="date" required />
+      <DateField label={t("startDate")} name="startDate" defaultValue={today} required />
     </GroupCommandDialog>
   )
 }
@@ -227,7 +227,7 @@ function EndMembershipDialog({ detail, member, today }: { detail: GroupDetail; m
     >
       <input type="hidden" name="groupId" value={group.id} />
       <input type="hidden" name="userId" value={member.userId} />
-      <InputField label={t("endDate")} name="endDate" defaultValue={today} type="date" required />
+      <DateField label={t("endDate")} name="endDate" defaultValue={today} required />
     </GroupCommandDialog>
   )
 }
@@ -261,7 +261,7 @@ function ChangeVoiceDialog({ detail, member, today }: { detail: GroupDetail; mem
         required
         options={voices.map((voice) => ({ value: voice, label: voice }))}
       />
-      <InputField label={t("changeDate")} name="date" defaultValue={today} type="date" required />
+      <DateField label={t("changeDate")} name="date" defaultValue={today} required />
     </GroupCommandDialog>
   )
 }
