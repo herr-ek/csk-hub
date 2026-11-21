@@ -1,7 +1,7 @@
 import "server-only"
 
 import { and, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm"
-import { alias } from "drizzle-orm/pg-core"
+import { alias, type SelectedFields } from "drizzle-orm/pg-core"
 import { z } from "zod"
 import {
   type AuthorizationDatabase,
@@ -36,7 +36,10 @@ export type NewsFeedEntry = {
   editedAt: Date | null
   body: RichTextDocument
 }
-export type PublishedPost = NewsFeedEntry
+export type PublishedPost = NewsFeedEntry & {
+  /** Revision of this detail view, supplied only to readers who can edit or recall it. */
+  manageRevision: number | null
+}
 export type DraftSummary = { id: string; title: string; savedAt: Date; recalled: boolean }
 export type EditablePost = {
   id: string
@@ -57,7 +60,6 @@ export function isPostId(value: string): boolean {
 }
 const editor = alias(user, "post_editor")
 const publishedPostColumns = {
-  id: post.id,
   title: post.title,
   body: post.body,
   authorName: user.name,
@@ -140,6 +142,21 @@ async function publishedReadModels<Row extends PublishedRow>(
   })
 }
 
+function selectPublishedCandidates<Columns extends SelectedFields>(
+  database: PostsDatabase,
+  columns: Columns,
+  filter: SQL | undefined
+) {
+  return database
+    .select({ id: post.id, ...columns })
+    .from(post)
+    .leftJoin(user, eq(post.authorId, user.id))
+    .leftJoin(editor, eq(post.lastEditorId, editor.id))
+    .leftJoin(group, eq(post.publisherGroupId, group.id))
+    .where(filter)
+    .for("share", { of: post })
+}
+
 export const NEWS_FEED_PAGE_SIZE = 20
 
 /**
@@ -179,18 +196,15 @@ async function readNewsFeed(
   const limit = shown * NEWS_FEED_PAGE_SIZE
   return withAccess(async (access, tx) => {
     const { actor, relationships } = await getPostScope(tx, access)
-    const rows = await tx
-      .select(publishedPostColumns)
-      .from(post)
-      .leftJoin(user, eq(post.authorId, user.id))
-      .leftJoin(editor, eq(post.lastEditorId, editor.id))
-      .leftJoin(group, eq(post.publisherGroupId, group.id))
-      .where(and(publishedPostVisibility(tx, actor, relationships), matches))
+    const rows = await selectPublishedCandidates(
+      tx,
+      publishedPostColumns,
+      and(publishedPostVisibility(tx, actor, relationships), matches)
+    )
       // The id breaks ties, so a Post never shows twice or goes missing across pages.
       .orderBy(desc(post.publishedAt), desc(post.id))
       // One row past the budget tells whether there is more, without counting the table.
       .limit(limit + 1)
-      .for("share", { of: post })
     const entries = await publishedReadModels(rows.slice(0, limit), tx, access, relationships)
     return { entries, pages: shown, hasMore: rows.length > limit }
   }, database)
@@ -205,16 +219,9 @@ export async function listLatestPosts(
   return withAccess(async (access, tx) => {
     const { actor, relationships } = await getPostScope(tx, access)
     const { body: _body, ...columns } = publishedPostColumns
-    const rows = await tx
-      .select(columns)
-      .from(post)
-      .leftJoin(user, eq(post.authorId, user.id))
-      .leftJoin(editor, eq(post.lastEditorId, editor.id))
-      .leftJoin(group, eq(post.publisherGroupId, group.id))
-      .where(publishedPostVisibility(tx, actor, relationships))
+    const rows = await selectPublishedCandidates(tx, columns, publishedPostVisibility(tx, actor, relationships))
       .orderBy(desc(post.publishedAt))
       .limit(count)
-      .for("share", { of: post })
     const visible = await publishedReadModels(rows, tx, access, relationships)
     return visible.map(({ targets: _targets, ...row }) => row)
   }, database)
@@ -230,15 +237,17 @@ export async function getPublishedPost(
   try {
     return await withAccess(async (access, tx) => {
       const { actor, relationships } = await getPostScope(tx, access)
-      const [row] = await tx
-        .select(publishedPostColumns)
-        .from(post)
-        .leftJoin(user, eq(post.authorId, user.id))
-        .leftJoin(editor, eq(post.lastEditorId, editor.id))
-        .leftJoin(group, eq(post.publisherGroupId, group.id))
-        .where(and(eq(post.id, postId), publishedPostVisibility(tx, actor, relationships)))
-        .for("share", { of: post })
-      return row ? ((await publishedReadModels([row], tx, access, relationships))[0] ?? null) : null
+      const [row] = await selectPublishedCandidates(
+        tx,
+        { ...publishedPostColumns, revision: post.revision },
+        and(eq(post.id, postId), publishedPostVisibility(tx, actor, relationships))
+      )
+      if (!row) return null
+      const [visible] = await publishedReadModels([row], tx, access, relationships)
+      if (!visible) return null
+      const { revision, ...detail } = visible
+      const canManage = access.can({ action: "post.unpublish", context: { post: row, relationships } })
+      return { ...detail, manageRevision: canManage ? revision : null }
     }, database)
   } catch (error) {
     if (error instanceof AuthorizationDeniedError) return null

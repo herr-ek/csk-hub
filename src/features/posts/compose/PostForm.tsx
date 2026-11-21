@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useActionState, useEffect, useState } from "react"
+import { type ReactNode, useActionState, useEffect, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { useTranslations } from "@/core/i18n/translations"
 import { RichTextEditor } from "@/features/rich-text"
@@ -11,7 +11,8 @@ import { Button, buttonVariants } from "@/shared/ui/base/button"
 import { Field, FieldError, FieldGroup, FieldTitle } from "@/shared/ui/base/field"
 import { postDocument } from "../post-document"
 import type { PostComposeOptions } from "../service"
-import type { PostFormState } from "./actions"
+import type { PostCommandState, PostFormState } from "./actions"
+import { ConfirmPostCommand } from "./ConfirmPostCommand"
 import { PostAddressFields } from "./PostAddressFields"
 import { POST_TITLE_MAX_LENGTH } from "./schemas"
 import type { UnsavedPost } from "./use-unsaved-post"
@@ -25,6 +26,8 @@ type PostFormProps = {
   stage: "draft" | "published" | "recalled"
   /** What the Post says now, when it already exists. */
   initial?: UnsavedPost & { revision?: number; identityFixed?: boolean }
+  header?: ReactNode
+  discardAction?: (state: PostCommandState, formData: FormData) => Promise<PostCommandState>
   options: PostComposeOptions
   /**
    * Where unsaved changes are kept across a reload: the Post's id, or `"new"`, and the
@@ -40,6 +43,8 @@ export function PostForm({
   action: submit,
   stage,
   initial: latestInitial,
+  header,
+  discardAction,
   options,
   unsaved: storage,
   cancelHref
@@ -86,72 +91,82 @@ export function PostForm({
   const fieldsKey = `${initial?.revision ?? "new"}-${unsaved.restored ? "restored" : "saved"}`
 
   return (
-    <form action={action} onSubmit={unsaved.saving} className="flex flex-col gap-6">
-      {unsaved.restored && state.status === "idle" ? (
-        <Alert>
-          <AlertDescription>{t("unsavedRestored")}</AlertDescription>
-          <AlertAction>
-            <Button type="button" variant="outline" size="sm" onClick={unsaved.discard}>
-              {t("discardUnsaved")}
-            </Button>
-          </AlertAction>
-        </Alert>
+    <>
+      {header ? (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          {header}
+          {discardAction && initial?.revision !== undefined ? (
+            <ConfirmPostCommand revision={initial.revision} command="discard" action={discardAction} />
+          ) : null}
+        </div>
       ) : null}
-      {initial?.revision !== undefined ? <input type="hidden" name="revision" value={initial.revision} /> : null}
-      <FieldGroup>
-        <PostAddressFields
-          key={`${fieldsKey}-${state.status}`}
-          initial={{
-            publisherGroupId: rejected ? rejected.publisherGroupId || null : (startedFrom?.publisherGroupId ?? null),
-            audienceAll: rejected?.audienceAll ?? startedFrom?.audienceAll ?? false,
-            targets: rejected?.targets ?? startedFrom?.targets ?? []
-          }}
-          options={options}
-          identityFixed={initial?.identityFixed ?? false}
-          onChange={unsaved.changeAddress}
-          targetErrors={state.status === "error" ? state.targetErrors : undefined}
-        />
-        <InputField
-          key={fieldsKey}
-          onChange={(event) => unsaved.changeTitle(event.target.value)}
-          label={t("titleLabel")}
-          name="title"
-          type="text"
-          defaultValue={title}
-          maxLength={POST_TITLE_MAX_LENGTH}
-          required
-        />
-        <Field className="min-h-64">
-          <FieldTitle id={POST_BODY_LABEL_ID}>{t("bodyLabel")}</FieldTitle>
-          <RichTextEditor
-            key={fieldsKey}
-            onChange={unsaved.changeBody}
-            schema={postDocument}
-            name="body"
-            defaultValue={body}
-            labelledBy={POST_BODY_LABEL_ID}
-            placeholder={t("bodyPlaceholder")}
-          />
-        </Field>
-        <FieldError>{state.status === "error" ? t(state.error) : undefined}</FieldError>
-        {state.status === "error" && state.error === "editConflict" ? (
-          <Link
-            href={`/news/${storage.slot}/edit`}
-            target="_blank"
-            rel="noopener"
-            className={buttonVariants({ variant: "outline" })}
-          >
-            {t("openLatest")}
-          </Link>
+      <form action={action} onSubmit={unsaved.saving} className="flex flex-col gap-6">
+        {unsaved.restored && state.status === "idle" ? (
+          <Alert>
+            <AlertDescription>{t("unsavedRestored")}</AlertDescription>
+            <AlertAction>
+              <Button type="button" variant="outline" size="sm" onClick={unsaved.discard}>
+                {t("discardUnsaved")}
+              </Button>
+            </AlertAction>
+          </Alert>
         ) : null}
-      </FieldGroup>
-      <div className="flex flex-wrap items-center gap-3">
-        <SubmitButtons stage={stage} />
-        <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
-          {common("cancel")}
-        </Link>
-      </div>
-    </form>
+        {initial?.revision !== undefined ? <input type="hidden" name="revision" value={initial.revision} /> : null}
+        <FieldGroup>
+          <PostAddressFields
+            key={`${fieldsKey}-${state.status}`}
+            initial={{
+              publisherGroupId: rejected ? rejected.publisherGroupId || null : (startedFrom?.publisherGroupId ?? null),
+              audienceAll: rejected?.audienceAll ?? startedFrom?.audienceAll ?? false,
+              targets: rejected?.targets ?? startedFrom?.targets ?? []
+            }}
+            options={options}
+            identityFixed={initial?.identityFixed ?? false}
+            onChange={unsaved.changeAddress}
+            targetErrors={state.status === "error" ? state.targetErrors : undefined}
+          />
+          <InputField
+            key={fieldsKey}
+            onChange={(event) => unsaved.changeTitle(event.target.value)}
+            label={t("titleLabel")}
+            name="title"
+            type="text"
+            defaultValue={title}
+            maxLength={POST_TITLE_MAX_LENGTH}
+            required
+          />
+          <Field className="min-h-64">
+            <FieldTitle id={POST_BODY_LABEL_ID}>{t("bodyLabel")}</FieldTitle>
+            <RichTextEditor
+              key={fieldsKey}
+              onChange={unsaved.changeBody}
+              schema={postDocument}
+              name="body"
+              defaultValue={body}
+              labelledBy={POST_BODY_LABEL_ID}
+              placeholder={t("bodyPlaceholder")}
+            />
+          </Field>
+          <FieldError>{state.status === "error" ? t(state.error) : undefined}</FieldError>
+          {state.status === "error" && state.error === "editConflict" ? (
+            <Link
+              href={`/news/${storage.slot}/edit`}
+              target="_blank"
+              rel="noopener"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {t("openLatest")}
+            </Link>
+          ) : null}
+        </FieldGroup>
+        <div className="flex flex-wrap items-center gap-3">
+          <SubmitButtons stage={stage} />
+          <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
+            {common("cancel")}
+          </Link>
+        </div>
+      </form>
+    </>
   )
 }
 

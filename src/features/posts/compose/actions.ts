@@ -15,7 +15,7 @@ import {
   saveDraftCommand,
   unpublishPostCommand
 } from "./commands"
-import { type PostFormInput, parsePostTargets, postFormSchema } from "./schemas"
+import { type PostFormInput, parsePostTargets, postFormSchema, postRevisionSchema } from "./schemas"
 import { UNPUBLISHED_NOTICE_PARAM } from "./unpublished-notice"
 
 /**
@@ -46,7 +46,7 @@ export type PostCommandError =
   | "unpublishFailed"
   | "discardFailed"
   | "postUnavailable"
-  | "editConflict"
+  | "commandConflict"
 
 export type PostCommandState = { status: "idle" } | { status: "error"; error: PostCommandError }
 
@@ -98,6 +98,17 @@ async function submitPost(
   return { savedId: result.postId, revision: result.revision, values }
 }
 
+/** An existing Post write always carries a validated revision from the editor. */
+async function submitExistingPost(
+  formData: FormData,
+  write: (content: PostFormInput, revision: number) => Promise<PostWriteResult>
+) {
+  const revision = postRevisionSchema.safeParse(formData.get("revision"))
+  if (!revision.success)
+    return { state: { status: "error", error: "editConflict", values: readValues(formData) } satisfies PostFormState }
+  return submitPost(formData, (content) => write(content, revision.data))
+}
+
 function revalidatePost(postId: string, publishedChanged: boolean) {
   if (publishedChanged) scheduleActivityDispatch()
   revalidatePath(ROUTES.home)
@@ -121,7 +132,9 @@ export async function createPost(_state: PostFormState, formData: FormData): Pro
  */
 export async function saveDraft(postId: string, _state: PostFormState, formData: FormData): Promise<PostFormState> {
   const publish = publishRequested(formData)
-  const result = await submitPost(formData, (content) => saveDraftCommand(postId, content, publish, content.revision))
+  const result = await submitExistingPost(formData, (content, revision) =>
+    saveDraftCommand(postId, content, publish, revision)
+  )
   if ("state" in result) return result.state
 
   revalidatePost(result.savedId, publish)
@@ -136,7 +149,9 @@ export async function editPublishedPost(
   _state: PostFormState,
   formData: FormData
 ): Promise<PostFormState> {
-  const result = await submitPost(formData, (content) => editPublishedPostCommand(postId, content, content.revision))
+  const result = await submitExistingPost(formData, (content, revision) =>
+    editPublishedPostCommand(postId, content, revision)
+  )
   if ("state" in result) return result.state
 
   revalidatePost(result.savedId, true)
@@ -151,16 +166,20 @@ export async function editPublishedPost(
 async function runCommand<Success extends object>(
   postId: string,
   command: PostCommand,
-  run: () => Promise<PostWriteResult<Success>>,
+  formData: FormData,
+  run: (revision: number) => Promise<PostWriteResult<Success>>,
   destination: (result: { postId: string } & Success) => string = () => ROUTES.news
 ): Promise<PostCommandState> {
   const failed = command === "unpublish" ? "unpublishFailed" : "discardFailed"
 
-  const result = await run()
+  const revision = postRevisionSchema.safeParse(formData.get("revision"))
+  if (!revision.success) return { status: "error", error: "commandConflict" }
+
+  const result = await run(revision.data)
   if (result.status === "unauthorized") return { status: "error", error: "writeUnauthorized" }
   if (result.status === "failed") return { status: "error", error: failed }
   if (result.status === "unavailable") return { status: "error", error: "postUnavailable" }
-  if (result.status === "conflict") return { status: "error", error: "editConflict" }
+  if (result.status === "conflict") return { status: "error", error: "commandConflict" }
 
   revalidatePost(postId, command === "unpublish")
   redirect(destination(result))
@@ -178,7 +197,8 @@ export async function unpublishPost(
   return runCommand(
     postId,
     "unpublish",
-    () => unpublishPostCommand(postId, readRevision(formData)),
+    formData,
+    (revision) => unpublishPostCommand(postId, revision),
     ({ unpublishedTo }) => `${ROUTES.news}?${UNPUBLISHED_NOTICE_PARAM}=${unpublishedTo}`
   )
 }
@@ -189,10 +209,5 @@ export async function discardDraft(
   _state: PostCommandState,
   formData: FormData
 ): Promise<PostCommandState> {
-  return runCommand(postId, "discard", () => discardDraftCommand(postId, readRevision(formData)))
-}
-
-function readRevision(formData: FormData): number | undefined {
-  const value = formData.get("revision")
-  return typeof value === "string" && /^\d+$/.test(value) ? Number(value) : undefined
+  return runCommand(postId, "discard", formData, (revision) => discardDraftCommand(postId, revision))
 }

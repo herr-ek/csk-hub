@@ -7,7 +7,6 @@ import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostTime } from "../PostTime"
 import { getEditablePost, getPostComposeOptions } from "../service"
 import { discardDraft, editPublishedPost, saveDraft } from "./actions"
-import { ConfirmPostCommand } from "./ConfirmPostCommand"
 import { PostForm } from "./PostForm"
 
 export async function EditPostScreen({ postId }: { postId: string }) {
@@ -23,31 +22,28 @@ export async function EditPostScreen({ postId }: { postId: string }) {
 
   return (
     <ContentPage>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold">
-            {post.recalled ? t("editRecalled") : draft ? t("editDraft") : t("editPublished")}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {draft ? (
-              <>
-                {t("draftSaved")} <PostTime date={post.savedAt} withTime /> {t("bylineSeparator")}{" "}
-                {t(post.recalled ? "recalledDescription" : "draftDescription")}
-              </>
-            ) : (
-              t("editPublishedDescription")
-            )}
-          </p>
-        </div>
-        {draft && !post.recalled ? (
-          <ConfirmPostCommand revision={post.revision} command="discard" action={discardDraft.bind(null, post.id)} />
-        ) : null}
-      </div>
-      {/* Keyed on the save, so a reloaded draft starts the editor from what was stored. */}
       <PostForm
         key={post.id}
         action={draft ? saveDraft.bind(null, post.id) : editPublishedPost.bind(null, post.id)}
         stage={post.recalled ? "recalled" : post.state}
+        discardAction={draft && !post.recalled ? discardDraft.bind(null, post.id) : undefined}
+        header={
+          <div>
+            <h1 className="font-heading text-2xl font-semibold">
+              {post.recalled ? t("editRecalled") : draft ? t("editDraft") : t("editPublished")}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {draft ? (
+                <>
+                  {t("draftSaved")} <PostTime date={post.savedAt} withTime /> {t("bylineSeparator")}{" "}
+                  {t(post.recalled ? "recalledDescription" : "draftDescription")}
+                </>
+              ) : (
+                t("editPublishedDescription")
+              )}
+            </p>
+          </div>
+        }
         options={options}
         initial={post}
         unsaved={{ slot: post.id, version: String(post.revision) }}

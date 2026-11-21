@@ -110,7 +110,7 @@ export async function saveDraftCommand(
   postId: string,
   content: PostSubmission,
   publish: boolean,
-  revision?: number,
+  revision: number,
   dependencies: Dependencies = {}
 ): Promise<PostWriteResult> {
   return writePost(
@@ -127,7 +127,7 @@ export async function saveDraftCommand(
 export async function editPublishedPostCommand(
   postId: string,
   content: PostSubmission,
-  revision?: number,
+  revision: number,
   dependencies: Dependencies = {}
 ): Promise<PostWriteResult> {
   return writePost(
@@ -143,7 +143,7 @@ export async function editPublishedPostCommand(
 
 export async function unpublishPostCommand(
   postId: string,
-  revision?: number,
+  revision: number,
   dependencies: Dependencies = {}
 ): Promise<PostWriteResult<{ unpublishedTo: UnpublishedTo }>> {
   return writePost(
@@ -171,7 +171,7 @@ export async function unpublishPostCommand(
 
 export async function discardDraftCommand(
   postId: string,
-  revision?: number,
+  revision: number,
   dependencies: Dependencies = {}
 ): Promise<PostWriteResult> {
   return writePost(

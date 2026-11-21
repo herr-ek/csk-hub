@@ -106,7 +106,7 @@ export function PostAddressFields({
                       { value: "", label: t("allCsk") },
                       ...visibleGroups.map((g) => ({
                         value: g.id,
-                        label: g.name + (g.active ? "" : t("archivedSuffix"))
+                        label: g.active ? g.name : t("archivedGroup", { name: g.name })
                       }))
                     ]}
                     onValueChange={(id) =>

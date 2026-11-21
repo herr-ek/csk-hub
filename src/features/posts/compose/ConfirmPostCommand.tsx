@@ -43,7 +43,7 @@ export function ConfirmPostCommand({
   const common = useTranslations("Common")
   const copy = COPY[command]
   const formId = useId()
-  const [open, setOpen] = useState(false)
+  const [confirmedRevision, setConfirmedRevision] = useState<number | null>(null)
   const [state, submit, pending] = useActionState<PostCommandState, FormData>(action, { status: "idle" })
 
   // The form sits outside the dialog so it adds no gap to the dialog's layout; the
@@ -51,9 +51,14 @@ export function ConfirmPostCommand({
   return (
     <>
       <form id={formId} action={submit}>
-        <input type="hidden" name="revision" value={revision} />
+        <input type="hidden" name="revision" value={confirmedRevision ?? revision} />
       </form>
-      <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+      <AlertDialog
+        open={confirmedRevision !== null}
+        onOpenChange={(open) => {
+          if (!pending) setConfirmedRevision((confirmed) => (open ? (confirmed ?? revision) : null))
+        }}
+      >
         <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
           {t(copy.label)}
         </AlertDialogTrigger>

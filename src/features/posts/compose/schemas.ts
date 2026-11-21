@@ -49,6 +49,8 @@ export function parsePostTargets(value: string) {
   }
 }
 
+export const postRevisionSchema = z.string().regex(/^\d+$/).transform(Number).pipe(z.int().nonnegative())
+
 /** A Post's title and body as every compose form submits them, new or edited. */
 export const postFormSchema = z.object({
   title: z.string().trim().min(1).max(POST_TITLE_MAX_LENGTH),
@@ -59,11 +61,7 @@ export const postFormSchema = z.object({
     .transform((id) => id || null),
   audienceAll: z.boolean().default(false),
   targets: postTargetsSchema.default([]),
-  revision: z
-    .string()
-    .regex(/^\d+$/)
-    .optional()
-    .transform((value) => (value === undefined ? undefined : Number(value)))
+  revision: postRevisionSchema.optional()
 })
 
 export type PostFormInput = z.infer<typeof postFormSchema>

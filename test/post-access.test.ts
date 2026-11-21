@@ -234,6 +234,14 @@ describe("Group Post access end to end", () => {
       (await commands.editPublishedPostCommand(id, content(address, "Stale"), 0, dependencies(alice))).status
     ).toBe("conflict")
     expect((await commands.unpublishPostCommand(id, 0, dependencies(alice))).status).toBe("conflict")
+    expect(await reads.getPublishedPost(id, db, dependencies(alice).withAccess)).toMatchObject({
+      title: "First",
+      manageRevision: 1
+    })
+    expect(await reads.getPublishedPost(id, db, dependencies(singer).withAccess)).toMatchObject({
+      title: "First",
+      manageRevision: null
+    })
     expect((await commands.unpublishPostCommand(id, 1, dependencies(bob))).status).toBe("success")
     for (const actor of [alice, bob, admin]) {
       expect((await commands.discardDraftCommand(id, 2, dependencies(actor))).status).toBe("unauthorized")

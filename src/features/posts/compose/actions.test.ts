@@ -207,6 +207,25 @@ describe("Post form transport", () => {
     expect(redirect).not.toHaveBeenCalled()
   })
 
+  test.each([undefined, "", "-1", "1.5", "9007199254740992"])(
+    "existing Post actions reject revision %s before invoking a command",
+    async (revision) => {
+      const data = form()
+      if (revision === undefined) data.delete("revision")
+      else data.set("revision", revision)
+      const conflict = { status: "error", error: "editConflict" }
+      expect(await actions.saveDraft(POST_ID, IDLE, data)).toMatchObject({ ...conflict, values: { body: BODY } })
+      expect(await actions.editPublishedPost(POST_ID, IDLE, data)).toMatchObject({
+        ...conflict,
+        values: { body: BODY }
+      })
+      expect(await actions.unpublishPost(POST_ID, IDLE, data)).toEqual({ status: "error", error: "commandConflict" })
+      expect(await actions.discardDraft(POST_ID, IDLE, data)).toEqual({ status: "error", error: "commandConflict" })
+      for (const command of [saveDraftCommand, editPublishedPostCommand, unpublishPostCommand, discardDraftCommand])
+        expect(command).not.toHaveBeenCalled()
+    }
+  )
+
   test("recall and discard forward revisions and describe shared recall", async () => {
     await expect(actions.unpublishPost(POST_ID, IDLE, form())).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=group")
     expect(unpublishPostCommand).toHaveBeenCalledWith(POST_ID, 7)
