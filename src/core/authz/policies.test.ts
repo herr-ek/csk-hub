@@ -165,8 +165,15 @@ describe("Group policies", () => {
 })
 
 describe("Event policies", () => {
-  const event = { id: "event", organiserGroupId: group.id }
-  const context = { ...groupContext, event, proposedOrganiser: groupContext }
+  const event = { id: "event", organiserGroupId: group.id, type: "Gig" as const, seriesId: null }
+  const context = {
+    ...groupContext,
+    groups: [group],
+    targets: [],
+    event,
+    proposedOrganiser: groupContext,
+    proposedEvent: { type: "Gig" as const, targets: [] }
+  }
 
   test("creation requires exact active non-Choir representation or explicit Admin authority", () => {
     expect(evaluatePermission(owner, { action: "event.create", context: groupContext })).toBe(true)
@@ -214,6 +221,72 @@ describe("Event policies", () => {
         expect(evaluatePermission(admin, { action, context: facts })).toBe(true)
       }
       expect(evaluatePermission(admin, { action, context: { ...context, event: null } })).toBe(false)
+    }
+  })
+})
+
+describe("Board scheduling of Choirs' Series Rehearsals", () => {
+  // `holding` makes owner a current Position holder in `group`, an active Board.
+  const choir: GroupAttributes = { id: "choir", type: GroupType.Choir, active: true }
+  const choirTarget = { groupId: choir.id, groupType: GroupType.Choir, voiceFamily: null }
+  const rehearsal = { id: "rehearsal", organiserGroupId: choir.id, type: "Rehearsal" as const, seriesId: "series" }
+  const choirContext = { group: choir, positionAppointments: [holding] }
+  const context = {
+    ...choirContext,
+    groups: [group, choir],
+    targets: [choirTarget],
+    event: rehearsal,
+    proposedOrganiser: choirContext,
+    proposedEvent: { type: "Rehearsal" as const, targets: [choirTarget] }
+  }
+  const instanceActions = ["event.read", "event.update", "event.changeStatus", "event.delete"] as const
+
+  test("the tool is for Admins and current Position holders in an active Board group", () => {
+    const schedule = { groups: [group, choir], positionAppointments: [holding] }
+    expect(evaluatePermission(owner, { action: "event.scheduleRehearsals", context: schedule })).toBe(true)
+    expect(evaluatePermission(other, { action: "event.scheduleRehearsals", context: schedule })).toBe(false)
+    expect(evaluatePermission(null, { action: "event.scheduleRehearsals", context: schedule })).toBe(false)
+    for (const facts of [
+      { ...schedule, groups: [{ ...group, active: false }, choir] },
+      { ...schedule, groups: [{ ...group, type: GroupType.GigCommittee }, choir] },
+      { ...schedule, positionAppointments: [{ ...holding, endDate: "2026-01-01" }] },
+      { ...schedule, positionAppointments: [{ ...holding, contextGroupId: choir.id }] }
+    ]) {
+      expect(evaluatePermission(owner, { action: "event.scheduleRehearsals", context: facts })).toBe(false)
+      expect(evaluatePermission(admin, { action: "event.scheduleRehearsals", context: facts })).toBe(true)
+    }
+  })
+
+  test("the Board manages a Rehearsal in a Series whose only Target is one whole Choir", () => {
+    for (const action of instanceActions) {
+      expect(evaluatePermission(owner, { action, context })).toBe(true)
+      expect(evaluatePermission(other, { action, context })).toBe(false)
+      for (const facts of [
+        { ...context, event: { ...rehearsal, seriesId: null } },
+        { ...context, event: { ...rehearsal, type: "Gig" as const } },
+        { ...context, targets: [] },
+        { ...context, targets: [{ ...choirTarget, voiceFamily: "B" as const }] },
+        { ...context, targets: [choirTarget, { ...choirTarget, groupId: "other-choir" }] },
+        { ...context, targets: [{ ...choirTarget, groupType: GroupType.Section }] },
+        { ...context, groups: [{ ...group, active: false }, choir] },
+        { ...context, positionAppointments: [{ ...holding, endDate: "2026-01-01" }] }
+      ]) {
+        expect(evaluatePermission(owner, { action, context: facts })).toBe(false)
+        expect(evaluatePermission(admin, { action, context: facts })).toBe(true)
+      }
+    }
+  })
+
+  test("a Board update must leave it a Choir's Series Rehearsal under the same organiser", () => {
+    for (const facts of [
+      { ...context, proposedOrganiser: { ...choirContext, group: { ...group, id: "foreign" } } },
+      { ...context, proposedOrganiser: { ...choirContext, group: null } },
+      { ...context, proposedEvent: { type: "Gig" as const, targets: [choirTarget] } },
+      { ...context, proposedEvent: { type: "Rehearsal" as const, targets: [] } },
+      { ...context, proposedEvent: { type: "Rehearsal" as const, targets: [{ ...choirTarget, voiceFamily: "S" as const }] } }
+    ]) {
+      expect(evaluatePermission(owner, { action: "event.update", context: facts })).toBe(false)
+      expect(evaluatePermission(admin, { action: "event.update", context: facts })).toBe(true)
     }
   })
 })

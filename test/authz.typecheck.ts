@@ -20,10 +20,15 @@ function checkInterface(
   access.can({ action: "group.manageContent", context: { group, positionAppointments: [] } })
   access.can({ action: "group.manageMemberships", context: { group } })
   const organiser = { group, positionAppointments: [] }
-  const event = { id: "event", organiserGroupId: group.id }
+  const event = { id: "event", organiserGroupId: group.id, type: "Gig" as const, seriesId: null }
+  const instance = { ...organiser, groups: [group], targets: [], event }
+  const proposedEvent = { type: "Gig" as const, targets: [] }
   access.can({ action: "event.create", context: organiser })
-  access.can({ action: "event.read", context: { ...organiser, event } })
-  access.can({ action: "event.update", context: { ...organiser, event, proposedOrganiser: organiser } })
+  access.can({ action: "event.read", context: instance })
+  access.can({ action: "event.update", context: { ...instance, proposedOrganiser: organiser, proposedEvent } })
+  access.can({ action: "event.scheduleRehearsals", context: { groups: [group], positionAppointments: [] } })
+  // @ts-expect-error Board scheduling is decided from Group and appointment facts, never assumed.
+  access.can({ action: "event.scheduleRehearsals" })
   // @ts-expect-error Event IDs alone cannot establish organiser authority.
   access.can({ action: "event.read", context: { eventId: event.id } })
   // @ts-expect-error Updates require proposed organiser facts as well as the existing Event.

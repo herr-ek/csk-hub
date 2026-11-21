@@ -9,12 +9,14 @@ const event = {
   id: "event",
   organiserGroupId: "organiser",
   type: "Rehearsal" as const,
+  seriesId: null,
   status: "Published" as const,
   startsAt: new Date("2026-10-01T16:00Z")
 }
 const context: PermissionContext["event.view"] = {
   event,
   group: { id: "organiser", type: GroupType.Board, active: true },
+  groups: [{ id: "organiser", type: GroupType.Board, active: true }],
   positionAppointments: [],
   targets: [{ groupId: "section", groupType: GroupType.Section, voiceFamily: null }],
   audienceMemberships: [

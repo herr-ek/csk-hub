@@ -3,8 +3,11 @@ import "server-only"
 import { eq } from "drizzle-orm"
 import { forCurrentRequest } from "@/core/authz"
 import { type Database, db } from "@/core/db"
-import { event } from "@/core/db/schema/events"
+import { event, eventTarget } from "@/core/db/schema/events"
+import { GroupType } from "@/core/org-structure"
 import { getGroupAuthorizationFacts, lockGroupAuthorizationFacts } from "@/features/org-structure"
+import type { VoiceFamily } from "@/features/voice/model"
+import type { EventType } from "./model"
 
 type EventAccess = Awaited<ReturnType<typeof forCurrentRequest>>
 type GroupFacts = Awaited<ReturnType<typeof getGroupAuthorizationFacts>>
@@ -26,20 +29,39 @@ export async function getEventManagementScope(database: Parameters<typeof lockGr
 export function eventGroupContext(facts: GroupFacts, groupId: string | null | undefined) {
   return {
     group: facts.groups.find(({ id }) => id === groupId) ?? null,
+    groups: facts.groups,
     positionAppointments: facts.positionAppointments
   }
+}
+
+/** The Board groups the actor holds a Position in, whose archival would end the Board's authority. */
+export function boardGroupIds(facts: GroupFacts) {
+  const boards = new Set(facts.groups.filter(({ type }) => type === GroupType.Board).map(({ id }) => id))
+  return facts.positionAppointments.flatMap(({ contextGroupId }) => (boards.has(contextGroupId) ? [contextGroupId] : []))
+}
+
+type TargetInput = { groupId: string | null; voiceFamily: string | null }
+
+/** Targets as authorization facts, with each group's type taken from the trusted Group catalogue. */
+export function targetFacts(facts: GroupFacts, targets: readonly TargetInput[]) {
+  return targets.map(({ groupId, voiceFamily }) => ({
+    groupId,
+    groupType: facts.groups.find(({ id }) => id === groupId)?.type ?? null,
+    voiceFamily: voiceFamily as VoiceFamily | null
+  }))
 }
 
 /**
  * Authorize and execute in one transaction. Relationship locks precede Event locks; after
  * observing an Event, recheck its locked organiser so a concurrent reassignment cannot grant
  * access. A changed organiser fails closed; the caller can retry with current facts.
- * Supplying a proposed organiser checks both sides of an update, including removing one.
+ * Supplying a proposed organiser checks both sides of an update, including removing one. An
+ * update that proposes no type or Targets keeps the Event's own.
  */
 export async function withEventPermission<T>(
   action: EventAction | "event.create",
   eventId: string | null,
-  proposed: { organiserGroupId: string | null } | undefined,
+  proposed: { organiserGroupId: string | null; type?: EventType; targets?: readonly TargetInput[] } | undefined,
   work: (database: Database, actorId: string) => Promise<T>,
   database: Database = db
 ): Promise<T> {
@@ -49,7 +71,12 @@ export async function withEventPermission<T>(
     const [observed] = eventId
       ? await tx.select({ organiserGroupId: event.organiserGroupId }).from(event).where(eq(event.id, eventId))
       : []
-    const ids = [observed?.organiserGroupId, proposed?.organiserGroupId].filter((id): id is string => Boolean(id))
+    const organisers = [observed?.organiserGroupId, proposed?.organiserGroupId].filter((id): id is string =>
+      Boolean(id)
+    )
+    // Board groups can grant access to an existing Event, so lock them with the organisers in one sorted batch.
+    const initial = eventId ? await getGroupAuthorizationFacts(tx, actor.userId) : null
+    const ids = [...organisers, ...(initial ? boardGroupIds(initial) : [])]
     const facts = await lockGroupAuthorizationFacts(tx, actor.userId, ids)
     const [resource] = eventId
       ? await tx
@@ -63,7 +90,18 @@ export async function withEventPermission<T>(
     } else {
       // If reassigned during lock acquisition, force fresh facts rather than using an unlocked Group.
       const stable = resource && resource.organiserGroupId === observed?.organiserGroupId
-      const context = { ...eventGroupContext(facts, resource?.organiserGroupId), event: stable ? resource : null }
+      const stored = resource
+        ? await tx
+            .select({ groupId: eventTarget.groupId, voiceFamily: eventTarget.voiceFamily })
+            .from(eventTarget)
+            .where(eq(eventTarget.eventId, resource.id))
+        : []
+      const targets = targetFacts(facts, stored)
+      const context = {
+        ...eventGroupContext(facts, resource?.organiserGroupId),
+        event: stable ? resource : null,
+        targets
+      }
       if (action === "event.update") {
         access.requirePermission({
           action,
@@ -72,7 +110,12 @@ export async function withEventPermission<T>(
             proposedOrganiser: eventGroupContext(
               facts,
               proposed ? proposed.organiserGroupId : resource?.organiserGroupId
-            )
+            ),
+            // Without a stored Event the policy denies before reading this; "Other" only fills the shape.
+            proposedEvent: {
+              type: proposed?.type ?? resource?.type ?? "Other",
+              targets: proposed?.targets ? targetFacts(facts, proposed.targets) : targets
+            }
           }
         })
       } else {
