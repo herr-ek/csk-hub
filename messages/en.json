@@ -1167,7 +1167,7 @@
       }
     },
     "respond": {
-      "title": "RSVP",
+      "title": "Who's coming",
       "respondBy": "Answer by {deadline}",
       "yourAnswer": "Your answer: {answer}",
       "late": "Late",
@@ -1184,10 +1184,12 @@
       "reasonText": "Your reason",
       "comment": "Comment (optional)",
       "privacy": "Your comment and reason are visible only to you and the organisers.",
-      "saving": "Saving…",
-      "change": "Change answer",
-      "submit": "Answer",
-      "saved": "Your answer has been saved."
+      "saved": "Your answer has been saved.",
+      "noTitle": "Why can't you come?",
+      "commentTitle": "Comment on your answer",
+      "addComment": "Add a comment",
+      "editComment": "Edit comment",
+      "save": "Save"
     },
     "responses": {
       "title": "Responses",

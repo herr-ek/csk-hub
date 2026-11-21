@@ -111,9 +111,12 @@ Both live in `calendar/`, with their reads in `calendar/query.ts`:
 - `/events?type=Gig` narrows the list to one type, after the Audience is computed. The filter only
   offers types the User has coming up, and only appears when there is more than one.
 - A Published Event in a response mode shows the User's own answer in the list, or that they have
-  not answered and by when, highlighted once the deadline has passed. On its page the Audience
-  answers (`ResponseForm`, `calendar/actions.ts`) and sees who answered what and how many have
-  not, by name only: the page reads no one's comment or reason but the viewer's own.
+  not answered and by when, highlighted once the deadline has passed. At the top of its page the
+  Audience answers (`ResponseBar`, `calendar/actions.ts`): Yes is saved in one tap, No opens a
+  dialog for the reason. A card at the bottom shows who answered what and how many have not, by
+  name only: the page reads no one's comment or reason but the viewer's own. On a Rehearsal only
+  the viewers who may manage it (`event.read`) get that card; the read leaves the names out for
+  everyone else.
 
 ## Admin pages
 

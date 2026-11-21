@@ -272,8 +272,9 @@ _Avoid_: RSVP type, invitation type
 **Response**:
 A User's answer in advance to an Event in one of the two response modes: Yes, No or Maybe, or
 strictly Yes or No, where a No needs an Absence reason. Only the Audience answers, and only
-until the Event starts; an answer after the respond-by deadline counts but is late. The
-answers are visible to the Audience; a comment or reason only to the User and the organisers.
+until the Event starts; an answer after the respond-by deadline counts but is late. Who
+answered what is visible to the Audience, except on a Rehearsal, where only those who manage it
+see it; a comment or reason only to the User and the organisers.
 No Response means "not answered yet", never a No. Shown as "RSVP" in the Hub.
 _Avoid_: RSVP (outside the Hub's copy), reply, Registration, Attendance
 

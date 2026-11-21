@@ -1167,7 +1167,7 @@
       }
     },
     "respond": {
-      "title": "Zusage",
+      "title": "Wer kommt",
       "respondBy": "Antworte bis {deadline}",
       "yourAnswer": "Deine Antwort: {answer}",
       "late": "Verspätet",
@@ -1184,10 +1184,12 @@
       "reasonText": "Dein Grund",
       "comment": "Kommentar (optional)",
       "privacy": "Dein Kommentar und dein Grund sind nur für dich und die Organisatoren sichtbar.",
-      "saving": "Wird gespeichert…",
-      "change": "Antwort ändern",
-      "submit": "Antworten",
-      "saved": "Deine Antwort wurde gespeichert."
+      "saved": "Deine Antwort wurde gespeichert.",
+      "noTitle": "Warum kannst du nicht kommen?",
+      "commentTitle": "Kommentar zu deiner Antwort",
+      "addComment": "Kommentar hinzufügen",
+      "editComment": "Kommentar bearbeiten",
+      "save": "Speichern"
     },
     "responses": {
       "title": "Antworten",

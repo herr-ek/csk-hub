@@ -1167,7 +1167,7 @@
       }
     },
     "respond": {
-      "title": "OSA",
+      "title": "Vilka kommer",
       "respondBy": "Svara senast {deadline}",
       "yourAnswer": "Ditt svar: {answer}",
       "late": "Sent",
@@ -1184,10 +1184,12 @@
       "reasonText": "Din anledning",
       "comment": "Kommentar (valfritt)",
       "privacy": "Din kommentar och anledning syns bara för dig och arrangörerna.",
-      "saving": "Sparar…",
-      "change": "Ändra svar",
-      "submit": "Svara",
-      "saved": "Ditt svar har sparats."
+      "saved": "Ditt svar har sparats.",
+      "noTitle": "Varför kan du inte komma?",
+      "commentTitle": "Kommentera ditt svar",
+      "addComment": "Lägg till kommentar",
+      "editComment": "Redigera kommentar",
+      "save": "Spara"
     },
     "responses": {
       "title": "Svar",

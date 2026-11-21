@@ -252,16 +252,21 @@ export async function getEventPage(
     costInfo: row.type === "Social" ? row.costInfo : null,
     targets: targets.map(({ groupName, voiceFamily }) => ({ groupName, voiceFamily })),
     responses: collectsResponses(row.participationMode)
-      ? await responsesForAudience(database, row, viewer.userId, inAudience(memberships, { ...row, targets }, now), now)
+      ? await responsesForAudience(database, row, viewer.userId, {
+          inAudience: inAudience(memberships, { ...row, targets }, now),
+          // Who comes to a Rehearsal is for those who run it; other Events show it to their Audience.
+          seesAnswers: row.type !== "Rehearsal" || canManage,
+          now
+        })
       : null
   }
 }
 
 /**
  * An Event's Responses as its Audience sees them: names per answer and how many have not answered,
- * never comments or reasons, which only the viewer's own Response carries. The viewer may answer
- * while the Event is Published and has not started, if they are in its Audience; an organiser
- * outside it may only look.
+ * never comments or reasons, which only the viewer's own Response carries. The summary is null
+ * for a viewer who may not see it. The viewer may answer while the Event is Published and has not
+ * started, if they are in its Audience; an organiser outside it may only look.
  */
 async function responsesForAudience(
   database: EventsDatabase,
@@ -273,12 +278,12 @@ async function responsesForAudience(
     respondBy: Date | null
   },
   viewerId: string,
-  viewerInAudience: boolean,
-  now: Date
+  viewer: { inAudience: boolean; seesAnswers: boolean; now: Date }
 ) {
+  const { now } = viewer
   const [responses, audience] = await Promise.all([
     listResponses(database, row.id),
-    listActiveAudience(database, row, now)
+    viewer.seesAnswers ? listActiveAudience(database, row, now) : []
   ])
   const own = responses.find(({ userId }) => userId === viewerId) ?? null
   const answered = new Set(responses.map(({ userId }) => userId))
@@ -287,7 +292,7 @@ async function responsesForAudience(
   return {
     mode: row.participationMode,
     respondBy: row.respondBy,
-    canRespond: viewerInAudience && row.status === "Published" && now < row.startsAt,
+    canRespond: viewer.inAudience && row.status === "Published" && now < row.startsAt,
     own: own && {
       answer: own.answer,
       comment: own.comment,
@@ -296,8 +301,12 @@ async function responsesForAudience(
       late: row.respondBy !== null && own.respondedAt > row.respondBy
     },
     reasons: await listPickableAbsenceReasons(database, own?.absenceReasonId ?? null),
-    byAnswer: { Yes: names("Yes"), No: names("No"), Maybe: names("Maybe") },
-    notAnswered: audience.filter(({ id }) => !answered.has(id)).length
+    summary: viewer.seesAnswers
+      ? {
+          byAnswer: { Yes: names("Yes"), No: names("No"), Maybe: names("Maybe") },
+          notAnswered: audience.filter(({ id }) => !answered.has(id)).length
+        }
+      : null
   }
 }
 

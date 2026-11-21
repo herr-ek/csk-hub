@@ -312,8 +312,7 @@ describe.skipIf(!database)("calendar reads", () => {
         mode: "ResponseRequired",
         canRespond: true,
         own: null,
-        byAnswer: { Yes: [], No: ["Maja"], Maybe: [] },
-        notAnswered: 1
+        summary: { byAnswer: { Yes: [], No: ["Maja"], Maybe: [] }, notAnswered: 1 }
       })
       expect(JSON.stringify(page)).not.toContain("Private note")
       expect(JSON.stringify(page)).not.toContain("Secret reason")
@@ -333,6 +332,26 @@ describe.skipIf(!database)("calendar reads", () => {
         (await getEventPage(t.db, eventId, { userId: users.Olof as string, isAdmin: false }, at("2026-10-28T18:30")))
           ?.responses?.canRespond
       ).toBe(false)
+    })
+
+    test("on a Rehearsal, only those who manage it see who is coming", async () => {
+      const rehearsalId = await event(
+        {
+          title: "KK rehearsal",
+          type: "Rehearsal",
+          schedule: { allDay: false, startsAt: at("2026-10-29T18:30"), endsAt: at("2026-10-29T21:00") },
+          targets: [{ groupId: groups.KK as string, voiceFamily: null }]
+        },
+        "Published"
+      )
+      expectSuccess(await respondToEvent(t.db, users.Maja as string, rehearsalId, { answer: "Yes" }, NOW))
+
+      const singer = await getEventPage(t.db, rehearsalId, { userId: users.Olof as string, isAdmin: false }, NOW)
+      expect(singer?.responses).toMatchObject({ canRespond: true, summary: null })
+      expect(JSON.stringify(singer)).not.toContain("Maja")
+
+      const admin = await getEventPage(t.db, rehearsalId, { userId: users.Admin as string, isAdmin: true }, NOW)
+      expect(admin?.responses?.summary).toEqual({ byAnswer: { Yes: ["Maja"], No: [], Maybe: [] }, notAnswered: 1 })
     })
 
     test("the list shows each User's own status, and none on Events that take no Responses", async () => {
