@@ -13,7 +13,7 @@ bun run ops studio               # Drizzle Studio against the local database
 bun run ops grant-admin <email>  # make an existing user an admin
 bun run ops reference-data       # Choirs, Sections and fixed Groups; also with --prod
 bun run ops reset                # erase the local database, migrate it and add the reference data
-bun run ops seed-admin           # local admin account
+bun run ops seed-admin           # admin@example.com with a generated password; also with --prod
 bun run ops seed-users           # 100 verified local example accounts, including three Admins
 bun run ops seed-groups          # balanced placements, groups, Positions and their history
 bun run ops seed-posts           # 24 published example Posts, after seed-users
@@ -25,6 +25,7 @@ bun run ops migrate --prod       # asks you to type "prod" first
 bun run ops migrate --prod --yes # unattended, e.g. in CI
 bun run ops grant-admin <email> --prod  # regain admin access in production
 bun run ops reference-data --prod       # the shared org structure, in production
+bun run ops seed-admin --prod           # first admin account in production
 ```
 
 ## Targets
@@ -56,8 +57,11 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
   local database. Locally it asks before erasing; `--yes` skips the question, and without a
   terminal it refuses instead of waiting. It drops the `public` and `drizzle` schemas, runs
   every migration and creates the reference data, but seeds nothing.
-- Seeding refuses outright and exits non-zero with `--prod`. The seed scripts also refuse
-  any `POSTGRES_URL` that is not a local database, including when run by hand.
+- `seed-admin` against production also requires typing `prod`. It is allowed there because
+  it creates one admin, `admin@example.com`, with a random password printed once to the
+  terminal. If the account already exists, its password is left unchanged.
+- Every other seed refuses outright and exits non-zero with `--prod`. Those seed scripts also
+  refuse any `POSTGRES_URL` that is not a local database, including when run by hand.
 
 ## Production build check
 

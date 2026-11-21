@@ -82,19 +82,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Local admin account
 
-The development seed script currently creates `admin@example.com` with the
-password `password`:
+`bun run ops seed-admin` creates `admin@example.com` with a generated password that is
+printed once to the terminal. `bun run ops seed-admin --prod` does the same in production,
+after asking you to type `prod`.
 
-```bash
-bun run ops seed-admin
-```
-
-`bun run ops seed-users` adds 100 named, verified example Users with the same password:
+`bun run ops seed-users` adds 100 named, verified example Users with the password `password`:
 `singer-001@example.com` through `singer-100@example.com`. The first three are Admins.
 
-Both are local-development conveniences only. Change the password immediately,
-and do not use these credentials in a deployed environment. Seeding refuses to
-run against production.
+The example Users are a local-development convenience only; do not use these
+credentials in a deployed environment. Every seed except `seed-admin` refuses to
+run against production. Change the admin password after signing in.
 
 `bun run ops reference-data` creates the Choirs MK, DK and KK with their Sections,
 Styret and the Positions; run it once after migrating (it also runs against production
