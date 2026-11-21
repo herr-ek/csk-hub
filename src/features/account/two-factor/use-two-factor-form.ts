@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation"
 import { useRef, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
+import { getOAuthResumePath } from "@/core/auth/oauth-continuation"
 import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath } from "@/core/navigation/navigation-utils"
 import { getAvailableMethods, sendTwoFactorOtp, type TwoFactorMethod, verifyTwoFactorMethod } from "./service"
@@ -44,14 +45,23 @@ export function useTwoFactorForm() {
     operationInProgress.current = true
     setError(undefined)
     setPending(true)
+    let navigating = false
     try {
       const result = await verifyTwoFactorMethod(method, code, trustDevice)
       if (!result.success) {
         if ("unavailable" in result) {
           try {
-            const session = await authClient.getSession()
-            if (session.data?.user) {
-              router.replace(getPostLoginPath(session.data.user.role, returnTo))
+            const { data } = await authClient.getSession({ query: { disableCookieCache: true } })
+            if (data && searchParams.has("sig")) {
+              const resumePath = getOAuthResumePath(searchParams.toString(), new Date(data.session.createdAt))
+              if (resumePath) {
+                window.location.replace(resumePath)
+                navigating = true
+                return
+              }
+            } else if (data) {
+              router.replace(getPostLoginPath(data.user.role, returnTo))
+              navigating = true
               return
             }
           } catch {
@@ -65,10 +75,13 @@ export function useTwoFactorForm() {
         return
       }
 
-      router.replace(getPostLoginPath(result.role, returnTo))
+      if (!result.redirecting) router.replace(getPostLoginPath(result.role, returnTo))
+      navigating = true
     } finally {
-      setPending(false)
-      operationInProgress.current = false
+      if (!navigating) {
+        setPending(false)
+        operationInProgress.current = false
+      }
     }
   }
 

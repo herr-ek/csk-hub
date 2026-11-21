@@ -3,8 +3,9 @@
 import { useForm, useSelector } from "@tanstack/react-form"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import type z from "zod"
+import { withOAuthQuery } from "@/core/auth/oauth-continuation"
 import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath, twoFactorPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
@@ -23,39 +24,29 @@ export function LoginForm() {
   const searchParams = useSearchParams()
   const returnTo = searchParams.get("returnTo") ?? undefined
   const [formError, setFormError] = useState<string | null>(null)
-  const [isPasskeySubmitting, setIsPasskeySubmitting] = useState(false)
+  const [signInMethod, setSignInMethod] = useState<"password" | "passkey">()
+  const signInInProgress = useRef(false)
 
-  function completeSignIn(result: LoginResult) {
-    if (!result.success) {
-      if ("requiresTwoFactor" in result) {
-        router.replace(twoFactorPath(result.methods, returnTo))
-        return
-      }
-      setFormError(t(`errors.${result.error}`))
-      return
-    }
-
-    router.replace(getPostLoginPath(result.role, returnTo))
-  }
-
-  async function handlePasskeySignIn() {
+  async function submitSignIn(method: "password" | "passkey", signIn: () => Promise<LoginResult>) {
+    if (signInInProgress.current) return
+    signInInProgress.current = true
+    setSignInMethod(method)
     setFormError(null)
 
-    setIsPasskeySubmitting(true)
-    const result = await signInWithPasskey()
-    setIsPasskeySubmitting(false)
-    completeSignIn(result)
+    const result = await signIn()
+    if (result.success) {
+      if (!result.redirecting) router.replace(getPostLoginPath(result.role, returnTo))
+    } else if ("requiresTwoFactor" in result) {
+      router.replace(withOAuthQuery(twoFactorPath(result.methods, returnTo), searchParams.toString()))
+    } else {
+      setFormError(t(`errors.${result.error}`))
+      signInInProgress.current = false
+      setSignInMethod(undefined)
+    }
   }
 
   async function onSubmit({ value }: { value: z.infer<typeof loginSchema> }) {
-    setFormError(null)
-
-    const result = await signInWithIdentifier({
-      identifier: value.identifier,
-      password: value.password,
-      rememberMe: value.rememberMe
-    })
-    completeSignIn(result)
+    await submitSignIn("password", () => signInWithIdentifier(value))
   }
 
   const form = useForm({
@@ -69,7 +60,10 @@ export function LoginForm() {
     },
     onSubmit
   })
-  const isSubmitting = useSelector(form.store, (state) => state.isSubmitting)
+  const isFormSubmitting = useSelector(form.store, (state) => state.isSubmitting)
+  const isPasswordSubmitting = isFormSubmitting || signInMethod === "password"
+  const isPasskeySubmitting = signInMethod === "passkey"
+  const isSubmitting = isPasswordSubmitting || isPasskeySubmitting
 
   return (
     <form
@@ -143,7 +137,7 @@ export function LoginForm() {
         </Alert>
       )}
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? (
+        {isPasswordSubmitting ? (
           <>
             <Spinner />
             {t("submitting")}
@@ -159,8 +153,8 @@ export function LoginForm() {
       <Button
         type="button"
         variant="outline"
-        onClick={handlePasskeySignIn}
-        disabled={isSubmitting || isPasskeySubmitting}
+        onClick={() => submitSignIn("passkey", signInWithPasskey)}
+        disabled={isSubmitting}
       >
         {isPasskeySubmitting ? t("passkeyPending") : t("passkey")}
       </Button>

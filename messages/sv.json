@@ -86,6 +86,7 @@
       "forgotPassword": "Glömt lösenordet?",
       "errors": {
         "invalidCredentials": "Det gick inte att logga in. Kontrollera din e-postadress eller ditt användarnamn och lösenord och försök igen.",
+        "oauthRequestExpired": "Inloggningsbegäran har gått ut. Gå tillbaka till appen och försök igen.",
         "unavailable": "Det går inte att logga in just nu. Kontrollera anslutningen och försök igen.",
         "passkeyFailed": "Det gick inte att logga in med din passnyckel. Försök igen eller använd e-post och lösenord.",
         "passkeyUnavailable": "Det går inte att logga in med en passnyckel just nu. Kontrollera anslutningen och försök igen."
@@ -143,6 +144,7 @@
       "requestFailed": "Verifieringsbegäran kunde inte slutföras. Försök igen.",
       "errors": {
         "sendFailed": "Det gick inte att skicka verifieringskoden.",
+        "oauthRequestExpired": "Inloggningsbegäran har gått ut. Gå tillbaka till appen och försök igen.",
         "verifyFailed": "Det gick inte att verifiera koden."
       }
     }
@@ -208,7 +210,8 @@
       "adminEventsNew": "Nytt evenemang",
       "adminEventLocations": "Platser",
       "eventsNew": "Nytt evenemang",
-      "eventsManage": "Hantera evenemang"
+      "eventsManage": "Hantera evenemang",
+      "adminOidcClients": "OIDC-klienter"
     },
     "members": "Medlemmar",
     "quickAccess": "Snabbåtkomst",
@@ -281,7 +284,9 @@
     "groups": "Grupper och poster",
     "groupsDescription": "Styrelsen, kommittéer och andra grupper, med medlemmar och poster.",
     "events": "Evenemang",
-    "eventsDescription": "Skapa evenemang i CSK:s kalender, publicera, ställ in och radera dem, och håll ordning på platserna."
+    "eventsDescription": "Skapa evenemang i CSK:s kalender, publicera, ställ in och radera dem, och håll ordning på platserna.",
+    "oidcClients": "OIDC-klienter",
+    "oidcClientsDescription": "Hantera betrodda applikationer som erbjuder inloggning med CSK Hub."
   },
   "Members": {
     "title": "Medlemmar",
@@ -1126,5 +1131,35 @@
     "newMessage": "Nytt meddelande",
     "notification": "Avisering",
     "open": "Öppna"
+  },
+  "OidcClients": {
+    "title": "OIDC-klienter",
+    "description": "Hantera betrodda applikationer som erbjuder inloggning med CSK Hub.",
+    "discoveryUrl": "Discovery-URL",
+    "create": "Skapa klient",
+    "edit": "Redigera klient",
+    "rotate": "Byt klienthemlighet",
+    "enable": "Aktivera",
+    "disable": "Inaktivera",
+    "enabled": "Aktiverad",
+    "disabled": "Inaktiverad",
+    "empty": "Inga klienter registrerade.",
+    "name": "Namn",
+    "redirectUrls": "Omdirigeringsadresser",
+    "redirectHelp": "En exakt callback-adress per rad. HTTPS krävs i produktion.",
+    "save": "Spara",
+    "error": "Åtgärden kunde inte slutföras. Kontrollera värdena och försök igen.",
+    "rotateWarning": "Den nuvarande hemligheten slutar fungera direkt. Uppdatera applikationen med den nya hemligheten.",
+    "credentials": "Klientuppgifter",
+    "secretWarning": "Kopiera hemligheten nu. Den visas inte igen.",
+    "clientId": "Klient-ID",
+    "secret": "Klienthemlighet",
+    "copy": "Kopiera hemlighet",
+    "copied": "Hemligheten har kopierats.",
+    "copyFailed": "Det gick inte att kopiera hemligheten. Markera och kopiera den manuellt.",
+    "consentTitle": "Logga in på {name}",
+    "consentDescription": "Tillåt att applikationen får den begärda identitetsinformationen?",
+    "allow": "Tillåt",
+    "deny": "Neka"
   }
 }

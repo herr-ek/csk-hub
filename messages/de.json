@@ -86,6 +86,7 @@
       "forgotPassword": "Passwort vergessen?",
       "errors": {
         "invalidCredentials": "Anmeldung nicht möglich. Prüfe deine E-Mail-Adresse oder deinen Benutzernamen und dein Passwort und versuche es erneut.",
+        "oauthRequestExpired": "Diese Anmeldeanfrage ist abgelaufen. Kehre zur Anwendung zurück und versuche es erneut.",
         "unavailable": "Anmeldung derzeit nicht möglich. Prüfe deine Verbindung und versuche es erneut.",
         "passkeyFailed": "Anmeldung mit deinem Passkey nicht möglich. Versuche es erneut oder nutze E-Mail und Passwort.",
         "passkeyUnavailable": "Anmeldung mit einem Passkey derzeit nicht möglich. Prüfe deine Verbindung und versuche es erneut."
@@ -143,6 +144,7 @@
       "requestFailed": "Die Verifizierungsanfrage konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
       "errors": {
         "sendFailed": "Der Bestätigungscode konnte nicht gesendet werden.",
+        "oauthRequestExpired": "Diese Anmeldeanfrage ist abgelaufen. Kehre zur Anwendung zurück und versuche es erneut.",
         "verifyFailed": "Der Code konnte nicht bestätigt werden."
       }
     }
@@ -208,7 +210,8 @@
       "adminEventsNew": "Neue Veranstaltung",
       "adminEventLocations": "Orte",
       "eventsNew": "Neue Veranstaltung",
-      "eventsManage": "Veranstaltungen verwalten"
+      "eventsManage": "Veranstaltungen verwalten",
+      "adminOidcClients": "OIDC-Clients"
     },
     "members": "Mitglieder",
     "quickAccess": "Schnellzugriff",
@@ -281,7 +284,9 @@
     "groups": "Gruppen und Ämter",
     "groupsDescription": "Vorstand, Ausschüsse und andere Gruppen mit ihren Mitgliedern und Ämtern.",
     "events": "Veranstaltungen",
-    "eventsDescription": "Veranstaltungen im CSK-Kalender anlegen, veröffentlichen, absagen und löschen, und die Orte pflegen."
+    "eventsDescription": "Veranstaltungen im CSK-Kalender anlegen, veröffentlichen, absagen und löschen, und die Orte pflegen.",
+    "oidcClients": "OIDC-Clients",
+    "oidcClientsDescription": "Vertrauenswürdige Anwendungen mit CSK-Hub-Anmeldung verwalten."
   },
   "Members": {
     "title": "Mitglieder",
@@ -1126,5 +1131,35 @@
     "newMessage": "Neue Nachricht",
     "notification": "Benachrichtigung",
     "open": "Öffnen"
+  },
+  "OidcClients": {
+    "title": "OIDC-Clients",
+    "description": "Vertrauenswürdige Anwendungen mit CSK-Hub-Anmeldung verwalten.",
+    "discoveryUrl": "Discovery-URL",
+    "create": "Client erstellen",
+    "edit": "Client bearbeiten",
+    "rotate": "Geheimnis erneuern",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "empty": "Keine Clients registriert.",
+    "name": "Name",
+    "redirectUrls": "Weiterleitungsadressen",
+    "redirectHelp": "Eine exakte Callback-URL pro Zeile. HTTPS ist in Produktion erforderlich.",
+    "save": "Speichern",
+    "error": "Die Aktion konnte nicht abgeschlossen werden. Werte prüfen und erneut versuchen.",
+    "rotateWarning": "Das bisherige Geheimnis wird sofort ungültig. Die Anwendung muss mit dem neuen Geheimnis aktualisiert werden.",
+    "credentials": "Client-Zugangsdaten",
+    "secretWarning": "Das Geheimnis jetzt kopieren. Es wird nicht erneut angezeigt.",
+    "clientId": "Client-ID",
+    "secret": "Client-Geheimnis",
+    "copy": "Geheimnis kopieren",
+    "copied": "Das Geheimnis wurde kopiert.",
+    "copyFailed": "Das Geheimnis konnte nicht kopiert werden. Markiere und kopiere es manuell.",
+    "consentTitle": "Bei {name} anmelden",
+    "consentDescription": "Dieser Anwendung die angeforderten Identitätsinformationen übermitteln?",
+    "allow": "Erlauben",
+    "deny": "Ablehnen"
   }
 }

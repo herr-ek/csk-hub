@@ -6,6 +6,13 @@ const userSession = { user: { id: "user-1", role: "user" } }
 const adminSession = { user: { id: "admin-1", role: "admin" } }
 
 describe("route access", () => {
+  test("allows OAuth reauthentication and two-factor pages despite an existing session", async () => {
+    for (const path of ["/login", "/two-factor"]) {
+      await expect(getRouteAccessDecision(path, userSession, `${path}?sig=signed&prompt=login`)).resolves.toEqual({
+        kind: "allow"
+      })
+    }
+  })
   test("keeps internal locale rewrites from turning login into a protected route", async () => {
     await expect(getRouteAccessDecision("/sv/login", null)).resolves.toEqual({ kind: "allow" })
     await expect(getRouteAccessDecision("/en/news/new", userSession)).resolves.toEqual({ kind: "allow" })
