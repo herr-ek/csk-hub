@@ -1,11 +1,18 @@
 import { describe, expect, test } from "bun:test"
+import {
+  cskToday,
+  currentOrganisationYear,
+  GroupType,
+  organisationYearPeriod,
+  PositionCode,
+  shiftDate
+} from "@/core/org-structure"
 import type {
   AuthorizationActor,
   GroupAttributes,
-  MembershipAttributes,
   PermissionContext,
   PermissionRequest,
-  PositionHoldingAttributes,
+  PositionAppointmentAttributes,
   PostAttributes
 } from "./model"
 import { evaluatePermission } from "./policy-registry"
@@ -23,18 +30,16 @@ function post(state: "draft" | "published" | "discarded", authorId: string | nul
   }
 }
 
-const group: GroupAttributes = { id: "group", type: "Board", active: true }
-const membership: MembershipAttributes = {
-  groupId: group.id,
+const group: GroupAttributes = { id: "group", type: GroupType.Board, active: true }
+const holding: PositionAppointmentAttributes = {
   userId: owner.userId,
-  startDate: "2020-01-01",
-  endDate: null
+  contextGroupId: group.id,
+  positionCode: PositionCode.Chair,
+  ...organisationYearPeriod(currentOrganisationYear(cskToday()))
 }
-const holding: PositionHoldingAttributes = { ...membership, positionId: "position" }
 const groupContext: PermissionContext["group.manageContent"] = {
   group,
-  memberships: [membership],
-  positionHoldings: [holding]
+  positionAppointments: [holding]
 }
 
 test("baseline application access allows active actors and denies anonymous requests", () => {
@@ -92,25 +97,18 @@ describe("personal Post policies", () => {
 })
 
 describe("Group policies", () => {
-  test("Group work needs both a Membership and a Position holding for this actor in this exact Group", () => {
+  test("Board work needs a current appointment for this actor in this exact Group", () => {
     for (const action of ["group.publishPost", "group.manageContent", "group.manageEvents"] as const) {
       expect(evaluatePermission(owner, { action, context: groupContext })).toBe(true)
       expect(evaluatePermission(other, { action, context: groupContext })).toBe(false)
-      expect(evaluatePermission(owner, { action, context: { ...groupContext, memberships: [] } })).toBe(false)
-      expect(evaluatePermission(owner, { action, context: { ...groupContext, positionHoldings: [] } })).toBe(false)
+      expect(evaluatePermission(owner, { action, context: { ...groupContext, positionAppointments: [] } })).toBe(false)
       expect(
         evaluatePermission(owner, { action, context: { ...groupContext, group: { ...group, id: "another-group" } } })
       ).toBe(false)
       expect(
         evaluatePermission(owner, {
           action,
-          context: { ...groupContext, positionHoldings: [{ ...holding, userId: other.userId }] }
-        })
-      ).toBe(false)
-      expect(
-        evaluatePermission(owner, {
-          action,
-          context: { ...groupContext, memberships: [{ ...membership, userId: other.userId }] }
+          context: { ...groupContext, positionAppointments: [{ ...holding, userId: other.userId }] }
         })
       ).toBe(false)
     }
@@ -118,12 +116,10 @@ describe("Group policies", () => {
 
   test("Choir work and Membership/Position administration require explicit Admin authority", () => {
     for (const action of ["group.publishPost", "group.manageContent", "group.manageEvents"] as const) {
-      const context = { ...groupContext, group: { ...group, type: "Choir" as const } }
+      const context = { ...groupContext, group: { ...group, type: GroupType.Choir } }
       expect(evaluatePermission(owner, { action, context })).toBe(false)
       expect(evaluatePermission(admin, { action, context })).toBe(true)
-      expect(evaluatePermission(admin, { action, context: { group, memberships: [], positionHoldings: [] } })).toBe(
-        true
-      )
+      expect(evaluatePermission(admin, { action, context: { group, positionAppointments: [] } })).toBe(true)
     }
     for (const action of ["group.manageMemberships", "group.managePositions"] as const) {
       expect(evaluatePermission(owner, { action, context: { group } })).toBe(false)
@@ -145,25 +141,26 @@ describe("Group policies", () => {
     }
   })
 
-  test("periods retain the existing open-ended semantics for future start and end dates", () => {
-    const context = {
-      group,
-      memberships: [{ ...membership, startDate: "2999-01-01" }],
-      positionHoldings: [{ ...holding, startDate: "2999-01-01" }]
+  test("periods exclude prepared and ended participation and include current dated terms", () => {
+    const today = cskToday()
+    const tomorrow = shiftDate(today, 1)
+    for (const dates of [
+      { startDate: tomorrow, endDate: null },
+      { startDate: holding.startDate, endDate: today }
+    ]) {
+      expect(
+        evaluatePermission(owner, {
+          action: "group.manageContent",
+          context: { ...groupContext, positionAppointments: [{ ...holding, ...dates }] }
+        })
+      ).toBe(false)
     }
-    expect(evaluatePermission(owner, { action: "group.manageContent", context })).toBe(true)
     expect(
       evaluatePermission(owner, {
         action: "group.manageContent",
-        context: { ...context, memberships: [{ ...membership, endDate: "2999-02-01" }] }
+        context: { ...groupContext, positionAppointments: [{ ...holding, startDate: today, endDate: tomorrow }] }
       })
-    ).toBe(false)
-    expect(
-      evaluatePermission(owner, {
-        action: "group.manageContent",
-        context: { ...context, positionHoldings: [{ ...holding, endDate: "2999-02-01" }] }
-      })
-    ).toBe(false)
+    ).toBe(true)
   })
 })
 
@@ -176,9 +173,8 @@ describe("Event policies", () => {
     for (const facts of [
       { ...groupContext, group: null },
       { ...groupContext, group: { ...group, active: false } },
-      { ...groupContext, group: { ...group, type: "Choir" as const } },
-      { ...groupContext, memberships: [] },
-      { ...groupContext, positionHoldings: [] }
+      { ...groupContext, group: { ...group, type: GroupType.Choir } },
+      { ...groupContext, positionAppointments: [] }
     ]) {
       expect(evaluatePermission(owner, { action: "event.create", context: facts })).toBe(false)
       expect(evaluatePermission(admin, { action: "event.create", context: facts })).toBe(true)
@@ -189,7 +185,7 @@ describe("Event policies", () => {
     for (const proposedOrganiser of [
       { ...groupContext, group: null },
       { ...groupContext, group: { ...group, id: "foreign" } },
-      { ...groupContext, group: { ...group, type: "Choir" as const } },
+      { ...groupContext, group: { ...group, type: GroupType.Choir } },
       { ...groupContext, group: { ...group, active: false } }
     ]) {
       expect(evaluatePermission(owner, { action: "event.update", context: { ...context, proposedOrganiser } })).toBe(
@@ -210,10 +206,9 @@ describe("Event policies", () => {
         { ...context, event: { ...event, organiserGroupId: "unrelated" } },
         { ...context, event: { ...event, organiserGroupId: null }, group: null },
         { ...context, group: { ...group, active: false } },
-        { ...context, group: { ...group, type: "Choir" as const } },
-        { ...context, memberships: [] },
-        { ...context, positionHoldings: [] },
-        { ...context, positionHoldings: [{ ...holding, endDate: "2026-01-01" }] }
+        { ...context, group: { ...group, type: GroupType.Choir } },
+        { ...context, positionAppointments: [] },
+        { ...context, positionAppointments: [{ ...holding, endDate: "2026-01-01" }] }
       ]) {
         expect(evaluatePermission(owner, { action, context: facts })).toBe(false)
         expect(evaluatePermission(admin, { action, context: facts })).toBe(true)

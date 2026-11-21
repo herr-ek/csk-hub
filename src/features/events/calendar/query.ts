@@ -11,6 +11,7 @@ import { event, eventDetail, eventTarget, gig, location, rehearsal, socialEvent 
 import {
   getGroupAuthorizationFacts,
   listGroupNames,
+  listLocalizedGroupLabels,
   listMembershipsOfUser,
   lockGroupAuthorizationFacts
 } from "@/features/org-structure"
@@ -261,7 +262,13 @@ async function targetsOf(database: EventsDatabase, eventIds: string[]) {
 
 /** Group names and types through org-structure, which alone reads its tables. */
 async function groupsById(database: EventsDatabase, groupIds: string[]) {
-  return new Map((await listGroupNames(database, groupIds)).map((found) => [found.id, found]))
+  const labels = await listLocalizedGroupLabels(database)
+  return new Map(
+    (await listGroupNames(database, groupIds)).map((found) => [
+      found.id,
+      { ...found, name: labels.get(found.id) ?? found.id }
+    ])
+  )
 }
 
 function minDate(a: string, b: string) {

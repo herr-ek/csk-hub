@@ -17,9 +17,9 @@ function checkInterface(
 ) {
   access.can({ action: "post.create" })
   access.requirePermission({ action: "post.update", context: { post } })
-  access.can({ action: "group.manageContent", context: { group, memberships: [], positionHoldings: [] } })
+  access.can({ action: "group.manageContent", context: { group, positionAppointments: [] } })
   access.can({ action: "group.manageMemberships", context: { group } })
-  const organiser = { group, memberships: [], positionHoldings: [] }
+  const organiser = { group, positionAppointments: [] }
   const event = { id: "event", organiserGroupId: group.id }
   access.can({ action: "event.create", context: organiser })
   access.can({ action: "event.read", context: { ...organiser, event } })

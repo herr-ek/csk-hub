@@ -1,6 +1,13 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { createChoir, createGroup, endMembership, placeSinger, startMembership } from "@/features/org-structure"
-import type { OrgStructureResult } from "@/features/org-structure/model"
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"
+import type { OrgStructureResult } from "@/core/org-structure"
+import { GroupType } from "@/core/org-structure"
+import {
+  createChoir,
+  createOrganisationGroup,
+  endMembership,
+  placeSinger,
+  startMembership
+} from "@/features/org-structure"
 import { createEvent, type EventInput } from "../events"
 import { changeEventStatus } from "../lifecycle"
 import { stockholmInstant } from "../model"
@@ -9,6 +16,11 @@ import { getEventPage, listUpcomingEventsForUser } from "./query"
 
 // The calendar reads against a real database. The groups and Memberships come from the
 // org-structure module's own commands, the Events from this module's, so both modules' rules hold.
+
+mock.module("@/core/i18n/server", () => ({
+  getTranslations: async () => (key: string, values?: Record<string, string>) =>
+    key === "types.GigCommittee" ? "Gigmästeri" : key === "labels.annual" ? `${values?.type} ${values?.year}` : key
+}))
 
 const database = await createEventsTestDatabase()
 
@@ -31,30 +43,22 @@ describe.skipIf(!database)("calendar reads", () => {
     const kk = ok(
       await createChoir(t.db, {
         name: "KK",
-        sections: [
-          { name: "KKS", voice: "S" },
-          { name: "KKA", voice: "A" },
-          { name: "KKT", voice: "T" },
-          { name: "KKB", voice: "B" }
-        ]
+        sections: [{ voice: "S" }, { voice: "A" }, { voice: "T" }, { voice: "B" }]
       })
     )
     const mk = ok(
       await createChoir(t.db, {
         name: "MK",
-        sections: [
-          { name: "MKT1", voice: "T1" },
-          { name: "MKT2", voice: "T2" },
-          { name: "MKB1", voice: "B1" },
-          { name: "MKB2", voice: "B2" }
-        ]
+        sections: [{ voice: "T1" }, { voice: "T2" }, { voice: "B1" }, { voice: "B2" }]
       })
     )
     groups.KK = kk.choirId
     groups.MK = mk.choirId
     for (const section of [...kk.sections, ...mk.sections]) groups[section.name] = section.id
-    groups.Alumnikväll = ok(await createGroup(t.db, { name: "Alumnikväll", type: "GigGroup" })).id
-    groups.Gigmästeri = ok(await createGroup(t.db, { name: "Gigmästeri", type: "Gigmästeri" })).id
+    groups.Alumnikväll = ok(await createOrganisationGroup(t.db, { name: "Alumnikväll", type: GroupType.GigGroup })).id
+    groups.Gigmästeri = ok(
+      await createOrganisationGroup(t.db, { type: GroupType.GigCommittee, organisationYear: 2026 })
+    ).id
 
     // Olof sings B1 in KK, Maja S2 in KK, Erik B2 in MK and plays the gig; Lucas left KK last week,
     // Sara joins MK next month, and Admin belongs to no group at all.
@@ -68,6 +72,7 @@ describe.skipIf(!database)("calendar reads", () => {
       await startMembership(t.db, {
         userId: users.Erik as string,
         groupId: groups.Alumnikväll as string,
+        voice: "B2",
         startDate: "2026-09-01"
       })
     )
@@ -167,9 +172,9 @@ describe.skipIf(!database)("calendar reads", () => {
       expect(await titlesFor("Olof", at("2026-10-20"))).not.toContain("Rephelg")
     })
 
-    test("departure removes future access immediately while preserving access after the Event start", async () => {
+    test("scheduled departure preserves access before its boundary and history after Event start", async () => {
       // Lucas left KK on 16 October: the Rehearsal on the 14th was his, the Rephelg from the 18th is not.
-      expect(await titlesFor("Lucas", at("2026-10-01"))).toEqual(["Körmöte"])
+      expect(await titlesFor("Lucas", at("2026-10-01"))).toEqual(["Past rehearsal", "Körmöte"])
       expect(await titlesFor("Lucas", at("2026-10-14T20:00"))).toEqual(["Past rehearsal", "Körmöte"])
       expect(await titlesFor("Lucas")).toEqual(["Körmöte"])
     })
@@ -235,7 +240,7 @@ describe.skipIf(!database)("calendar reads", () => {
         status: "Published",
         locationText: "Kårhuset, the big hall",
         location: null,
-        organiserGroup: "Gigmästeri",
+        organiserGroup: "Gigmästeri 26/27",
         responsibleName: "Olof",
         leaderName: null,
         costInfo: null,

@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import * as session from "@/core/authz"
 import { db } from "@/core/db"
 import * as messaging from "@/features/messaging/reading"
+import * as organisation from "@/features/org-structure"
 import { getProfile } from "./query"
 import * as service from "./service"
 
@@ -26,8 +27,10 @@ const capability = spyOn(session, "can")
 const sessionRead = spyOn(session, "requirePermission")
 const profileRead = spyOn(service, "getMemberProfile")
 const conversationRead = spyOn(messaging, "findDirectConversation")
+const labelsRead = spyOn(organisation, "listLocalizedGroupLabels")
 
 beforeEach(() => {
+  labelsRead.mockReset().mockResolvedValue(new Map())
   capability.mockReset().mockResolvedValue(false)
   sessionRead.mockReset().mockResolvedValue(viewer)
   profileRead.mockReset().mockResolvedValue(member)
@@ -35,6 +38,7 @@ beforeEach(() => {
 })
 
 afterAll(() => {
+  labelsRead.mockRestore()
   capability.mockRestore()
   sessionRead.mockRestore()
   profileRead.mockRestore()

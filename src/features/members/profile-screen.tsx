@@ -3,6 +3,7 @@ import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
 import { conversationPath } from "@/core/navigation/navigation-utils"
 import { ROUTES } from "@/core/navigation/site"
+import { positionCodeKey } from "@/core/org-structure"
 import { StartConversationDialog } from "@/features/messaging"
 import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
@@ -97,6 +98,7 @@ async function ProfileActions({ data }: { data: ProfileData }) {
 }
 
 async function ProfilePositions({ positions }: { positions: Profile["positions"] }) {
+  const positionLabels = await getTranslations("Groups.positionLabels")
   if (positions.length === 0) return null
   const t = await getTranslations("MemberProfiles")
   return (
@@ -109,7 +111,9 @@ async function ProfilePositions({ positions }: { positions: Profile["positions"]
         {positions.map((position) => (
           <Card key={position.id} size="sm">
             <CardContent>
-              <h3 className="font-semibold">{position.name}</h3>
+              <h3 className="font-semibold">
+                {position.positionCode ? positionLabels(positionCodeKey(position.positionCode)) : position.name}
+              </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {position.groups
                   .map((group) =>
@@ -164,7 +168,7 @@ async function ProfileGroups({ groups, otherGroups }: Pick<Profile, "groups" | "
           <h2 id="other-groups-title" className="mb-4 font-heading text-xl font-semibold">
             {t("otherGroups")}
           </h2>
-          <MemberGroupsCard groups={otherGroups} showContext />
+          <MemberGroupsCard groups={otherGroups} />
         </section>
       ) : null}
     </>

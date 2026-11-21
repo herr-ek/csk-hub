@@ -232,7 +232,7 @@ describe.skipIf(!database)("Events commands", () => {
         error: "location-archived"
       })
 
-      const board = await t.group("Board")
+      const board = await t.group("gig-group")
       await t.archiveGroup(board)
       expect(await createEvent(t.db, { ...eventInput({ organiserGroupId: board }), createdBy: null })).toEqual({
         success: false,
@@ -247,8 +247,8 @@ describe.skipIf(!database)("Events commands", () => {
   describe("Targets", () => {
     test("express each typical shape: a Choir, a Section, a Voice family, both, a gig group", async () => {
       const kk = await t.choir()
-      const kkb = await t.group("Section", kk)
-      const gigGroup = await t.group("GigGroup")
+      const kkb = await t.group("section", kk)
+      const gigGroup = await t.group("gig-group")
       const shapes = [
         { groupId: kk, voiceFamily: null },
         { groupId: kkb, voiceFamily: null },
@@ -283,7 +283,7 @@ describe.skipIf(!database)("Events commands", () => {
         })
       ).toEqual({ success: false, error: "target-duplicate" })
 
-      const archived = await t.group("GigGroup")
+      const archived = await t.group("gig-group")
       await t.archiveGroup(archived)
       expect(
         await createEvent(t.db, {
@@ -358,7 +358,7 @@ describe.skipIf(!database)("Events commands", () => {
 
     test("replaces the Targets as a set, keeping a group archived since", async () => {
       const kk = await t.choir()
-      const gigGroup = await t.group("GigGroup")
+      const gigGroup = await t.group("gig-group")
       const { id } = expectSuccess(
         await createEvent(t.db, {
           ...eventInput({ targets: [{ groupId: gigGroup, voiceFamily: null }] }),

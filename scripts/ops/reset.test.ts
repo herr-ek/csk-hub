@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, spyOn, test } from "bun:test"
 import { sql } from "drizzle-orm"
 import { user } from "@/core/db/schema/auth"
-import { group } from "@/core/db/schema/org-structure"
 import { createTestDatabase } from "../../test/database"
 import { readMigrations } from "./migration-status"
 import { resetLocalDatabase } from "./reset"
@@ -42,6 +41,11 @@ describe.skipIf(!database)("resetLocalDatabase", () => {
       sql`select count(*)::int as applied from drizzle.__drizzle_migrations`
     )
     expect(rows).toEqual([{ applied: readMigrations().length }])
-    expect((await t.db.select({ name: group.name }).from(group)).map(({ name }) => name)).toContain("KKB")
+    const result = await t.db.execute<{ label: string; name: string | null }>(sql`
+      SELECT c.name || s.voice::text AS label, g.name FROM section s
+      JOIN "group" g ON g.id = s.group_id JOIN "group" c ON c.id = g.choir_id
+      WHERE c.name = 'KK' AND s.voice = 'B'
+    `)
+    expect(result.rows).toEqual([{ label: "KKB", name: null }])
   }, 60_000)
 })

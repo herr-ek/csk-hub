@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test"
+import { GroupType } from "@/core/org-structure"
 import { rehearsalKind } from "./rehearsal-kind"
 
-const kk = { groupType: "Choir" as const, voiceFamily: null }
-const mk = { groupType: "Choir" as const, voiceFamily: null }
-const kkb = { groupType: "Section" as const, voiceFamily: null }
+const kk = { groupType: GroupType.Choir, voiceFamily: null }
+const mk = { groupType: GroupType.Choir, voiceFamily: null }
+const kkb = { groupType: GroupType.Section, voiceFamily: null }
 const basses = { groupType: null, voiceFamily: "B" as const }
-const kkBasses = { groupType: "Choir" as const, voiceFamily: "B" as const }
-const gigGroup = { groupType: "GigGroup" as const, voiceFamily: null }
+const kkBasses = { groupType: GroupType.Choir, voiceFamily: "B" as const }
+const gigGroup = { groupType: GroupType.GigGroup, voiceFamily: null }
 
 describe("rehearsalKind", () => {
   test("one whole Choir: a Choir rehearsal in a Series, an Extra rehearsal outside one", () => {

@@ -3,7 +3,7 @@ import "server-only"
 import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm"
 import { db } from "@/core/db"
 import { event, eventTarget } from "@/core/db/schema/events"
-import { listGroupNames } from "@/features/org-structure"
+import { listGroupNames, listLocalizedGroupLabels } from "@/features/org-structure"
 import type { VoiceFamily } from "@/features/voice/model"
 import { getEventManagementScope, managedEventGroupIds } from "../../access"
 import { byPresentValue, type EventStatus, type EventType } from "../../model"
@@ -73,13 +73,14 @@ export async function listManagedEvents(filters: EventListFilters, now: Date) {
             )
 
     const groupIds = [...rows.map(({ organiserGroupId }) => organiserGroupId), ...targets.map(({ groupId }) => groupId)]
+    const labels = await listLocalizedGroupLabels(db)
     const groupNames = new Map(
       (
         await listGroupNames(
           db,
           groupIds.filter((id): id is string => id !== null)
         )
-      ).map(({ id, name }) => [id, name])
+      ).map(({ id }) => [id, labels.get(id) ?? id])
     )
     const nameOf = (groupId: string | null) => (groupId ? (groupNames.get(groupId) ?? null) : null)
 

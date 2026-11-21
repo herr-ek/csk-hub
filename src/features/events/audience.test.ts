@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { GroupType } from "@/core/org-structure"
 import type { VoiceDivision } from "@/features/voice/model"
 import { type AudienceMembership, type AudienceTarget, inAudience } from "./audience"
 
@@ -23,18 +24,18 @@ function singer(
   const section = SECTIONS[sectionId]
   if (!section?.voices.includes(voice)) throw new Error(`${sectionId} does not sing ${voice}.`)
   return [
-    { groupId: section.choir, groupType: "Choir", choirId: null, voice: null, startDate, endDate },
-    { groupId: sectionId, groupType: "Section", choirId: section.choir, voice, startDate, endDate }
+    { groupId: section.choir, groupType: GroupType.Choir, choirId: null, voice: null, startDate, endDate },
+    { groupId: sectionId, groupType: GroupType.Section, choirId: section.choir, voice, startDate, endDate }
   ]
 }
 
 function member(groupId: string, startDate = "2024-08-20", endDate: string | null = null): AudienceMembership {
-  return { groupId, groupType: "GigGroup", choirId: null, voice: null, startDate, endDate }
+  return { groupId, groupType: GroupType.GigGroup, choirId: null, voice: null, startDate, endDate }
 }
 
-const choir = (groupId: string): AudienceTarget => ({ groupId, groupType: "Choir", voiceFamily: null })
-const section = (groupId: string): AudienceTarget => ({ groupId, groupType: "Section", voiceFamily: null })
-const gigGroup = (groupId: string): AudienceTarget => ({ groupId, groupType: "GigGroup", voiceFamily: null })
+const choir = (groupId: string): AudienceTarget => ({ groupId, groupType: GroupType.Choir, voiceFamily: null })
+const section = (groupId: string): AudienceTarget => ({ groupId, groupType: GroupType.Section, voiceFamily: null })
+const gigGroup = (groupId: string): AudienceTarget => ({ groupId, groupType: GroupType.GigGroup, voiceFamily: null })
 const voiceFamily = (family: "S" | "A" | "T" | "B", within?: AudienceTarget): AudienceTarget => ({
   groupId: within?.groupId ?? null,
   groupType: within?.groupType ?? null,
@@ -118,15 +119,15 @@ describe("inAudience", () => {
     const lastDay = singer("KKB", "B1", "2020-08-20", "2026-10-07")
     const firstDay = singer("KKB", "B1", "2026-10-07")
 
-    test("count only on the Event's date, inclusive at both ends", () => {
-      expect(audienceOf([choir("KK")], { leaving, joining, lastDay, firstDay })).toEqual(["lastDay", "firstDay"])
-      expect(audienceOf([voiceFamily("B")], { leaving, joining, lastDay, firstDay })).toEqual(["lastDay", "firstDay"])
+    test("count only on the Event's date, excluding the end boundary", () => {
+      expect(audienceOf([choir("KK")], { leaving, joining, lastDay, firstDay })).toEqual(["firstDay"])
+      expect(audienceOf([voiceFamily("B")], { leaving, joining, lastDay, firstDay })).toEqual(["firstDay"])
     })
 
     test("a Voice change counts the Section the singer is in on the day", () => {
       const changed = [
         ...singer("MKT1", "T1", "2022-08-20", "2026-10-01"),
-        ...singer("MKB1", "B1", "2026-10-01").filter(({ groupType }) => groupType === "Section")
+        ...singer("MKB1", "B1", "2026-10-01").filter(({ groupType }) => groupType === "section")
       ]
       expect(inAudience(changed, { startsAt: OCTOBER_7, targets: [voiceFamily("B")] })).toBe(true)
       expect(inAudience(changed, { startsAt: OCTOBER_7, targets: [voiceFamily("T")] })).toBe(false)

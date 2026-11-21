@@ -4,6 +4,8 @@ import { user } from "@/core/db/schema/auth"
 import { createEvent } from "../../events"
 import { createEventsTestDatabase, eventInput, expectSuccess } from "../../test-support"
 
+mock.module("@/core/i18n/server", () => ({ getTranslations: async () => (key: string) => key }))
+
 const database = await createEventsTestDatabase()
 mock.module("@/core/db", () => ({ db: database?.db }))
 
@@ -23,7 +25,7 @@ describe.skipIf(!database)("the admin Events list", () => {
 
   test("names the Organiser group and the Target groups, archived or not, in name order", async () => {
     const choir = await t.choir()
-    const organiser = await t.group("Board")
+    const organiser = await t.group("gig-group")
     const { id } = expectSuccess(
       await createEvent(t.db, {
         ...eventInput({
@@ -43,11 +45,11 @@ describe.skipIf(!database)("the admin Events list", () => {
     const rows = await listManagedEvents({ when: "upcoming" }, new Date("2026-01-01T00:00:00Z"))
     const row = rows.find((candidate) => candidate.id === id)
 
-    expect(row?.organiserGroup).toStartWith("Board ")
+    expect(row?.organiserGroup).toStartWith("gig-group ")
     expect(row?.targets.map(({ group, voiceFamily }) => [group?.split(" ")[0] ?? null, voiceFamily])).toEqual([
-      ["Board", null],
-      ["Choir", "A"],
-      ["Choir", "B"],
+      ["choir", "A"],
+      ["choir", "B"],
+      ["gig-group", null],
       [null, "S"]
     ])
   })

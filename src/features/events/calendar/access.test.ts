@@ -7,6 +7,8 @@ import { createEvent } from "../events"
 import { changeEventStatus } from "../lifecycle"
 import { createEventsTestDatabase, eventInput, expectSuccess } from "../test-support"
 
+mock.module("@/core/i18n/server", () => ({ getTranslations: async () => (key: string) => key }))
+
 const database = await createEventsTestDatabase()
 let viewer: string | null = null
 const access = database
@@ -23,10 +25,12 @@ describe.skipIf(!database)("protected Event calendar", () => {
   const t = database as NonNullable<typeof database>
   afterAll(t.drop)
 
-  test("fresh calendar reads agree on immediate future departure and retained viewing from Event start", async () => {
+  test("fresh calendar reads agree on scheduled future departure and retained viewing from Event start", async () => {
     viewer = await t.user()
-    const groupId = await t.group("GigGroup")
-    expect((await startMembership(t.db, { userId: viewer, groupId, startDate: "2020-01-01" })).success).toBe(true)
+    const groupId = await t.group("gig-group")
+    expect(
+      (await startMembership(t.db, { userId: viewer, groupId, voice: "B1", startDate: "2020-01-01" })).success
+    ).toBe(true)
     const stored = expectSuccess(
       await createEvent(t.db, {
         ...eventInput({
@@ -45,8 +49,8 @@ describe.skipIf(!database)("protected Event calendar", () => {
     expect(await getCurrentEventPage(stored.id, before)).toMatchObject({ id: stored.id })
     expect((await listCurrentUpcomingEvents(before)).events.map(({ id }) => id)).toContain(stored.id)
     expect((await endMembership(t.db, { userId: viewer, groupId, endDate: "2026-10-02" })).success).toBe(true)
-    expect(await getCurrentEventPage(stored.id, before)).toBeNull()
-    expect((await listCurrentUpcomingEvents(before)).events).toEqual([])
+    expect(await getCurrentEventPage(stored.id, before)).toMatchObject({ id: stored.id })
+    expect((await listCurrentUpcomingEvents(before)).events.map(({ id }) => id)).toContain(stored.id)
     expect(await getCurrentEventPage(stored.id, new Date("2026-10-01T16:00Z"))).toMatchObject({ id: stored.id })
     expect((await listCurrentUpcomingEvents(new Date("2026-10-02T18:00Z"))).events.map(({ id }) => id)).toContain(
       stored.id

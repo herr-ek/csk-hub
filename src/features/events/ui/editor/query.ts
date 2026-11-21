@@ -5,8 +5,8 @@ import { AuthorizationDeniedError } from "@/core/authz"
 import { type Database, db } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { event, eventDetail, eventTarget, gig, location, rehearsal, socialEvent } from "@/core/db/schema/events"
-import { listActiveGroups } from "@/features/org-structure"
-import type { GroupType } from "@/features/org-structure/model"
+import { GroupType } from "@/core/org-structure"
+import { listActiveGroups, listLocalizedGroupLabels } from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
 import { getEventManagementScope, managedEventGroupIds, withEventPermission } from "../../access"
 import { getEventDeletionImpact } from "../../lifecycle"
@@ -49,7 +49,7 @@ export type EventFormValues = {
 export type EventFormOptions = Awaited<ReturnType<typeof getEventFormOptions>>
 
 // Choirs and their Sections first, as most Targets name them, then every other group.
-const GROUP_TYPE_ORDER: Partial<Record<GroupType, number>> = { Choir: 0, Section: 1 }
+const GROUP_TYPE_ORDER: Partial<Record<GroupType, number>> = { [GroupType.Choir]: 0, [GroupType.Section]: 1 }
 
 /**
  * What the form's pickers offer: active Locations, groups and Users, plus any archived or Inactive
@@ -67,7 +67,11 @@ export async function getEventFormOptions(
       .from(location)
       .where(or(eq(location.active, true), keep(location.id, kept.locationIds)))
       .orderBy(asc(location.name))
-    const groups = await listActiveGroups(database, kept.groupIds)
+    const labels = await listLocalizedGroupLabels(database)
+    const groups = (await listActiveGroups(database, kept.groupIds)).map((group) => ({
+      ...group,
+      name: labels.get(group.id) ?? group.id
+    }))
     const users = await database
       .select({ id: user.id, name: user.name, ...(access.actor?.isAdmin ? { email: user.email } : {}) })
       .from(user)

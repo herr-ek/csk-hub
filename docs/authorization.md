@@ -36,7 +36,7 @@ unchanged; no database migration is required. Authorization actors contain only 
 Features import `@/core/authz`; authorization imports `core/auth`, `core/db` and generic shared
 helpers, never features. Authorization declares minimal attribute types derived from database
 schemas, resolves a fresh session and reloads the current User's role/status. It does not load
-Posts, Groups, Memberships or Position holdings. Features load those facts through trusted server
+Posts, Groups or Position appointments. Features load those facts through trusted server
 reads and supply them as context. Organisational reads use org-structure's read helpers and writes
 still go through its commands. Document validation, lifecycle predicates and Conversation
 history remain feature-owned.
@@ -60,10 +60,9 @@ failures propagate. Map denials to localized feature errors or 404s without expo
 server-side actor/resource diagnostics. Rendering guards require Suspense and stay outside caches.
 
 `app.access` establishes fresh active identity for shared application workflows, including
-Messaging. It does not grant Conversation access. Group policies accept Group, Membership and
-Position holding attributes from trusted feature reads. The policies determine relationship scope and
-currentness; features must not substitute precomputed permission booleans. Position UUIDs identify
-records. Do not hardcode mutable titles or environment-specific seed UUIDs as policy identities.
+Messaging. It does not grant Conversation access. Group policies accept Group and contextual Position appointment attributes from trusted feature reads. The policies determine relationship scope and
+currentness; features must not substitute precomputed permission booleans. Fixed Position codes identify responsibilities; appointments identify the concrete context Group.
+Do not hardcode translated titles or environment-specific seed UUIDs as policy identities.
 Specific Choir Position grants remain deferred.
 
 There are no standalone Membership/Position fact helpers in authz. The existing org-structure
@@ -85,7 +84,7 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 | `post.update` | Own Draft; published personal content by its author or Admin |
 | `post.publish`, `post.discard` | Own live Draft |
 | `post.unpublish` | Published personal content by its author or Admin |
-| `group.publishPost`, `group.manageContent`, `group.manageEvents` | Admin, or current Position holder with current Membership in that exact active non-Choir Group |
+| `group.publishPost`, `group.manageContent`, `group.manageEvents` | Admin, or current Position holder in that exact active non-Choir Group |
 | `group.manageMemberships`, `group.managePositions` | Admin, for an existing active Group |
 | `org.manage`, `user.administer`, `notification.broadcast`, `admin.access` | Explicit Admin grants; feature-specific safeguards still apply |
 | `memberId.issue` | Active Users may present their own temporary ID |
@@ -98,7 +97,7 @@ not a universal bypass. Unknown actions and invalid/missing resources fail close
 Discarded Posts are inaccessible. Group requests express authority to represent a Group; they
 cannot authorize an arbitrary Post, Event or Conversation ID. Event instance policies bind
 the resource to its organiser Group; future Group Post policies must do the same. Choir operations remain Admin-only. No grant
-propagates through `choirId`, linked holdings or the Board to unrelated Groups.
+propagates through `choirId`, appointment-granted Memberships or the Board to unrelated Groups.
 
 ## Freshness, locks and limitations
 
@@ -164,15 +163,14 @@ service/action tests cover ownership, inactive Users and unauthenticated request
 ## Organisational administration: implemented boundaries
 
 `org-structure/ui/run-command.ts` requires `org.manage` before parsing the form, then checks the
-specific request inside the transaction used by the domain command. Structure/catalogue work uses
-`org.manage`; existing Group Membership/Voice operations use `group.manageMemberships`; holder
-operations use `group.managePositions`. All are currently Admin-only. Creating a Group does not
+specific request inside the transaction used by the domain command. The retained structural, Membership/Voice and appointment operations all use `org.manage`
+inside that transaction and remain Admin-only. Creating a Group does not
 require a nonexistent Group ID.
 
-Protected screen queries in `ui/choirs`, `ui/groups`, `ui/detail`, `ui/catalogue` and
+Protected screen queries in `ui/choirs`, `ui/groups`, `ui/detail` and
 `ui/group-summaries.ts` require `org.manage` themselves. Domain commands/read helpers remain
-session-independent for composition and operations. No period helper or date reinterpretation is
-introduced. Existing results, savepoints, advisory locks and invariant tests remain intact.
+session-independent for composition and operations. The fixed catalogue and shared calendar clock determine dated participation.
+Existing results, savepoints, advisory locks and invariant tests remain intact.
 
 ## User management and broadcast: implemented boundaries
 
@@ -224,7 +222,7 @@ The following policies are registered in `core/authz/event-policies.ts`:
 
 | Policy | Grant |
 | --- | --- |
-| `event.create` | Admin, or a current Position holder with current Membership in the proposed exact active non-Choir organiser Group |
+| `event.create` | Admin, or a current Position appointment holder in the proposed exact active non-Choir organiser Group |
 | `event.read` | Admin, or the same representation of the Event's actual organiser Group |
 | `event.update` | Management of the current Event **and** authority over the proposed organiser, including clearing it |
 | `event.changeStatus` | Event managers may publish, cancel or reinstate; the feature still enforces legal lifecycle transitions |
@@ -262,13 +260,14 @@ deactivation and Session revocation.
 ### Agreed audience and participation rules
 
 Audience Membership is evaluated at the **Event start**, including multi-day Events. Before that
-instant, a closed Membership grants no access, so departure removes future visibility immediately.
+instant, a Membership whose exclusive end has passed grants no access. Scheduled ends retain
+visibility until their boundary.
 At or after start, historical Membership remains a viewing grant after departure. Targets are
 OR'ed; group/Voice filters within a Target are AND'ed. No Targets means every active User.
 Cancelled Events retain audience visibility; Draft calendar pages stay hidden and managers
 use their management page.
 
-Stored Membership boundaries are dates, with inclusive end dates in the existing Events scheme.
+Stored Membership boundaries are dates, with inclusive starts and exclusive ends.
 Checks use the Stockholm date of the start instant. The schema cannot distinguish departures
 before versus after an Event start on the same calendar day. This change does not invent
 timestamp precision or alter global organisational period semantics.
@@ -281,8 +280,8 @@ for composition/testing, never browser authority.
 ### Deferred participation workflows
 
 Responses, Registrations and Attendance have no application workflows yet. Their policies and
-unused data-access operations are deliberately deferred. This PR adds no Position-code schema,
-migration or seeding changes; stable Position identity belongs to its separate PR.
+unused data-access operations are deliberately deferred. Position identity uses the fixed
+catalogue and contextual appointments; appointment-derived Memberships count toward Event audiences.
 
 The following agreed rules are future-work requirements, not registered permission grants:
 
@@ -336,31 +335,11 @@ republication, mixed audiences, untrusted Group IDs and confidentiality of every
 The existing Groups schema's Choir-wide permission examples must be reconciled with direct-Group
 scope and the current Admin-only Choir decision; they are not automatic grants.
 
-## Future organisational period change: always coordinated
+## Organisational periods and appointments
 
-Today, both org-structure and authz mean **`endDate IS NULL`**. A future start grants current
-status immediately. A future end removes current status immediately. The current implementation
-preserves those consequences with contract tests; it does not introduce a shared period helper
-or reinterpret dates inside authz alone.
-
-The agreed future direction is Stockholm calendar dates with `[startDate, endDate)` periods.
-Before adopting it, change the following together:
-
-1. Audit existing Memberships/holdings for overlaps, future dates, zero-length terms and partial
-   linked holdings. Partial unique indexes protect open-ended rows, not effective-date overlap.
-2. Define scheduling and immediate termination consistently, including cascades. Update
-   `membership.ts`, `positions.ts`, `linked-positions.ts`, `lookup.ts` and relevant `structure.ts`
-   constraints; same-user holding checks currently do not exclude every cross-user overlap.
-3. Strengthen transactional/range invariants for one effective holder and elected Position rules.
-   Coordinate with per-user/Group locking instead of assuming the current indexes enforce ranges.
-4. Update `reads.ts`, `ui/detail/query.ts`, `ui/group-summaries.ts`, other organisational consumers,
-   authz relationship policies and fixtures, feature-owned fact reads and relevant schema
-   documentation in one change. Update historical Event audience calculations too: the design
-   schema currently uses an inclusive end date.
-5. Extend parity tests for before/on/after start/end, future handover, same-day replacement,
-   departure cascades, archive behavior and concurrent changes. Update the glossary only when
-   org and authz adopt the new definition together.
-
-Historical Post access for former Choir/Section members, finer Choir Position grants, and a
-persistent identity for linked appointments remain separate investigations. Neither static
-Position names nor the existence of an old Membership should silently grant access meanwhile.
+Org-structure and authz use Stockholm calendar dates with `[startDate, endDate)` periods.
+A prepared future start confers no current status; a future end retains current status until
+that exclusive boundary. The shared `cskToday()` clock keeps both modules on the same date.
+Group policies require a current appointment in the exact context Group. The catalogue either
+grants context Membership or requires independent Membership covering the tenure, so a separate
+Membership input is unnecessary. Derived Membership in another Group grants no representation authority.

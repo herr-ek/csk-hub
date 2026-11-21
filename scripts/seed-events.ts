@@ -13,7 +13,8 @@ import {
   rehearsal,
   socialEvent
 } from "@/core/db/schema/events"
-import { group } from "@/core/db/schema/org-structure"
+import { group, section } from "@/core/db/schema/org-structure"
+import { currentOrganisationYear, GroupType } from "@/core/org-structure"
 import { assertLocalDatabase } from "./ops/guards"
 
 /**
@@ -94,10 +95,10 @@ export function seedEvents(database: Database, from = today()) {
 
 async function seed(database: Database, monday: string) {
   // One at a time: a transaction is one connection.
-  const gigmasteri = await requireGroup(database, "Gigmästeri", "Gigmästeri")
-  const sexmasteri = await requireGroup(database, "Sexmästeri", "Sexmästeri")
-  const board = await requireGroup(database, null, "Board")
-  const gigGroup = await findOrCreateGroup(database, "Alumnikväll", "GigGroup")
+  const gigmasteri = await requireGroup(database, null, GroupType.GigCommittee, monday)
+  const sexmasteri = await requireGroup(database, null, GroupType.SocialCommittee, monday)
+  const board = await requireGroup(database, null, GroupType.Board, monday)
+  const gigGroup = await findOrCreateGroup(database, "Alumnikväll", GroupType.GigGroup)
   const scania = await findOrCreateLocation(database, "Scania", "Chalmersplatsen 1, Göteborg")
   const karhuset = await findOrCreateLocation(database, "Kårhuset", "Chalmersplatsen 1, Göteborg")
   const [leader, responsible] = await activeUsers(database)
@@ -134,8 +135,8 @@ async function seed(database: Database, monday: string) {
   const missing = async (title: string) => !(await eventTitled(database, title))
 
   for (const choir of CHOIRS) {
-    const choirId = await requireGroup(database, choir.name, "Choir")
-    const sectionId = await requireGroup(database, choir.section, "Section")
+    const choirId = await requireGroup(database, choir.name, GroupType.Choir)
+    const sectionId = await requireSection(database, choirId, choir.section.slice(choir.name.length))
 
     const seriesName = `${choir.name} rehearsals, ${term(monday)}`
     const [series] = await database.select().from(eventSeries).where(eq(eventSeries.name, seriesName))
@@ -309,11 +310,18 @@ function term(date: string) {
   return month >= 8 ? `autumn ${year}` : `spring ${year}`
 }
 
-async function requireGroup(database: Database, name: string | null, type: (typeof group.type.enumValues)[number]) {
+async function requireGroup(database: Database, name: string | null, type: GroupType, date?: string) {
   const [row] = await database
     .select({ id: group.id })
     .from(group)
-    .where(and(eq(group.type, type), eq(group.active, true), name ? eq(group.name, name) : undefined))
+    .where(
+      and(
+        eq(group.type, type),
+        eq(group.active, true),
+        name ? eq(group.name, name) : undefined,
+        date ? eq(group.organisationYear, currentOrganisationYear(date)) : undefined
+      )
+    )
     .orderBy(asc(group.name))
     .limit(1)
   if (!row) {
@@ -324,7 +332,17 @@ async function requireGroup(database: Database, name: string | null, type: (type
   return row.id
 }
 
-async function findOrCreateGroup(database: Database, name: string, type: (typeof group.type.enumValues)[number]) {
+async function requireSection(database: Database, choirId: string, voice: string) {
+  const [row] = await database
+    .select({ id: group.id })
+    .from(group)
+    .innerJoin(section, eq(section.groupId, group.id))
+    .where(and(eq(group.choirId, choirId), eq(section.voice, voice as typeof section.$inferSelect.voice)))
+  if (!row) throw new Error("Reference Section is missing.")
+  return row.id
+}
+
+async function findOrCreateGroup(database: Database, name: string, type: GroupType) {
   const [found] = await database
     .select({ id: group.id })
     .from(group)

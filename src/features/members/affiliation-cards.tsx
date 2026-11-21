@@ -1,4 +1,6 @@
 import { getFormatter, getTranslations } from "@/core/i18n/server"
+import { useTranslations } from "@/core/i18n/translations"
+import { formatGroupLabel, positionCodeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Card, CardContent, CardHeader } from "@/shared/ui/base/card"
 import type { ProfileAffiliations } from "./affiliations"
@@ -6,28 +8,25 @@ import type { ProfileAffiliations } from "./affiliations"
 type Group = ProfileAffiliations["groups"][number]
 
 function Positions({ positions }: { positions: Group["positions"] }) {
+  const label = useTranslations("Groups.positionLabels")
   return positions.length ? (
     <div className="flex flex-wrap gap-2">
       {positions.map((position) => (
-        <Badge key={position.positionId} variant="secondary">
-          {position.name}
+        <Badge key={position.id} variant="secondary">
+          {position.positionCode ? label(positionCodeKey(position.positionCode)) : position.name}
         </Badge>
       ))}
     </div>
   ) : null
 }
 
-async function GroupList({ groups, showContext = false }: { groups: Group[]; showContext?: boolean }) {
-  const t = await getTranslations("MemberProfiles")
+async function GroupList({ groups }: { groups: Group[] }) {
+  const t = await getTranslations("Groups")
   return (
     <ul className="divide-y">
       {groups.map((group) => (
         <li key={group.groupId} className="flex flex-wrap items-center justify-between gap-2 py-3">
-          <span className="font-medium">
-            {showContext && group.choirName
-              ? t("groupContext", { group: group.name, choir: group.choirName })
-              : group.name}
-          </span>
+          <span className="font-medium">{formatGroupLabel(group, t)}</span>
           <Positions positions={group.positions} />
         </li>
       ))}
@@ -35,11 +34,11 @@ async function GroupList({ groups, showContext = false }: { groups: Group[]; sho
   )
 }
 
-export function MemberGroupsCard({ groups, showContext = false }: { groups: Group[]; showContext?: boolean }) {
+export function MemberGroupsCard({ groups }: { groups: Group[] }) {
   return (
     <Card>
       <CardContent>
-        <GroupList groups={groups} showContext={showContext} />
+        <GroupList groups={groups} />
       </CardContent>
     </Card>
   )

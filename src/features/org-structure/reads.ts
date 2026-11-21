@@ -1,109 +1,137 @@
 import "server-only"
 
-import { and, asc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm"
-import { alias } from "drizzle-orm/pg-core"
-import { group, groupMember, position, positionHolder, section } from "@/core/db/schema/org-structure"
+import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm"
+import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
-import type { IsoDate } from "./model"
+import { appointmentMemberships } from "./appointment-memberships"
+import { listEffectiveMembersAt } from "./appointments"
+import {
+  cskToday,
+  listEffectiveChoirAffiliationsOfUsersAt,
+  listEffectiveParticipationOfUserAt
+} from "./effective-reads"
 import { lockUser, type OrgStructureDatabase, type OrgStructureTransaction } from "./operation"
 
 /** The current members of a group, with the Voice each sings when the group is a Section. */
 export function listCurrentGroupMembers(database: OrgStructureDatabase, groupId: string) {
-  return database
-    .select({ userId: groupMember.userId, startDate: groupMember.startDate, voice: groupMember.voice })
-    .from(groupMember)
-    .where(and(eq(groupMember.groupId, groupId), isNull(groupMember.endDate)))
-    .orderBy(asc(groupMember.startDate), asc(groupMember.userId))
+  const date = cskToday()
+  return listEffectiveMembersAt(database, groupId, date).then((members) =>
+    members
+      .flatMap((member) => {
+        const startDate = [
+          ...member.memberships.map(({ startDate }) => startDate),
+          ...member.positions.map(({ startDate }) => startDate)
+        ].sort()[0]
+        return startDate ? [{ userId: member.userId, startDate, voice: member.voice }] : []
+      })
+      .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.userId.localeCompare(b.userId))
+  )
 }
 
 /** The groups a user currently belongs to. */
-export function listCurrentGroupsOfUser(database: OrgStructureDatabase, userId: string) {
-  const owningChoir = alias(group, "owning_choir")
-  return database
-    .select({
-      groupId: group.id,
-      name: group.name,
-      type: group.type,
-      choirId: group.choirId,
-      active: group.active,
-      startDate: groupMember.startDate,
-      voice: groupMember.voice,
-      sectionVoice: section.voice,
-      choirName: owningChoir.name
+export async function listCurrentGroupsOfUser(database: OrgStructureDatabase, userId: string, date = cskToday()) {
+  return (await listEffectiveParticipationOfUserAt(database, userId, date)).groups.map(
+    ({ groupId, name, type, choirId, active, startDate, voice, sectionVoice, choirName }) => ({
+      groupId,
+      name,
+      type,
+      choirId,
+      active,
+      startDate,
+      voice,
+      sectionVoice,
+      choirName
     })
-    .from(groupMember)
-    .innerJoin(group, eq(group.id, groupMember.groupId))
-    .leftJoin(section, eq(section.groupId, group.id))
-    .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
-    .where(and(eq(groupMember.userId, userId), isNull(groupMember.endDate)))
-    .orderBy(asc(group.name))
+  )
 }
 
 /** Current Position holdings with their Group identity; callers choose archive visibility. */
-export function listCurrentPositionsOfUser(database: OrgStructureDatabase, userId: string) {
-  return database
-    .select({ groupId: positionHolder.groupId, positionId: position.id, name: position.name })
-    .from(positionHolder)
-    .innerJoin(position, eq(position.id, positionHolder.positionId))
-    .where(and(eq(positionHolder.userId, userId), isNull(positionHolder.endDate)))
-    .orderBy(asc(position.name), asc(positionHolder.groupId))
+export async function listCurrentPositionsOfUser(database: OrgStructureDatabase, userId: string, date = cskToday()) {
+  return (await listEffectiveParticipationOfUserAt(database, userId, date)).positions
+    .flatMap((item) =>
+      item.affiliationGroups.map((entry) => ({ groupId: entry.id, positionId: item.id, name: item.name }))
+    )
+    .sort((a, b) => a.name.localeCompare(b.name, "sv") || a.groupId.localeCompare(b.groupId))
 }
 
 /** Batched Choir/Section summaries for a directory page, excluding archived Groups. */
-export async function listCurrentChoirAffiliationsOfUsers(database: OrgStructureDatabase, userIds: string[]) {
-  if (userIds.length === 0) return []
-  return database
-    .select({
-      userId: groupMember.userId,
-      groupId: group.id,
-      name: group.name,
-      type: group.type,
-      choirId: group.choirId
-    })
-    .from(groupMember)
-    .innerJoin(group, eq(group.id, groupMember.groupId))
-    .where(
-      and(
-        inArray(groupMember.userId, userIds),
-        isNull(groupMember.endDate),
-        eq(group.active, true),
-        inArray(group.type, ["Choir", "Section"])
-      )
-    )
-    .orderBy(asc(group.name), asc(group.id))
+export async function listCurrentChoirAffiliationsOfUsers(
+  database: OrgStructureDatabase,
+  userIds: string[],
+  date = cskToday()
+) {
+  return listEffectiveChoirAffiliationsOfUsersAt(database, userIds, date)
 }
 
 /**
- * A user's Memberships, current and past, that had not ended before `from`: enough to tell which
- * groups they were in on any date from then on. Each carries its group's type and Choir, and the
- * Voice of a Section Membership. Positions are not Memberships and are not included.
+ * Effective dated Memberships whose exclusive end lies after `from`, including appointment
+ * grants. Archived Groups remain available for historical Event audiences.
  */
-export function listMembershipsOfUser(database: OrgStructureDatabase, userId: string, { from }: { from: IsoDate }) {
-  return database
-    .select({
-      groupId: group.id,
-      groupType: group.type,
-      choirId: group.choirId,
-      voice: groupMember.voice,
-      startDate: groupMember.startDate,
-      endDate: groupMember.endDate
-    })
-    .from(groupMember)
-    .innerJoin(group, eq(group.id, groupMember.groupId))
-    .where(and(eq(groupMember.userId, userId), or(isNull(groupMember.endDate), gte(groupMember.endDate, from))))
-    .orderBy(asc(groupMember.startDate), asc(group.id))
+export async function listMembershipsOfUser(
+  database: OrgStructureDatabase,
+  userId: string,
+  { from }: { from: IsoDate }
+) {
+  const derived = appointmentMemberships(database)
+  const [direct, granted] = await Promise.all([
+    database
+      .select({
+        groupId: group.id,
+        groupType: group.type,
+        choirId: group.choirId,
+        voice: directMembership.voice,
+        startDate: directMembership.startDate,
+        endDate: directMembership.endDate
+      })
+      .from(directMembership)
+      .innerJoin(group, eq(group.id, directMembership.groupId))
+      .where(
+        and(
+          eq(directMembership.userId, userId),
+          or(isNull(directMembership.endDate), gt(directMembership.endDate, from))
+        )
+      ),
+    database
+      .select({
+        groupId: group.id,
+        groupType: group.type,
+        choirId: group.choirId,
+        voice: sql<null>`NULL`,
+        startDate: positionAppointment.startDate,
+        endDate: positionAppointment.endDate
+      })
+      .from(derived)
+      .innerJoin(group, eq(group.id, derived.groupId))
+      .innerJoin(positionAppointment, eq(positionAppointment.id, derived.appointmentId))
+      .where(
+        and(
+          eq(positionAppointment.userId, userId),
+          or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, from))
+        )
+      )
+  ])
+  return [...direct, ...granted].sort(
+    (a, b) => a.startDate.localeCompare(b.startDate) || a.groupId.localeCompare(b.groupId)
+  )
 }
 
 /** Who currently holds a Position in a group, or null when it is vacant. */
-export async function getCurrentPositionHolder(database: OrgStructureDatabase, groupId: string, positionId: string) {
+export async function getCurrentPositionHolder(
+  database: OrgStructureDatabase,
+  groupId: string,
+  positionCode: PositionCode,
+  date = cskToday()
+) {
   const [holder] = await database
-    .select({ userId: positionHolder.userId, startDate: positionHolder.startDate })
-    .from(positionHolder)
+    .select({ userId: positionAppointment.userId, startDate: positionAppointment.startDate })
+    .from(positionAppointment)
     .where(
       and(
-        eq(positionHolder.groupId, groupId),
-        eq(positionHolder.positionId, positionId),
-        isNull(positionHolder.endDate)
+        eq(positionAppointment.contextGroupId, groupId),
+        eq(positionAppointment.positionCode, positionCode),
+        lte(positionAppointment.startDate, date),
+        or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
       )
     )
   return holder ?? null
@@ -113,21 +141,31 @@ export async function getCurrentPositionHolder(database: OrgStructureDatabase, g
  * The current singers of a Choir in one Voice family: members of the Sections whose Voice is in
  * that family (KKB, or MKB1 and MKB2, for B). "All basses" is never a group; it is found this way.
  */
-export function listChoirMembersByVoiceFamily(database: OrgStructureDatabase, choirId: string, family: VoiceFamily) {
-  return database
-    .selectDistinct({ userId: groupMember.userId, sectionId: groupMember.groupId, voice: groupMember.voice })
-    .from(groupMember)
-    .innerJoin(group, eq(group.id, groupMember.groupId))
+export async function listChoirMembersByVoiceFamily(
+  database: OrgStructureDatabase,
+  choirId: string,
+  family: VoiceFamily,
+  date = cskToday()
+) {
+  const voices = [family, ...divisionsOf(family)]
+  const rows = await database
+    .select({ userId: directMembership.userId, sectionId: directMembership.groupId, voice: directMembership.voice })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
     .innerJoin(section, eq(section.groupId, group.id))
     .where(
       and(
         eq(group.choirId, choirId),
-        eq(group.type, "Section"),
-        isNull(groupMember.endDate),
-        inArray(section.voice, [family, ...divisionsOf(family)])
+        eq(group.type, GroupType.Section),
+        eq(group.active, true),
+        inArray(section.voice, voices),
+        lte(directMembership.startDate, date),
+        or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
       )
     )
-    .orderBy(asc(groupMember.userId))
+  return [...new Map(rows.map((row) => [`${row.userId}:${row.sectionId}`, row])).values()].sort((a, b) =>
+    a.userId.localeCompare(b.userId)
+  )
 }
 
 /**
@@ -166,9 +204,11 @@ export async function lockGroupForReference(tx: OrgStructureTransaction, groupId
  */
 export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
   const groups = await database.select({ id: group.id, type: group.type, active: group.active }).from(group)
-  const memberships = await database.select().from(groupMember).where(eq(groupMember.userId, userId))
-  const positionHoldings = await database.select().from(positionHolder).where(eq(positionHolder.userId, userId))
-  return { groups, memberships, positionHoldings }
+  const positionAppointments = await database
+    .select()
+    .from(positionAppointment)
+    .where(eq(positionAppointment.userId, userId))
+  return { groups, positionAppointments }
 }
 
 /**
@@ -184,7 +224,7 @@ export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, u
       .from(group)
       .where(inArray(group.id, [...new Set(groupIds)].sort()))
       // Choir archival locks its Choir before updating Sections; preserve that order here.
-      .orderBy(sql`case when ${group.type} = 'Choir' then 0 else 1 end`, asc(group.id))
+      .orderBy(sql`case when ${group.type} = ${GroupType.Choir} then 0 else 1 end`, asc(group.id))
       .for("share")
   }
   return getGroupAuthorizationFacts(tx, userId)

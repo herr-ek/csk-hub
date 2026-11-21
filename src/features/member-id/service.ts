@@ -34,7 +34,7 @@ async function getProfile(userId: string) {
     name: member.name,
     image: member.image,
     accountStatus: "active" as const,
-    choirs: affiliations.filter((group) => group.type === "Choir").map(({ groupId, name }) => ({ id: groupId, name }))
+    choirs: affiliations.filter((group) => group.type === "choir").map(({ groupId, name }) => ({ id: groupId, name }))
   }
 }
 

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { GroupType } from "@/core/org-structure"
 import type { AuthorizationActor, PermissionContext } from "./model"
 import { evaluatePermission } from "./policy-registry"
 
@@ -13,14 +14,13 @@ const event = {
 }
 const context: PermissionContext["event.view"] = {
   event,
-  group: { id: "organiser", type: "Board", active: true },
-  memberships: [],
-  positionHoldings: [],
-  targets: [{ groupId: "section", groupType: "Section", voiceFamily: null }],
+  group: { id: "organiser", type: GroupType.Board, active: true },
+  positionAppointments: [],
+  targets: [{ groupId: "section", groupType: GroupType.Section, voiceFamily: null }],
   audienceMemberships: [
     {
       groupId: "section",
-      groupType: "Section",
+      groupType: GroupType.Section,
       choirId: "choir",
       voice: "B1",
       startDate: "2020-01-01",
@@ -30,11 +30,11 @@ const context: PermissionContext["event.view"] = {
   now
 }
 
-test("future departure removes access immediately; after start historical membership preserves viewing", () => {
+test("scheduled departure retains access until the boundary; historical membership preserves viewing", () => {
   const request = context
   expect(
     evaluatePermission(member, { action: "event.view", context: { ...request, now: new Date("2026-09-30") } })
-  ).toBe(false)
+  ).toBe(true)
   expect(
     evaluatePermission(member, {
       action: "event.view",

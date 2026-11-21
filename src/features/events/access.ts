@@ -26,8 +26,7 @@ export async function getEventManagementScope(database: Parameters<typeof lockGr
 export function eventGroupContext(facts: GroupFacts, groupId: string | null | undefined) {
   return {
     group: facts.groups.find(({ id }) => id === groupId) ?? null,
-    memberships: facts.memberships,
-    positionHoldings: facts.positionHoldings
+    positionAppointments: facts.positionAppointments
   }
 }
 
