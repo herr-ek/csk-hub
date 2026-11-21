@@ -127,33 +127,31 @@ async function EventFacts({ page }: { page: EventPage }) {
 
 type PageResponses = NonNullable<EventPage["responses"]>
 
-/** Answering the Event, first on the page: two buttons while it can be answered, the answer after. */
+/** Answering the Event, first on the page, on one line; after the start, only the answer. */
 async function ResponseRow({ eventId, responses }: { eventId: string; responses: PageResponses }) {
   const { own, canRespond } = responses
   if (!canRespond && !own) return null
-  const [t, answers, format] = await Promise.all([
-    getTranslations("Events.respond"),
-    getTranslations("Events.answers"),
-    getFormatter()
-  ])
+  const [t, format] = await Promise.all([getTranslations("Events.respond"), getFormatter()])
+  const deadline = responses.respondBy
+    ? t("respondBy", { deadline: format.dateTime(responses.respondBy, { dateStyle: "medium", timeStyle: "short" }) })
+    : null
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <h2 className="flex flex-wrap items-center gap-2 font-heading text-lg font-semibold">
-          {canRespond || !own ? t("answer") : t("yourAnswer", { answer: answers(own.answer) })}
-          {own?.late ? <Badge variant="destructive">{t("late")}</Badge> : null}
-        </h2>
-        {responses.respondBy && canRespond ? (
-          <p className="text-sm text-muted-foreground">
-            {t("respondBy", {
-              deadline: format.dateTime(responses.respondBy, { dateStyle: "medium", timeStyle: "short" })
-            })}
-          </p>
-        ) : null}
-      </div>
+    <section className="rounded-xl border bg-card px-4 py-3 text-sm">
       {canRespond ? (
-        <ResponseBar eventId={eventId} mode={responses.mode} reasons={responses.reasons} own={own} />
+        <ResponseBar
+          eventId={eventId}
+          mode={responses.mode}
+          reasons={responses.reasons}
+          own={own}
+          deadline={deadline}
+        />
+      ) : own ? (
+        // Once the Event has started, or is cancelled, the answer is only shown.
+        <p className="flex flex-wrap items-center gap-2 font-medium">
+          {t(`answered.${own.answer}`)}
+          {own.late ? <Badge variant="destructive">{t("late")}</Badge> : null}
+        </p>
       ) : null}
     </section>
   )

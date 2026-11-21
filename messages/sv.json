@@ -1189,7 +1189,13 @@
       "commentTitle": "Kommentera ditt svar",
       "addComment": "Lägg till kommentar",
       "editComment": "Redigera kommentar",
-      "save": "Spara"
+      "save": "Spara",
+      "answered": {
+        "Yes": "Du kommer",
+        "No": "Du kan inte komma",
+        "Maybe": "Du kanske kommer"
+      },
+      "changeAnswer": "Ändra ditt svar"
     },
     "responses": {
       "title": "Svar",

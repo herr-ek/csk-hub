@@ -1189,7 +1189,13 @@
       "commentTitle": "Comment on your answer",
       "addComment": "Add a comment",
       "editComment": "Edit comment",
-      "save": "Save"
+      "save": "Save",
+      "answered": {
+        "Yes": "You're coming",
+        "No": "You can't come",
+        "Maybe": "You might come"
+      },
+      "changeAnswer": "Change your answer"
     },
     "responses": {
       "title": "Responses",

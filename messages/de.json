@@ -1189,7 +1189,13 @@
       "commentTitle": "Kommentar zu deiner Antwort",
       "addComment": "Kommentar hinzufügen",
       "editComment": "Kommentar bearbeiten",
-      "save": "Speichern"
+      "save": "Speichern",
+      "answered": {
+        "Yes": "Du kommst",
+        "No": "Du kannst nicht kommen",
+        "Maybe": "Du kommst vielleicht"
+      },
+      "changeAnswer": "Antwort ändern"
     },
     "responses": {
       "title": "Antworten",

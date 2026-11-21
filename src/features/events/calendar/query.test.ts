@@ -323,6 +323,7 @@ describe.skipIf(!database)("calendar reads", () => {
         comment: "Private note",
         absenceReasonId: null,
         reasonText: "Secret reason",
+        respondedAt: NOW,
         late: true
       })
       // An Admin outside the Audience sees the answers but has none to give.

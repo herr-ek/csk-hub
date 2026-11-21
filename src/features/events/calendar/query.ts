@@ -298,6 +298,7 @@ async function responsesForAudience(
       comment: own.comment,
       absenceReasonId: own.absenceReasonId,
       reasonText: own.reasonText,
+      respondedAt: own.respondedAt,
       late: row.respondBy !== null && own.respondedAt > row.respondBy
     },
     reasons: await listPickableAbsenceReasons(database, own?.absenceReasonId ?? null),

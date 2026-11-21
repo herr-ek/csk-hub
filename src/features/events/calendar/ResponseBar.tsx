@@ -1,11 +1,13 @@
 "use client"
 
-import { Check, X } from "lucide-react"
+import { Check, CircleHelp, X } from "lucide-react"
+import { AnimatePresence, MotionConfig, motion } from "motion/react"
 import { type ReactElement, startTransition, useActionState, useEffect, useId, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { IDLE } from "@/shared/forms/command-state"
 import { InputField, SelectField } from "@/shared/forms/fields"
-import { Button } from "@/shared/ui/base/button"
+import { Badge } from "@/shared/ui/base/badge"
+import { Button, buttonVariants } from "@/shared/ui/base/button"
 import { Field, FieldError, FieldLabel } from "@/shared/ui/base/field"
 import { Textarea } from "@/shared/ui/base/textarea"
 import { toast } from "@/shared/ui/base/toast"
@@ -22,42 +24,62 @@ type OwnResponse = {
   comment: string | null
   absenceReasonId: string | null
   reasonText: string | null
+  respondedAt: Date
+  late: boolean
 }
 
 type Reasons = { id: string; label: string }[]
 
-// Solid until the User has answered; then only their answer stays solid.
-const YES = {
-  solid: "bg-green-600 text-white hover:bg-green-700",
-  outline: "border-green-600/40 bg-transparent text-green-700 hover:bg-green-600/10 dark:text-green-400"
+// Outlined in the answer's colour, so the row stays calm until it is used.
+const ANSWER_STYLE: Record<RsvpAnswer, string> = {
+  Yes: "border-green-600/40 text-green-700 hover:bg-green-600/10 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400",
+  No: "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive",
+  Maybe: ""
 }
-const NO = {
-  solid: "bg-destructive text-white hover:bg-destructive/90",
-  outline: "border-destructive/40 bg-transparent text-destructive hover:bg-destructive/10"
-}
+const ANSWER_ICON: Record<RsvpAnswer, typeof Check> = { Yes: Check, No: X, Maybe: CircleHelp }
+
+const press = { whileHover: { y: -1 }, whileTap: { scale: 0.94 } } as const
+const swap = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: 0.18 }
+} as const
 
 /**
- * Answering an Event in one tap: Yes is saved at once, No asks for a reason first. In
- * ResponseRequired, Maybe is offered too. The comment and reason are private to the User and the
- * organisers.
+ * Answering an Event on one line: the question with Yes and No (and Maybe in ResponseRequired),
+ * or, once answered, the answer with a way to change it. Yes and Maybe are saved at once; No asks
+ * for a reason first. The comment and reason are private to the User and the organisers.
  */
 export function ResponseBar({
   eventId,
   mode,
   reasons,
-  own
+  own,
+  deadline
 }: {
   eventId: string
   mode: ParticipationMode
   reasons: Reasons
   own: OwnResponse | null
+  /** The respond-by deadline, already in words. */
+  deadline: string | null
 }) {
   const t = useTranslations("Events.respond")
   const answers = useTranslations("Events.answers")
+  const common = useTranslations("Common")
   const errorMessage = useEventErrorMessage()
   const [state, formAction, pending] = useActionState(respondToEventAction, IDLE)
   const handled = useRef<number | null>(null)
-  const chosen = own?.answer
+  const [changing, setChanging] = useState(false)
+
+  // A newly saved answer, from a button or the dialog, ends the change.
+  const answeredAt = own?.respondedAt.getTime()
+  const [seenAnswer, setSeenAnswer] = useState(answeredAt)
+  if (seenAnswer !== answeredAt) {
+    setSeenAnswer(answeredAt)
+    setChanging(false)
+  }
 
   useEffect(() => {
     if (state.status !== "success" || handled.current === state.completedAt) return
@@ -73,75 +95,98 @@ export function ResponseBar({
     if (own?.comment) data.set("comment", own.comment)
     startTransition(() => formAction(data))
   }
-  const style = (option: RsvpAnswer, colors: typeof YES) =>
-    !chosen || chosen === option ? colors.solid : colors.outline
+
+  const option = (value: RsvpAnswer) => {
+    const Icon = ANSWER_ICON[value]
+    return {
+      type: "button" as const,
+      disabled: pending,
+      "aria-pressed": own?.answer === value,
+      className: cn(buttonVariants({ variant: "outline", size: "sm" }), ANSWER_STYLE[value]),
+      ...press,
+      children: (
+        <>
+          <Icon aria-hidden="true" />
+          {answers(value)}
+        </>
+      )
+    }
+  }
+
+  const AnsweredIcon = own ? ANSWER_ICON[own.answer] : Check
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
-        <Button
-          type="button"
-          className={cn("h-14 rounded-2xl text-base", style("Yes", YES))}
-          aria-pressed={chosen === "Yes"}
-          disabled={pending}
-          onClick={() => answer("Yes")}
-        >
-          <Check className="size-5" aria-hidden="true" />
-          {answers("Yes")}
-        </Button>
-        <ResponseDialog
-          eventId={eventId}
-          mode={mode}
-          reasons={reasons}
-          own={own}
-          answer="No"
-          title={t("noTitle")}
-          trigger={
-            <Button
-              type="button"
-              className={cn("h-14 rounded-2xl text-base", style("No", NO))}
-              aria-pressed={chosen === "No"}
-              disabled={pending}
-            >
-              <X className="size-5" aria-hidden="true" />
-              {answers("No")}
-            </Button>
-          }
-        />
-      </div>
-      {mode !== "ResponseRequiredStrict" || own ? (
-        <div className="flex flex-wrap gap-2">
-          {mode !== "ResponseRequiredStrict" ? (
-            <Button
-              type="button"
-              variant={chosen === "Maybe" ? "secondary" : "ghost"}
-              size="sm"
-              aria-pressed={chosen === "Maybe"}
-              disabled={pending}
-              onClick={() => answer("Maybe")}
-            >
-              {answers("Maybe")}
-            </Button>
-          ) : null}
-          {own ? (
-            <ResponseDialog
-              eventId={eventId}
-              mode={mode}
-              reasons={reasons}
-              own={own}
-              answer={own.answer}
-              title={t("commentTitle")}
-              trigger={
-                <Button type="button" variant="ghost" size="sm" disabled={pending}>
-                  {own.comment ? t("editComment") : t("addComment")}
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence mode="wait" initial={false}>
+        {!own || changing ? (
+          <motion.div key="ask" {...swap} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="flex flex-col">
+              <span className="font-medium">{t("answer")}</span>
+              {deadline ? <span className="text-xs text-muted-foreground">{deadline}</span> : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <motion.button {...option("Yes")} onClick={() => answer("Yes")} />
+              <ResponseDialog
+                eventId={eventId}
+                mode={mode}
+                reasons={reasons}
+                own={own}
+                answer="No"
+                title={t("noTitle")}
+                trigger={<motion.button {...option("No")} />}
+              />
+              {mode !== "ResponseRequiredStrict" ? (
+                <motion.button {...option("Maybe")} onClick={() => answer("Maybe")} />
+              ) : null}
+              {own ? (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setChanging(false)}>
+                  {common("cancel")}
                 </Button>
-              }
-            />
-          ) : null}
-        </div>
-      ) : null}
+              ) : null}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div key="answered" {...swap} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <span className={cn("flex flex-wrap items-center gap-2 font-medium", ANSWER_STYLE[own.answer])}>
+              <motion.span
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                className="flex"
+              >
+                <AnsweredIcon className="size-4" aria-hidden="true" />
+              </motion.span>
+              {t(`answered.${own.answer}`)}
+              {own.late ? <Badge variant="destructive">{t("late")}</Badge> : null}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <ResponseDialog
+                eventId={eventId}
+                mode={mode}
+                reasons={reasons}
+                own={own}
+                answer={own.answer}
+                title={t("commentTitle")}
+                trigger={
+                  <Button type="button" variant="ghost" size="sm">
+                    {own.comment ? t("editComment") : t("addComment")}
+                  </Button>
+                }
+              />
+              <motion.button
+                type="button"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+                onClick={() => setChanging(true)}
+                {...press}
+              >
+                {t("changeAnswer")}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <FieldError>{state.status === "error" ? errorMessage(state.error) : undefined}</FieldError>
-    </div>
+    </MotionConfig>
   )
 }
 
