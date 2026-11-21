@@ -5,7 +5,7 @@ import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { activityDelivery } from "@/core/db/schema/activity"
 import { activityStreamKey, connectActivityBroker } from "@/core/realtime/broker"
-import type { ActivityEvent } from "@/core/realtime/events"
+import { type ActivityEvent, activityChangeSchema } from "@/core/realtime/events"
 import { getActivitySession, isActivitySessionActive } from "./access"
 import { type ActivityDeliveryPolicy, isDeliveryAllowed } from "./delivery-access"
 import { PUSH_GRACE_MS } from "./outbox"
@@ -91,14 +91,13 @@ export async function handleActivityStream(policy: ActivityDeliveryPolicy, reque
                 .where(and(eq(activityDelivery.id, id), eq(activityDelivery.userId, identity.userId)))
               if (!delivery || !(await isDeliveryAllowed(policy, delivery))) continue
               const event: ActivityEvent = {
-                ...delivery.change,
+                ...activityChangeSchema.parse(delivery.change),
                 id: delivery.id,
                 notify: Boolean(delivery.body && !delivery.acknowledgedAt && !delivery.pushCompletedAt),
                 ...(delivery.body
                   ? { notifyUntil: delivery.pushAfter?.getTime() ?? delivery.createdAt.getTime() + PUSH_GRACE_MS }
                   : {}),
-                ...(delivery.href ? { href: delivery.href } : {}),
-                ...(delivery.change.kind === "notification.created" && delivery.body ? { body: delivery.body } : {})
+                ...(delivery.href ? { href: delivery.href } : {})
               }
               write(`id: ${cursor}\nevent: activity\ndata: ${JSON.stringify(event)}\n\n`)
               if ((controller.desiredSize ?? 0) < -64_000) {

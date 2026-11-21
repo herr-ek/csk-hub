@@ -7,6 +7,7 @@ import { parseSafeInternalPath } from "@/core/navigation/navigation-utils"
 import { type ActivityEvent, activityEventSchema, activityReadySchema } from "@/core/realtime/events"
 import { toast } from "@/shared/ui/base/toast"
 import { canPresentActivity } from "./presentation"
+import { resolveActivityToastText } from "./toast-text"
 
 /** One SSE connection for this session. Hidden clients never acknowledge notifications. */
 export function ActivityConnection({ userId }: { userId: string }) {
@@ -49,7 +50,9 @@ export function ActivityConnection({ userId }: { userId: string }) {
     }
 
     const present = async (event: ActivityEvent) => {
-      if (!canPresentActivity(event, Date.now()) || document.visibilityState !== "visible" || disposed) return
+      const content = event.toast
+      if (!content || !canPresentActivity(event, Date.now()) || document.visibilityState !== "visible" || disposed)
+        return
       const href = parseSafeInternalPath(event.href)
       // The signed read marker acknowledges only after the refreshed timeline renders.
       if (event.kind === "message.created" && href === route.current.pathname && !route.current.older) return
@@ -65,8 +68,14 @@ export function ActivityConnection({ userId }: { userId: string }) {
         if (!alreadyShown) {
           toast.add({
             id: event.id,
-            title: translate.current(event.kind === "message.created" ? "newMessage" : "notification"),
-            description: event.body,
+            title: (
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">
+                {resolveActivityToastText(content.title, translate.current)}
+              </span>
+            ),
+            description: content.description ? (
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">{content.description}</span>
+            ) : undefined,
             ...(href ? { actionProps: { children: translate.current("open"), onClick: () => router.push(href) } } : {})
           })
           try {
