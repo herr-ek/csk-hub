@@ -1,7 +1,6 @@
 import "server-only"
 
 import { and, eq } from "drizzle-orm"
-import { z } from "zod"
 import { env } from "@/core/config/env"
 import { db } from "@/core/db"
 import { activityDelivery } from "@/core/db/schema/activity"
@@ -11,30 +10,6 @@ import { getActivitySession, isActivitySessionActive } from "./access"
 import { type ActivityDeliveryPolicy, isDeliveryAllowed } from "./delivery-access"
 import { PUSH_GRACE_MS } from "./outbox"
 import { resolveActivityCursor } from "./stream-cursor"
-import type { ActivityToastText } from "./toast-text"
-
-const legacyPreviewSchema = z.object({
-  messagePreview: z.object({ snippet: z.string(), conversationName: z.string().optional() }).optional()
-})
-
-// Old outbox rows have no common toast payload. Normalize them at the transport boundary
-// so the browser and every new producer use the same presentation contract.
-function legacyActivityToast(delivery: typeof activityDelivery.$inferSelect): ActivityEvent["toast"] {
-  if (delivery.change.kind === "message.created") {
-    const sender: ActivityToastText = delivery.title || { key: "newMessage" }
-    const preview = legacyPreviewSchema.parse(delivery.change).messagePreview
-    return {
-      title: preview?.conversationName
-        ? { key: "groupMessage", values: { sender, conversation: preview.conversationName } }
-        : sender,
-      description: preview?.snippet ?? delivery.body?.replace(/\s+/gu, " ").trim()
-    }
-  }
-  if (delivery.change.kind === "notification.created") {
-    return { title: { key: "notification" }, description: delivery.body ?? undefined }
-  }
-  return undefined
-}
 
 function unavailableStream() {
   // A non-200 response can permanently close EventSource. A valid stream followed
@@ -122,8 +97,7 @@ export async function handleActivityStream(policy: ActivityDeliveryPolicy, reque
                 ...(delivery.body
                   ? { notifyUntil: delivery.pushAfter?.getTime() ?? delivery.createdAt.getTime() + PUSH_GRACE_MS }
                   : {}),
-                ...(delivery.href ? { href: delivery.href } : {}),
-                toast: delivery.change.toast ?? legacyActivityToast(delivery)
+                ...(delivery.href ? { href: delivery.href } : {})
               }
               write(`id: ${cursor}\nevent: activity\ndata: ${JSON.stringify(event)}\n\n`)
               if ((controller.desiredSize ?? 0) < -64_000) {

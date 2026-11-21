@@ -117,8 +117,8 @@ viewing browser's locale, while names and message content remain literal text. M
 its Group Conversation name and normalized snippet when sending. Broadcasts use the same payload.
 
 Outbox `title`/`body` and push scheduling retain their existing contract; toast previews do not
-replace push content. SSE normalizes older queued deliveries without a toast at its boundary.
-Invalidation-only events do not need a toast.
+replace push content. SSE forwards the toast supplied by the producer. Events without a toast
+can still refresh the view.
 
 ## Notification behavior
 

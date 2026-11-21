@@ -50,7 +50,9 @@ export function ActivityConnection({ userId }: { userId: string }) {
     }
 
     const present = async (event: ActivityEvent) => {
-      if (!canPresentActivity(event, Date.now()) || document.visibilityState !== "visible" || disposed) return
+      const content = event.toast
+      if (!content || !canPresentActivity(event, Date.now()) || document.visibilityState !== "visible" || disposed)
+        return
       const href = parseSafeInternalPath(event.href)
       // The signed read marker acknowledges only after the refreshed timeline renders.
       if (event.kind === "message.created" && href === route.current.pathname && !route.current.older) return
@@ -68,13 +70,11 @@ export function ActivityConnection({ userId }: { userId: string }) {
             id: event.id,
             title: (
               <span className="line-clamp-2 [overflow-wrap:anywhere]">
-                {event.toast
-                  ? resolveActivityToastText(event.toast.title, translate.current)
-                  : translate.current("notification")}
+                {resolveActivityToastText(content.title, translate.current)}
               </span>
             ),
-            description: event.toast?.description ? (
-              <span className="line-clamp-2 [overflow-wrap:anywhere]">{event.toast.description}</span>
+            description: content.description ? (
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">{content.description}</span>
             ) : undefined,
             ...(href ? { actionProps: { children: translate.current("open"), onClick: () => router.push(href) } } : {})
           })

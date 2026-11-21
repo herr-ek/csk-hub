@@ -304,7 +304,6 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           while (!update.includes('"kind":"message.created"')) update += await stream.read()
           expect(update).toContain('"conversation":"Planning"')
           expect(update).toContain('"sender":"Singer"')
-          expect(update).not.toContain('"messagePreview"')
         } finally {
           stream.close()
         }
@@ -316,34 +315,6 @@ if (!process.env.CSK_ACTIVITY_TEST) {
           tag: delivery.id
         })
       })
-
-      test.each([false, true])(
-        "pending legacy Message previews normalize to the common toast (preview: %s)",
-        async (hasPreview) => {
-          const { recipient } = await direct()
-          const delivery = await messageDelivery(recipient.userId)
-          const { toast: _toast, ...change } = delivery.change
-          await testDatabase.db
-            .update(activityDelivery)
-            .set({
-              change: {
-                ...change,
-                ...(hasPreview ? { messagePreview: { snippet: "Legacy snippet", conversationName: "Old Group" } } : {})
-              }
-            })
-            .where(eq(activityDelivery.id, delivery.id))
-          const stream = await streamAs(recipient)
-          try {
-            await stream.read()
-            await dispatchActivity(conversationActivityPolicy)
-            const update = await stream.read()
-            expect(update).toContain(hasPreview ? '"key":"groupMessage"' : '"title":"Singer"')
-            expect(update).toContain(hasPreview ? '"description":"Legacy snippet"' : '"description":"Private Message"')
-          } finally {
-            stream.close()
-          }
-        }
-      )
 
       test("a visible toast cancels fallback without advancing the unread cursor", async () => {
         const { recipient, sent } = await direct()
