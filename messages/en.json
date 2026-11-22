@@ -215,7 +215,8 @@
       "adminAbsenceReasons": "Absence reasons",
       "eventsNew": "New Event",
       "eventsManage": "Manage Events",
-      "adminOidcClients": "OIDC clients"
+      "adminOidcClients": "OIDC clients",
+      "eventsRehearsals": "Rehearsal schedule"
     },
     "members": "Members",
     "quickAccess": "Quick access",
@@ -964,7 +965,13 @@
       "absence-reason-label-taken": "An active reason already has that wording.",
       "invalid-input": "Some of the values are not valid. Check the form and try again.",
       "unexpected": "Something went wrong. Please try again.",
-      "access-denied": "You no longer have permission to manage this Event."
+      "access-denied": "You no longer have permission to manage this Event.",
+      "last-day-before-first": "The last day must be on or after the first day.",
+      "date-in-past": "Rehearsals cannot be scheduled in the past.",
+      "no-dates": "There are no dates to create. Choose a range that includes the weekday, and tick at least one date.",
+      "too-many-dates": "One series holds at most 26 rehearsals. Shorten the range.",
+      "series-name-required": "Give the series a name.",
+      "not-a-choir": "Choose a choir."
     },
     "form": {
       "saved": "Event saved.",
@@ -1081,7 +1088,8 @@
       "voiceInGroup": "{voice} in {group}",
       "voiceInCsk": "{voice} in CSK",
       "audience": "For {audience}",
-      "organisedBy": "Organised by {group}"
+      "organisedBy": "Organised by {group}",
+      "rehearsalSchedule": "Rehearsal schedule"
     },
     "locations": {
       "title": "Locations",
@@ -1210,6 +1218,56 @@
       "late": "Late",
       "notAnsweredTitle": "Not answered ({count})",
       "everyoneAnswered": "Everyone has answered."
+    },
+    "schedule": {
+      "title": "Rehearsal schedule",
+      "description": "Set up each choir's weekly rehearsals for a term, then adjust and publish them.",
+      "generator": {
+        "heading": "New rehearsal series",
+        "intro": "Creates Draft rehearsals for one choir on one weekday. Nobody sees them until they are published.",
+        "choir": "Choir",
+        "chooseChoir": "Choose a choir",
+        "weekday": "Weekday",
+        "firstDay": "First day",
+        "lastDay": "Last day",
+        "startTime": "Starts",
+        "endTime": "Ends",
+        "location": "Location",
+        "noLocation": "No Location",
+        "eventTitle": "Title",
+        "defaultTitle": "Rehearsal",
+        "seriesName": "Series name",
+        "seriesNameDefault": "{choir} rehearsals, {term, select, autumn {autumn} other {spring}} {year}",
+        "preview": "Preview dates",
+        "previewing": "Finding dates…",
+        "datesHeading": "Dates",
+        "datesHelp": "Untick the dates without a rehearsal. A date the choir already rehearses on starts unticked.",
+        "taken": "Already has a rehearsal",
+        "create": "{count, plural, =0 {Create rehearsals} one {Create # rehearsal} other {Create # rehearsals}}",
+        "creating": "Creating…",
+        "created": "The rehearsals were created as Drafts.",
+        "change": "Change"
+      },
+      "list": {
+        "heading": "Rehearsals in a series",
+        "choir": "Choir",
+        "allChoirs": "All choirs",
+        "when": "Which rehearsals",
+        "upcoming": "Upcoming",
+        "past": "Past",
+        "noUpcoming": "No upcoming rehearsals in a series.",
+        "noPast": "No past rehearsals in a series.",
+        "location": "Location of {title}",
+        "noLocation": "No Location",
+        "locationSaved": "Location saved.",
+        "edit": "Edit"
+      },
+      "publish": {
+        "button": "{count, plural, one {Publish # Draft} other {Publish # Drafts}}",
+        "title": "Publish the Drafts?",
+        "explanation": "{count, plural, one {# Draft rehearsal in this list becomes} other {# Draft rehearsals in this list become}} visible to their choir, who can then answer. Published rehearsals can be cancelled later, but never become Drafts again.",
+        "done": "The Drafts were published."
+      }
     }
   },
   "Realtime": {

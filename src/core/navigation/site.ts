@@ -19,6 +19,7 @@ export const ROUTES = {
   adminOrgStructureGroups: "/admin/org-structure/groups",
   eventsManage: "/events/manage",
   eventsNew: "/events/manage/new",
+  eventsRehearsals: "/events/manage/rehearsals",
   adminEvents: "/admin/events",
   adminEventsNew: "/admin/events/new",
   adminEventLocations: "/admin/events/locations",
@@ -39,6 +40,7 @@ export type MenuRouteId =
   | "events"
   | "eventsManage"
   | "eventsNew"
+  | "eventsRehearsals"
   | "newsCompose"
   | "messages"
   | "account"
@@ -58,6 +60,7 @@ export type MenuRouteId =
 export const ROUTE_PARENTS: Partial<Record<MenuRouteId, MenuRouteId>> = {
   eventsManage: "events",
   eventsNew: "eventsManage",
+  eventsRehearsals: "eventsManage",
   newsCompose: "news",
   accountSettings: "account",
   adminOidcClients: "admin",

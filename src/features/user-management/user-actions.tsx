@@ -55,7 +55,7 @@ type UserActionConfig = DialogCopy & {
   success: (userName: string) => { title: string; description: string }
 }
 
-function getUserActionConfig(t: ReturnType<typeof useTranslations>): Record<UserAction, UserActionConfig> {
+function getUserActionConfig(t: ReturnType<typeof useTranslations<"Members">>): Record<UserAction, UserActionConfig> {
   return {
     activate: {
       title: t("activate"),

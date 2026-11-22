@@ -37,7 +37,9 @@ export function eventGroupContext(facts: GroupFacts, groupId: string | null | un
 /** The Board groups the actor holds a Position in, whose archival would end the Board's authority. */
 export function boardGroupIds(facts: GroupFacts) {
   const boards = new Set(facts.groups.filter(({ type }) => type === GroupType.Board).map(({ id }) => id))
-  return facts.positionAppointments.flatMap(({ contextGroupId }) => (boards.has(contextGroupId) ? [contextGroupId] : []))
+  return facts.positionAppointments.flatMap(({ contextGroupId }) =>
+    boards.has(contextGroupId) ? [contextGroupId] : []
+  )
 }
 
 type TargetInput = { groupId: string | null; voiceFamily: string | null }
@@ -144,7 +146,51 @@ export async function getEventManagementCapabilities() {
     const { access, facts } = await getEventManagementScope(tx)
     return {
       canCreate: access.actor?.isAdmin === true || managedEventGroupIds(access, facts).length > 0,
-      canAdminister: access.can({ action: "event.administer" })
+      canAdminister: access.can({ action: "event.administer" }),
+      // A Board the actor represents is one of the managed Groups, so the scope keeps it.
+      canScheduleRehearsals: access.can({ action: "event.scheduleRehearsals", context: facts })
     }
   })
+}
+
+/**
+ * Authorize the rehearsal schedule tool and run `work` in the same transaction, with the actor's
+ * Board groups locked against archival. `work` checks each Event it touches through
+ * `eventContext`, so a listed or submitted Event is never trusted to be a Choir's Series Rehearsal.
+ */
+export async function withRehearsalSchedulePermission<T>(
+  work: (database: Database, scope: RehearsalScheduleScope) => Promise<T>,
+  database: Database = db
+): Promise<T> {
+  return database.transaction(async (tx) => {
+    const access = await forCurrentRequest(tx)
+    const actor = access.requirePermission({ action: "app.access" })
+    const initial = await getGroupAuthorizationFacts(tx, actor.userId)
+    const facts = await lockGroupAuthorizationFacts(tx, actor.userId, boardGroupIds(initial))
+    access.requirePermission({ action: "event.scheduleRehearsals", context: facts })
+    const eventContext = (stored: StoredEventFacts) => ({
+      ...eventGroupContext(facts, stored.organiserGroupId),
+      event: stored,
+      targets: targetFacts(facts, stored.targets)
+    })
+    return work(tx, { access, actorId: actor.userId, eventContext })
+  })
+}
+
+export type RehearsalScheduleScope = {
+  access: EventAccess
+  actorId: string
+  eventContext: (stored: StoredEventFacts) => EventInstanceContext
+}
+
+type StoredEventFacts = {
+  id: string
+  organiserGroupId: string | null
+  type: EventType
+  seriesId: string | null
+  targets: readonly TargetInput[]
+}
+type EventInstanceContext = ReturnType<typeof eventGroupContext> & {
+  event: StoredEventFacts
+  targets: ReturnType<typeof targetFacts>
 }

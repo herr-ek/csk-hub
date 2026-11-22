@@ -38,5 +38,11 @@ export type EventViolation =
   | "absence-reason-archived"
   | "absence-reason-label-required"
   | "absence-reason-label-taken"
+  | "last-day-before-first"
+  | "date-in-past"
+  | "no-dates"
+  | "too-many-dates"
+  | "series-name-required"
+  | "not-a-choir"
 
 export type EventResult<T> = { success: true; data: T } | { success: false; error: EventViolation }

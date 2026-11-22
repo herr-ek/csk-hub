@@ -7,7 +7,7 @@ import { type Database, db } from "@/core/db"
 import { logger } from "@/core/logging"
 import { ROUTES } from "@/core/navigation/site"
 import { getErrorCode, getErrorName } from "@/shared/errors"
-import { withEventPermission } from "../access"
+import { type RehearsalScheduleScope, withEventPermission, withRehearsalSchedulePermission } from "../access"
 import type { EventResult } from "../model"
 import type { EventCommandState } from "./command-state"
 
@@ -15,16 +15,23 @@ import type { EventCommandState } from "./command-state"
  * Require active identity, validate input, then check the exact Event policy in its write
  * transaction. Location and Absence reason commands require Admin-only event.administer. A
  * Response needs only active identity (`"app.access"`): the command itself refuses anyone outside
- * the Audience. Domain commands remain independent of request sessions for transactional
- * composition and operational use.
+ * the Audience. The rehearsal schedule tool's commands run in its `"event.scheduleRehearsals"`
+ * scope, which they use to check each Event they touch. Domain commands remain independent of
+ * request sessions for transactional composition and operational use.
  */
 export async function runEventsCommand<Schema extends z.ZodType, T>(
   name: string,
   schema: Schema,
   values: unknown,
-  command: (input: z.infer<Schema>, actorId: string, database: Database) => Promise<EventResult<T>>,
+  command: (
+    input: z.infer<Schema>,
+    actorId: string,
+    database: Database,
+    schedule?: RehearsalScheduleScope
+  ) => Promise<EventResult<T>>,
   permission?:
     | "app.access"
+    | "event.scheduleRehearsals"
     | ((input: z.infer<Schema>) => {
         action: "event.create" | "event.update" | "event.changeStatus" | "event.delete"
         eventId: string | null
@@ -43,7 +50,11 @@ export async function runEventsCommand<Schema extends z.ZodType, T>(
       ? await withEventPermission(request.action, request.eventId, request.proposed, (database, actorId) =>
           command(input.data, actorId, database)
         )
-      : await command(input.data, userId, db)
+      : permission === "event.scheduleRehearsals"
+        ? await withRehearsalSchedulePermission((database, scope) =>
+            command(input.data, scope.actorId, database, scope)
+          )
+        : await command(input.data, userId, db)
   } catch (error) {
     if (getErrorCode(error) === AUTHORIZATION_DENIED) return { state: { status: "error", error: "access-denied" } }
     logger.error(`admin.events.${name}-failed`, {
