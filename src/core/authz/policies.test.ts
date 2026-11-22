@@ -283,7 +283,10 @@ describe("Board scheduling of Choirs' Series Rehearsals", () => {
       { ...context, proposedOrganiser: { ...choirContext, group: null } },
       { ...context, proposedEvent: { type: "Gig" as const, targets: [choirTarget] } },
       { ...context, proposedEvent: { type: "Rehearsal" as const, targets: [] } },
-      { ...context, proposedEvent: { type: "Rehearsal" as const, targets: [{ ...choirTarget, voiceFamily: "S" as const }] } }
+      {
+        ...context,
+        proposedEvent: { type: "Rehearsal" as const, targets: [{ ...choirTarget, voiceFamily: "S" as const }] }
+      }
     ]) {
       expect(evaluatePermission(owner, { action: "event.update", context: facts })).toBe(false)
       expect(evaluatePermission(admin, { action: "event.update", context: facts })).toBe(true)

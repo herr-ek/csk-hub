@@ -1260,7 +1260,8 @@
         "location": "Location of {title}",
         "noLocation": "No Location",
         "locationSaved": "Location saved.",
-        "edit": "Edit"
+        "edit": "Edit",
+        "choirAndSeries": "{choir} · {series}"
       },
       "publish": {
         "button": "{count, plural, one {Publish # Draft} other {Publish # Drafts}}",

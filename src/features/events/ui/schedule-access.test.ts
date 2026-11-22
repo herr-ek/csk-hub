@@ -81,7 +81,9 @@ describe.skipIf(!database)("Rehearsal schedule at protected entrypoints", () => 
   test("only Admins and current Board Position holders reach the tool", async () => {
     const choir = await t.choir()
     viewer = null
-    await expect(getRehearsalSchedule({ when: "upcoming" }, new Date())).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await expect(getRehearsalSchedule({ when: "upcoming" }, new Date())).rejects.toBeInstanceOf(
+      AuthorizationDeniedError
+    )
     await expect(
       previewRehearsalSeriesAction({ choirGroupId: choir, weekday: 2, firstDay, lastDay })
     ).rejects.toBeInstanceOf(AuthorizationDeniedError)
@@ -179,9 +181,7 @@ describe.skipIf(!database)("Rehearsal schedule at protected entrypoints", () => 
     expect(await publishRehearsalDraftsAction(idle, form({ eventId: [first.id, second.id] }))).toMatchObject(success)
     expect((await seriesRows(choir)).map(({ status }) => status)).toEqual(["Published", "Published"])
 
-    expect(await changeEventStatusAction(idle, form({ eventId: first.id, status: "Cancelled" }))).toMatchObject(
-      success
-    )
+    expect(await changeEventStatusAction(idle, form({ eventId: first.id, status: "Cancelled" }))).toMatchObject(success)
     expect(await deleteRehearsalAction(idle, form({ eventId: second.id }))).toMatchObject(success)
     const left = await t.db.select().from(event).where(eq(event.id, first.id)).orderBy(asc(event.startsAt))
     expect(left.map(({ status }) => status)).toEqual(["Cancelled"])

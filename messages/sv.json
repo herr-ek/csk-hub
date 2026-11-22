@@ -1260,7 +1260,8 @@
         "location": "Plats för {title}",
         "noLocation": "Ingen plats",
         "locationSaved": "Platsen har sparats.",
-        "edit": "Redigera"
+        "edit": "Redigera",
+        "choirAndSeries": "{choir} · {series}"
       },
       "publish": {
         "button": "{count, plural, one {Publicera # utkast} other {Publicera # utkast}}",

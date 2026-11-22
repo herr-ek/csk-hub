@@ -1260,7 +1260,8 @@
         "location": "Ort von {title}",
         "noLocation": "Kein Ort",
         "locationSaved": "Ort gespeichert.",
-        "edit": "Bearbeiten"
+        "edit": "Bearbeiten",
+        "choirAndSeries": "{choir} · {series}"
       },
       "publish": {
         "button": "{count, plural, one {# Entwurf veröffentlichen} other {# Entwürfe veröffentlichen}}",

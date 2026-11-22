@@ -72,7 +72,8 @@ export type PermissionContext = {
   "event.create": GroupWorkContext
   "event.read": EventContext
   "event.view": EventViewContext
-  "event.update": EventContext & Readonly<{ proposedOrganiser: GroupWorkContext; proposedEvent: ProposedEventAttributes }>
+  "event.update": EventContext &
+    Readonly<{ proposedOrganiser: GroupWorkContext; proposedEvent: ProposedEventAttributes }>
   "event.changeStatus": EventContext
   "event.delete": EventContext
   "event.administer": undefined

@@ -1,4 +1,4 @@
-import { CalendarPlus, ListChecks, MapPin } from "lucide-react"
+import { CalendarPlus, CalendarRange, ListChecks, MapPin } from "lucide-react"
 import { io } from "next/cache"
 import Link from "next/link"
 import { getFormatter, getTranslations } from "@/core/i18n/server"
@@ -56,7 +56,7 @@ export async function EventsScreen({ searchParams }: { searchParams: SearchParam
 
 async function EventsHeader() {
   const t = await getTranslations("Events")
-  const { canCreate, canAdminister } = await getEventManagementCapabilities()
+  const { canCreate, canAdminister, canScheduleRehearsals } = await getEventManagementCapabilities()
   return (
     <div className="flex flex-col gap-2">
       <PageBreadcrumb route="eventsManage" />
@@ -66,6 +66,12 @@ async function EventsHeader() {
           <p className="mt-1 text-sm text-muted-foreground">{t("list.description")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {canScheduleRehearsals ? (
+            <Link href={ROUTES.eventsRehearsals} className={buttonVariants({ variant: "outline" })}>
+              <CalendarRange aria-hidden="true" />
+              {t("list.rehearsalSchedule")}
+            </Link>
+          ) : null}
           {canAdminister ? (
             <Link href={ROUTES.adminEventLocations} className={buttonVariants({ variant: "outline" })}>
               <MapPin aria-hidden="true" />
