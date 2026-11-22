@@ -6,6 +6,7 @@ import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
+import { Checkbox } from "@/shared/ui/base/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/base/dialog"
 import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Textarea } from "@/shared/ui/base/textarea"
@@ -122,6 +123,7 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
               const data = new FormData(event.currentTarget)
               const details = {
                 name: String(data.get("name")),
+                websiteAccess: data.get("websiteAccess") === "on",
                 redirectUrls: String(data.get("redirectUrls"))
                   .split(/\r?\n/)
                   .map((url) => url.trim())
@@ -151,6 +153,15 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
               />
             </Field>
             <p className="text-sm text-muted-foreground">{t("redirectHelp")}</p>
+            <Field orientation="horizontal">
+              <Checkbox
+                id="oidc-website-access"
+                name="websiteAccess"
+                value="on"
+                defaultChecked={typeof editor === "object" && editor.websiteAccess}
+              />
+              <FieldLabel htmlFor="oidc-website-access">{t("websiteAccess")}</FieldLabel>
+            </Field>
             {error && <p role="alert">{t("error")}</p>}
             <Button type="submit" disabled={pending}>
               {t("save")}

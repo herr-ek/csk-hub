@@ -4,10 +4,13 @@ import { betterAuth } from "better-auth"
 import { admin, jwt } from "better-auth/plugins"
 import { eq } from "drizzle-orm"
 import * as schema from "@/core/db/schema/auth"
+import { directMembership, group } from "@/core/db/schema/org-structure"
+import { cskToday, currentOrganisationYear, GroupType, organisationYearPeriod } from "@/core/org-structure"
 import { createTestDatabase } from "../../../test/database"
 import { createAuthPlugins } from "./auth-plugins"
 import { getOAuthResumePath } from "./oauth-continuation"
 import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
+import { websiteAdminClaim, websiteScope } from "./website-access"
 
 const database = await createTestDatabase()
 
@@ -186,7 +189,7 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     const metadata = await request("/.well-known/openid-configuration")
     expect(await metadata.json()).toMatchObject({
       grant_types_supported: ["authorization_code"],
-      scopes_supported: ["openid", "profile", "email"]
+      scopes_supported: ["openid", "profile", "email", websiteScope]
     })
 
     const authorized = await request(authorization(client.client_id), undefined, member.cookie)
@@ -307,5 +310,66 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     expect(callback.origin).toBe("http://localhost:8787")
     expect(callback.searchParams.get("state")).toBe("test-state")
     expect(callback.searchParams.get("code")).toBeTruthy()
+  })
+
+  test("website client UserInfo grants access only to active Admins and current Webmästeriet members", async () => {
+    const admin = await account("admin")
+    const member = await account("user")
+    const client = await register(admin.headers)
+    const scope = `openid profile ${websiteScope}`
+
+    async function authorize(subject: typeof admin, requestedScope: string) {
+      return request(authorization(client.client_id, { scope: requestedScope }), undefined, subject.cookie)
+    }
+
+    async function userInfo(subject: typeof admin, requestedScope: string) {
+      const response = await authorize(subject, requestedScope)
+      const callback = new URL(response.headers.get("location") as string)
+      const code = callback.searchParams.get("code")
+      expect(code).toBeTruthy()
+      const token = await exchange(client.client_id, client.client_secret as string, code as string)
+      expect(token.status).toBe(200)
+      const { access_token } = await token.json()
+      return () => request("/oauth2/userinfo", undefined, "", `Bearer ${access_token}`)
+    }
+
+    const deniedScope = await authorize(admin, scope)
+    expect(deniedScope.headers.get("location") ?? (await deniedScope.text())).toContain("invalid_scope")
+
+    await auth.api.adminUpdateOAuthClient({
+      headers: admin.headers,
+      body: { client_id: client.client_id, update: { scope: `${scope} email` } }
+    })
+
+    const identityOnly = await userInfo(admin, "openid profile")
+    expect((await (await identityOnly()).json())[websiteAdminClaim]).toBeUndefined()
+    const adminInfo = await userInfo(admin, scope)
+    const memberInfo = await userInfo(member, scope)
+    expect((await (await adminInfo()).json())[websiteAdminClaim]).toBe(true)
+    expect((await (await memberInfo()).json())[websiteAdminClaim]).toBeUndefined()
+
+    const today = cskToday()
+    const organisationYear = currentOrganisationYear(today)
+    const [webTeam] = await t.db
+      .insert(group)
+      .values({ type: GroupType.WebTeam, organisationYear })
+      .returning({ id: group.id })
+    const [membership] = await t.db
+      .insert(directMembership)
+      .values({
+        userId: member.id,
+        groupId: webTeam.id,
+        startDate: today,
+        endDate: organisationYearPeriod(organisationYear).endDate
+      })
+      .returning({ id: directMembership.id })
+    expect((await (await memberInfo()).json())[websiteAdminClaim]).toBe(true)
+
+    await t.db.delete(directMembership).where(eq(directMembership.id, membership.id))
+    expect((await (await memberInfo()).json())[websiteAdminClaim]).toBeUndefined()
+    await t.db.update(schema.user).set({ banned: true }).where(eq(schema.user.id, admin.id))
+    const inactive = await adminInfo()
+    if (inactive.ok) expect((await inactive.json())[websiteAdminClaim]).toBeUndefined()
+    else expect(inactive.status).toBe(401)
   })
 })

@@ -1233,6 +1233,7 @@
     "name": "Namn",
     "redirectUrls": "Omdirigeringsadresser",
     "redirectHelp": "En exakt callback-adress per rad. HTTPS krävs i produktion.",
+    "websiteAccess": "Tillåt behörighetskontroll för Chalmers Sångkörs webbplats",
     "save": "Spara",
     "error": "Åtgärden kunde inte slutföras. Kontrollera värdena och försök igen.",
     "rotateWarning": "Den nuvarande hemligheten slutar fungera direkt. Uppdatera applikationen med den nya hemligheten.",
