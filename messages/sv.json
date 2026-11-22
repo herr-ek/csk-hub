@@ -1239,7 +1239,8 @@
       "openid": "Logga in med CSK Hub",
       "profile": "Grundläggande profiluppgifter",
       "email": "E-postadress",
-      "csk:website": "Administratörsbehörighet för Chalmers Sångkörs webbplats"
+      "csk:website": "Administratörsbehörighet för Chalmers Sångkörs webbplats",
+      "csk:bookie": "Arrangörsbehörighet för CSK Bookie"
     },
     "save": "Spara",
     "error": "Åtgärden kunde inte slutföras. Kontrollera värdena och försök igen.",

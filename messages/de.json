@@ -1239,7 +1239,8 @@
       "openid": "Mit CSK Hub anmelden",
       "profile": "Grundlegende Profilinformationen",
       "email": "E-Mail-Adresse",
-      "csk:website": "Admin-Berechtigung für die Website von Chalmers Sångkör"
+      "csk:website": "Admin-Berechtigung für die Website von Chalmers Sångkör",
+      "csk:bookie": "Organizer-Berechtigung für CSK Bookie"
     },
     "save": "Speichern",
     "error": "Die Aktion konnte nicht abgeschlossen werden. Werte prüfen und erneut versuchen.",

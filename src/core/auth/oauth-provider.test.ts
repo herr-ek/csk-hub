@@ -4,13 +4,20 @@ import { betterAuth } from "better-auth"
 import { admin, jwt } from "better-auth/plugins"
 import { eq } from "drizzle-orm"
 import * as schema from "@/core/db/schema/auth"
-import { directMembership, group } from "@/core/db/schema/org-structure"
-import { cskToday, currentOrganisationYear, GroupType, organisationYearPeriod } from "@/core/org-structure"
+import { choir, directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
+import {
+  cskToday,
+  currentOrganisationYear,
+  GroupType,
+  organisationYearPeriod,
+  PositionCode
+} from "@/core/org-structure"
 import { createTestDatabase } from "../../../test/database"
 import { createAuthPlugins } from "./auth-plugins"
+import { bookieOrganizerClaim } from "./bookie-access"
 import { getOAuthResumePath } from "./oauth-continuation"
 import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
-import { websiteScope } from "./oidc-scopes"
+import { bookieScope, websiteScope } from "./oidc-scopes"
 import { websiteAdminClaim } from "./website-access"
 
 const database = await createTestDatabase()
@@ -98,7 +105,7 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     })}`
   }
 
-  async function register(headers: Headers) {
+  async function register(headers: Headers, scope = "openid profile email") {
     return auth.api.adminCreateOAuthClient({
       headers,
       body: {
@@ -107,7 +114,7 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
         application_type: "web",
         token_endpoint_auth_method: "client_secret_basic",
         grant_types: ["authorization_code"],
-        scope: "openid profile email",
+        scope,
         require_pkce: true,
         skip_consent: true
       }
@@ -190,7 +197,7 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     const metadata = await request("/.well-known/openid-configuration")
     expect(await metadata.json()).toMatchObject({
       grant_types_supported: ["authorization_code"],
-      scopes_supported: ["openid", "profile", "email", websiteScope]
+      scopes_supported: ["openid", "profile", "email", websiteScope, bookieScope]
     })
 
     const authorized = await request(authorization(client.client_id), undefined, member.cookie)
@@ -374,6 +381,83 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     await t.db.update(schema.user).set({ banned: true }).where(eq(schema.user.id, admin.id))
     const inactive = await adminInfo()
     if (inactive.ok) expect((await inactive.json())[websiteAdminClaim]).toBeUndefined()
+    else expect(inactive.status).toBe(401)
+  })
+
+  test("Bookie UserInfo grants Organizer access to active Admins and current Konsertmästare", async () => {
+    const admin = await account("admin")
+    const firstConcertMaster = await account("user")
+    const choirConcertMaster = await account("user")
+    const member = await account("user")
+    const scope = `openid profile ${bookieScope}`
+    const client = await register(admin.headers, scope)
+    const otherClient = await register(admin.headers)
+
+    async function userInfo(subject: typeof admin, requestedScope = scope) {
+      const response = await request(
+        authorization(client.client_id, { scope: requestedScope }),
+        undefined,
+        subject.cookie
+      )
+      const callback = new URL(response.headers.get("location") as string)
+      const code = callback.searchParams.get("code")
+      expect(code).toBeTruthy()
+      const token = await exchange(client.client_id, client.client_secret as string, code as string)
+      expect(token.status).toBe(200)
+      const { access_token } = await token.json()
+      return () => request("/oauth2/userinfo", undefined, "", `Bearer ${access_token}`)
+    }
+
+    const deniedScope = await request(authorization(otherClient.client_id, { scope }), undefined, admin.cookie)
+    expect(deniedScope.headers.get("location") ?? (await deniedScope.text())).toContain("invalid_scope")
+    const identityOnly = await userInfo(admin, "openid")
+    expect((await (await identityOnly()).json())[bookieOrganizerClaim]).toBeUndefined()
+    const adminInfo = await userInfo(admin)
+    expect((await (await adminInfo()).json())[bookieOrganizerClaim]).toBe(true)
+    const memberInfo = await userInfo(member)
+    expect((await (await memberInfo()).json())[bookieOrganizerClaim]).toBeUndefined()
+
+    const today = cskToday()
+    const year = currentOrganisationYear(today)
+    const period = organisationYearPeriod(year)
+    const [board] = await t.db.insert(group).values({ type: GroupType.Board, organisationYear: year }).returning()
+    const [choirGroup] = await t.db.insert(group).values({ type: GroupType.Choir, name: "Bookie Choir" }).returning()
+    await t.db.insert(choir).values({ groupId: choirGroup.id })
+    const [committee] = await t.db
+      .insert(group)
+      .values({ type: GroupType.ConcertCommittee, organisationYear: year })
+      .returning()
+    await t.db.insert(directMembership).values([
+      { userId: choirConcertMaster.id, groupId: choirGroup.id, startDate: period.startDate },
+      { userId: member.id, groupId: committee.id, ...period }
+    ])
+    await t.db.insert(positionAppointment).values([
+      {
+        userId: firstConcertMaster.id,
+        contextGroupId: board.id,
+        positionCode: PositionCode.FirstConcertMaster,
+        organisationYear: year,
+        ...period
+      },
+      {
+        userId: choirConcertMaster.id,
+        contextGroupId: choirGroup.id,
+        positionCode: PositionCode.ChoirConcertMaster,
+        organisationYear: year,
+        ...period
+      }
+    ])
+    const boardInfo = await userInfo(firstConcertMaster)
+    const choirInfo = await userInfo(choirConcertMaster)
+    expect((await (await boardInfo()).json())[bookieOrganizerClaim]).toBe(true)
+    expect((await (await choirInfo()).json())[bookieOrganizerClaim]).toBe(true)
+    expect((await (await memberInfo()).json())[bookieOrganizerClaim]).toBeUndefined()
+
+    await t.db.delete(positionAppointment).where(eq(positionAppointment.userId, firstConcertMaster.id))
+    expect((await (await boardInfo()).json())[bookieOrganizerClaim]).toBeUndefined()
+    await t.db.update(schema.user).set({ banned: true }).where(eq(schema.user.id, choirConcertMaster.id))
+    const inactive = await choirInfo()
+    if (inactive.ok) expect((await inactive.json())[bookieOrganizerClaim]).toBeUndefined()
     else expect(inactive.status).toBe(401)
   })
 })

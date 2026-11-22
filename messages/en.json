@@ -1239,7 +1239,8 @@
       "openid": "Sign in with CSK Hub",
       "profile": "Basic profile",
       "email": "Email address",
-      "csk:website": "Chalmers Sångkör website Admin authorization"
+      "csk:website": "Chalmers Sångkör website Admin authorization",
+      "csk:bookie": "CSK Bookie Organizer access"
     },
     "save": "Save",
     "error": "The action could not be completed. Check the values and try again.",

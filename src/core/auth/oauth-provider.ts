@@ -4,7 +4,8 @@ import { evaluatePermission } from "@/core/authz/policy-registry"
 import type { Database } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
-import { oidcScopes, websiteScope } from "./oidc-scopes"
+import { bookieOrganizerClaim, canAccessBookieOrganizer } from "./bookie-access"
+import { bookieScope, oidcScopes, websiteScope } from "./oidc-scopes"
 import { canAccessWebsiteAdmin, websiteAdminClaim } from "./website-access"
 
 // Management is exposed only through validated, Admin-only Server Actions. Direct server API
@@ -26,9 +27,16 @@ export function createOAuthProvider(database: Database, allowLocalCallbacks: boo
     scopes: [...oidcScopes],
     async customUserInfoClaims({ user, scopes, jwt }) {
       const clientId = jwt.client_id
-      if (!user || typeof clientId !== "string" || !scopes.includes(websiteScope)) return {}
+      if (!user || typeof clientId !== "string") return {}
 
-      return (await canAccessWebsiteAdmin(database, user.id, clientId)) ? { [websiteAdminClaim]: true } : {}
+      const claims: Record<string, true> = {}
+      if (scopes.includes(websiteScope) && (await canAccessWebsiteAdmin(database, user.id, clientId))) {
+        claims[websiteAdminClaim] = true
+      }
+      if (scopes.includes(bookieScope) && (await canAccessBookieOrganizer(database, user.id, clientId))) {
+        claims[bookieOrganizerClaim] = true
+      }
+      return claims
     },
     grantTypes: ["authorization_code"],
     clientReference: () => "csk-hub",
