@@ -228,11 +228,16 @@ The following policies are registered in `core/authz/event-policies.ts`:
 | `event.changeStatus` | Event managers may publish, cancel or reinstate; the feature still enforces legal lifecycle transitions |
 | `event.delete` | Event managers; the existing confirmation includes the deletion impact |
 | `event.administer` | Admin-only shared Location catalogue and Admin route access |
+| `event.scheduleRehearsals` | Admin, or a current Position holder in an active Board group; the rehearsal schedule tool |
 | `event.view` | Admin/current manager, or a non-Draft Event's audience under the time rules below |
 
 Management covers Draft, Published and Cancelled Events. `createdBy`, audience Targets, Choir
 ownership and links to another Group confer no management authority. Choir organisers, missing
-organisers and archived organisers are Admin-only. An absent Event denies even Admin. Admin may
+organisers and archived organisers are Admin-only, except that `event.scheduleRehearsals` holders
+manage a Rehearsal in a Series whose only Target is one whole Choir; a Board update must keep it
+one under the same organiser. Event contexts therefore carry the Group catalogue and the Event's
+Targets, and Event operations lock the actor's Board groups with the organisers. An absent Event
+denies even Admin. Admin may
 create an Event without an organiser, and may retain an archived organiser on an existing Event;
 feature validation still refuses newly choosing an archived or nonexistent Group.
 
@@ -303,7 +308,8 @@ insufficient. Recording/correction requires a Published Event and an audience su
 Existing records remain readable after cancellation but cannot then be changed.
 
 The Events scheme's former broader Choir/subgroup/Target management examples are reconciled
-with the exact-organiser rule. Choir-organised and organiser-less Events remain Admin-only.
+with the exact-organiser rule. Choir-organised and organiser-less Events remain Admin-only, apart
+from the Board's Choir Series Rehearsals above.
 
 Rich text has no separate protected persistence workflow.
 

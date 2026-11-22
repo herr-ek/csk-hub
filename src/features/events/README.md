@@ -66,6 +66,9 @@ never surface as thrown errors.
 - Events: `createEvent` (takes the acting User as `createdBy`), `updateEvent`, which saves the
   whole form as one change, `changeEventStatus`, `deleteEvent`, and `getEventDeletionImpact`,
   which counts the Responses, Registrations and Attendance a delete removes.
+- Rehearsal series: `createRehearsalSeries`, one Series of Draft Rehearsals for a whole Choir on
+  the given dates, all or nothing and at most `MAX_SERIES_DATES`; `setEventLocation` changes only
+  an Event's Location. `weeklyDates` in the model lists a weekday's dates for the preview.
 - Locations: `createLocation`, `updateLocation`, `archiveLocation`.
 - Responses: `respondToEvent`, which takes the responding User and returns whether the answer was
   late. Absence reasons: `createAbsenceReason`, `renameAbsenceReason`, `archiveAbsenceReason`.
@@ -77,7 +80,10 @@ The UI requires fresh `event.*` authority at each protected read and command.
 Admin and current Position appointment holders of the exact active non-Choir organiser Group may
 manage Events in every lifecycle state. Updates check current and proposed organisers.
 Creator identity and Targets do not grant management. Missing/archived organisers and Choirs
-remain Admin-only. Shared Location management uses Admin-only `event.administer`.
+remain Admin-only, with one exception: `event.scheduleRehearsals` (Admin, or a current Position
+holder in an active Board group) manages a Rehearsal in a Series whose only Target is one whole
+Choir, and its updates must keep it one under the same organiser. Shared Location management
+uses Admin-only `event.administer`.
 Delegated form options contain User names and IDs without emails; Admin retains emails.
 `group.manageEvents` alone does not authorize an Event ID. See [authorization](../../../docs/authorization.md#events-implemented-boundaries-and-policy-gaps).
 
