@@ -1233,7 +1233,14 @@
     "name": "Name",
     "redirectUrls": "Weiterleitungsadressen",
     "redirectHelp": "Eine exakte Callback-URL pro Zeile. HTTPS ist in Produktion erforderlich.",
-    "websiteAccess": "Berechtigungsprüfung für die Website von Chalmers Sångkör erlauben",
+    "allowedScopes": "Erlaubte Scopes",
+    "scopeRequired": "Wähle mindestens einen Scope aus.",
+    "scopes": {
+      "openid": "Mit CSK Hub anmelden",
+      "profile": "Grundlegende Profilinformationen",
+      "email": "E-Mail-Adresse",
+      "csk:website": "Admin-Berechtigung für die Website von Chalmers Sångkör"
+    },
     "save": "Speichern",
     "error": "Die Aktion konnte nicht abgeschlossen werden. Werte prüfen und erneut versuchen.",
     "rotateWarning": "Das bisherige Geheimnis wird sofort ungültig. Die Anwendung muss mit dem neuen Geheimnis aktualisiert werden.",

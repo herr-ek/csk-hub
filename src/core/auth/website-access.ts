@@ -4,10 +4,9 @@ import { oauthClient, user } from "@/core/db/schema/auth"
 import { directMembership, group } from "@/core/db/schema/org-structure"
 import { cskToday, currentOrganisationYear, GroupType } from "@/core/org-structure"
 import { hasAdminRole } from "@/shared/roles"
+import { websiteScope } from "./oidc-scopes"
 
-export const websiteScope = "csk:website"
 export const websiteAdminClaim = "https://chalmerssangkor.se/claims/website-admin"
-export const identityScopes = ["openid", "profile", "email"]
 
 /** Evaluates website access for the User and client of a validated Hub access token. */
 export async function canAccessWebsiteAdmin(database: Database, userId: string, clientId: string) {

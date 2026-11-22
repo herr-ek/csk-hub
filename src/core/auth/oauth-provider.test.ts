@@ -10,7 +10,8 @@ import { createTestDatabase } from "../../../test/database"
 import { createAuthPlugins } from "./auth-plugins"
 import { getOAuthResumePath } from "./oauth-continuation"
 import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
-import { websiteAdminClaim, websiteScope } from "./website-access"
+import { websiteScope } from "./oidc-scopes"
+import { websiteAdminClaim } from "./website-access"
 
 const database = await createTestDatabase()
 
@@ -316,7 +317,7 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     const admin = await account("admin")
     const member = await account("user")
     const client = await register(admin.headers)
-    const scope = `openid profile ${websiteScope}`
+    const scope = `openid ${websiteScope}`
 
     async function authorize(subject: typeof admin, requestedScope: string) {
       return request(authorization(client.client_id, { scope: requestedScope }), undefined, subject.cookie)
@@ -338,10 +339,13 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
 
     await auth.api.adminUpdateOAuthClient({
       headers: admin.headers,
-      body: { client_id: client.client_id, update: { scope: `${scope} email` } }
+      body: { client_id: client.client_id, update: { scope } }
     })
 
-    const identityOnly = await userInfo(admin, "openid profile")
+    const deniedProfile = await authorize(admin, "openid profile")
+    expect(deniedProfile.headers.get("location") ?? (await deniedProfile.text())).toContain("invalid_scope")
+
+    const identityOnly = await userInfo(admin, "openid")
     expect((await (await identityOnly()).json())[websiteAdminClaim]).toBeUndefined()
     const adminInfo = await userInfo(admin, scope)
     const memberInfo = await userInfo(member, scope)

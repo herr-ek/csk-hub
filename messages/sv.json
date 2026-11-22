@@ -1233,7 +1233,14 @@
     "name": "Namn",
     "redirectUrls": "Omdirigeringsadresser",
     "redirectHelp": "En exakt callback-adress per rad. HTTPS krävs i produktion.",
-    "websiteAccess": "Tillåt behörighetskontroll för Chalmers Sångkörs webbplats",
+    "allowedScopes": "Tillåtna scopes",
+    "scopeRequired": "Välj minst ett scope.",
+    "scopes": {
+      "openid": "Logga in med CSK Hub",
+      "profile": "Grundläggande profiluppgifter",
+      "email": "E-postadress",
+      "csk:website": "Administratörsbehörighet för Chalmers Sångkörs webbplats"
+    },
     "save": "Spara",
     "error": "Åtgärden kunde inte slutföras. Kontrollera värdena och försök igen.",
     "rotateWarning": "Den nuvarande hemligheten slutar fungera direkt. Uppdatera applikationen med den nya hemligheten.",

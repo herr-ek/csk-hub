@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { identityScopes, type OidcScope, oidcScopes } from "@/core/auth/oidc-scopes"
 import { useTranslations } from "@/core/i18n/translations"
 import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"
@@ -8,7 +9,7 @@ import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Checkbox } from "@/shared/ui/base/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/base/dialog"
-import { Field, FieldLabel } from "@/shared/ui/base/field"
+import { Field, FieldLabel, FieldLegend, FieldSet } from "@/shared/ui/base/field"
 import { Textarea } from "@/shared/ui/base/textarea"
 import { updateOidcClient } from "./actions"
 import type { ClientCommand, OidcClient } from "./clients.server"
@@ -16,25 +17,26 @@ import type { ClientCommand, OidcClient } from "./clients.server"
 export function OidcClients({ clients }: { clients: OidcClient[] }) {
   const t = useTranslations("OidcClients")
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<"error" | "scopeRequired" | null>(null)
   const [editor, setEditor] = useState<OidcClient | "create">()
   const [rotation, setRotation] = useState<OidcClient>()
   const [credentials, setCredentials] = useState<{ clientId: string; secret?: string }>()
+  const selectedScopes: readonly OidcScope[] = typeof editor === "object" ? editor.scopes : identityScopes
 
   function run(command: ClientCommand) {
-    setError(false)
+    setError(null)
     startTransition(async () => {
       try {
         const result = await updateOidcClient(command)
         if (!result.success) {
-          setError(true)
+          setError("error")
           return
         }
         setEditor(undefined)
         setRotation(undefined)
         setCredentials(result.credentials)
       } catch {
-        setError(true)
+        setError("error")
       }
     })
   }
@@ -44,7 +46,7 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
       <Button
         className="self-start"
         onClick={() => {
-          setError(false)
+          setError(null)
           setEditor("create")
         }}
         disabled={pending}
@@ -53,7 +55,7 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
       </Button>
       {error && !editor && !rotation && (
         <Alert variant="destructive">
-          <AlertDescription>{t("error")}</AlertDescription>
+          <AlertDescription>{t(error)}</AlertDescription>
         </Alert>
       )}
       {clients.length === 0 && <p>{t("empty")}</p>}
@@ -75,7 +77,7 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
                 variant="outline"
                 disabled={pending}
                 onClick={() => {
-                  setError(false)
+                  setError(null)
                   setEditor(client)
                 }}
               >
@@ -85,7 +87,7 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
                 variant="outline"
                 disabled={pending}
                 onClick={() => {
-                  setError(false)
+                  setError(null)
                   setRotation(client)
                 }}
               >
@@ -107,11 +109,11 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
         onOpenChange={(open) => {
           if (!open && !pending) {
             setEditor(undefined)
-            setError(false)
+            setError(null)
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editor === "create" ? t("create") : t("edit")}</DialogTitle>
           </DialogHeader>
@@ -121,9 +123,15 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
             onSubmit={(event) => {
               event.preventDefault()
               const data = new FormData(event.currentTarget)
+              const checkedScopes = data.getAll("scopes")
+              const scopes = oidcScopes.filter((scope) => checkedScopes.includes(scope))
+              if (scopes.length === 0) {
+                setError("scopeRequired")
+                return
+              }
               const details = {
                 name: String(data.get("name")),
-                websiteAccess: data.get("websiteAccess") === "on",
+                scopes,
                 redirectUrls: String(data.get("redirectUrls"))
                   .split(/\r?\n/)
                   .map((url) => url.trim())
@@ -153,16 +161,23 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
               />
             </Field>
             <p className="text-sm text-muted-foreground">{t("redirectHelp")}</p>
-            <Field orientation="horizontal">
-              <Checkbox
-                id="oidc-website-access"
-                name="websiteAccess"
-                value="on"
-                defaultChecked={typeof editor === "object" && editor.websiteAccess}
-              />
-              <FieldLabel htmlFor="oidc-website-access">{t("websiteAccess")}</FieldLabel>
-            </Field>
-            {error && <p role="alert">{t("error")}</p>}
+            <FieldSet className="gap-3">
+              <FieldLegend variant="label">{t("allowedScopes")}</FieldLegend>
+              {oidcScopes.map((scope) => (
+                <Field key={scope} orientation="horizontal">
+                  <Checkbox
+                    id={`oidc-scope-${scope}`}
+                    name="scopes"
+                    value={scope}
+                    defaultChecked={selectedScopes.includes(scope)}
+                  />
+                  <FieldLabel htmlFor={`oidc-scope-${scope}`}>
+                    {t(`scopes.${scope}`)} <code className="text-xs text-muted-foreground">{scope}</code>
+                  </FieldLabel>
+                </Field>
+              ))}
+            </FieldSet>
+            {error && <p role="alert">{t(error)}</p>}
             <Button type="submit" disabled={pending}>
               {t("save")}
             </Button>
@@ -174,7 +189,7 @@ export function OidcClients({ clients }: { clients: OidcClient[] }) {
         onOpenChange={(open) => {
           if (!open && !pending) {
             setRotation(undefined)
-            setError(false)
+            setError(null)
           }
         }}
       >

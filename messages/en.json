@@ -1233,7 +1233,14 @@
     "name": "Name",
     "redirectUrls": "Redirect URLs",
     "redirectHelp": "One exact callback URL per line. HTTPS is required in production.",
-    "websiteAccess": "Allow Chalmers Sångkör website Admin authorization",
+    "allowedScopes": "Allowed scopes",
+    "scopeRequired": "Select at least one scope.",
+    "scopes": {
+      "openid": "Sign in with CSK Hub",
+      "profile": "Basic profile",
+      "email": "Email address",
+      "csk:website": "Chalmers Sångkör website Admin authorization"
+    },
     "save": "Save",
     "error": "The action could not be completed. Check the values and try again.",
     "rotateWarning": "The current secret stops working immediately. Update the application with the new secret.",

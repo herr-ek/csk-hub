@@ -4,7 +4,8 @@ import { evaluatePermission } from "@/core/authz/policy-registry"
 import type { Database } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
-import { canAccessWebsiteAdmin, identityScopes, websiteAdminClaim, websiteScope } from "./website-access"
+import { oidcScopes, websiteScope } from "./oidc-scopes"
+import { canAccessWebsiteAdmin, websiteAdminClaim } from "./website-access"
 
 // Management is exposed only through validated, Admin-only Server Actions. Direct server API
 // calls still work; blocking these HTTP paths prevents arbitrary client metadata mutations.
@@ -22,7 +23,7 @@ export function createOAuthProvider(database: Database, allowLocalCallbacks: boo
   return oauthProvider({
     loginPage: "/login",
     consentPage: "/oauth/consent",
-    scopes: [...identityScopes, websiteScope],
+    scopes: [...oidcScopes],
     async customUserInfoClaims({ user, scopes, jwt }) {
       const clientId = jwt.client_id
       if (!user || typeof clientId !== "string" || !scopes.includes(websiteScope)) return {}
