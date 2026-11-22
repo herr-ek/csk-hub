@@ -1233,14 +1233,26 @@
     "name": "Name",
     "redirectUrls": "Redirect URLs",
     "redirectHelp": "One exact callback URL per line. HTTPS is required in production.",
-    "allowedScopes": "Allowed scopes",
-    "scopeRequired": "Select at least one scope.",
+    "signIn": "Users sign in through this client",
+    "readAboutUser": "Can read this about the user",
+    "resourcesOnBehalf": "Can get these resources on behalf of the user",
+    "apiResources": "Can access these API resources",
+    "apiWarning": "These scopes give the client data without any User's restrictions.",
+    "noResources": "No resources are available yet.",
+    "accessRequired": "Allow sign-in or select at least one API resource.",
     "scopes": {
-      "openid": "Sign in with CSK Hub",
       "profile": "Basic profile",
-      "email": "Email address",
-      "csk:website": "Chalmers Sångkör website Admin authorization",
-      "csk:bookie": "CSK Bookie Organizer access"
+      "email": "Email address"
+    },
+    "claimGroups": {
+      "website-access": {
+        "title": "Website access control",
+        "description": "Admin for Hub Admins and current Webmästeriet members."
+      },
+      "bookie-access": {
+        "title": "Bookie access control",
+        "description": "Organizer for active Hub Admins and current First and Choir Concert Masters."
+      }
     },
     "save": "Save",
     "error": "The action could not be completed. Check the values and try again.",

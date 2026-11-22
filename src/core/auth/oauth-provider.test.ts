@@ -14,13 +14,18 @@ import {
 } from "@/core/org-structure"
 import { createTestDatabase } from "../../../test/database"
 import { createAuthPlugins } from "./auth-plugins"
-import { bookieOrganizerClaim } from "./bookie-access"
+import { readClaimSettings, readClientMetadata, withReleasedClaims } from "./client-claims"
+import { type ClaimGroupId, claimGroups, type OAuthCatalogue, signInScope } from "./oauth-catalogue"
 import { getOAuthResumePath } from "./oauth-continuation"
 import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
-import { bookieScope, websiteScope } from "./oidc-scopes"
-import { websiteAdminClaim } from "./website-access"
 
 const database = await createTestDatabase()
+
+function claimName(id: ClaimGroupId): string {
+  const group = claimGroups.find((entry) => entry.id === id)
+  if (!group) throw new Error(`Unknown claim group ${id}`)
+  return group.claim
+}
 
 describe.skipIf(!database)("Hub OIDC provider", () => {
   const t = database as NonNullable<typeof database>
@@ -105,7 +110,7 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     })}`
   }
 
-  async function register(headers: Headers, scope = "openid profile email") {
+  async function register(headers: Headers, options: { scope?: string; metadata?: Record<string, unknown> } = {}) {
     return auth.api.adminCreateOAuthClient({
       headers,
       body: {
@@ -114,9 +119,11 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
         application_type: "web",
         token_endpoint_auth_method: "client_secret_basic",
         grant_types: ["authorization_code"],
-        scope,
+        response_types: ["code"],
+        scope: options.scope ?? "openid profile email",
         require_pkce: true,
-        skip_consent: true
+        skip_consent: true,
+        metadata: options.metadata ?? withReleasedClaims({}, [])
       }
     })
   }
@@ -134,6 +141,19 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
       "",
       `Basic ${Buffer.from(`${clientId}:${secret}`).toString("base64")}`
     )
+  }
+
+  /** Signs the User in through the client and returns the access token for the requested scope. */
+  async function accessToken(clientId: string, secret: string, subject: { cookie: string }, scope: string) {
+    const response = await request(authorization(clientId, { scope }), undefined, subject.cookie)
+    const code = new URL(response.headers.get("location") as string).searchParams.get("code") as string
+    const token = await exchange(clientId, secret, code)
+    expect(token.status).toBe(200)
+    return (await token.json()).access_token as string
+  }
+
+  async function userInfo(token: string) {
+    return request("/oauth2/userinfo", undefined, "", `Bearer ${token}`)
   }
 
   test("discovery metadata uses the allowed preview request host and auth path", async () => {
@@ -196,8 +216,8 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     expect((await request("/token", undefined, first.cookie)).status).toBe(404)
     const metadata = await request("/.well-known/openid-configuration")
     expect(await metadata.json()).toMatchObject({
-      grant_types_supported: ["authorization_code"],
-      scopes_supported: ["openid", "profile", "email", websiteScope, bookieScope]
+      grant_types_supported: ["authorization_code", "client_credentials"],
+      scopes_supported: [signInScope, "profile", "email"]
     })
 
     const authorized = await request(authorization(client.client_id), undefined, member.cookie)
@@ -212,10 +232,10 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     const tokens = await token.json()
     expect(tokens.id_token).toBeString()
     expect(tokens.refresh_token).toBeUndefined()
-    const userInfo = await auth.handler(
+    const userInfoResponse = await auth.handler(
       new Request(`${origin}/api/auth/oauth2/userinfo`, { headers: { authorization: `Bearer ${tokens.access_token}` } })
     )
-    expect(await userInfo.json()).toMatchObject({ sub: member.id, email: member.email })
+    expect(await userInfoResponse.json()).toMatchObject({ sub: member.id, email: member.email })
 
     const pendingAuthorization = await request(authorization(client.client_id), undefined, member.cookie)
     const pendingCode = new URL(pendingAuthorization.headers.get("location") as string).searchParams.get(
@@ -320,44 +340,25 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     expect(callback.searchParams.get("code")).toBeTruthy()
   })
 
-  test("website client UserInfo grants access only to active Admins and current Webmästeriet members", async () => {
+  test("website-access claim is released only to qualifying Users of an enabled, enabled-client", async () => {
     const admin = await account("admin")
     const member = await account("user")
-    const client = await register(admin.headers)
-    const scope = `openid ${websiteScope}`
+    const outsider = await account("user")
+    const website = claimName("website-access")
+    const enabled = await register(admin.headers, { metadata: withReleasedClaims({}, ["website-access"]) })
+    const notEnabled = await register(admin.headers)
+    const scope = "openid profile"
 
-    async function authorize(subject: typeof admin, requestedScope: string) {
-      return request(authorization(client.client_id, { scope: requestedScope }), undefined, subject.cookie)
-    }
+    const adminToken = await accessToken(enabled.client_id, enabled.client_secret as string, admin, scope)
+    const adminInfo = await (await userInfo(adminToken)).json()
+    expect(adminInfo[website]).toEqual(["admin"])
+    expect(adminInfo[claimName("bookie-access")]).toBeUndefined()
 
-    async function userInfo(subject: typeof admin, requestedScope: string) {
-      const response = await authorize(subject, requestedScope)
-      const callback = new URL(response.headers.get("location") as string)
-      const code = callback.searchParams.get("code")
-      expect(code).toBeTruthy()
-      const token = await exchange(client.client_id, client.client_secret as string, code as string)
-      expect(token.status).toBe(200)
-      const { access_token } = await token.json()
-      return () => request("/oauth2/userinfo", undefined, "", `Bearer ${access_token}`)
-    }
+    const outsiderToken = await accessToken(enabled.client_id, enabled.client_secret as string, outsider, scope)
+    expect((await (await userInfo(outsiderToken)).json())[website]).toBeUndefined()
 
-    const deniedScope = await authorize(admin, scope)
-    expect(deniedScope.headers.get("location") ?? (await deniedScope.text())).toContain("invalid_scope")
-
-    await auth.api.adminUpdateOAuthClient({
-      headers: admin.headers,
-      body: { client_id: client.client_id, update: { scope } }
-    })
-
-    const deniedProfile = await authorize(admin, "openid profile")
-    expect(deniedProfile.headers.get("location") ?? (await deniedProfile.text())).toContain("invalid_scope")
-
-    const identityOnly = await userInfo(admin, "openid")
-    expect((await (await identityOnly()).json())[websiteAdminClaim]).toBeUndefined()
-    const adminInfo = await userInfo(admin, scope)
-    const memberInfo = await userInfo(member, scope)
-    expect((await (await adminInfo()).json())[websiteAdminClaim]).toBe(true)
-    expect((await (await memberInfo()).json())[websiteAdminClaim]).toBeUndefined()
+    const notEnabledToken = await accessToken(notEnabled.client_id, notEnabled.client_secret as string, admin, scope)
+    expect((await (await userInfo(notEnabledToken)).json())[website]).toBeUndefined()
 
     const today = cskToday()
     const organisationYear = currentOrganisationYear(today)
@@ -374,48 +375,44 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
         endDate: organisationYearPeriod(organisationYear).endDate
       })
       .returning({ id: directMembership.id })
-    expect((await (await memberInfo()).json())[websiteAdminClaim]).toBe(true)
+    const memberToken = await accessToken(enabled.client_id, enabled.client_secret as string, member, scope)
+    expect((await (await userInfo(memberToken)).json())[website]).toEqual(["admin"])
 
     await t.db.delete(directMembership).where(eq(directMembership.id, membership.id))
-    expect((await (await memberInfo()).json())[websiteAdminClaim]).toBeUndefined()
-    await t.db.update(schema.user).set({ banned: true }).where(eq(schema.user.id, admin.id))
-    const inactive = await adminInfo()
-    if (inactive.ok) expect((await inactive.json())[websiteAdminClaim]).toBeUndefined()
-    else expect(inactive.status).toBe(401)
+    const memberAgain = await accessToken(enabled.client_id, enabled.client_secret as string, member, scope)
+    expect((await (await userInfo(memberAgain)).json())[website]).toBeUndefined()
+
+    await auth.api.adminUpdateOAuthClient({
+      headers: admin.headers,
+      body: { client_id: enabled.client_id, update: { disabled: true } }
+    })
+    const disabledClient = await userInfo(adminToken)
+    if (disabledClient.ok) expect((await disabledClient.json())[website]).toBeUndefined()
+    else expect(disabledClient.status).toBe(401)
   })
 
-  test("Bookie UserInfo grants Organizer access to active Admins and current Konsertmästare", async () => {
+  test("bookie-access claim is released to active Admins and current Konsertmästare only", async () => {
     const admin = await account("admin")
     const firstConcertMaster = await account("user")
     const choirConcertMaster = await account("user")
     const member = await account("user")
-    const scope = `openid profile ${bookieScope}`
-    const client = await register(admin.headers, scope)
-    const otherClient = await register(admin.headers)
+    const bookie = claimName("bookie-access")
+    const scope = "openid profile"
+    const enabled = await register(admin.headers, { metadata: withReleasedClaims({}, ["bookie-access"]) })
+    const notEnabled = await register(admin.headers)
 
-    async function userInfo(subject: typeof admin, requestedScope = scope) {
-      const response = await request(
-        authorization(client.client_id, { scope: requestedScope }),
-        undefined,
-        subject.cookie
-      )
-      const callback = new URL(response.headers.get("location") as string)
-      const code = callback.searchParams.get("code")
-      expect(code).toBeTruthy()
-      const token = await exchange(client.client_id, client.client_secret as string, code as string)
-      expect(token.status).toBe(200)
-      const { access_token } = await token.json()
-      return () => request("/oauth2/userinfo", undefined, "", `Bearer ${access_token}`)
-    }
-
-    const deniedScope = await request(authorization(otherClient.client_id, { scope }), undefined, admin.cookie)
-    expect(deniedScope.headers.get("location") ?? (await deniedScope.text())).toContain("invalid_scope")
-    const identityOnly = await userInfo(admin, "openid")
-    expect((await (await identityOnly()).json())[bookieOrganizerClaim]).toBeUndefined()
-    const adminInfo = await userInfo(admin)
-    expect((await (await adminInfo()).json())[bookieOrganizerClaim]).toBe(true)
-    const memberInfo = await userInfo(member)
-    expect((await (await memberInfo()).json())[bookieOrganizerClaim]).toBeUndefined()
+    const adminInfo = await (
+      await userInfo(await accessToken(enabled.client_id, enabled.client_secret as string, admin, scope))
+    ).json()
+    expect(adminInfo[bookie]).toEqual(["organizer"])
+    expect(adminInfo[claimName("website-access")]).toBeUndefined()
+    expect(
+      (
+        await (
+          await userInfo(await accessToken(notEnabled.client_id, notEnabled.client_secret as string, admin, scope))
+        ).json()
+      )[bookie]
+    ).toBeUndefined()
 
     const today = cskToday()
     const year = currentOrganisationYear(today)
@@ -423,14 +420,6 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
     const [board] = await t.db.insert(group).values({ type: GroupType.Board, organisationYear: year }).returning()
     const [choirGroup] = await t.db.insert(group).values({ type: GroupType.Choir, name: "Bookie Choir" }).returning()
     await t.db.insert(choir).values({ groupId: choirGroup.id })
-    const [committee] = await t.db
-      .insert(group)
-      .values({ type: GroupType.ConcertCommittee, organisationYear: year })
-      .returning()
-    await t.db.insert(directMembership).values([
-      { userId: choirConcertMaster.id, groupId: choirGroup.id, startDate: period.startDate },
-      { userId: member.id, groupId: committee.id, ...period }
-    ])
     await t.db.insert(positionAppointment).values([
       {
         userId: firstConcertMaster.id,
@@ -447,17 +436,144 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
         ...period
       }
     ])
-    const boardInfo = await userInfo(firstConcertMaster)
-    const choirInfo = await userInfo(choirConcertMaster)
-    expect((await (await boardInfo()).json())[bookieOrganizerClaim]).toBe(true)
-    expect((await (await choirInfo()).json())[bookieOrganizerClaim]).toBe(true)
-    expect((await (await memberInfo()).json())[bookieOrganizerClaim]).toBeUndefined()
+    const releasedTo = async (subject: { cookie: string }) =>
+      (
+        await (
+          await userInfo(await accessToken(enabled.client_id, enabled.client_secret as string, subject, scope))
+        ).json()
+      )[bookie]
+    expect(await releasedTo(firstConcertMaster)).toEqual(["organizer"])
+    expect(await releasedTo(choirConcertMaster)).toEqual(["organizer"])
+    expect(await releasedTo(member)).toBeUndefined()
 
     await t.db.delete(positionAppointment).where(eq(positionAppointment.userId, firstConcertMaster.id))
-    expect((await (await boardInfo()).json())[bookieOrganizerClaim]).toBeUndefined()
+    expect(await releasedTo(firstConcertMaster)).toBeUndefined()
     await t.db.update(schema.user).set({ banned: true }).where(eq(schema.user.id, choirConcertMaster.id))
-    const inactive = await choirInfo()
-    if (inactive.ok) expect((await inactive.json())[bookieOrganizerClaim]).toBeUndefined()
-    else expect(inactive.status).toBe(401)
+    const banned = await userInfo(
+      await accessToken(enabled.client_id, enabled.client_secret as string, choirConcertMaster, scope)
+    )
+    expect(banned.ok ? (await banned.json())[bookie] : undefined).toBeUndefined()
+  })
+
+  test("editing claim settings keeps an unrelated metadata key", async () => {
+    const owner = await account("admin")
+    const created = await register(owner.headers, { metadata: { "internal-note": "keep" } })
+    const id = created.client_id
+
+    await auth.api.adminUpdateOAuthClient({
+      headers: owner.headers,
+      body: {
+        client_id: id,
+        update: { metadata: withReleasedClaims(await readClientMetadata(t.db, id), ["website-access"]) }
+      }
+    })
+
+    const stored = await readClientMetadata(t.db, id)
+    expect(stored).toMatchObject({ "internal-note": "keep" })
+    expect((await readClaimSettings(t.db, id))?.releasedClaims).toEqual(["website-access"])
+  })
+
+  test("unknown claim group ids in stored metadata are ignored", async () => {
+    const owner = await account("admin")
+    const admin = await account("admin")
+    const created = await register(owner.headers, {
+      metadata: { csk: { releasedClaims: ["website-access", "retired-group"] } }
+    })
+    expect((await readClaimSettings(t.db, created.client_id))?.releasedClaims).toEqual(["website-access"])
+
+    const malformed = await register(owner.headers, { metadata: { csk: { releasedClaims: "website-access" } } })
+    expect((await readClaimSettings(t.db, malformed.client_id))?.releasedClaims).toEqual([])
+
+    const token = await accessToken(created.client_id, created.client_secret as string, admin, "openid profile")
+    expect((await (await userInfo(token)).json())[claimName("website-access")]).toEqual(["admin"])
+  })
+
+  test("API scopes are issued only through client_credentials and only when configured by an Admin", async () => {
+    const owner = await account("admin")
+    const member = await account("user")
+    const catalogue: OAuthCatalogue = {
+      userScopes: [{ scope: "user:test:read" }],
+      apiScopes: [{ scope: "api:test:read" }]
+    }
+    const provider = betterAuth({
+      ...auth.options,
+      plugins: [admin(), jwt({ disableSettingJwtHeader: true }), createOAuthProvider(t.db, true, catalogue)]
+    })
+    const machineBody: {
+      application_type: "web"
+      token_endpoint_auth_method: "client_secret_basic"
+      grant_types: ["client_credentials"]
+    } = {
+      application_type: "web",
+      token_endpoint_auth_method: "client_secret_basic",
+      grant_types: ["client_credentials"]
+    }
+
+    const machine = await provider.api.adminCreateOAuthClient({
+      headers: owner.headers,
+      body: { ...machineBody, client_name: "Machine", client_credentials_scopes: ["api:test:read"] }
+    })
+    async function clientCredentials(clientId: string, secret: string, scope: string) {
+      return provider.handler(
+        new Request(`${origin}/api/auth/oauth2/token`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+            authorization: `Basic ${Buffer.from(`${clientId}:${secret}`).toString("base64")}`
+          },
+          body: new URLSearchParams({ grant_type: "client_credentials", scope })
+        })
+      )
+    }
+    const issued = await clientCredentials(machine.client_id, machine.client_secret as string, "api:test:read")
+    expect(issued.status).toBe(200)
+    expect((await issued.json()).scope).toBe("api:test:read")
+    expect(
+      (await clientCredentials(machine.client_id, machine.client_secret as string, "user:test:read")).status
+    ).not.toBe(200)
+
+    // The plugin accepts any provider scope here; keeping user: scopes off the machine side is the
+    // server action's schema check (see client-command.test.ts).
+    await expect(
+      provider.api.adminCreateOAuthClient({
+        headers: member.headers,
+        body: { ...machineBody, client_name: "Member", client_credentials_scopes: ["api:test:read"] }
+      })
+    ).rejects.toThrow()
+
+    // A sign-in client becomes a machine client through the same update the admin form sends.
+    const signIn = await provider.api.adminCreateOAuthClient({
+      headers: owner.headers,
+      body: {
+        client_name: "Converted",
+        redirect_uris: ["http://localhost:8787/callback"],
+        application_type: "web",
+        token_endpoint_auth_method: "client_secret_basic",
+        grant_types: ["authorization_code"],
+        response_types: ["code"],
+        scope: `${signInScope} profile`,
+        require_pkce: true,
+        skip_consent: true
+      }
+    })
+    await provider.api.adminUpdateOAuthClient({
+      headers: owner.headers,
+      body: {
+        client_id: signIn.client_id,
+        update: {
+          grant_types: ["client_credentials"],
+          response_types: [],
+          scope: "",
+          client_credentials_scopes: ["api:test:read"]
+        }
+      }
+    })
+    const converted = await clientCredentials(signIn.client_id, signIn.client_secret as string, "api:test:read")
+    expect(converted.status).toBe(200)
+  })
+
+  test("default catalogue advertises no user or API scopes", async () => {
+    const discovery = await (await request("/.well-known/openid-configuration")).json()
+    expect(discovery.scopes_supported).toEqual([signInScope, "profile", "email"])
   })
 })

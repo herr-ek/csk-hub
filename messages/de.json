@@ -1233,14 +1233,26 @@
     "name": "Name",
     "redirectUrls": "Weiterleitungsadressen",
     "redirectHelp": "Eine exakte Callback-URL pro Zeile. HTTPS ist in Produktion erforderlich.",
-    "allowedScopes": "Erlaubte Scopes",
-    "scopeRequired": "Wähle mindestens einen Scope aus.",
+    "signIn": "Nutzer melden sich über diesen Client an",
+    "readAboutUser": "Darf dies über den Nutzer lesen",
+    "resourcesOnBehalf": "Darf diese Ressourcen im Auftrag des Nutzers abrufen",
+    "apiResources": "Darf auf diese API-Ressourcen zugreifen",
+    "apiWarning": "Diese Scopes geben dem Client Daten ohne die Einschränkungen irgendeines Nutzers.",
+    "noResources": "Noch keine Ressourcen verfügbar.",
+    "accessRequired": "Erlaube die Anmeldung oder wähle mindestens eine API-Ressource aus.",
     "scopes": {
-      "openid": "Mit CSK Hub anmelden",
       "profile": "Grundlegende Profilinformationen",
-      "email": "E-Mail-Adresse",
-      "csk:website": "Admin-Berechtigung für die Website von Chalmers Sångkör",
-      "csk:bookie": "Organizer-Berechtigung für CSK Bookie"
+      "email": "E-Mail-Adresse"
+    },
+    "claimGroups": {
+      "website-access": {
+        "title": "Zugriffskontrolle Website",
+        "description": "Admin für Hub-Admins und aktuelle Mitglieder der Webmästeriet."
+      },
+      "bookie-access": {
+        "title": "Zugriffskontrolle Bookie",
+        "description": "Organizer für aktive Hub-Admins sowie aktuelle First- und Chor-Konzertmeister."
+      }
     },
     "save": "Speichern",
     "error": "Die Aktion konnte nicht abgeschlossen werden. Werte prüfen und erneut versuchen.",

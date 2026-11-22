@@ -4,9 +4,10 @@ import { evaluatePermission } from "@/core/authz/policy-registry"
 import type { Database } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
-import { bookieOrganizerClaim, canAccessBookieOrganizer } from "./bookie-access"
-import { bookieScope, oidcScopes, websiteScope } from "./oidc-scopes"
-import { canAccessWebsiteAdmin, websiteAdminClaim } from "./website-access"
+import { bookieAccessRoles } from "./bookie-access"
+import { readClaimSettings } from "./client-claims"
+import { type ClaimGroupId, claimGroups, type OAuthCatalogue, oauthCatalogue, providerScopes } from "./oauth-catalogue"
+import { websiteAccessRoles } from "./website-access"
 
 // Management is exposed only through validated, Admin-only Server Actions. Direct server API
 // calls still work; blocking these HTTP paths prevents arbitrary client metadata mutations.
@@ -19,29 +20,44 @@ export const oauthDisabledPaths = [
   "/oauth2/get-clients"
 ]
 
-/** Configures Hub-owned confidential clients, using fresh roles rather than cached session claims. */
-export function createOAuthProvider(database: Database, allowLocalCallbacks: boolean) {
+const claimGroupRoles: Record<ClaimGroupId, (database: Database, userId: string) => Promise<string[]>> = {
+  "website-access": websiteAccessRoles,
+  "bookie-access": bookieAccessRoles
+}
+
+/**
+ * Configures Hub-owned clients, using fresh roles rather than cached session claims. The catalogue
+ * defaults to the real one; tests inject entries to exercise `user:` and `api:` grants.
+ */
+export function createOAuthProvider(
+  database: Database,
+  allowLocalCallbacks: boolean,
+  catalogue: OAuthCatalogue = oauthCatalogue
+) {
   return oauthProvider({
     loginPage: "/login",
     consentPage: "/oauth/consent",
-    scopes: [...oidcScopes],
-    async customUserInfoClaims({ user, scopes, jwt }) {
+    scopes: providerScopes(catalogue),
+    async customUserInfoClaims({ user, jwt }) {
       const clientId = jwt.client_id
       if (!user || typeof clientId !== "string") return {}
 
-      const claims: Record<string, true> = {}
-      if (scopes.includes(websiteScope) && (await canAccessWebsiteAdmin(database, user.id, clientId))) {
-        claims[websiteAdminClaim] = true
-      }
-      if (scopes.includes(bookieScope) && (await canAccessBookieOrganizer(database, user.id, clientId))) {
-        claims[bookieOrganizerClaim] = true
+      // Release rule: the client is enabled, has the group on, and the User qualifies for it.
+      const client = await readClaimSettings(database, clientId)
+      if (!client || client.disabled) return {}
+
+      const claims: Record<string, string[]> = {}
+      for (const group of claimGroups) {
+        if (!client.releasedClaims.includes(group.id)) continue
+        const roles = await claimGroupRoles[group.id](database, user.id)
+        if (roles.length > 0) claims[group.claim] = roles
       }
       return claims
     },
-    grantTypes: ["authorization_code"],
+    grantTypes: ["authorization_code", "client_credentials"],
     clientReference: () => "csk-hub",
     async clientPrivileges({ action, session }) {
-      if (!session || action === "delete" || action === "configure-client-credentials-scopes") return false
+      if (!session || action === "delete") return false
       const [actor] = await database
         .select({ id: user.id, role: user.role, banned: user.banned })
         .from(user)
