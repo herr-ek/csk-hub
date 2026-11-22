@@ -332,3 +332,36 @@ _Avoid_: Read receipt, seen state
 The identity-free authorship state of a retained Message after its author exercises
 Erasure.
 _Avoid_: Deleted message, anonymous User
+
+## Sign-in and API access
+
+**Login Client**:
+An OAuth client that signs Users in through CSK Hub and so receives Login Claims. A client
+that only obtains machine access is not a Login Client.
+_Avoid_: Application, integration, relying party
+
+**Claim group**:
+An Admin-enabled setting on a Login Client that releases one list-valued Login Claim
+computed by the Hub for the signed-in User. The Hub decides who qualifies.
+_Avoid_: Permission group, role, scope
+
+**Login Claim**:
+Information the Hub releases about the signed-in User to a Login Client in UserInfo, such as
+the roles a claim group grants. It is not an access token scope.
+_Avoid_: Scope, attribute, profile field
+
+**API Scope**:
+A permission an access token carries for Hub APIs. It is either Delegated Access or Machine
+Access, and each kind is issued only through its own grant.
+_Avoid_: Choir-scoped, Section-scoped, Login Claim
+
+**Delegated Access**:
+An API Scope with the `user:` prefix, which acts on behalf of the signed-in User. It is issued
+only through sign-in and is limited by that User's own restrictions.
+_Avoid_: Impersonation, user scope
+
+**Machine Access**:
+An API Scope with the `api:` prefix, which acts with no User involved. It is issued only through
+the client credentials grant, is configured only by an Admin, and bypasses user-level
+restrictions.
+_Avoid_: Service account, system access, bot access
