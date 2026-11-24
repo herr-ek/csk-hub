@@ -1,56 +1,49 @@
 "use client"
 
 import { LogOutIcon, SettingsIcon, UserRoundIcon } from "lucide-react"
-import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { AnimatePresence, MotionConfig, motion } from "motion/react"
 import Link from "next/link"
-import { useState } from "react"
+import { type FocusEvent, type KeyboardEvent, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/base/avatar"
-import { Button } from "@/shared/ui/base/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/shared/ui/base/dropdown-menu"
+import { buttonVariants } from "@/shared/ui/base/button"
 import { toast } from "@/shared/ui/base/toast"
+import { cn } from "@/shared/utils"
 import { logout } from "./logout"
 import { ROUTES } from "./site"
 
 type AccountUser = { name: string; image?: string | null }
 
-// Morph from the 36px trigger circle (top-right of the popup) to the full panel; the
-// open inset is negative so the popup's shadow isn't clipped. The near-1 opacity lets
-// Base UI detect the exit animation and wait for it before hiding the popup.
-const closedClip = "inset(0px 0px calc(100% - 36px) calc(100% - 36px) round 18px)"
-const morph = {
-  initial: { clipPath: closedClip, opacity: 0.9999 },
-  animate: {
-    clipPath: "inset(-32px -32px calc(0% - 32px) calc(0% - 32px) round 56px)",
-    opacity: 1,
-    transition: { type: "spring", bounce: 0.15, visualDuration: 0.25 }
-  },
-  // No bounce on close: overshoot would clip into the avatar before the trigger takes over.
-  exit: { clipPath: closedClip, opacity: 0.9999, transition: { type: "spring", bounce: 0, visualDuration: 0.2 } }
-} as const
-const fade = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+// Adapted from motion.dev's Clerk user button: the button and the open panel share a
+// layoutId so Motion morphs one into the other, and the avatar morphs on its own.
+const spring = { type: "spring", bounce: 0.15, visualDuration: 0.25 } as const
 const reveal = {
   initial: { opacity: 0, filter: "blur(8px)" },
   animate: { opacity: 1, filter: "blur(0px)", transition: { delay: 0.15 } },
-  exit: { opacity: 0, filter: "blur(8px)", transition: { duration: 0.1 } }
+  exit: { opacity: 0, filter: "blur(8px)" }
+}
+const itemClass =
+  "flex w-full cursor-pointer items-center gap-2.5 rounded-2xl px-3 py-2 text-sm font-medium outline-none hover:bg-foreground/10 focus-visible:bg-foreground/10 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0"
+
+// Module-level so React calls it once per mount, not on every render.
+function focusOnMount(element: HTMLElement | null) {
+  element?.focus({ preventScroll: true })
 }
 
-function UserAvatar({ user, className }: { user: AccountUser; className?: string }) {
+function UserAvatar({ user }: { user: AccountUser }) {
   return (
-    <Avatar aria-hidden="true" className={className}>
-      {user.image ? <AvatarImage src={user.image} alt="" referrerPolicy="no-referrer" /> : null}
-      <AvatarFallback>
-        <UserRoundIcon />
-      </AvatarFallback>
-    </Avatar>
+    <motion.span
+      layoutId="account-avatar"
+      transition={spring}
+      aria-hidden="true"
+      className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-muted-foreground"
+    >
+      {user.image ? (
+        // biome-ignore lint/performance/noImgElement: a freshly mounted Base UI Avatar shows its fallback for a frame, mid-morph.
+        <img src={user.image} alt="" referrerPolicy="no-referrer" className="size-full object-cover" />
+      ) : (
+        <UserRoundIcon className="size-4" />
+      )}
+    </motion.span>
   )
 }
 
@@ -59,7 +52,13 @@ export function AccountMenu({ user }: { user: AccountUser }) {
   const t = useTranslations("Navigation")
   const [isPending, setIsPending] = useState(false)
   const [open, setOpen] = useState(false)
-  const reduceMotion = useReducedMotion()
+  // Only Escape hands focus back to the button; other closes leave focus where the user put it.
+  const [refocusButton, setRefocusButton] = useState(false)
+
+  function close(focusButton = false) {
+    setRefocusButton(focusButton)
+    setOpen(false)
+  }
 
   async function handleLogout() {
     setIsPending(true)
@@ -77,59 +76,73 @@ export function AccountMenu({ user }: { user: AccountUser }) {
     }
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") close(true)
+  }
+
+  // Covers clicking outside and tabbing away. The panel is focusable, so clicks inside it keep focus within.
+  function handleBlur(event: FocusEvent<HTMLDivElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget)) close()
+  }
+
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full data-popup-open:opacity-0"
-            aria-label={t("myAccount")}
-          />
-        }
-      >
-        <UserAvatar user={user} />
-      </DropdownMenuTrigger>
-      <AnimatePresence>
-        {open ? (
-          <DropdownMenuContent
-            keepMounted
-            align="end"
-            sideOffset={-36}
-            className="w-64"
-            render={<motion.div {...(reduceMotion ? fade : morph)} />}
-          >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel
-                className="-mt-1 h-8 truncate py-0 pr-10 text-sm leading-8 font-medium text-foreground"
-                render={<motion.div {...reveal} />}
-              >
-                {user.name}
-              </DropdownMenuLabel>
-              {/* Pinned 2px in, exactly over the trigger's avatar (32px in a 36px button). */}
-              <UserAvatar user={user} className="absolute top-0.5 right-0.5" />
-              <motion.div {...reveal}>
-                <DropdownMenuItem render={<Link href={ROUTES.account} />}>
+    <MotionConfig reducedMotion="user">
+      <div className="relative size-9">
+        <AnimatePresence initial={false}>
+          {open ? (
+            <motion.div
+              key="open"
+              role="dialog"
+              aria-label={t("myAccount")}
+              layoutId="account-menu"
+              transition={spring}
+              style={{ borderRadius: 24 }}
+              ref={focusOnMount}
+              tabIndex={-1}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              className="absolute top-0 left-0 z-50 w-56 overflow-hidden bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-foreground/5 outline-none md:right-0 md:left-auto dark:ring-foreground/10"
+            >
+              <div className="flex flex-col items-center gap-3 px-3 pt-3 pb-2">
+                <UserAvatar user={user} />
+                <motion.p {...reveal} className="max-w-full truncate text-sm font-medium">
+                  {user.name}
+                </motion.p>
+              </div>
+              <motion.div {...reveal} className="flex flex-col gap-0.5">
+                <Link href={ROUTES.account} className={itemClass} onClick={() => close()}>
                   <UserRoundIcon />
                   {t("myAccount")}
-                </DropdownMenuItem>
-                <DropdownMenuItem render={<Link href={ROUTES.accountSettings} />}>
+                </Link>
+                <Link href={ROUTES.accountSettings} className={itemClass} onClick={() => close()}>
                   <SettingsIcon />
                   {t("routes.accountSettings")}
-                </DropdownMenuItem>
+                </Link>
+                <hr className="mx-3 my-1 border-foreground/5" />
+                <button type="button" className={itemClass} disabled={isPending} onClick={handleLogout}>
+                  <LogOutIcon />
+                  {isPending ? t("loggingOut") : t("logout")}
+                </button>
               </motion.div>
-            </DropdownMenuGroup>
-            <motion.div {...reveal}>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={isPending} onClick={handleLogout} closeOnClick={false}>
-                <LogOutIcon />
-                {isPending ? t("loggingOut") : t("logout")}
-              </DropdownMenuItem>
             </motion.div>
-          </DropdownMenuContent>
-        ) : null}
-      </AnimatePresence>
-    </DropdownMenu>
+          ) : (
+            <motion.button
+              key="closed"
+              type="button"
+              layoutId="account-menu"
+              transition={spring}
+              style={{ borderRadius: 999 }}
+              ref={refocusButton ? focusOnMount : undefined}
+              aria-label={t("myAccount")}
+              aria-expanded={false}
+              onClick={() => setOpen(true)}
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "absolute inset-0 overflow-hidden p-0")}
+            >
+              <UserAvatar user={user} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
+    </MotionConfig>
   )
 }
