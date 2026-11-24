@@ -82,7 +82,8 @@ manage Events in every lifecycle state. Updates check current and proposed organ
 Creator identity and Targets do not grant management. Missing/archived organisers and Choirs
 remain Admin-only, with one exception: `event.scheduleRehearsals` (Admin, or a current Position
 holder in an active Board group) manages a Rehearsal in a Series whose only Target is one whole
-Choir, and its updates must keep it one under the same organiser. Shared Location management
+Choir, and its updates must keep it one under the same organiser; see
+[the exception](../../../docs/authorization.md#exception-the-board-schedules-choirs-series-rehearsals). Shared Location management
 uses Admin-only `event.administer`.
 Delegated form options contain User names and IDs without emails; Admin retains emails.
 `group.manageEvents` alone does not authorize an Event ID. See [authorization](../../../docs/authorization.md#events-implemented-boundaries-and-policy-gaps).

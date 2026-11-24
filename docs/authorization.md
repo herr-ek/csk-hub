@@ -233,13 +233,25 @@ The following policies are registered in `core/authz/event-policies.ts`:
 
 Management covers Draft, Published and Cancelled Events. `createdBy`, audience Targets, Choir
 ownership and links to another Group confer no management authority. Choir organisers, missing
-organisers and archived organisers are Admin-only, except that `event.scheduleRehearsals` holders
-manage a Rehearsal in a Series whose only Target is one whole Choir; a Board update must keep it
-one under the same organiser. Event contexts therefore carry the Group catalogue and the Event's
-Targets, and Event operations lock the actor's Board groups with the organisers. An absent Event
-denies even Admin. Admin may
-create an Event without an organiser, and may retain an archived organiser on an existing Event;
-feature validation still refuses newly choosing an archived or nonexistent Group.
+organisers and archived organisers are Admin-only, with the one exception below. An absent Event
+denies even Admin. Admin may create an Event without an organiser, and may retain an archived
+organiser on an existing Event; feature validation still refuses newly choosing an archived or
+nonexistent Group.
+
+### Exception: the Board schedules Choirs' Series Rehearsals
+
+`event.scheduleRehearsals` holders (Admin, or a current Position holder in an active Board group)
+manage a Rehearsal in a Series whose only Target is one whole Choir, so the Board can set up and
+adjust each Choir's weekly rehearsals for a term without an Admin. The grant follows the Event's
+type, Series and Targets, not its organiser: generated Rehearsals keep the Choir as Organiser
+group, so nothing changes hands when a new Board takes over on 1 July. A Board update must leave
+the Event such a Rehearsal under the same organiser; otherwise it needs authority over the proposed
+organiser as before. Extra and Sectional rehearsals, and Rehearsals for several Choirs, stay
+outside the grant. Conductors managing their own Choir's Rehearsals is a separate question (#168).
+
+Event contexts therefore carry the Group catalogue and the Event's Targets, and Event operations
+lock the actor's Board groups with the organisers. The rehearsal schedule tool lives at
+`/events/manage/rehearsals`, since `/admin` admits only Admins.
 
 Every Event action supplies trusted resource and relationship facts to its exact policy in the
 same transaction as the domain command. The update context contains the proposed organiser facts.
@@ -309,7 +321,7 @@ Existing records remain readable after cancellation but cannot then be changed.
 
 The Events scheme's former broader Choir/subgroup/Target management examples are reconciled
 with the exact-organiser rule. Choir-organised and organiser-less Events remain Admin-only, apart
-from the Board's Choir Series Rehearsals above.
+from the Board's exception above.
 
 Rich text has no separate protected persistence workflow.
 
