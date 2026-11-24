@@ -7,6 +7,7 @@
       "seeAll": "Alla evenemang",
       "today": "Idag",
       "comingUp": "Framöver",
+      "comingUpEmpty": "Inga fler kommande evenemang.",
       "allDay": "Heldag",
       "cancelledToday": "Inställt. Kom inte.",
       "empty": "Inget på gång för dig just nu.",

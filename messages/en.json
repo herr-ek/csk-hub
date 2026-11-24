@@ -7,6 +7,7 @@
       "seeAll": "All Events",
       "today": "Today",
       "comingUp": "Coming up",
+      "comingUpEmpty": "No more upcoming events.",
       "allDay": "All day",
       "cancelledToday": "Cancelled. Don't come.",
       "empty": "Nothing coming up for you right now.",
