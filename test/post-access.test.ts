@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"
-import { and, defineRelations, eq } from "drizzle-orm"
+import { and, defineRelations, eq, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { createTranslator } from "next-intl"
 import { Pool } from "pg"
@@ -607,6 +607,26 @@ describe("Group Post access end to end", () => {
         await db.select({ id: group.id }).from(group).where(eq(group.id, unrelated.id)).for("update", { noWait: true })
       ).toEqual([{ id: unrelated.id }])
     })
+  })
+
+  test("Post reads do not queue behind a membership change holding the same User's lock", async () => {
+    let release!: () => void
+    const released = new Promise<void>((resolve) => (release = resolve))
+    const holder = db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:user:${alice}`}))`)
+      await released
+    })
+    const { withAccess } = dependencies(alice)
+    try {
+      const outcome = await Promise.race([
+        reads.listNewsFeed(db, withAccess).then(() => "read"),
+        new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 2000))
+      ])
+      expect(outcome).toBe("read")
+    } finally {
+      release()
+      await holder
+    }
   })
 
   test("parallel reads and competing saves complete when session validation uses another connection", async () => {

@@ -18,7 +18,7 @@ import { group } from "@/core/db/schema/org-structure"
 import { post, postTarget } from "@/core/db/schema/posts"
 import { getPostAuthorizationFacts, listLocalizedGroupLabels } from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
-import { editableUnpublishedVisibility, getPostScope, publishedPostVisibility } from "./access"
+import { editableUnpublishedVisibility, getPostReadScope, publishedPostVisibility } from "./access"
 
 export type PostsDatabase = AuthorizationDatabase
 export type NewsFeedEntry = {
@@ -78,7 +78,7 @@ const publishedPostColumns = {
 type PublishedRow = PostAttributes &
   Omit<NewsFeedEntry, "showAuthor" | "targets" | "publishedAt" | "body"> & { publishedAt: Date | null }
 
-/** Shape protected metadata only after the Posts and relationship facts have been locked. */
+/** Shape protected metadata only after the Post rows and the actor's relationship facts have been read. */
 async function publishedReadModels<Row extends PublishedRow>(
   rows: Row[],
   database: PostsDatabase,
@@ -195,7 +195,7 @@ async function readNewsFeed(
   const shown = Number.isSafeInteger(pages) && pages > 0 ? pages : 1
   const limit = shown * NEWS_FEED_PAGE_SIZE
   return withAccess(async (access, tx) => {
-    const { actor, relationships } = await getPostScope(tx, access)
+    const { actor, relationships } = await getPostReadScope(tx, access)
     const rows = await selectPublishedCandidates(
       tx,
       publishedPostColumns,
@@ -217,7 +217,7 @@ export async function listLatestPosts(
   withAccess = withCurrentRequest
 ): Promise<Omit<NewsFeedEntry, "body" | "targets">[]> {
   return withAccess(async (access, tx) => {
-    const { actor, relationships } = await getPostScope(tx, access)
+    const { actor, relationships } = await getPostReadScope(tx, access)
     const { body: _body, ...columns } = publishedPostColumns
     const rows = await selectPublishedCandidates(tx, columns, publishedPostVisibility(tx, actor, relationships))
       .orderBy(desc(post.publishedAt))
@@ -236,7 +236,7 @@ export async function getPublishedPost(
   if (!isPostId(postId)) return null
   try {
     return await withAccess(async (access, tx) => {
-      const { actor, relationships } = await getPostScope(tx, access)
+      const { actor, relationships } = await getPostReadScope(tx, access)
       const [row] = await selectPublishedCandidates(
         tx,
         { ...publishedPostColumns, revision: post.revision },
@@ -261,7 +261,7 @@ export async function listOwnDrafts(
   withAccess = withCurrentRequest
 ): Promise<DraftSummary[]> {
   return withAccess(async (access, tx) => {
-    const { actor, relationships } = await getPostScope(tx, access)
+    const { actor, relationships } = await getPostReadScope(tx, access)
     const rows = await tx
       .select({
         id: post.id,
@@ -290,7 +290,7 @@ export async function getEditablePost(
   if (!isPostId(postId)) return null
   try {
     return await withAccess(async (access, tx) => {
-      const { relationships } = await getPostScope(tx, access)
+      const { relationships } = await getPostReadScope(tx, access)
       const [row] = await tx
         .select()
         .from(post)

@@ -6,9 +6,16 @@ import type { AuthorizationActor, PostAddress, PostRelationships } from "@/core/
 import { currentPostMemberships, matchesPostTarget } from "@/core/authz/post-audience"
 import { canRepresentPostGroup } from "@/core/authz/post-policies"
 import { post, postTarget } from "@/core/db/schema/posts"
-import { lockCurrentGroupAuthorizationFacts, type OrgStructureTransaction } from "@/features/org-structure"
+import {
+  getPostAuthorizationFacts,
+  lockCurrentGroupAuthorizationFacts,
+  type OrgStructureTransaction
+} from "@/features/org-structure"
 
-/** Fresh identity and relationship/archive locks, acquired before any Post lock. */
+/**
+ * For writes only: fresh identity and relationship/archive locks, acquired before any Post lock.
+ * The Group ids come from the proposed address, when the write has one, so the locks cover what it will name.
+ */
 export async function getPostScope(
   database: OrgStructureTransaction,
   access: RequestAuthorization,
@@ -19,6 +26,17 @@ export async function getPostScope(
     ? [address.publisherGroupId, ...address.targets.map((target) => target.groupId)].filter((id) => id !== null)
     : []
   const relationships = await lockCurrentGroupAuthorizationFacts(database, actor.userId, groupIds)
+  return { actor, relationships }
+}
+
+/**
+ * For reads: the actor's current relationships with no User or Group locks, so a page load never
+ * queues behind a membership change. Each read sees committed state at its start, which is enough
+ * here; anything that saves must use getPostScope.
+ */
+export async function getPostReadScope(database: OrgStructureTransaction, access: RequestAuthorization) {
+  const actor = access.requirePermission({ action: "app.access" })
+  const relationships = await getPostAuthorizationFacts(database, actor.userId)
   return { actor, relationships }
 }
 
