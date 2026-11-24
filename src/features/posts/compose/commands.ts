@@ -78,8 +78,9 @@ async function writePost<Saved extends { id: string }>(
     }, database)
   } catch (error) {
     if (getErrorCode(error) === AUTHORIZATION_DENIED) return { status: "unauthorized" }
-    logger.error("news.post.write-failed", {
-      action,
+    // Keep the event names that alerts already match on: save, unpublish and discard.
+    const event = action === "post.unpublish" ? "unpublish" : action === "post.discard" ? "discard" : "save"
+    logger.error(`news.post.${event}-failed`, {
       errorCode: getErrorCode(error),
       errorName: getErrorName(error),
       status: getErrorStatus(error)
