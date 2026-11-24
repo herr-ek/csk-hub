@@ -80,21 +80,24 @@ export async function NextEventCard({ className }: { className?: string }) {
   )
 }
 
-/** The few Events after the next one, each linking to its page. Renders nothing when there are none. */
+/** The few Events after the next one, each linking to its page, or a note when there are none. */
 export async function ComingUpCard({ className }: { className?: string }) {
   const [{ events, today }, t] = await Promise.all([upcomingForHome(), getTranslations("HomePage.events")])
   const later = events.slice(1, 1 + COMING_UP)
-  if (later.length === 0) return null
 
   return (
     <OverviewCard title={t("comingUp")} link={{ href: ROUTES.events, label: t("seeAll") }} className={className}>
-      <OverviewList>
-        {later.map((event) => (
-          <li key={event.id}>
-            <ComingUpRow event={event} today={happensOn(event, today)} />
-          </li>
-        ))}
-      </OverviewList>
+      {later.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("comingUpEmpty")}</p>
+      ) : (
+        <OverviewList>
+          {later.map((event) => (
+            <li key={event.id}>
+              <ComingUpRow event={event} today={happensOn(event, today)} />
+            </li>
+          ))}
+        </OverviewList>
+      )}
     </OverviewCard>
   )
 }

@@ -7,6 +7,7 @@
       "seeAll": "Alle Termine",
       "today": "Heute",
       "comingUp": "Demnächst",
+      "comingUpEmpty": "Keine weiteren Termine.",
       "allDay": "Ganztägig",
       "cancelledToday": "Abgesagt. Nicht kommen.",
       "empty": "Gerade steht für dich nichts an.",
