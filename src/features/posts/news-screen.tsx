@@ -1,4 +1,3 @@
-import { Search } from "lucide-react"
 import Form from "next/form"
 import Link from "next/link"
 import { Suspense } from "react"
@@ -11,16 +10,17 @@ import { ROUTES } from "@/core/navigation/site"
 import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Badge } from "@/shared/ui/base/badge"
-import { Button, buttonVariants } from "@/shared/ui/base/button"
+import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
 import { Input } from "@/shared/ui/base/input"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
 import { UnpublishedNotice } from "./compose/UnpublishedNotice"
+import { NewsSearchButton, Reveal } from "./news-motion"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
-import { listNewsFeed, listOwnDrafts, searchNewsFeed } from "./service"
+import { listNewsFeed, listOwnDrafts, NEWS_FEED_PAGE_SIZE, searchNewsFeed } from "./service"
 import { listUnreadPostIds } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
@@ -117,10 +117,7 @@ export async function NewsScreen({
             placeholder={t("searchPlaceholder")}
           />
         </div>
-        <Button type="submit">
-          <Search className="size-4" aria-hidden="true" />
-          {t("search")}
-        </Button>
+        <NewsSearchButton />
         {query ? (
           <Link href={ROUTES.news} className={buttonVariants({ variant: "outline" })}>
             {t("clearSearch")}
@@ -129,46 +126,51 @@ export async function NewsScreen({
       </Form>
 
       {entries.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>{t(query ? "noResultsTitle" : "emptyTitle")}</EmptyTitle>
-            <EmptyDescription>{t(query ? "noResultsDescription" : "emptyDescription")}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        // Keyed by the query, so a second search with no matches visibly answers again.
+        <Reveal key={query}>
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>{t(query ? "noResultsTitle" : "emptyTitle")}</EmptyTitle>
+              <EmptyDescription>{t(query ? "noResultsDescription" : "emptyDescription")}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </Reveal>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry) => {
+          {entries.map((entry, index) => {
             const isUnread = unread.has(entry.id)
             return (
               <li key={entry.id}>
-                <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
-                  <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                    <CardHeader>
-                      <CardTitle className={cn("text-lg break-words", isUnread && "font-semibold")}>
-                        {entry.title}
-                      </CardTitle>
-                      {isUnread ? (
-                        <CardAction>
-                          <Badge>{t("unread")}</Badge>
-                        </CardAction>
-                      ) : null}
-                      <CardDescription>
-                        <PostByline
-                          authorName={entry.authorName}
-                          publishedAt={entry.publishedAt}
-                          editedAt={entry.editedAt}
+                <Reveal order={index % NEWS_FEED_PAGE_SIZE}>
+                  <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
+                    <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                      <CardHeader>
+                        <CardTitle className={cn("text-lg break-words", isUnread && "font-semibold")}>
+                          {entry.title}
+                        </CardTitle>
+                        {isUnread ? (
+                          <CardAction>
+                            <Badge>{t("unread")}</Badge>
+                          </CardAction>
+                        ) : null}
+                        <CardDescription>
+                          <PostByline
+                            authorName={entry.authorName}
+                            publishedAt={entry.publishedAt}
+                            editedAt={entry.editedAt}
+                          />
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <RichTextContent
+                          document={entry.body}
+                          linksAsText
+                          className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
                         />
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <RichTextContent
-                        document={entry.body}
-                        linksAsText
-                        className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
-                      />
-                    </CardContent>
-                  </Card>
-                </Link>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </Reveal>
               </li>
             )
           })}
