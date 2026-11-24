@@ -4,6 +4,7 @@ import Link from "next/link"
 import { type ReactNode, useActionState, useEffect, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { useTranslations } from "@/core/i18n/translations"
+import { newsPostEditPath } from "@/core/navigation/navigation-utils"
 import { RichTextEditor } from "@/features/rich-text"
 import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertAction, AlertDescription } from "@/shared/ui/base/alert"
@@ -124,6 +125,7 @@ export function PostForm({
             identityFixed={initial?.identityFixed ?? false}
             onChange={unsaved.changeAddress}
             targetErrors={state.status === "error" ? state.targetErrors : undefined}
+            audienceInvalid={state.status === "error" && state.audienceRequired === true}
           />
           <InputField
             key={fieldsKey}
@@ -150,7 +152,7 @@ export function PostForm({
           <FieldError>{state.status === "error" ? t(state.error) : undefined}</FieldError>
           {state.status === "error" && state.error === "editConflict" ? (
             <Link
-              href={`/news/${storage.slot}/edit`}
+              href={newsPostEditPath(storage.slot)}
               target="_blank"
               rel="noopener"
               className={buttonVariants({ variant: "outline" })}

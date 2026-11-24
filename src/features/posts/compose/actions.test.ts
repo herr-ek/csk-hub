@@ -145,6 +145,27 @@ describe("Post form transport", () => {
     expect(createPostCommand).not.toHaveBeenCalled()
   })
 
+  test("a publish or a published edit without an audience is an Audience error; a draft may have none", async () => {
+    const noAudience = form("publish")
+    noAudience.set("audience", "")
+    expect(await actions.createPost(IDLE, noAudience)).toMatchObject({
+      status: "error",
+      error: "formInvalid",
+      audienceRequired: true
+    })
+    expect(await actions.editPublishedPost(POST_ID, IDLE, noAudience)).toMatchObject({
+      status: "error",
+      error: "formInvalid",
+      audienceRequired: true
+    })
+    expect(createPostCommand).not.toHaveBeenCalled()
+    expect(editPublishedPostCommand).not.toHaveBeenCalled()
+
+    noAudience.set("intent", "draft")
+    expect(await actions.saveDraft(POST_ID, IDLE, noAudience)).toMatchObject({ status: "saved" })
+    expect(saveDraftCommand).toHaveBeenCalledWith(POST_ID, expect.objectContaining({ audienceAll: false }), false, 7)
+  })
+
   test("sanitizes unsupported document markup before writing", async () => {
     const data = form()
     data.set(

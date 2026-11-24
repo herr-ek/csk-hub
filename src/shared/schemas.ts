@@ -4,6 +4,7 @@ import { passwordPolicy } from "@/shared/policy"
 export const validationMessageIds = {
   required: "validation.required",
   audienceTargetIncomplete: "validation.audienceTargetIncomplete",
+  audienceRequired: "validation.audienceRequired",
   passwordTooShort: "validation.passwordTooShort",
   invalidEmail: "validation.invalidEmail",
   passwordsMismatch: "validation.passwordsMismatch"

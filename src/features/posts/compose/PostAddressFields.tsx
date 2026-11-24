@@ -17,13 +17,15 @@ export function PostAddressFields({
   options,
   identityFixed,
   onChange,
-  targetErrors
+  targetErrors,
+  audienceInvalid
 }: {
   initial: PostAddress
   options: PostComposeOptions
   identityFixed: boolean
   onChange: (address: PostAddress) => void
   targetErrors?: readonly number[]
+  audienceInvalid?: boolean
 }) {
   const t = useTranslations("Posts")
   const formatValidation = useValidationMessage()
@@ -44,6 +46,15 @@ export function PostAddressFields({
   const visibleGroups = options.groups.filter(
     (g) => allowed.includes(g.id) || initial.targets.some((target) => target.groupId === g.id)
   )
+  // A draft's publisher can stop being one the Member may represent. Keep it visible so the
+  // select shows the Group, and say it must change before the Post can be saved.
+  const lostPublisherId =
+    !identityFixed &&
+    address.publisherGroupId !== null &&
+    !options.publishers.some((g) => g.id === address.publisherGroupId)
+      ? address.publisherGroupId
+      : null
+  const lostPublisherName = options.groups.find((g) => g.id === lostPublisherId)?.name ?? ""
   return (
     <>
       <input type="hidden" name="targets" value={JSON.stringify(address.targets)} />
@@ -56,21 +67,38 @@ export function PostAddressFields({
           <input type="hidden" name="publisherGroupId" value={address.publisherGroupId ?? ""} />
         </Field>
       ) : (
-        <SelectField
-          label={t("publisherLabel")}
-          name="publisherGroupId"
-          value={address.publisherGroupId ?? ""}
-          options={[
-            { value: "", label: t("personalPublisher") },
-            ...options.publishers.map((g) => ({ value: g.id, label: g.name }))
-          ]}
-          onValueChange={(id) => change({ ...address, publisherGroupId: id || null })}
-        />
+        <>
+          <SelectField
+            label={t("publisherLabel")}
+            name="publisherGroupId"
+            value={address.publisherGroupId ?? ""}
+            options={[
+              { value: "", label: t("personalPublisher") },
+              ...options.publishers.map((g) => ({ value: g.id, label: g.name })),
+              ...(lostPublisherId ? [{ value: lostPublisherId, label: lostPublisherName }] : [])
+            ]}
+            onValueChange={(id) => {
+              // Targets the new publisher may not address would fail on save; drop them now.
+              const usable = options.audiencesByPublisher[id] ?? []
+              const kept = rows.filter((row) => row.groupId === null || usable.includes(row.groupId))
+              setRows(kept)
+              change({
+                ...address,
+                publisherGroupId: id || null,
+                targets: kept.map(({ groupId, voiceFamily }) => ({ groupId, voiceFamily }))
+              })
+            }}
+          />
+          <FieldError>
+            {lostPublisherId ? t("publisherNoLongerAvailable", { name: lostPublisherName }) : undefined}
+          </FieldError>
+        </>
       )}
       <SelectField
         label={t("audienceLabel")}
         name="audience"
         value={audience}
+        invalid={audienceInvalid}
         options={[
           { value: "", label: t("chooseAudience") },
           { value: "all", label: t("allCsk") },
@@ -82,6 +110,9 @@ export function PostAddressFields({
           if (value !== "targets") setRows([])
         }}
       />
+      <FieldError>
+        {audienceInvalid ? formatValidation({ message: validationMessageIds.audienceRequired }) : undefined}
+      </FieldError>
       {audience === "targets" ? (
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-2 text-sm font-medium">{t("audienceTargets")}</legend>

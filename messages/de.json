@@ -165,7 +165,8 @@
       "passwordTooShort": "Verwende mindestens {count} Zeichen.",
       "invalidEmail": "Gib eine gültige E-Mail-Adresse ein.",
       "passwordsMismatch": "Die Passwörter stimmen nicht überein.",
-      "audienceTargetIncomplete": "Wähle eine Gruppe oder Stimmfamilie oder entferne diese Zielgruppe."
+      "audienceTargetIncomplete": "Wähle eine Gruppe oder Stimmfamilie oder entferne diese Zielgruppe.",
+      "audienceRequired": "Wähle, wer diesen Beitrag lesen darf: Alle CSK oder mindestens eine Gruppe oder Stimmfamilie."
     }
   },
   "Ui": {
@@ -284,6 +285,7 @@
     "unsavedRestored": "Deine nicht gespeicherten Änderungen von vorhin wurden wiederhergestellt.",
     "discardUnsaved": "Änderungen verwerfen",
     "publisherLabel": "Veröffentlichen als",
+    "publisherNoLongerAvailable": "Du kannst nicht mehr als {name} veröffentlichen. Wähle vor dem Speichern unter „Veröffentlichen als“ eine andere Option.",
     "personalPublisher": "Ich selbst",
     "audienceLabel": "Zielgruppe",
     "chooseAudience": "Zielgruppe auswählen",

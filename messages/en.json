@@ -165,7 +165,8 @@
       "passwordTooShort": "Use at least {count} characters.",
       "invalidEmail": "Enter a valid email address.",
       "passwordsMismatch": "Passwords do not match.",
-      "audienceTargetIncomplete": "Choose a group or voice family, or remove this audience target."
+      "audienceTargetIncomplete": "Choose a group or voice family, or remove this audience target.",
+      "audienceRequired": "Choose who can read this post: All CSK, or at least one group or voice family."
     }
   },
   "Ui": {
@@ -284,6 +285,7 @@
     "unsavedRestored": "Your unsaved changes from before were restored.",
     "discardUnsaved": "Discard changes",
     "publisherLabel": "Publish as",
+    "publisherNoLongerAvailable": "You can no longer publish as {name}. Choose another publisher before saving.",
     "personalPublisher": "Myself",
     "audienceLabel": "Audience",
     "chooseAudience": "Choose an audience",

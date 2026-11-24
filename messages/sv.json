@@ -165,7 +165,8 @@
       "passwordTooShort": "Använd minst {count} tecken.",
       "invalidEmail": "Ange en giltig e-postadress.",
       "passwordsMismatch": "Lösenorden matchar inte.",
-      "audienceTargetIncomplete": "Välj en grupp eller stämfamilj, eller ta bort målgruppen."
+      "audienceTargetIncomplete": "Välj en grupp eller stämfamilj, eller ta bort målgruppen.",
+      "audienceRequired": "Välj vem som kan läsa inlägget: Alla i CSK, eller minst en grupp eller stämfamilj."
     }
   },
   "Ui": {
@@ -284,6 +285,7 @@
     "unsavedRestored": "Dina osparade ändringar från tidigare har återställts.",
     "discardUnsaved": "Släng ändringarna",
     "publisherLabel": "Publicera som",
+    "publisherNoLongerAvailable": "Du kan inte längre publicera som {name}. Välj en annan avsändare innan du sparar.",
     "personalPublisher": "Mig själv",
     "audienceLabel": "Målgrupp",
     "chooseAudience": "Välj en målgrupp",

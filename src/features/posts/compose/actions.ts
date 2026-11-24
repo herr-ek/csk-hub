@@ -36,7 +36,14 @@ export type PostFormError = "formInvalid" | "writeUnauthorized" | "saveFailed" |
 export type PostFormState =
   | { status: "idle" }
   | { status: "saved"; revision: number; values: PostFormValues }
-  | { status: "error"; error: PostFormError; values: PostFormValues; targetErrors?: number[] }
+  | {
+      status: "error"
+      error: PostFormError
+      values: PostFormValues
+      targetErrors?: number[]
+      /** Set when a publish has no audience, so the Audience field shows why. */
+      audienceRequired?: true
+    }
 
 /** A change of state confirmed in a dialog — unpublishing, discarding — rather than a form. */
 export type PostCommand = "unpublish" | "discard"
@@ -69,10 +76,12 @@ function readValues(formData: FormData): PostFormValues {
 /**
  * The shared shape of every form submission: validate before authorizing, authorize the
  * write, run it, and hand the Member their post back on any failure. On success the write
- * names the Post saved, and the caller says where the Member goes next.
+ * names the Post saved, and the caller says where the Member goes next. A publish, or an
+ * edit of a published Post, must name an audience; drafts may not.
  */
 async function submitPost(
   formData: FormData,
+  audienceRequired: boolean,
   write: (content: PostFormInput) => Promise<PostWriteResult>
 ): Promise<{ state: PostFormState } | { savedId: string; revision: number; values: PostFormValues }> {
   const values = readValues(formData)
@@ -90,6 +99,9 @@ async function submitPost(
     }
   }
 
+  if (audienceRequired && !input.data.audienceAll && input.data.targets.length === 0)
+    return { state: { status: "error", error: "formInvalid", values, audienceRequired: true } }
+
   const result = await write(input.data)
   if (result.status === "unauthorized") return errorState("writeUnauthorized")
   if (result.status === "failed") return errorState("saveFailed")
@@ -101,12 +113,13 @@ async function submitPost(
 /** An existing Post write always carries a validated revision from the editor. */
 async function submitExistingPost(
   formData: FormData,
+  audienceRequired: boolean,
   write: (content: PostFormInput, revision: number) => Promise<PostWriteResult>
 ) {
   const revision = postRevisionSchema.safeParse(formData.get("revision"))
   if (!revision.success)
     return { state: { status: "error", error: "editConflict", values: readValues(formData) } satisfies PostFormState }
-  return submitPost(formData, (content) => write(content, revision.data))
+  return submitPost(formData, audienceRequired, (content) => write(content, revision.data))
 }
 
 function revalidatePost(postId: string, publishedChanged: boolean) {
@@ -119,7 +132,7 @@ function revalidatePost(postId: string, publishedChanged: boolean) {
 /** Writes a new Post: published straight to the feed, or kept as the author's draft. */
 export async function createPost(_state: PostFormState, formData: FormData): Promise<PostFormState> {
   const publish = publishRequested(formData)
-  const result = await submitPost(formData, (content) => createPostCommand(content, publish))
+  const result = await submitPost(formData, publish, (content) => createPostCommand(content, publish))
   if ("state" in result) return result.state
 
   revalidatePost(result.savedId, publish)
@@ -132,7 +145,7 @@ export async function createPost(_state: PostFormState, formData: FormData): Pro
  */
 export async function saveDraft(postId: string, _state: PostFormState, formData: FormData): Promise<PostFormState> {
   const publish = publishRequested(formData)
-  const result = await submitExistingPost(formData, (content, revision) =>
+  const result = await submitExistingPost(formData, publish, (content, revision) =>
     saveDraftCommand(postId, content, publish, revision)
   )
   if ("state" in result) return result.state
@@ -149,7 +162,7 @@ export async function editPublishedPost(
   _state: PostFormState,
   formData: FormData
 ): Promise<PostFormState> {
-  const result = await submitExistingPost(formData, (content, revision) =>
+  const result = await submitExistingPost(formData, true, (content, revision) =>
     editPublishedPostCommand(postId, content, revision)
   )
   if ("state" in result) return result.state
