@@ -23,18 +23,24 @@ import { ROUTES } from "./site"
 type AccountUser = { name: string; image?: string | null }
 
 // Morph from the 36px trigger circle (top-right of the popup) to the full panel; the
-// open inset is negative so the popup's shadow isn't clipped.
+// open inset is negative so the popup's shadow isn't clipped. The near-1 opacity lets
+// Base UI detect the exit animation and wait for it before hiding the popup.
+const closedClip = "inset(0px 0px calc(100% - 36px) calc(100% - 36px) round 18px)"
 const morph = {
-  initial: { clipPath: "inset(0px 0px calc(100% - 36px) calc(100% - 36px) round 18px)" },
-  animate: { clipPath: "inset(-32px -32px calc(0% - 32px) calc(0% - 32px) round 56px)" },
-  exit: { clipPath: "inset(0px 0px calc(100% - 36px) calc(100% - 36px) round 18px)" },
-  transition: { type: "spring", bounce: 0.15, visualDuration: 0.25 }
+  initial: { clipPath: closedClip, opacity: 0.9999 },
+  animate: {
+    clipPath: "inset(-32px -32px calc(0% - 32px) calc(0% - 32px) round 56px)",
+    opacity: 1,
+    transition: { type: "spring", bounce: 0.15, visualDuration: 0.25 }
+  },
+  // No bounce on close: overshoot would clip into the avatar before the trigger takes over.
+  exit: { clipPath: closedClip, opacity: 0.9999, transition: { type: "spring", bounce: 0, visualDuration: 0.2 } }
 } as const
 const fade = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
 const reveal = {
   initial: { opacity: 0, filter: "blur(8px)" },
   animate: { opacity: 1, filter: "blur(0px)", transition: { delay: 0.15 } },
-  exit: { opacity: 0, filter: "blur(8px)" }
+  exit: { opacity: 0, filter: "blur(8px)", transition: { duration: 0.1 } }
 }
 
 function UserAvatar({ user, className }: { user: AccountUser; className?: string }) {
@@ -95,16 +101,14 @@ export function AccountMenu({ user }: { user: AccountUser }) {
             render={<motion.div {...(reduceMotion ? fade : morph)} />}
           >
             <DropdownMenuGroup>
-              <div className="flex items-center gap-2">
-                <DropdownMenuLabel
-                  className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
-                  render={<motion.div {...reveal} />}
-                >
-                  {user.name}
-                </DropdownMenuLabel>
-                {/* Sits exactly over the trigger avatar so the morph starts from it. */}
-                <UserAvatar user={user} className="-mt-1 -mr-1" />
-              </div>
+              <DropdownMenuLabel
+                className="-mt-1 h-8 truncate py-0 pr-10 text-sm leading-8 font-medium text-foreground"
+                render={<motion.div {...reveal} />}
+              >
+                {user.name}
+              </DropdownMenuLabel>
+              {/* Pinned 2px in, exactly over the trigger's avatar (32px in a 36px button). */}
+              <UserAvatar user={user} className="absolute top-0.5 right-0.5" />
               <motion.div {...reveal}>
                 <DropdownMenuItem render={<Link href={ROUTES.account} />}>
                   <UserRoundIcon />
