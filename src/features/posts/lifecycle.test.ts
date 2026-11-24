@@ -22,8 +22,8 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     return createAuthorization({ database: db, readSession: async () => ({ user: { id }, session: {} }) })
       .requirePermission
   }
-  function listNewsFeed(database = db) {
-    return reads.listNewsFeed(database, authorizeAs(viewerId))
+  function listNewsFeed(pages: number, database = db) {
+    return reads.listNewsFeed(pages, database, authorizeAs(viewerId))
   }
   function listLatestPosts(count: number, database = db) {
     return reads.listLatestPosts(count, database, authorizeAs(viewerId))
@@ -46,7 +46,8 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
   }
 
   async function feedIds() {
-    return (await listNewsFeed(db)).map((entry) => entry.id)
+    // Every page, so a test sees the whole feed whatever else the shared database holds.
+    return (await listNewsFeed(1_000)).entries.map((entry) => entry.id)
   }
 
   async function row(postId: string) {
@@ -111,6 +112,30 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
       publishedAt: expect.any(Date),
       editedAt: null
     })
+  })
+
+  test("the feed loads a page of Posts at a time, each page adding to the last", async () => {
+    const author = await newAdmin()
+    const ids: string[] = []
+    for (let index = 0; index <= reads.NEWS_FEED_PAGE_SIZE; index++) {
+      const { id } = await createPost({ authorId: author, content: content(`Post ${index}`), publish: true }, db)
+      // Far ahead of every other test's Posts, newest last, so these head the shared feed.
+      await db
+        .update(post)
+        .set({ publishedAt: new Date(Date.UTC(3000, 0, 1, 0, index)) })
+        .where(eq(post.id, id))
+      ids.unshift(id)
+    }
+
+    const first = await listNewsFeed(1)
+    expect(first.entries.map((entry) => entry.id)).toEqual(ids.slice(0, reads.NEWS_FEED_PAGE_SIZE))
+    expect(first).toMatchObject({ pages: 1, hasMore: true })
+
+    const second = await listNewsFeed(2)
+    expect(second.entries.slice(0, ids.length).map((entry) => entry.id)).toEqual(ids)
+    expect(second.pages).toBe(2)
+
+    for (const invalid of [0, -1, Number.NaN, 1.5]) expect((await listNewsFeed(invalid)).pages).toBe(1)
   })
 
   test("saving a draft never marks it edited", async () => {

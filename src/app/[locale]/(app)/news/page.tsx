@@ -1,10 +1,10 @@
 import { Suspense } from "react"
 import { NewsScreen, NewsScreenSkeleton } from "@/features/posts"
 
-export default function NewsPage() {
+export default function NewsPage({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
   return (
     <Suspense fallback={<NewsScreenSkeleton />}>
-      <NewsScreen />
+      <NewsScreen searchParams={searchParams} />
     </Suspense>
   )
 }

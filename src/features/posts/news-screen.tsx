@@ -67,9 +67,10 @@ async function listUnreadForCurrentUser() {
   return session ? listUnreadPostIds(session.user.id) : new Set<string>()
 }
 
-export async function NewsScreen() {
-  const [entries, unread, canPublish, t] = await Promise.all([
-    listNewsFeed(),
+export async function NewsScreen({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
+  const params = await searchParams
+  const [{ entries, pages, hasMore }, unread, canPublish, t] = await Promise.all([
+    listNewsFeed(typeof params.page === "string" ? Number(params.page) : 1),
     listUnreadForCurrentUser(),
     can({ action: "post.create" }),
     getTranslations("Posts")
@@ -138,6 +139,15 @@ export async function NewsScreen() {
           })}
         </ul>
       )}
+      {hasMore ? (
+        <Link
+          href={`${ROUTES.news}?${new URLSearchParams({ page: String(pages + 1) })}`}
+          scroll={false}
+          className={cn(buttonVariants({ variant: "outline" }), "self-center")}
+        >
+          {t("loadMore")}
+        </Link>
+      ) : null}
     </ContentPage>
   )
 }
