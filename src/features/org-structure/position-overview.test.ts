@@ -110,14 +110,37 @@ describe.skipIf(!database)("organisation-wide Position overview", () => {
     const currentBoard = contexts.find(({ group }) => group.id === board)
     expect(currentBoard?.positions.map(({ code }) => code)).toEqual([
       PositionCode.Chair,
-      PositionCode.FirstConcertMaster
+      PositionCode.ViceChair,
+      PositionCode.Treasurer,
+      PositionCode.Secretary,
+      PositionCode.PublicRelationsOfficer,
+      PositionCode.FirstConcertMaster,
+      PositionCode.OrganisationGigCoordinator,
+      PositionCode.SocialCoordinator
     ])
     expect(currentBoard?.positions.find(({ code }) => code === PositionCode.Chair)?.holders).toMatchObject([
       { userId: successor }
     ])
+    expect(currentBoard?.positions.find(({ code }) => code === PositionCode.Treasurer)?.holders).toEqual([])
     expect(contexts.some(({ group }) => group.type === GroupType.ConcertCommittee)).toBe(false)
     expect(contexts.some(({ group }) => group.id === archivedGig)).toBe(false)
-    expect(contexts.find(({ group }) => group.id === choir)?.positions).toHaveLength(2)
+    expect(contexts.find(({ group }) => group.id === choir)?.positions.map(({ code }) => code)).toEqual([
+      PositionCode.Conductor,
+      PositionCode.MusicLibrarian,
+      PositionCode.ChoirConcertMaster,
+      PositionCode.ChoirGigCoordinator
+    ])
+  })
+
+  test("current view lists vacant Positions for every active context, even without any holders", async () => {
+    const contexts = await listPositionOverview(t.db, "2026-10-22")
+    const choirContexts = contexts.filter(({ group }) => group.type === GroupType.Choir)
+    expect(choirContexts.length).toBeGreaterThan(0)
+    for (const context of choirContexts) expect(context.positions).toHaveLength(4)
+    const sections = contexts.filter(({ group }) => group.type === GroupType.Section)
+    expect(sections.length).toBeGreaterThan(0)
+    for (const section of sections)
+      expect(section.positions.map(({ code }) => code)).toEqual([PositionCode.SectionParent])
   })
 
   test("year history lists both annual and fluid handover holders under their Position", async () => {

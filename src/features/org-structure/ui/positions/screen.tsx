@@ -42,30 +42,33 @@ export async function PositionsScreen({ requestedYear }: { requestedYear?: strin
     { key: "sections", title: t("sections"), contexts: sorted.filter(({ group }) => group.type === GroupType.Section) },
     { key: "gigs", title: t("gigs"), contexts: sorted.filter(({ group }) => group.type === GroupType.GigGroup) }
   ]
-  const holders = (position: PositionOverview[number]["positions"][number]) => (
-    <ul className="flex flex-col gap-2">
-      {position.holders.map((holder) => (
-        <li key={holder.userId}>
-          <Link
-            href={`/members/${encodeURIComponent(holder.userId)}`}
-            className="font-medium underline-offset-4 hover:underline"
-          >
-            {holder.name}
-          </Link>
-          {holder.periods.map((period) => (
-            <p key={period.id} className="text-xs text-muted-foreground">
-              {t("tenure", {
-                start: format.dateTime(new Date(`${period.startDate}T12:00:00Z`), { dateStyle: "medium" }),
-                end: period.endDate
-                  ? format.dateTime(new Date(`${shiftDate(period.endDate, -1)}T12:00:00Z`), { dateStyle: "medium" })
-                  : t("ongoing")
-              })}
-            </p>
-          ))}
-        </li>
-      ))}
-    </ul>
-  )
+  const holders = (position: PositionOverview[number]["positions"][number]) =>
+    position.holders.length === 0 ? (
+      <p className="text-sm italic text-muted-foreground">{t("vacant")}</p>
+    ) : (
+      <ul className="flex flex-col gap-2">
+        {position.holders.map((holder) => (
+          <li key={holder.userId}>
+            <Link
+              href={`/members/${encodeURIComponent(holder.userId)}`}
+              className="font-medium underline-offset-4 hover:underline"
+            >
+              {holder.name}
+            </Link>
+            {holder.periods.map((period) => (
+              <p key={period.id} className="text-xs text-muted-foreground">
+                {t("tenure", {
+                  start: format.dateTime(new Date(`${period.startDate}T12:00:00Z`), { dateStyle: "medium" }),
+                  end: period.endDate
+                    ? format.dateTime(new Date(`${shiftDate(period.endDate, -1)}T12:00:00Z`), { dateStyle: "medium" })
+                    : t("ongoing")
+                })}
+              </p>
+            ))}
+          </li>
+        ))}
+      </ul>
+    )
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
       <PageBreadcrumb route="adminPositions" />

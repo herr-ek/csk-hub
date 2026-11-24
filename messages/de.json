@@ -1413,6 +1413,7 @@
     "sections": "Stimmgruppenbetreuung",
     "gigs": "Gig-Ensembles",
     "tenure": "{start} – {end}",
-    "ongoing": "Laufend"
+    "ongoing": "Laufend",
+    "vacant": "Unbesetzt"
   }
 }

@@ -1,13 +1,15 @@
 import "server-only"
 
-import { and, asc, eq, gt, isNull, lt, lte, min, or } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, isNull, lt, lte, min, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { group, positionAppointment } from "@/core/db/schema/org-structure"
 import {
   currentOrganisationYear,
+  type GroupType,
   type IsoDate,
   organisationYearPeriod,
+  POSITION_DEFINITIONS,
   PositionCode,
   shiftDate
 } from "@/core/org-structure"
@@ -25,10 +27,16 @@ export async function listPositionHistoryYears(database: OrgStructureDatabase, t
   return Array.from({ length: current - first + 1 }, (_, index) => current - index)
 }
 
+/** Every Position code whose responsibility context is the given Group type, in catalogue order. */
+function positionCodesFor(type: GroupType) {
+  return Object.values(PositionCode).filter((code) => POSITION_DEFINITIONS[code].context === type)
+}
+
 /**
  * Positions grouped by their actual responsibility context, never duplicated into granted Groups.
- * Without a year, returns holders on `today` in active contexts. A historical year includes
- * every overlapping tenure, including archived contexts and fluid Positions. The current year's
+ * Without a year, returns every active context with each Position it could hold, including
+ * vacant Positions with no holders on `today`. A historical year includes only Positions that
+ * had holders, including archived contexts and fluid Positions. The current year's
  * historical view stops at today, so prepared appointments never appear as past holders.
  */
 export async function listPositionOverview(database: OrgStructureDatabase, today: IsoDate, year?: number) {
@@ -71,6 +79,19 @@ export async function listPositionOverview(database: OrgStructureDatabase, today
       position.holders.push(holder)
     }
     holder.periods.push({ id: appointment.id, startDate: appointment.startDate, endDate: appointment.endDate })
+  }
+  if (year === undefined) {
+    const contextTypes = [...new Set(Object.values(POSITION_DEFINITIONS).map(({ context }) => context))]
+    const activeContexts = await database
+      .select({ context: group, choirName: choir.name })
+      .from(group)
+      .leftJoin(choir, eq(choir.id, group.choirId))
+      .where(and(eq(group.active, true), inArray(group.type, contextTypes)))
+    for (const { context, choirName } of activeContexts)
+      if (!contexts.has(context.id)) contexts.set(context.id, { group: context, choirName, positions: [] })
+    for (const entry of contexts.values())
+      for (const code of positionCodesFor(entry.group.type))
+        if (!entry.positions.some((position) => position.code === code)) entry.positions.push({ code, holders: [] })
   }
   const codes = Object.values(PositionCode)
   for (const context of contexts.values())

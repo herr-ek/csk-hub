@@ -1413,6 +1413,7 @@
     "sections": "Stämföräldrar",
     "gigs": "Giggrupper",
     "tenure": "{start} – {end}",
-    "ongoing": "Löpande"
+    "ongoing": "Löpande",
+    "vacant": "Vakant"
   }
 }
