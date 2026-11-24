@@ -6,40 +6,52 @@ import { useTranslations } from "@/core/i18n/translations"
 import { ROUTES } from "@/core/navigation/site"
 import { Field, FieldLabel } from "@/shared/ui/base/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/base/select"
-import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/base/tabs"
+import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/base/toggle-group"
 
-export function PositionPeriodPicker({ years, selectedYear }: { years: number[]; selectedYear?: number }) {
+export type PositionView = "historical" | "current" | "future"
+
+/** Address of one Positions view; the current view keeps the bare page URL. */
+export function positionsViewHref(view: PositionView, year?: number) {
+  if (view === "current") return ROUTES.adminPositions
+  if (view === "future") return `${ROUTES.adminPositions}?view=future`
+  return `${ROUTES.adminPositions}?view=historical&year=${year}`
+}
+
+export function PositionPeriodPicker({
+  years,
+  view,
+  selectedYear
+}: {
+  years: number[]
+  view: PositionView
+  selectedYear: number
+}) {
   const t = useTranslations("PositionsPage")
   const id = useId()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const navigate = (year?: number) =>
-    startTransition(() =>
-      router.push(year === undefined ? ROUTES.adminPositions : `${ROUTES.adminPositions}?year=${year}`, {
-        scroll: false
-      })
-    )
+  const navigate = (href: string) => startTransition(() => router.push(href, { scroll: false }))
   return (
     <div className="flex flex-wrap items-end gap-4" aria-busy={pending}>
-      <Tabs
-        value={selectedYear === undefined ? "current" : "history"}
-        onValueChange={(value) => navigate(value === "current" ? undefined : years[0])}
+      <ToggleGroup
+        aria-label={t("period")}
+        value={[view]}
+        onValueChange={(values) => {
+          const next = values[0] as PositionView | undefined
+          if (next && next !== view) navigate(positionsViewHref(next, selectedYear))
+        }}
+        disabled={pending}
       >
-        <TabsList aria-label={t("period")}>
-          <TabsTrigger value="current" disabled={pending}>
-            {t("current")}
-          </TabsTrigger>
-          <TabsTrigger value="history" disabled={pending}>
-            {t("history")}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      {selectedYear !== undefined ? (
+        <ToggleGroupItem value="historical">{t("history")}</ToggleGroupItem>
+        <ToggleGroupItem value="current">{t("current")}</ToggleGroupItem>
+        <ToggleGroupItem value="future">{t("future")}</ToggleGroupItem>
+      </ToggleGroup>
+      {view === "historical" ? (
         <Field className="w-fit min-w-40">
           <FieldLabel htmlFor={id}>{t("year")}</FieldLabel>
           <Select
             value={String(selectedYear)}
-            onValueChange={(value) => value && navigate(Number(value))}
+            onValueChange={(value) => value && navigate(positionsViewHref("historical", Number(value)))}
             items={years.map((year) => ({
               value: String(year),
               label: t("yearValue", { start: year, end: year + 1 })

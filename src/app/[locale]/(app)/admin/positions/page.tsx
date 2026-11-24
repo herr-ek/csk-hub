@@ -2,12 +2,17 @@ import { Suspense } from "react"
 import { requirePermission } from "@/core/authz"
 import { PositionsScreen, PositionsScreenSkeleton } from "@/features/org-structure"
 
-type SearchParams = Promise<{ year?: string | string[] }>
+type SearchParams = Promise<{ view?: string | string[]; year?: string | string[] }>
 
 async function AdminPositions({ searchParams }: { searchParams: SearchParams }) {
   await requirePermission({ action: "admin.access" })
-  const { year } = await searchParams
-  return <PositionsScreen requestedYear={typeof year === "string" ? year : undefined} />
+  const { view, year } = await searchParams
+  return (
+    <PositionsScreen
+      requestedView={typeof view === "string" ? view : undefined}
+      requestedYear={typeof year === "string" ? year : undefined}
+    />
+  )
 }
 
 export default function AdminPositionsPage({ searchParams }: { searchParams: SearchParams }) {

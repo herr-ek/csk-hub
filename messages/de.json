@@ -1402,7 +1402,7 @@
     "description": "Aktuelle Amtsinhaber in ganz CSK mit Verlauf nach Organisationsjahr.",
     "period": "Zeitraum der Ämter",
     "current": "Aktuell",
-    "history": "Verlauf",
+    "history": "Historisch",
     "year": "Organisationsjahr",
     "yearValue": "{start}/{end}",
     "currentHelp": "Heute besetzte Ämter in aktiven Gruppen.",
@@ -1414,6 +1414,8 @@
     "gigs": "Gig-Ensembles",
     "tenure": "{start} – {end}",
     "ongoing": "Laufend",
-    "vacant": "Unbesetzt"
+    "vacant": "Unbesetzt",
+    "future": "Zukunft",
+    "futureHelp": "Ämter, die zu einem künftigen Datum übernommen werden, in aktiven Gruppen, einschließlich unbesetzter Ämter. Bestimmungen erscheinen hier, bevor sie beginnen."
   }
 }

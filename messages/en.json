@@ -1402,7 +1402,7 @@
     "description": "Current position holders across CSK, with history by organisational year.",
     "period": "Position period",
     "current": "Current",
-    "history": "History",
+    "history": "Historical",
     "year": "Organisational year",
     "yearValue": "{start}/{end}",
     "currentHelp": "Positions held today in active groups.",
@@ -1414,6 +1414,8 @@
     "gigs": "Gig groups",
     "tenure": "{start} – {end}",
     "ongoing": "Ongoing",
-    "vacant": "Vacant"
+    "vacant": "Vacant",
+    "future": "Future",
+    "futureHelp": "Positions taken up on a future date in active groups, including vacancies. Appointments appear here before they start."
   }
 }

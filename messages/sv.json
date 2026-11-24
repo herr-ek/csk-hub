@@ -1402,7 +1402,7 @@
     "description": "Nuvarande postinnehavare i hela CSK, med historik per verksamhetsår.",
     "period": "Period för poster",
     "current": "Nuvarande",
-    "history": "Historik",
+    "history": "Historisk",
     "year": "Verksamhetsår",
     "yearValue": "{start}/{end}",
     "currentHelp": "Poster som innehas idag i aktiva grupper.",
@@ -1414,6 +1414,8 @@
     "gigs": "Giggrupper",
     "tenure": "{start} – {end}",
     "ongoing": "Löpande",
-    "vacant": "Vakant"
+    "vacant": "Vakant",
+    "future": "Kommande",
+    "futureHelp": "Poster som tillträds vid ett senare datum i aktiva grupper, inklusive vakanser. Utnämningar visas här innan de börjar."
   }
 }

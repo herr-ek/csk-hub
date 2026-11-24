@@ -6,11 +6,28 @@ import { GroupType, positionCodeKey, shiftDate } from "@/core/org-structure"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cskToday } from "../../effective-reads"
-import { listPositionHistoryYears, listPositionOverview, type PositionOverview } from "../../position-overview"
+import {
+  listFuturePositionOverview,
+  listPositionHistoryYears,
+  listPositionOverview,
+  type PositionOverview
+} from "../../position-overview"
 import { listLocalizedGroupLabels } from "../group-labels"
-import { PositionPeriodPicker } from "./PositionPeriodPicker"
+import { PositionPeriodPicker, type PositionView } from "./PositionPeriodPicker"
 
-export async function PositionsScreen({ requestedYear }: { requestedYear?: string }) {
+const helpKey = {
+  historical: "historyHelp",
+  current: "currentHelp",
+  future: "futureHelp"
+} as const
+
+export async function PositionsScreen({
+  requestedView,
+  requestedYear
+}: {
+  requestedView?: string
+  requestedYear?: string
+}) {
   const today = cskToday()
   const [years, labels, t, positions, format] = await Promise.all([
     listPositionHistoryYears(db, today),
@@ -20,8 +37,19 @@ export async function PositionsScreen({ requestedYear }: { requestedYear?: strin
     getFormatter()
   ])
   const parsed = requestedYear ? Number(requestedYear) : undefined
-  const year = parsed !== undefined && years.includes(parsed) ? parsed : undefined
-  const contexts = await listPositionOverview(db, today, year)
+  const year = parsed !== undefined && years.includes(parsed) ? parsed : years[0]
+  const view: PositionView =
+    requestedView === "future"
+      ? "future"
+      : requestedView === "current"
+        ? "current"
+        : requestedView === "historical" || requestedYear
+          ? "historical"
+          : "current"
+  const contexts =
+    view === "future"
+      ? await listFuturePositionOverview(db, today)
+      : await listPositionOverview(db, today, view === "historical" ? year : undefined)
   const label = (context: PositionOverview[number]) =>
     labels.get(context.group.id) ?? context.group.name ?? context.group.type
   const sorted = contexts.sort(
@@ -76,8 +104,8 @@ export async function PositionsScreen({ requestedYear }: { requestedYear?: strin
         <h1 className="font-heading text-2xl font-semibold">{t("title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
       </div>
-      <PositionPeriodPicker years={years} selectedYear={year} />
-      <p className="text-sm text-muted-foreground">{year === undefined ? t("currentHelp") : t("historyHelp")}</p>
+      <PositionPeriodPicker years={years} view={view} selectedYear={year} />
+      <p className="text-sm text-muted-foreground">{t(helpKey[view])}</p>
       {contexts.length === 0 ? <p className="text-muted-foreground">{t("empty")}</p> : null}
       {categories
         .filter(({ contexts }) => contexts.length > 0)

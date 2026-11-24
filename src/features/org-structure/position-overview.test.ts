@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { GroupType, PositionCode } from "@/core/org-structure"
 import { appointPosition, createOrganisationGroup } from "./appointments"
 import { addDirectMembership } from "./direct-membership"
-import { listPositionHistoryYears, listPositionOverview } from "./position-overview"
+import { listFuturePositionOverview, listPositionHistoryYears, listPositionOverview } from "./position-overview"
 import { archiveGroup } from "./structure"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
 
@@ -141,6 +141,25 @@ describe.skipIf(!database)("organisation-wide Position overview", () => {
     expect(sections.length).toBeGreaterThan(0)
     for (const section of sections)
       expect(section.positions.map(({ code }) => code)).toEqual([PositionCode.SectionParent])
+  })
+
+  test("future view lists only prepared tenures, with vacancies for Positions nobody is prepared for", async () => {
+    const future = await listFuturePositionOverview(t.db, "2026-10-22")
+    const futureBoard = future.find(({ group }) => group.id === board)
+    expect(futureBoard?.positions.map(({ code }) => code)).toEqual([
+      PositionCode.Chair,
+      PositionCode.ViceChair,
+      PositionCode.Treasurer,
+      PositionCode.Secretary,
+      PositionCode.PublicRelationsOfficer,
+      PositionCode.FirstConcertMaster,
+      PositionCode.OrganisationGigCoordinator,
+      PositionCode.SocialCoordinator
+    ])
+    const treasurer = futureBoard?.positions.find(({ code }) => code === PositionCode.Treasurer)?.holders
+    expect(treasurer).toMatchObject([{ name: "Prepared treasurer", periods: [{ startDate: "2027-01-01" }] }])
+    expect(futureBoard?.positions.find(({ code }) => code === PositionCode.Chair)?.holders).toEqual([])
+    expect(future.some(({ group }) => group.id === archivedGig)).toBe(false)
   })
 
   test("year history lists both annual and fluid handover holders under their Position", async () => {
