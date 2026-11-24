@@ -161,7 +161,11 @@ async function menu(): Promise<void> {
           hint: `Choirs, Sections, Styret, Positions, against ${target}`
         },
         localOnlyOption("reset", "Reset local database"),
-        { value: "seed-admin", label: "Seed admin", hint: `generated password, against ${target}` },
+        {
+          value: "seed-admin",
+          label: "Seed admin",
+          hint: `${target === "local" ? 'password "password"' : "generated password"}, against ${target}`
+        },
         localOnlyOption("seed-users", "Seed users"),
         localOnlyOption("seed-groups", "Seed groups"),
         localOnlyOption("seed-posts", "Seed Posts"),
