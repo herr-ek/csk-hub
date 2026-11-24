@@ -27,3 +27,7 @@ export { EventScreen, EventScreenSkeleton } from "./ui/editor/EventScreen"
 export { NewEventScreen, NewEventScreenSkeleton } from "./ui/editor/NewEventScreen"
 export { EventsScreen, EventsScreenSkeleton } from "./ui/list/EventsScreen"
 export { LocationsScreen, LocationsScreenSkeleton } from "./ui/locations/LocationsScreen"
+export {
+  RehearsalScheduleScreen,
+  RehearsalScheduleScreenSkeleton
+} from "./ui/schedule/RehearsalScheduleScreen"

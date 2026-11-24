@@ -57,6 +57,13 @@ export const ERROR_FIELD: Record<EventCommandError, EventFormField> = {
   "absence-reason-archived": "form",
   "absence-reason-label-required": "form",
   "absence-reason-label-taken": "form",
+  // The rehearsal generator shows every failure below itself.
+  "last-day-before-first": "form",
+  "date-in-past": "form",
+  "no-dates": "form",
+  "too-many-dates": "form",
+  "series-name-required": "form",
+  "not-a-choir": "form",
   "invalid-input": "form",
   "access-denied": "form",
   unexpected: "form"

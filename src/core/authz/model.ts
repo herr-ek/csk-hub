@@ -20,15 +20,25 @@ type GroupWorkContext = GroupContext &
   Readonly<{
     positionAppointments: readonly PositionAppointmentAttributes[]
   }>
-export type EventAttributes = Readonly<Pick<typeof event.$inferSelect, "id" | "organiserGroupId">>
-type EventContext = GroupWorkContext & Readonly<{ event: EventAttributes | null }>
+/** Every Group's type and state, so a policy can tell which appointments and Targets name the Board or a Choir. */
+type GroupCatalogueContext = Readonly<{ groups: readonly GroupAttributes[] }>
+type RehearsalScheduleContext = GroupCatalogueContext &
+  Readonly<{ positionAppointments: readonly PositionAppointmentAttributes[] }>
+export type EventAttributes = Readonly<Pick<typeof event.$inferSelect, "id" | "organiserGroupId" | "type" | "seriesId">>
+type EventContext = GroupWorkContext &
+  GroupCatalogueContext &
+  Readonly<{ event: EventAttributes | null; targets: readonly AudienceTarget[] }>
+/** What an update would make the Event: the Board may only keep it a Choir's Series Rehearsal. */
+export type ProposedEventAttributes = Readonly<{
+  type: (typeof event.$inferSelect)["type"]
+  targets: readonly AudienceTarget[]
+}>
 
 export type EventViewAttributes = EventAttributes &
   Readonly<Pick<typeof event.$inferSelect, "type" | "status" | "startsAt">>
 type EventViewContext = Omit<EventContext, "event"> &
   Readonly<{
     event: EventViewAttributes | null
-    targets: readonly AudienceTarget[]
     audienceMemberships: readonly AudienceMembership[]
     now: Date
   }>
@@ -62,10 +72,12 @@ export type PermissionContext = {
   "event.create": GroupWorkContext
   "event.read": EventContext
   "event.view": EventViewContext
-  "event.update": EventContext & Readonly<{ proposedOrganiser: GroupWorkContext }>
+  "event.update": EventContext &
+    Readonly<{ proposedOrganiser: GroupWorkContext; proposedEvent: ProposedEventAttributes }>
   "event.changeStatus": EventContext
   "event.delete": EventContext
   "event.administer": undefined
+  "event.scheduleRehearsals": RehearsalScheduleContext
   "org.manage": undefined
   "user.administer": undefined
   "notification.broadcast": undefined

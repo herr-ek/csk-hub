@@ -23,6 +23,7 @@ export class RuleViolation extends Error {
  */
 const CONSTRAINT_VIOLATIONS: Record<string, EventViolation> = {
   event_title_not_blank_check: "title-required",
+  event_series_name_not_blank_check: "series-name-required",
   event_period_check: "ends-before-start",
   event_call_time_check: "call-time-after-start",
   event_respond_by_check: "respond-by-after-start",

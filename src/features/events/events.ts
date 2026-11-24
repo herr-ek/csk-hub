@@ -67,14 +67,17 @@ export type EventInput = {
 /**
  * Creates a Draft with its extension row, Targets and Event details, in one transaction. Without
  * a Participation mode it takes the type's default. A Location and an Organiser group must be
- * active, as must every Target group.
+ * active, as must every Target group. A Series, if given, is the one this Event is an occurrence of.
  */
-export function createEvent(database: EventsDatabase, input: EventInput & { createdBy: string | null }) {
+export function createEvent(
+  database: EventsDatabase,
+  input: EventInput & { createdBy: string | null; seriesId?: string | null }
+) {
   return runEventCommand(database, async (tx) => {
     const values = await eventValues(tx, input, undefined)
     const [created] = await tx
       .insert(event)
-      .values({ ...values, status: "Draft", createdBy: input.createdBy })
+      .values({ ...values, status: "Draft", createdBy: input.createdBy, seriesId: input.seriesId ?? null })
       .returning({ id: event.id })
     if (!created) throw new Error("Event creation did not return a record.")
     await writeParts(tx, created.id, input, new Set())
@@ -111,6 +114,23 @@ export function updateEvent(database: EventsDatabase, eventId: string, input: Ev
     await tx.delete(eventDetail).where(eq(eventDetail.eventId, eventId))
     const kept = new Set(currentTargets.flatMap(({ groupId }) => (groupId ? [groupId] : [])))
     await writeParts(tx, eventId, input, kept)
+  })
+}
+
+/**
+ * Changes only the Event's Location, or clears it with null; its free-text place is left as it
+ * is. A newly chosen Location must be active; the one the Event already has may stay archived.
+ */
+export function setEventLocation(database: EventsDatabase, eventId: string, locationId: string | null) {
+  return runEventCommand(database, async (tx) => {
+    const [current] = await tx
+      .select({ locationId: event.locationId })
+      .from(event)
+      .where(eq(event.id, eventId))
+      .for("update")
+    if (!current) throw new RuleViolation("event-not-found")
+    if (locationId) await requireLocation(tx, locationId, locationId === current.locationId)
+    await tx.update(event).set({ locationId }).where(eq(event.id, eventId))
   })
 }
 

@@ -13,7 +13,7 @@ bun run ops studio               # Drizzle Studio against the local database
 bun run ops grant-admin <email>  # make an existing user an admin
 bun run ops reference-data       # Choirs, Sections and fixed Groups; also with --prod
 bun run ops reset                # erase the local database, migrate it and add the reference data
-bun run ops seed-admin           # admin@example.com with a generated password; also with --prod
+bun run ops seed-admin           # admin@example.com, password "password"; generated with --prod
 bun run ops seed-users           # 100 verified local example accounts, including three Admins
 bun run ops seed-groups          # balanced placements, groups, Positions and their history
 bun run ops seed-posts           # 24 published example Posts, after seed-users
@@ -59,7 +59,9 @@ child as `POSTGRES_URL`. `drizzle.config.ts` only reads that already-resolved va
   every migration and creates the reference data, but seeds nothing.
 - `seed-admin` against production also requires typing `prod`. It is allowed there because
   it creates one admin, `admin@example.com`, with a random password printed once to the
-  terminal. If the account already exists, its password is left unchanged.
+  terminal. If the account already exists there, its password is left unchanged. Locally the
+  password is always `password`, like the other seeded accounts, and an existing local admin's
+  password is reset to it.
 - Every other seed refuses outright and exits non-zero with `--prod`. Those seed scripts also
   refuse any `POSTGRES_URL` that is not a local database, including when run by hand.
 

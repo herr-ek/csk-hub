@@ -210,12 +210,16 @@ export async function listGroupNames(database: OrgStructureDatabase, groupIds: s
 }
 
 /**
- * Whether a group exists and is active, for another feature's command about to refer to it. The
+ * Whether a group exists, its type and whether it is active, for another feature's command about to refer to it. The
  * group stays locked against concurrent archiving until the caller's transaction ends. Null when
  * there is no such group.
  */
 export async function lockGroupForReference(tx: OrgStructureTransaction, groupId: string) {
-  const [row] = await tx.select({ active: group.active }).from(group).where(eq(group.id, groupId)).for("share")
+  const [row] = await tx
+    .select({ active: group.active, type: group.type })
+    .from(group)
+    .where(eq(group.id, groupId))
+    .for("share")
   return row ?? null
 }
 

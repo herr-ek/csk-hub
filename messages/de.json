@@ -215,7 +215,8 @@
       "adminAbsenceReasons": "Abwesenheitsgründe",
       "eventsNew": "Neue Veranstaltung",
       "eventsManage": "Veranstaltungen verwalten",
-      "adminOidcClients": "OIDC-Clients"
+      "adminOidcClients": "OIDC-Clients",
+      "eventsRehearsals": "Probenplan"
     },
     "members": "Mitglieder",
     "quickAccess": "Schnellzugriff",
@@ -964,7 +965,13 @@
       "absence-reason-label-taken": "Ein aktiver Grund hat bereits diesen Wortlaut.",
       "invalid-input": "Einige Werte sind ungültig. Prüfe das Formular und versuche es erneut.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
-      "access-denied": "Du hast keine Berechtigung mehr, diese Veranstaltung zu verwalten."
+      "access-denied": "Du hast keine Berechtigung mehr, diese Veranstaltung zu verwalten.",
+      "last-day-before-first": "Der letzte Tag muss am oder nach dem ersten Tag liegen.",
+      "date-in-past": "Proben können nicht in der Vergangenheit angesetzt werden.",
+      "no-dates": "Es gibt keine Termine zum Anlegen. Wähle einen Zeitraum, der den Wochentag enthält, und hake mindestens einen Termin an.",
+      "too-many-dates": "Eine Reihe umfasst höchstens 26 Proben. Verkürze den Zeitraum.",
+      "series-name-required": "Gib der Reihe einen Namen.",
+      "not-a-choir": "Wähle einen Chor."
     },
     "form": {
       "saved": "Veranstaltung gespeichert.",
@@ -1081,7 +1088,8 @@
       "voiceInGroup": "{voice} in {group}",
       "voiceInCsk": "{voice} in CSK",
       "audience": "Für {audience}",
-      "organisedBy": "Ausgerichtet von {group}"
+      "organisedBy": "Ausgerichtet von {group}",
+      "rehearsalSchedule": "Probenplan"
     },
     "locations": {
       "title": "Orte",
@@ -1210,6 +1218,57 @@
       "late": "Verspätet",
       "notAnsweredTitle": "Nicht geantwortet ({count})",
       "everyoneAnswered": "Alle haben geantwortet."
+    },
+    "schedule": {
+      "title": "Probenplan",
+      "description": "Lege die wöchentlichen Proben jedes Chors für ein Semester an, und passe sie danach an und veröffentliche sie.",
+      "generator": {
+        "heading": "Neue Probenreihe",
+        "intro": "Legt Proben als Entwürfe für einen Chor an einem Wochentag an. Niemand sieht sie, bevor sie veröffentlicht sind.",
+        "choir": "Chor",
+        "chooseChoir": "Wähle einen Chor",
+        "weekday": "Wochentag",
+        "firstDay": "Erster Tag",
+        "lastDay": "Letzter Tag",
+        "startTime": "Beginn",
+        "endTime": "Ende",
+        "location": "Ort",
+        "noLocation": "Kein Ort",
+        "eventTitle": "Titel",
+        "defaultTitle": "Probe",
+        "seriesName": "Name der Reihe",
+        "seriesNameDefault": "{choir}, Proben {term, select, autumn {Herbst} other {Frühjahr}} {year}",
+        "preview": "Termine anzeigen",
+        "previewing": "Termine werden gesucht…",
+        "datesHeading": "Termine",
+        "datesHelp": "Entferne den Haken bei Terminen ohne Probe. Ein Termin, an dem der Chor schon probt, ist anfangs nicht angehakt.",
+        "taken": "Hat schon eine Probe",
+        "create": "{count, plural, =0 {Proben anlegen} one {# Probe anlegen} other {# Proben anlegen}}",
+        "creating": "Wird angelegt…",
+        "created": "Die Proben wurden als Entwürfe angelegt.",
+        "change": "Ändern"
+      },
+      "list": {
+        "heading": "Proben in einer Reihe",
+        "choir": "Chor",
+        "allChoirs": "Alle Chöre",
+        "when": "Welche Proben",
+        "upcoming": "Anstehend",
+        "past": "Vergangen",
+        "noUpcoming": "Keine anstehenden Proben in einer Reihe.",
+        "noPast": "Keine vergangenen Proben in einer Reihe.",
+        "location": "Ort von {title}",
+        "noLocation": "Kein Ort",
+        "locationSaved": "Ort gespeichert.",
+        "edit": "Bearbeiten",
+        "choirAndSeries": "{choir} · {series}"
+      },
+      "publish": {
+        "button": "{count, plural, one {# Entwurf veröffentlichen} other {# Entwürfe veröffentlichen}}",
+        "title": "Entwürfe veröffentlichen?",
+        "explanation": "{count, plural, one {# Probe in dieser Liste, die ein Entwurf ist, wird} other {# Proben in dieser Liste, die Entwürfe sind, werden}} für ihren Chor sichtbar, der dann antworten kann. Veröffentlichte Proben können später abgesagt werden, werden aber nie wieder Entwürfe.",
+        "done": "Die Entwürfe wurden veröffentlicht."
+      }
     }
   },
   "Realtime": {

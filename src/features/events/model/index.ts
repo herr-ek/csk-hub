@@ -1,5 +1,6 @@
 import type { eventStatus, eventType, participationMode, rsvpAnswer } from "@/core/db/schema/events"
 
+export { MAX_SERIES_DATES, WEEKDAYS, type Weekday, weekdayOf, weeklyDates } from "./rehearsal-dates"
 export { type RehearsalKind, rehearsalKind } from "./rehearsal-kind"
 export type { EventResult, EventViolation } from "./result"
 export {

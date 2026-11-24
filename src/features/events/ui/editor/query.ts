@@ -56,7 +56,7 @@ const GROUP_TYPE_ORDER: Partial<Record<GroupType, number>> = { [GroupType.Choir]
  * one the Event already uses, so editing it never silently drops a value.
  */
 export async function getEventFormOptions(
-  kept: { locationIds?: string[]; groupIds?: string[]; userIds?: string[] } = {},
+  kept: { locationIds?: string[]; groupIds?: string[]; userIds?: string[]; organiserGroupId?: string | null } = {},
   database: Database = db
 ) {
   return database.transaction(async (database) => {
@@ -81,7 +81,10 @@ export async function getEventFormOptions(
     return {
       canCreate: access.actor?.isAdmin === true || groupIds.length > 0,
       locations,
-      organiserGroups: groups.filter((group) => access.actor?.isAdmin || groupIds.includes(group.id)),
+      // The Event's own organiser stays offered, as the Board edits Choir rehearsals it cannot organise.
+      organiserGroups: groups.filter(
+        (group) => access.actor?.isAdmin || groupIds.includes(group.id) || group.id === kept.organiserGroupId
+      ),
       groups: groups.sort(
         (a, b) =>
           (GROUP_TYPE_ORDER[a.type] ?? 2) - (GROUP_TYPE_ORDER[b.type] ?? 2) || a.name.localeCompare(b.name, "sv")
@@ -158,7 +161,8 @@ export async function getEventEditor(eventId: string) {
       {
         locationIds: stored.locationId ? [stored.locationId] : [],
         groupIds,
-        userIds
+        userIds,
+        organiserGroupId: stored.organiserGroupId
       },
       db
     )

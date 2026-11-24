@@ -215,7 +215,8 @@
       "adminAbsenceReasons": "Frånvaroanledningar",
       "eventsNew": "Nytt evenemang",
       "eventsManage": "Hantera evenemang",
-      "adminOidcClients": "OIDC-klienter"
+      "adminOidcClients": "OIDC-klienter",
+      "eventsRehearsals": "Repetitionsschema"
     },
     "members": "Medlemmar",
     "quickAccess": "Snabbåtkomst",
@@ -964,7 +965,13 @@
       "absence-reason-label-taken": "Det finns redan en aktiv anledning med den formuleringen.",
       "invalid-input": "Några av värdena är ogiltiga. Kontrollera formuläret och försök igen.",
       "unexpected": "Något gick fel. Försök igen.",
-      "access-denied": "Du har inte längre behörighet att hantera detta evenemang."
+      "access-denied": "Du har inte längre behörighet att hantera detta evenemang.",
+      "last-day-before-first": "Sista dagen måste vara samma dag som eller efter första dagen.",
+      "date-in-past": "Repetitioner kan inte läggas i det förflutna.",
+      "no-dates": "Det finns inga datum att skapa. Välj ett intervall som innehåller veckodagen och kryssa i minst ett datum.",
+      "too-many-dates": "En serie rymmer högst 26 repetitioner. Korta intervallet.",
+      "series-name-required": "Ge serien ett namn.",
+      "not-a-choir": "Välj en kör."
     },
     "form": {
       "saved": "Evenemanget har sparats.",
@@ -1081,7 +1088,8 @@
       "voiceInGroup": "{voice} i {group}",
       "voiceInCsk": "{voice} i CSK",
       "audience": "För {audience}",
-      "organisedBy": "Arrangeras av {group}"
+      "organisedBy": "Arrangeras av {group}",
+      "rehearsalSchedule": "Repetitionsschema"
     },
     "locations": {
       "title": "Platser",
@@ -1210,6 +1218,57 @@
       "late": "Sent",
       "notAnsweredTitle": "Inte svarat ({count})",
       "everyoneAnswered": "Alla har svarat."
+    },
+    "schedule": {
+      "title": "Repetitionsschema",
+      "description": "Lägg upp varje körs veckorepetitioner för en termin, och justera och publicera dem sedan.",
+      "generator": {
+        "heading": "Ny repetitionsserie",
+        "intro": "Skapar repetitioner som utkast för en kör på en veckodag. Ingen ser dem förrän de publiceras.",
+        "choir": "Kör",
+        "chooseChoir": "Välj en kör",
+        "weekday": "Veckodag",
+        "firstDay": "Första dagen",
+        "lastDay": "Sista dagen",
+        "startTime": "Börjar",
+        "endTime": "Slutar",
+        "location": "Plats",
+        "noLocation": "Ingen plats",
+        "eventTitle": "Titel",
+        "defaultTitle": "Repetition",
+        "seriesName": "Seriens namn",
+        "seriesNameDefault": "{choir}, repetitioner {term, select, autumn {hösten} other {våren}} {year}",
+        "preview": "Visa datum",
+        "previewing": "Hämtar datum…",
+        "datesHeading": "Datum",
+        "datesHelp": "Kryssa ur datum utan repetition. Ett datum då kören redan repeterar är urkryssat från början.",
+        "taken": "Har redan en repetition",
+        "create": "{count, plural, =0 {Skapa repetitioner} one {Skapa # repetition} other {Skapa # repetitioner}}",
+        "creating": "Skapar…",
+        "created": "Repetitionerna har skapats som utkast.",
+        "change": "Ändra"
+      },
+      "list": {
+        "heading": "Repetitioner i en serie",
+        "choir": "Kör",
+        "allChoirs": "Alla körer",
+        "when": "Vilka repetitioner",
+        "upcoming": "Kommande",
+        "past": "Tidigare",
+        "noUpcoming": "Inga kommande repetitioner i en serie.",
+        "noPast": "Inga tidigare repetitioner i en serie.",
+        "location": "Plats för {title}",
+        "noLocation": "Ingen plats",
+        "locationSaved": "Platsen har sparats.",
+        "edit": "Redigera",
+        "choirAndSeries": "{choir} · {series}"
+      },
+      "publish": {
+        "button": "{count, plural, one {Publicera # utkast} other {Publicera # utkast}}",
+        "title": "Publicera utkasten?",
+        "explanation": "{count, plural, one {# repetition som är utkast i listan blir synlig} other {# repetitioner som är utkast i listan blir synliga}} för sin kör, som sedan kan svara. Publicerade repetitioner kan ställas in senare, men blir aldrig utkast igen.",
+        "done": "Utkasten har publicerats."
+      }
     }
   },
   "Realtime": {

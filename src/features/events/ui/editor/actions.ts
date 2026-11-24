@@ -42,7 +42,11 @@ export async function updateEventAction(
     (form) => ({
       action: "event.update",
       eventId: form.eventId,
-      proposed: { organiserGroupId: form.input.organiserGroupId ?? null }
+      proposed: {
+        organiserGroupId: form.input.organiserGroupId ?? null,
+        type: form.input.type,
+        targets: form.input.targets ?? []
+      }
     })
   )
   return state

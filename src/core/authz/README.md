@@ -11,8 +11,9 @@ application Post grants; the legacy application permission guards have been remo
 Posts, Post audience targets and Recalled Group Posts remain unimplemented.
 Event audience visibility and Responses are implemented. Delegated Response privacy and Section-scoped attendance
 remain deferred until those workflows exist.
-Event management uses organiser-bound `event.*` policies; `event.administer` remains Admin-only
-for Locations and Admin routes. See the adoption guide for the explicit policy list.
+Event management uses organiser-bound `event.*` policies, plus `event.scheduleRehearsals`, which
+lets the Board manage Choirs' Series Rehearsals; `event.administer` remains Admin-only for
+Locations and Admin routes. See the adoption guide for the explicit policy list.
 
 ## Reading order
 
