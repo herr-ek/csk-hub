@@ -2,14 +2,18 @@ import Link from "next/link"
 import { getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
 import { ROUTES } from "@/core/navigation/site"
+import { currentOrganisationYear } from "@/core/org-structure"
 import { Skeleton } from "@/shared/ui/base/skeleton"
+import { cskToday } from "../../effective-reads"
 import { CreateGroupDialog } from "./create-group-dialog"
 import { GroupsOverview } from "./overview"
+import { PrepareYearDialog } from "./PrepareYearDialog"
 import { getGroupsOverview } from "./query"
 
-/** The groups beside the Choirs' Sections, and the Positions they can have. */
+/** The groups beside the Choirs' Sections, with annual preparation controls. */
 export async function GroupsScreen() {
   const [overview, t] = await Promise.all([getGroupsOverview(), getTranslations("Groups")])
+  const currentYear = currentOrganisationYear(cskToday())
   const choirs = overview.choirs
     .filter(({ choir }) => choir.active)
     .map(({ choir }) => ({ id: choir.id, name: choir.name }))
@@ -28,7 +32,10 @@ export async function GroupsScreen() {
             {t("groupsPage.choirsLink")}
           </Link>
         </div>
-        <CreateGroupDialog choirs={choirs} />
+        <div className="flex flex-wrap gap-2">
+          <PrepareYearDialog currentYear={currentYear} />
+          <CreateGroupDialog choirs={choirs} currentYear={currentYear} />
+        </div>
       </div>
 
       <GroupsOverview overview={overview} />

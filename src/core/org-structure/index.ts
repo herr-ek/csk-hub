@@ -1,6 +1,7 @@
 import { GroupType } from "./identifiers"
 
 export {
+  annualAppointmentDefaults,
   cskToday,
   currentOrganisationYear,
   isAllowedOrganisationYear,

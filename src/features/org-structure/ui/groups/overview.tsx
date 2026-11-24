@@ -6,7 +6,7 @@ import { groupTypeKey } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/base/collapsible"
-import { EXPAND_TRIGGER, ExpandChevron, GroupItems, GroupList, ShowArchivedToggle } from "../group-list"
+import { EXPAND_TRIGGER, ExpandChevron, GroupItems, GroupList, GroupVisibilityToggle } from "../group-list"
 import type { GroupSummary } from "../group-summaries"
 import type { GroupsOverview as Overview } from "./query"
 
@@ -15,7 +15,9 @@ export function GroupsOverview({ overview }: { overview: Overview }) {
   const t = useTranslations("Groups")
   const types = useTranslations("Groups.types")
   const [showArchived, setShowArchived] = useState(false)
-  const visible = (groups: GroupSummary[]) => groups.filter(({ active }) => showArchived || active)
+  const [showFuture, setShowFuture] = useState(true)
+  const visible = (groups: GroupSummary[]) =>
+    groups.filter(({ active, phase }) => (phase === "future" ? showFuture : active || showArchived))
 
   const cskWide = visible(overview.cskWide)
   const cskWideTypes = [...new Set(cskWide.map(({ type }) => type))]
@@ -23,7 +25,10 @@ export function GroupsOverview({ overview }: { overview: Overview }) {
 
   return (
     <section className="flex flex-col gap-6">
-      <ShowArchivedToggle checked={showArchived} onChange={setShowArchived} />
+      <div className="flex flex-wrap justify-end gap-x-6 gap-y-3">
+        <GroupVisibilityToggle label={t("showFuture")} checked={showFuture} onChange={setShowFuture} />
+        <GroupVisibilityToggle label={t("showArchived")} checked={showArchived} onChange={setShowArchived} />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {choirs.map(({ choir, groups }) => (

@@ -56,8 +56,46 @@ Event audiences, including archived Groups and excluding periods ending at the r
 Admin commands authorize before parsing and again inside the transaction used by the command;
 protected screen queries establish their own `org.manage` boundary.
 
-The existing Admin screens support basic Group creation, direct participation, singer placement,
-and appointment assignment/end through this model. There is no runtime editor for formal Positions.
+Admin forms accept the inclusive last day and store the following day as the exclusive end.
+Non-annual archival preserves dated participation and still allows corrections to ended periods.
+Preparing an annual year creates its Groups without copying participation.
+
+## Public interface
+
+Import commands and reads from `@/features/org-structure`; fixed definitions and universal types
+come from `@/core/org-structure`. The public interface is server-only.
+
+Group workflows use `createOrganisationGroup`, `prepareOrganisationYear`,
+`listOrganisationGroups`, and `updateOrganisationGroup`. Preparing a year creates its concrete
+annual Groups without copying Members or appointments.
+
+Direct Membership workflows use `addDirectMembership`, `changeDirectMembership`,
+`correctDirectMembership`, `endDirectMembership`, `listDirectMemberships`,
+`listDirectMembershipsOfUser`, and `listDirectMembersAt`. Singer placement commands
+`startMembership`, `placeSinger`, `placeSingerInSection`, `changeVoice`, and `endMembership` use
+the same direct Membership rules and preserve the explicit Section Voice.
+
+Position workflows use `appointPosition`, `replaceAppointmentHolder`, `endAppointment`,
+`cancelPreparedAppointment`, `correctAnnualAppointment`, and `correctFluidAppointment`. The
+catalogue fixes each appointment's context type, prerequisite, grants, and annual or fluid end
+policy. Each correction command validates the selected Position's policy and recomputes the
+appointment's required target Groups. Effective reads derive participation from the updated appointment.
+
+Use effective reads whenever a caller needs Group participation, rather than adding the direct
+and appointed sides independently:
+
+- `listEffectiveMembersAt`, `listEffectiveMembersCurrent`, and
+  `listEffectiveMembersForGroupsAt` return one Membership per User and retain the appointments
+  and context that provide Position membership.
+- `listEffectiveParticipationOfUserAt` and `listEffectiveParticipationOfUserCurrent` show a
+  person's Memberships and appointments together.
+- `listEffectiveGroupsOfUserAt` shows the Groups a person belongs to on a date.
+- `listEffectiveChoirAffiliationsOfUsersAt` provides dated Choir and Section summaries for
+  multiple people.
+
+Historical and future records are evaluated against the date supplied to the read. “Current”
+reads use the same effective rules at today's date rather than equating a null end with permanent
+participation.
 
 ## Migration and verification
 
