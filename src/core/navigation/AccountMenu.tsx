@@ -5,9 +5,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react"
 import Link from "next/link"
 import { type FocusEvent, type KeyboardEvent, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
-import { buttonVariants } from "@/shared/ui/base/button"
 import { toast } from "@/shared/ui/base/toast"
-import { cn } from "@/shared/utils"
 import { logout } from "./logout"
 import { ROUTES } from "./site"
 
@@ -136,7 +134,8 @@ export function AccountMenu({ user }: { user: AccountUser }) {
               aria-label={t("myAccount")}
               aria-expanded={false}
               onClick={() => setOpen(true)}
-              className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "absolute inset-0 overflow-hidden p-0")}
+              // Not buttonVariants: its transition-all, active translate and border fight Motion's per-frame transforms.
+              className="absolute inset-0 cursor-pointer overflow-hidden outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
             >
               <UserAvatar user={user} />
             </motion.button>
