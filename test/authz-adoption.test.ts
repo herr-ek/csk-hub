@@ -52,7 +52,7 @@ describe.skipIf(!database)("adopted Post authorization", () => {
     expect(await getEditablePost(draft.id, t.db, admin.access.requirePermission)).toBeNull()
     expect(await getPublishedPost(draft.id, t.db, foreign)).toBeNull()
     await t.db.update(user).set({ banned: true }).where(eq(user.id, other.userId))
-    await expect(listNewsFeed(t.db, foreign)).rejects.toBeInstanceOf(AuthorizationDeniedError)
+    await expect(listNewsFeed(1, t.db, foreign)).rejects.toBeInstanceOf(AuthorizationDeniedError)
   })
 
   test("feature-owned Post locks serialize with recall; subsequent reads reject deactivation and revocation", async () => {

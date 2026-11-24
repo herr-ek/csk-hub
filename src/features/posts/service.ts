@@ -54,12 +54,21 @@ const publishedPostColumns = {
   editedAt: post.editedAt
 }
 
-/** The whole feed, newest first. Every signed-in User sees the same one, and no drafts. */
+export const NEWS_FEED_PAGE_SIZE = 20
+
+/**
+ * The first `pages` pages of the feed, newest first. Every signed-in User sees the same one,
+ * and no drafts. "Load more" asks for one page more, so the feed reads from the top each time.
+ */
 export async function listNewsFeed(
+  pages: number,
   database: PostsDatabase = db,
   authorize = requirePermission
-): Promise<NewsFeedEntry[]> {
+): Promise<{ entries: NewsFeedEntry[]; pages: number; hasMore: boolean }> {
   await authorize({ action: "app.access" }, database)
+  // The count arrives from the URL, so anything may.
+  const shown = Number.isSafeInteger(pages) && pages > 0 ? pages : 1
+  const limit = shown * NEWS_FEED_PAGE_SIZE
   const rows = await database
     .select(publishedPostColumns)
     .from(post)
@@ -67,9 +76,13 @@ export async function listNewsFeed(
     // in the feed.
     .leftJoin(user, eq(post.authorId, user.id))
     .where(isNotNull(post.publishedAt))
-    .orderBy(desc(post.publishedAt))
+    // The id breaks ties, so a Post never shows twice or goes missing across pages.
+    .orderBy(desc(post.publishedAt), desc(post.id))
+    // One row past the budget tells whether there is more, without counting the table.
+    .limit(limit + 1)
 
-  return rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
+  const entries = rows.flatMap((row) => (row.publishedAt ? [{ ...row, publishedAt: row.publishedAt }] : []))
+  return { entries: entries.slice(0, limit), pages: shown, hasMore: entries.length > limit }
 }
 
 /** One Post as an overview lists it: what it is called and who published it when. */

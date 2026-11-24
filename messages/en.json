@@ -233,6 +233,7 @@
     "formerMember": "Former member",
     "bylineSeparator": "·",
     "unread": "Unread",
+    "loadMore": "Load more",
     "titleLabel": "Title",
     "bodyLabel": "Post",
     "bodyPlaceholder": "Write the post. Type ## for a heading, - for a list.",
