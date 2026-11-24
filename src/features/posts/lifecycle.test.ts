@@ -138,6 +138,31 @@ describe.skipIf(!database)("a Post's lifecycle", () => {
     for (const invalid of [0, -1, Number.NaN, 1.5]) expect((await listNewsFeed(invalid)).pages).toBe(1)
   })
 
+  test("search finds published Posts by a word in the title or body, newest first", async () => {
+    const author = await newAdmin()
+    // A word no other test writes, so the shared database cannot add matches.
+    const word = `ord${crypto.randomUUID().replaceAll("-", "")}`
+    const inBody = await createPost(
+      { authorId: author, content: content("Repetition", `Ta med ${word}.`), publish: true },
+      db
+    )
+    const inTitle = await createPost({ authorId: author, content: content(`Om ${word}`), publish: true }, db)
+    await createPost({ authorId: author, content: content(word, word), publish: false }, db)
+    await db
+      .update(post)
+      .set({ publishedAt: new Date("2999-02-01T10:00:00Z") })
+      .where(eq(post.id, inBody.id))
+    const search = (query: string) => reads.searchNewsFeed(query, 1, db, authorizeAs(viewerId))
+
+    expect((await search(word)).entries.map((entry) => entry.id)).toEqual([inBody.id, inTitle.id])
+    // Words may fall in the title and the body alike.
+    expect((await search(`${word} repetition`)).entries.map((entry) => entry.id)).toEqual([inBody.id])
+    expect((await search(`${word} -repetition`)).entries.map((entry) => entry.id)).toEqual([inTitle.id])
+    expect((await search(`ord${crypto.randomUUID().replaceAll("-", "")}`)).entries).toEqual([])
+    expect((await search(`'); drop table post; --`)).entries).toEqual([])
+    expect(await row(inBody.id)).toBeDefined()
+  })
+
   test("saving a draft never marks it edited", async () => {
     const author = await newAdmin()
     const { id } = await createPost({ authorId: author, content: content("Första"), publish: false }, db)

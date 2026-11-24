@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm"
+import { and, desc, eq, isNotNull, isNull, type SQL, sql } from "drizzle-orm"
 import { z } from "zod"
 import { type AuthorizationDatabase, AuthorizationDeniedError, requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
@@ -60,10 +60,32 @@ export const NEWS_FEED_PAGE_SIZE = 20
  * The first `pages` pages of the feed, newest first. Every signed-in User sees the same one,
  * and no drafts. "Load more" asks for one page more, so the feed reads from the top each time.
  */
-export async function listNewsFeed(
+export function listNewsFeed(pages: number, database: PostsDatabase = db, authorize = requirePermission) {
+  return readNewsFeed(pages, undefined, database, authorize)
+}
+
+/**
+ * The published Posts whose title or body match `query`, paged and ordered like the feed.
+ * The query is the reader's own words in web-search syntax, so it is bound, never spliced in.
+ */
+export function searchNewsFeed(
+  query: string,
   pages: number,
   database: PostsDatabase = db,
   authorize = requirePermission
+) {
+  const terms = sql`websearch_to_tsquery('swedish', ${query})`
+  // One vector for title and body, so a query's words may fall in either, and need no migration.
+  // shortcut: this skips the `body_search` GIN index; fold the title into the generated column if the feed grows large.
+  const matches = sql`(to_tsvector('swedish', ${post.title}) || ${post.bodySearch}) @@ ${terms}`
+  return readNewsFeed(pages, matches, database, authorize)
+}
+
+async function readNewsFeed(
+  pages: number,
+  matches: SQL | undefined,
+  database: PostsDatabase,
+  authorize: typeof requirePermission
 ): Promise<{ entries: NewsFeedEntry[]; pages: number; hasMore: boolean }> {
   await authorize({ action: "app.access" }, database)
   // The count arrives from the URL, so anything may.
@@ -75,7 +97,7 @@ export async function listNewsFeed(
     // Left, not inner: an erased author leaves `author_id` null, and the Post still belongs
     // in the feed.
     .leftJoin(user, eq(post.authorId, user.id))
-    .where(isNotNull(post.publishedAt))
+    .where(and(isNotNull(post.publishedAt), matches))
     // The id breaks ties, so a Post never shows twice or goes missing across pages.
     .orderBy(desc(post.publishedAt), desc(post.id))
     // One row past the budget tells whether there is more, without counting the table.

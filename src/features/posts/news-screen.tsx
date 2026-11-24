@@ -1,3 +1,5 @@
+import { Search } from "lucide-react"
+import Form from "next/form"
 import Link from "next/link"
 import { Suspense } from "react"
 import { getRequestSession } from "@/core/auth/session.server"
@@ -9,15 +11,16 @@ import { ROUTES } from "@/core/navigation/site"
 import { RichTextContent } from "@/features/rich-text/view"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Badge } from "@/shared/ui/base/badge"
-import { buttonVariants } from "@/shared/ui/base/button"
+import { Button, buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
+import { Input } from "@/shared/ui/base/input"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
 import { UnpublishedNotice } from "./compose/UnpublishedNotice"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
-import { listNewsFeed, listOwnDrafts } from "./service"
+import { listNewsFeed, listOwnDrafts, searchNewsFeed } from "./service"
 import { listUnreadPostIds } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
@@ -67,10 +70,16 @@ async function listUnreadForCurrentUser() {
   return session ? listUnreadPostIds(session.user.id) : new Set<string>()
 }
 
-export async function NewsScreen({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
+export async function NewsScreen({
+  searchParams
+}: {
+  searchParams: Promise<{ query?: string | string[]; page?: string | string[] }>
+}) {
   const params = await searchParams
+  const query = typeof params.query === "string" ? params.query.trim() : ""
+  const page = typeof params.page === "string" ? Number(params.page) : 1
   const [{ entries, pages, hasMore }, unread, canPublish, t] = await Promise.all([
-    listNewsFeed(typeof params.page === "string" ? Number(params.page) : 1),
+    query ? searchNewsFeed(query, page) : listNewsFeed(page),
     listUnreadForCurrentUser(),
     can({ action: "post.create" }),
     getTranslations("Posts")
@@ -93,11 +102,37 @@ export async function NewsScreen({ searchParams }: { searchParams: Promise<{ pag
         </Suspense>
       ) : null}
 
+      <Form action={ROUTES.news} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <label htmlFor="news-search" className="mb-2 block text-sm font-medium">
+            {t("searchLabel")}
+          </label>
+          <Input
+            id="news-search"
+            name="query"
+            type="search"
+            maxLength={200}
+            defaultValue={query}
+            key={query}
+            placeholder={t("searchPlaceholder")}
+          />
+        </div>
+        <Button type="submit">
+          <Search className="size-4" aria-hidden="true" />
+          {t("search")}
+        </Button>
+        {query ? (
+          <Link href={ROUTES.news} className={buttonVariants({ variant: "outline" })}>
+            {t("clearSearch")}
+          </Link>
+        ) : null}
+      </Form>
+
       {entries.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>{t("emptyTitle")}</EmptyTitle>
-            <EmptyDescription>{t("emptyDescription")}</EmptyDescription>
+            <EmptyTitle>{t(query ? "noResultsTitle" : "emptyTitle")}</EmptyTitle>
+            <EmptyDescription>{t(query ? "noResultsDescription" : "emptyDescription")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -141,7 +176,7 @@ export async function NewsScreen({ searchParams }: { searchParams: Promise<{ pag
       )}
       {hasMore ? (
         <Link
-          href={`${ROUTES.news}?${new URLSearchParams({ page: String(pages + 1) })}`}
+          href={`${ROUTES.news}?${new URLSearchParams({ ...(query ? { query } : {}), page: String(pages + 1) })}`}
           scroll={false}
           className={cn(buttonVariants({ variant: "outline" }), "self-center")}
         >
