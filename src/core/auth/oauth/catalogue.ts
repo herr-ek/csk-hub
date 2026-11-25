@@ -10,14 +10,12 @@ export const signInScope = "openid"
 export const standardLoginScopes = ["profile", "email"] as const
 
 /**
- * A Hub-owned scope. `user:` entries are delegated access, `api:` entries are machine access;
+ * The Hub-owned scopes. `user:` entries are delegated access, `api:` entries are machine access;
  * neither kind exists yet, so both catalogues are empty.
  */
-export type CatalogueScope = { readonly scope: string }
-
 export type OAuthCatalogue = {
-  readonly userScopes: readonly CatalogueScope[]
-  readonly apiScopes: readonly CatalogueScope[]
+  readonly userScopes: readonly { readonly scope: `user:${string}` }[]
+  readonly apiScopes: readonly { readonly scope: `api:${string}` }[]
 }
 
 export const oauthCatalogue: OAuthCatalogue = { userScopes: [], apiScopes: [] }

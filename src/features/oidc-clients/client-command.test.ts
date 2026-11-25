@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { OAuthCatalogue } from "@/core/auth/oauth-catalogue"
+import type { OAuthCatalogue } from "@/core/auth/oauth/catalogue"
 import { createClientCommandSchema } from "./client-command"
 
 const catalogue: OAuthCatalogue = {

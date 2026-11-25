@@ -1,5 +1,5 @@
 import { authClient } from "@/core/auth/auth-client"
-import { isInvalidOAuthSignature, isOAuthRedirect } from "@/core/auth/oauth-continuation"
+import { isInvalidOAuthSignature, isOAuthRedirect } from "@/core/auth/oauth/continuation"
 
 export type EmailPasswordSignInInput = {
   email: string

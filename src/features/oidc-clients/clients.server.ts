@@ -3,8 +3,8 @@ import "server-only"
 import { headers } from "next/headers"
 import type { z } from "zod"
 import { auth } from "@/core/auth"
-import { readClientMetadata, readReleasedClaimsByClient, withReleasedClaims } from "@/core/auth/client-claims"
-import { type ClaimGroupId, oauthCatalogue, signInScope, standardLoginScopes } from "@/core/auth/oauth-catalogue"
+import { type ClaimGroupId, oauthCatalogue, signInScope, standardLoginScopes } from "@/core/auth/oauth/catalogue"
+import { readClientMetadata, readReleasedClaimsByClient, withReleasedClaims } from "@/core/auth/oauth/client-claims"
 import { requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { oauthClient } from "@/core/db/schema/auth"
@@ -77,7 +77,8 @@ export async function manageOidcClient(input: ClientCommand) {
     ...(command.signIn ? ["authorization_code"] : []),
     ...(command.clientCredentialsScopes.length > 0 ? ["client_credentials"] : [])
   ]
-  const scope = command.signIn ? [signInScope, ...command.scopes].join(" ") : undefined
+  // Always set: the plugin lets a client stored without scopes request every provider scope.
+  const scope = command.signIn ? [signInScope, ...command.scopes].join(" ") : ""
   const releasedClaims = command.signIn ? command.claimGroups : []
   const sharedSettings = {
     client_name: command.name,
@@ -115,7 +116,7 @@ export async function manageOidcClient(input: ClientCommand) {
         // The plugin cannot store an empty redirect list, so redirect URIs are left as stored when
         // sign-in is off. Without the authorization_code grant they are not used.
         redirect_uris: command.signIn ? command.redirectUrls : undefined,
-        scope: scope ?? "",
+        scope,
         response_types: command.signIn ? ["code"] : [],
         metadata: withReleasedClaims(current, releasedClaims)
       }

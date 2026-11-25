@@ -5,8 +5,8 @@ import type { Database } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
 import { bookieAccessRoles } from "./bookie-access"
+import { type ClaimGroupId, claimGroups, type OAuthCatalogue, oauthCatalogue, providerScopes } from "./catalogue"
 import { readClaimSettings } from "./client-claims"
-import { type ClaimGroupId, claimGroups, type OAuthCatalogue, oauthCatalogue, providerScopes } from "./oauth-catalogue"
 import { websiteAccessRoles } from "./website-access"
 
 // Management is exposed only through validated, Admin-only Server Actions. Direct server API

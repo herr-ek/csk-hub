@@ -3,7 +3,7 @@ import { passkey } from "@better-auth/passkey"
 import { admin, emailOTP, jwt, magicLink, openAPI, twoFactor, username } from "better-auth/plugins"
 import { app } from "@/core/config/app"
 import type { Database } from "@/core/db"
-import { createOAuthProvider } from "./oauth-provider"
+import { createOAuthProvider } from "./oauth/provider"
 import { adminPluginOptions } from "./permissions"
 
 /** Builds the shared auth pipeline in hook order for production and database-backed tests. */

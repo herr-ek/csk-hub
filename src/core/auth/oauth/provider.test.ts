@@ -12,12 +12,12 @@ import {
   organisationYearPeriod,
   PositionCode
 } from "@/core/org-structure"
-import { createTestDatabase } from "../../../test/database"
-import { createAuthPlugins } from "./auth-plugins"
+import { createTestDatabase } from "../../../../test/database"
+import { createAuthPlugins } from "../auth-plugins"
+import { type ClaimGroupId, claimGroups, type OAuthCatalogue, signInScope } from "./catalogue"
 import { readClaimSettings, readClientMetadata, withReleasedClaims } from "./client-claims"
-import { type ClaimGroupId, claimGroups, type OAuthCatalogue, signInScope } from "./oauth-catalogue"
-import { getOAuthResumePath } from "./oauth-continuation"
-import { createOAuthProvider, oauthDisabledPaths } from "./oauth-provider"
+import { getOAuthResumePath } from "./continuation"
+import { createOAuthProvider, oauthDisabledPaths } from "./provider"
 
 const database = await createTestDatabase()
 
@@ -511,8 +511,30 @@ describe.skipIf(!database)("Hub OIDC provider", () => {
 
     const machine = await provider.api.adminCreateOAuthClient({
       headers: owner.headers,
-      body: { ...machineBody, client_name: "Machine", client_credentials_scopes: ["api:test:read"] }
+      body: { ...machineBody, client_name: "Machine", scope: "", client_credentials_scopes: ["api:test:read"] }
     })
+    // Null would let the client request every provider scope if sign-in were ever enabled.
+    const [stored] = await t.db
+      .select({ scopes: schema.oauthClient.scopes })
+      .from(schema.oauthClient)
+      .where(eq(schema.oauthClient.clientId, machine.client_id))
+    expect(stored.scopes).not.toBeNull()
+
+    const loginClient = await register(owner.headers, { scope: `${signInScope} profile` })
+    for (const [id, error] of [
+      [loginClient.client_id, "invalid_scope"],
+      [machine.client_id, "unauthorized_client"]
+    ]) {
+      const refused = await provider.handler(
+        new Request(`${origin}/api/auth${authorization(id, { scope: "openid api:test:read" })}`, {
+          headers: { cookie: owner.cookie, accept: "text/html" }
+        })
+      )
+      const location = new URL(refused.headers.get("location") as string)
+      expect(location.searchParams.get("error")).toBe(error)
+      expect(location.searchParams.has("code")).toBe(false)
+    }
+
     async function clientCredentials(clientId: string, secret: string, scope: string) {
       return provider.handler(
         new Request(`${origin}/api/auth/oauth2/token`, {

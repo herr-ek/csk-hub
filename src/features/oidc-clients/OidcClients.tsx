@@ -7,7 +7,7 @@ import {
   oauthCatalogue,
   signInScope,
   standardLoginScopes
-} from "@/core/auth/oauth-catalogue"
+} from "@/core/auth/oauth/catalogue"
 import { useTranslations } from "@/core/i18n/translations"
 import { InputField } from "@/shared/forms/fields"
 import { Alert, AlertDescription } from "@/shared/ui/base/alert"

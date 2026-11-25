@@ -55,6 +55,9 @@ Use `src/shared` only for genuinely cross-feature modules:
 Use `src/core` for infrastructure, app shell modules, and stable application-wide domain contracts:
 
 - `src/core/auth`: Better Auth setup, server/client auth objects, plugins, cookie integration, and auth infrastructure tests.
+  `src/core/auth/oauth` holds the Hub's OIDC provider: the scope and claim group catalogue, claim
+  settings and eligibility, and sign-in continuation. `catalogue.ts` and `continuation.ts` are imported
+  by Client Components, so they stay free of database access; import modules directly, without a barrel.
 - `src/core/authz`: application authorization with a server-only entrypoint for fresh actor
   resolution and enforcement. Pure policies evaluate feature-supplied resource and relationship
   attributes; only actor resolution reads the database. It depends on auth and database schemas,

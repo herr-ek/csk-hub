@@ -8,7 +8,7 @@ import { db } from "@/core/db"
 import * as schema from "@/core/db/schema/auth"
 import { createAuthPlugins } from "./auth-plugins"
 import { getBaseURL } from "./base-url"
-import { oauthDisabledPaths } from "./oauth-provider"
+import { oauthDisabledPaths } from "./oauth/provider"
 
 export const authOptions = {
   appName: app.name,

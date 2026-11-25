@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { claimGroupIds, type OAuthCatalogue, standardLoginScopes } from "@/core/auth/oauth-catalogue"
+import { claimGroupIds, type OAuthCatalogue, standardLoginScopes } from "@/core/auth/oauth/catalogue"
 
 const clientId = z.string().min(1)
 

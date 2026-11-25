@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm"
 import { z } from "zod"
 import type { Database } from "@/core/db"
 import { oauthClient } from "@/core/db/schema/auth"
-import { type ClaimGroupId, claimGroupIds } from "./oauth-catalogue"
+import { type ClaimGroupId, claimGroupIds } from "./catalogue"
 
 /**
  * The only module that reads or writes the Hub's claim settings on an OAuth client. They live in
