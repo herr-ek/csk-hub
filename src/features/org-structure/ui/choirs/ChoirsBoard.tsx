@@ -2,7 +2,7 @@
 
 import { type ReactNode, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
-import { divisionsOf, isVoiceDivision, VOICE_DIVISIONS } from "@/features/voice/model"
+import { compareVoices, divisionsOf, isVoiceDivision, VOICE_DIVISIONS } from "@/features/voice/model"
 import { Badge } from "@/shared/ui/base/badge"
 import { Button } from "@/shared/ui/base/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/base/card"
@@ -126,7 +126,10 @@ function ChoirColumn({ choir, people, matches, onSelect }: ListProps & { choir: 
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         {choir.sections.map((section) => {
-          const singers = placed.filter(({ placement }) => placement.sectionId === section.id)
+          // People arrive by name, and the sort keeps that order within a division.
+          const singers = placed
+            .filter(({ placement }) => placement.sectionId === section.id)
+            .toSorted((a, b) => compareVoices(a.placement.voice, b.placement.voice))
           const divided = isVoiceDivision(section.voice)
           return (
             <section key={section.id} aria-labelledby={`section-${section.id}`}>
