@@ -12,7 +12,6 @@ import { NavigationFrame } from "./NavigationFrame"
 import { type NavLinkItem, NavLinks } from "./NavLinks"
 import { QuickAccessBar } from "./QuickAccessBar"
 import { RefreshOnReturn } from "./RefreshOnReturn"
-import type { NavigationRouteId } from "./site"
 import { TopNavigation } from "./TopNavigation"
 import { UnreadBadge, UnreadIndicator } from "./UnreadBadge"
 import type { UnreadSources } from "./unread-sources"
@@ -27,13 +26,9 @@ export interface AppNavigationTemplateProps {
   unreadSources?: UnreadSources
 }
 
-/** The avatar's place in the header, in a ring of glass from `md` up. */
-const avatarClass =
-  "pointer-events-auto relative col-start-1 row-start-1 justify-self-start md:glass md:col-start-3 md:justify-self-end md:rounded-full md:bg-neutral-200/40 md:p-1.75"
-
 export function AppNavigationTemplate({ config, unreadSources = {} }: AppNavigationTemplateProps) {
   const t = useTranslations("Navigation")
-  const itemsOf = (menu: readonly (DestinationId & NavigationRouteId)[]): NavLinkItem[] =>
+  const itemsOf = (menu: readonly DestinationId[]): NavLinkItem[] =>
     visibleDestinations(menu, config).map((id) => ({
       id,
       href: DESTINATIONS[id].href,
@@ -43,45 +38,45 @@ export function AppNavigationTemplate({ config, unreadSources = {} }: AppNavigat
 
   if (!config) {
     return (
-      <NavigationFrame>
-        <nav
-          aria-label={t("primary")}
-          className="pointer-events-auto col-start-3 row-start-1 flex items-center gap-1.5 justify-self-end"
-        >
-          <NavLinks items={itemsOf(MENUS.topBar)} />
-          <ThemeSwitch />
-        </nav>
-      </NavigationFrame>
+      <NavigationFrame
+        end={
+          <nav aria-label={t("primary")} className="flex items-center gap-1.5">
+            <NavLinks items={itemsOf(MENUS.topBar)} />
+            <ThemeSwitch />
+          </nav>
+        }
+      />
     )
   }
 
   return (
-    <CollapsingHeader>
-      <TopNavigation items={itemsOf(MENUS.topBar)} />
-      <div className="col-start-3 row-start-1 justify-self-end md:hidden">
-        <MobileNavigation
-          items={itemsOf(MENUS.sheet)}
-          indicator={<UnreadIndicator counts={Object.values(unreadSources)} />}
-        />
-      </div>
+    <>
+      <CollapsingHeader
+        links={<TopNavigation items={itemsOf(MENUS.topBar)} />}
+        end={
+          <div className="md:hidden">
+            <MobileNavigation
+              items={itemsOf(MENUS.sheet)}
+              indicator={<UnreadIndicator counts={Object.values(unreadSources)} />}
+            />
+          </div>
+        }
+        // One menu for every screen size: a second would share its Motion layoutIds and break the morph.
+        account={<AccountMenu user={config.user} />}
+      />
       <RefreshOnReturn />
-      {/* One menu for every screen size: a second would share its Motion layoutIds and break the morph. */}
-      <div className={avatarClass}>
-        <AccountMenu user={config.user} />
-      </div>
-    </CollapsingHeader>
+    </>
   )
 }
 
 /** The header before it is known who is looking: the shapes of what a signed-in User sees. */
 function NavigationPlaceholder() {
   return (
-    <NavigationFrame aria-busy>
-      <Skeleton className="col-start-2 row-start-1 hidden h-5 w-80 md:block lg:w-120" />
-      <div className={avatarClass}>
-        <Skeleton className="size-9 rounded-full" />
-      </div>
-    </NavigationFrame>
+    <NavigationFrame
+      aria-busy
+      links={<Skeleton className="h-5 w-80 lg:w-120" />}
+      account={<Skeleton className="size-9 rounded-full" />}
+    />
   )
 }
 

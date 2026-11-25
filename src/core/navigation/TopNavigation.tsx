@@ -10,6 +10,7 @@ import { cn } from "@/shared/utils"
 import { DESTINATIONS } from "./destinations"
 import type { NavLinkItem } from "./NavLinks"
 import { isActiveRoute } from "./navigation-utils"
+import { usePendingIndex } from "./use-pending-index"
 
 /** How far the mark stays inside its link's ends, a little short of the name. */
 const MARK_INSET_PX = 24
@@ -31,12 +32,9 @@ export function TopNavigation({ items }: { items: NavLinkItem[] }) {
   const lightX = useSpring(0, { stiffness: 350, damping: 35 })
   const lightY = useSpring(0, { stiffness: 350, damping: 35 })
 
-  // The link just followed, held while its page loads so the mark does not fall back to the old one in the meantime.
-  const [pending, setPending] = useState<{ index: number; from: string } | null>(null)
-  if (pending && pending.from !== pathname) setPending(null)
-
+  const [pendingIndex, choose] = usePendingIndex(pathname)
   const currentIndex = items.findIndex((item) => isActiveRoute(pathname, item.href))
-  const markedIndex = pending?.index ?? currentIndex
+  const markedIndex = pendingIndex ?? currentIndex
   const mark = useItemBox(listRef, markedIndex, items.length)
 
   /** The light trails the mouse, but starts where it enters rather than where it last left. */
@@ -53,7 +51,7 @@ export function TopNavigation({ items }: { items: NavLinkItem[] }) {
       onPointerEnter={(event) => moveLight(event, { jump: true })}
       onPointerMove={(event) => moveLight(event)}
       className={cn(
-        "group/bar pointer-events-auto relative col-start-2 row-start-1 hidden py-1 [--current:var(--primary)] md:block dark:[--current:color-mix(in_oklab,var(--primary),white_55%)]",
+        "group/bar relative py-1 [--current:var(--primary)] dark:[--current:color-mix(in_oklab,var(--primary),white_55%)]",
         // Swells a little when pressed, like the bar on small screens.
         "motion-safe:transition-[scale] motion-safe:duration-300 motion-safe:active:scale-[1.03]"
       )}
@@ -85,7 +83,7 @@ export function TopNavigation({ items }: { items: NavLinkItem[] }) {
                       <Link
                         href={item.href}
                         aria-current={current ? "page" : undefined}
-                        onNavigate={() => setPending({ index, from: pathname })}
+                        onNavigate={() => choose(index)}
                         className={cn(
                           "relative flex h-11 items-center rounded-xl px-4 font-medium text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:transition-colors",
                           index === markedIndex ? "text-(--current)" : "text-foreground/75 hover:text-foreground"

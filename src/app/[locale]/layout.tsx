@@ -96,7 +96,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       className={cn(
         "h-full",
         // Keeps what is scrolled or focused into view clear of the floating header.
-        "md:has-data-navigation:scroll-pt-20",
+        "md:has-data-navigation:scroll-pt-[calc(var(--header-height)_+_0.25rem)]",
         "antialiased",
         geistSans.variable,
         geistMono.variable,

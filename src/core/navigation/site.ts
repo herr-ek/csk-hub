@@ -32,7 +32,6 @@ export const ROUTES = {
 } as const
 
 export type RouteId = keyof typeof ROUTES
-export type NavigationRouteId = Exclude<RouteId, "home">
 
 /** Signed-in routes that have a place in the menu hierarchy, each labelled by `Navigation.routes.<id>`. */
 export type MenuRouteId =

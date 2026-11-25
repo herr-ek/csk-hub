@@ -6,13 +6,14 @@ import { usePathname, useRouter } from "next/navigation"
 import { type MouseEvent, type PointerEvent, type RefObject, Suspense, useEffect, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { cn } from "@/shared/utils"
-import { DESTINATIONS, MENUS } from "./destinations"
+import { DESTINATIONS, MENUS, visibleDestinations } from "./destinations"
 import { isActiveRoute } from "./navigation-utils"
 import { slotIndexAt } from "./quick-access"
 import { useCollapseOnScroll } from "./use-collapse-on-scroll"
+import { usePendingIndex } from "./use-pending-index"
 
-/** The main navigation slots, in order. */
-const SHORTCUTS = MENUS.quickAccess.map((id) => DESTINATIONS[id])
+/** The main navigation slots, in order. The bar is the same for every User, so it leaves out what only Admins see. */
+const SHORTCUTS = visibleDestinations(MENUS.quickAccess, { showAdmin: false }).map((id) => DESTINATIONS[id])
 
 /**
  * A white wash, hidden until the glass is pressed, that brightens it as an iOS tab bar does under a finger. The glass's
@@ -85,11 +86,7 @@ function Bar({ pathname }: { pathname: string | null }) {
   const activeIndex = pathname === null ? -1 : SHORTCUTS.findIndex((shortcut) => isActiveRoute(pathname, shortcut.href))
   const CollapsedIcon = activeIndex === -1 ? EllipsisIcon : SHORTCUTS[activeIndex].icon
 
-  // The slot just chosen, held while its page loads so the lens does not fall back to the old page in the meantime.
-  // It lapses by itself once the path changes.
-  const [pending, setPending] = useState<{ index: number; from: string | null } | null>(null)
-  const pendingIndex = pending?.from === pathname ? pending.index : null
-  const choose = (index: number) => setPending({ index, from: pathname })
+  const [pendingIndex, choose] = usePendingIndex(pathname)
 
   const rowRef = useRef<HTMLDivElement>(null)
   const { dragIndex, pressed, startGesture, onClickCapture } = useDragToSelect(rowRef, slotCount, (index) => {

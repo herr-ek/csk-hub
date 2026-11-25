@@ -16,19 +16,20 @@ type Destination = {
   /** The key of its name in the `Navigation` messages. */
   label: "events" | "news" | "messages" | "members" | "admin" | "login" | "profile" | "routes.home"
   icon: LucideIcon
-  audience: "member" | "admin" | "signedOut"
+  /** Who sees it: every signed-in User, only those with admin access, or only signed-out visitors. */
+  shownTo: "user" | "admin" | "signedOut"
 }
 
 /** Everything the navigation can link to. Client Components look destinations up by id, since an icon can't be a prop. */
 export const DESTINATIONS = {
-  home: { href: ROUTES.home, label: "routes.home", icon: House, audience: "member" },
-  events: { href: ROUTES.events, label: "events", icon: CalendarDays, audience: "member" },
-  news: { href: ROUTES.news, label: "news", icon: Newspaper, audience: "member" },
-  messages: { href: ROUTES.messages, label: "messages", icon: MessageCircle, audience: "member" },
-  members: { href: ROUTES.members, label: "members", icon: Users, audience: "member" },
-  account: { href: ROUTES.account, label: "profile", icon: CircleUser, audience: "member" },
-  admin: { href: ROUTES.admin, label: "admin", icon: Shield, audience: "admin" },
-  login: { href: ROUTES.login, label: "login", icon: LogIn, audience: "signedOut" }
+  home: { href: ROUTES.home, label: "routes.home", icon: House, shownTo: "user" },
+  events: { href: ROUTES.events, label: "events", icon: CalendarDays, shownTo: "user" },
+  news: { href: ROUTES.news, label: "news", icon: Newspaper, shownTo: "user" },
+  messages: { href: ROUTES.messages, label: "messages", icon: MessageCircle, shownTo: "user" },
+  members: { href: ROUTES.members, label: "members", icon: Users, shownTo: "user" },
+  account: { href: ROUTES.account, label: "profile", icon: CircleUser, shownTo: "user" },
+  admin: { href: ROUTES.admin, label: "admin", icon: Shield, shownTo: "admin" },
+  login: { href: ROUTES.login, label: "login", icon: LogIn, shownTo: "signedOut" }
 } as const satisfies Record<string, Destination>
 
 export type DestinationId = keyof typeof DESTINATIONS
@@ -49,8 +50,8 @@ export function visibleDestinations<Id extends DestinationId>(
   viewer: { showAdmin: boolean } | null
 ) {
   return menu.filter((id) => {
-    const { audience } = DESTINATIONS[id]
-    if (!viewer) return audience === "signedOut"
-    return audience === "member" || (audience === "admin" && viewer.showAdmin)
+    const { shownTo } = DESTINATIONS[id]
+    if (!viewer) return shownTo === "signedOut"
+    return shownTo === "user" || (shownTo === "admin" && viewer.showAdmin)
   })
 }

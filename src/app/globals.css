@@ -4,7 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* The header's links as icons: always below `lg`, and from `lg` while the header is collapsed. */
+/* The floating header's height from `md` up. Its spacer, the blur behind it and the page's scroll padding follow it. */
+:root {
+  --header-height: 4.75rem;
+}
+
+/*
+ * The header's links as icons: always below `lg`, and from `lg` while the header is collapsed (`CollapsingHeader` sets
+ * `data-collapsed`).
+ */
 @custom-variant compact-nav {
   @media (width < 64rem) {
     @slot;

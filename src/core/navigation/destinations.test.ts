@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import { MENUS, visibleDestinations } from "./destinations"
 
-const member = { showAdmin: false }
+const user = { showAdmin: false }
 const admin = { showAdmin: true }
 
 describe("visible destinations", () => {
-  test("members see the sections without Admin", () => {
-    expect(visibleDestinations(MENUS.topBar, member)).toEqual(["events", "news", "messages", "members"])
-    expect(visibleDestinations(MENUS.sheet, member)).toEqual(["news", "events", "messages", "members"])
+  test("Users see the sections without Admin", () => {
+    expect(visibleDestinations(MENUS.topBar, user)).toEqual(["events", "news", "messages", "members"])
+    expect(visibleDestinations(MENUS.sheet, user)).toEqual(["news", "events", "messages", "members"])
   })
 
   test("those with admin access see Admin last", () => {
@@ -20,10 +20,7 @@ describe("visible destinations", () => {
     expect(visibleDestinations(MENUS.sheet, null)).toEqual([])
   })
 
-  test("the quick-access bar is the same for every member", () => {
-    const slots = ["events", "news", "home", "messages", "account"] as const
-    expect(visibleDestinations(MENUS.quickAccess, member)).toEqual([...slots])
-    expect(visibleDestinations(MENUS.quickAccess, admin)).toEqual([...slots])
-    expect(visibleDestinations(MENUS.quickAccess, null)).toEqual([])
+  test("the quick-access bar, shown to every User alike, keeps all its slots", () => {
+    expect(visibleDestinations(MENUS.quickAccess, user)).toEqual(["events", "news", "home", "messages", "account"])
   })
 })
