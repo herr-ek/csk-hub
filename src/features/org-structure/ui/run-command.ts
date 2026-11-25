@@ -5,7 +5,6 @@ import type { z } from "zod"
 import { type AuthorizationDatabase, AuthorizationDeniedError, requirePermission } from "@/core/authz"
 import { db } from "@/core/db"
 import { logger } from "@/core/logging"
-import { ROUTES } from "@/core/navigation/site"
 import type { OrgStructureResult } from "@/core/org-structure"
 import { getErrorCode, getErrorName } from "@/shared/errors"
 import type { GroupCommandState } from "./command-state"
@@ -42,9 +41,7 @@ export async function runGroupCommand<Schema extends z.ZodType>(
   }
   if (!result.success) return { status: "error", error: result.error }
 
-  revalidatePath(ROUTES.adminOrgStructure, "layout")
-  revalidatePath(ROUTES.adminGigGroups, "page")
-  revalidatePath(ROUTES.adminPositions, "page")
+  revalidatePath("/[locale]/(app)/admin", "layout")
   revalidatePath("/[locale]/(app)/members", "page")
   revalidatePath("/[locale]/(app)/members/[memberId]", "page")
   revalidatePath("/[locale]/(app)/me", "page")

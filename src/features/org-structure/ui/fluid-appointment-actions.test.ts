@@ -12,7 +12,7 @@ mock.module("@/core/authz", () => ({ requirePermission: requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
 const { assignFluidAppointmentAction, correctFluidAppointmentAction, endFluidAppointmentAction } = await import(
-  "./detail/fluid-appointment-actions"
+  "./history/fluid-appointment-actions"
 )
 const { listAppointmentsForGroup } = await import("../appointments")
 const { addDirectMembership, endDirectMembership } = await import("../direct-membership")

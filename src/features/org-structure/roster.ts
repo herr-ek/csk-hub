@@ -10,6 +10,17 @@ export function tenureStatus({ startDate, endDate }: Tenure, today: IsoDate): Te
   return startDate > today ? "planned" : "current"
 }
 
+/** How an Organisational year is written: 26/27. */
+export function yearLabel(year: number) {
+  return `${String(year).slice(-2)}/${String(year + 1).slice(-2)}`
+}
+
+/** The year to show: the one asked for when it can be stepped to, else the current one. */
+export function selectedYear(requested: string | undefined, years: number[], current: number) {
+  const year = Number(requested)
+  return requested !== undefined && years.includes(year) ? year : current
+}
+
 /** Whether an Organisational year is over, running or still to come. */
 export function yearPhase(year: number, today: IsoDate): TenureStatus {
   return tenureStatus(organisationYearPeriod(year), today)
@@ -50,6 +61,11 @@ export function missingChoirs<C extends { id: string }>(choirs: C[], members: { 
 
 export function singsFamily(voices: VoiceDivision[], family: VoiceFamily) {
   return voices.some((voice) => familyOf(voice) === family)
+}
+
+/** Someone who belongs to no Choir and is not about to. */
+export function isUnplaced(person: { choirs: unknown[]; planned: unknown[] }) {
+  return person.choirs.length === 0 && person.planned.length === 0
 }
 
 export type Placement = {

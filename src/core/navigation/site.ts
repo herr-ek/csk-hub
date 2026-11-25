@@ -15,10 +15,12 @@ export const ROUTES = {
   adminOidcClients: "/admin/oidc-clients",
   adminUsers: "/admin/users",
   adminNotifications: "/admin/notifications",
-  adminOrgStructure: "/admin/org-structure",
+  adminChoirs: "/admin/choirs",
+  adminBoard: "/admin/board",
+  adminChoirPositions: "/admin/choir-positions",
+  adminCommittees: "/admin/committees",
   adminGigGroups: "/admin/gig-groups",
-  adminPositions: "/admin/positions",
-  adminOrgStructureGroups: "/admin/org-structure/groups",
+  adminGroupHistory: "/admin/group-history",
   eventsManage: "/events/manage",
   eventsNew: "/events/manage/new",
   eventsRehearsals: "/events/manage/rehearsals",
@@ -50,14 +52,15 @@ export type MenuRouteId =
   | "adminOidcClients"
   | "adminUsers"
   | "adminNotifications"
-  | "adminOrgStructure"
-  | "adminOrgStructureGroups"
+  | "adminChoirs"
+  | "adminBoard"
+  | "adminChoirPositions"
+  | "adminCommittees"
   | "adminEvents"
   | "adminEventsNew"
   | "adminEventLocations"
   | "adminAbsenceReasons"
   | "adminGigGroups"
-  | "adminPositions"
 
 /** Where each nested route sits in the menu hierarchy; routes without an entry are top-level sections. */
 export const ROUTE_PARENTS: Partial<Record<MenuRouteId, MenuRouteId>> = {
@@ -69,14 +72,15 @@ export const ROUTE_PARENTS: Partial<Record<MenuRouteId, MenuRouteId>> = {
   adminOidcClients: "admin",
   adminUsers: "admin",
   adminNotifications: "admin",
-  adminOrgStructure: "admin",
-  adminOrgStructureGroups: "admin",
+  adminChoirs: "admin",
+  adminBoard: "admin",
+  adminChoirPositions: "admin",
+  adminCommittees: "admin",
   adminEvents: "admin",
   adminEventsNew: "adminEvents",
   adminEventLocations: "adminEvents",
   adminAbsenceReasons: "adminEvents",
-  adminGigGroups: "admin",
-  adminPositions: "admin"
+  adminGigGroups: "admin"
 }
 
 /** The route and its ancestors, from the top-level section down to `id`. */

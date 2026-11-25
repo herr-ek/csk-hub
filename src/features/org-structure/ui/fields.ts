@@ -17,10 +17,17 @@ export const fields = {
   date: z.iso.date(),
   /** A singer's Voice, which is always a division. */
   voice: z.enum(voice.enumValues.filter(isVoiceDivision) as [VoiceDivision, ...VoiceDivision[]]),
+  voiceFamily: z.enum(["S", "A", "T", "B"]),
+  organisationYear: z.coerce.number().int().min(1000).max(9998),
   groupType: z.enum(GroupType),
   positionCode: z.enum(PositionCode),
   /** A type a group can be created with; Choirs and Sections are created only with their Choir. */
   creatableGroupType: z.enum(creatableGroupTypes)
+}
+
+/** Every non-empty value of a repeated field. */
+export function values(formData: FormData, name: string) {
+  return formData.getAll(name).filter((raw): raw is string => typeof raw === "string" && raw.trim() !== "")
 }
 
 /** A form value, with an empty string read as absent. */

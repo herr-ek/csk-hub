@@ -51,11 +51,13 @@ export type Person = {
   name: string
   choirs: { id: string; name: string; since: IsoDate }[]
   placements: SingerPlacement[]
+  /** Section placements still to begin. */
+  planned: SingerPlacement[]
   /** Every Voice division they declare or sing in a Section. */
   voices: VoiceDivision[]
 }
 
-/** Every active User with the Choirs, Section placements and Voices they have on a date. */
+/** Every active User with the Choirs, Section placements and Voices they have on a date, and placements to come. */
 export async function listPeople(database: OrgStructureDatabase, date: IsoDate): Promise<Person[]> {
   const owningChoir = alias(group, "person_owning_choir")
   const [users, memberships, capabilities] = await Promise.all([
@@ -73,20 +75,26 @@ export async function listPeople(database: OrgStructureDatabase, date: IsoDate):
       .innerJoin(group, eq(group.id, directMembership.groupId))
       .leftJoin(owningChoir, eq(owningChoir.id, group.choirId))
       .leftJoin(section, eq(section.groupId, group.id))
-      .where(and(inArray(group.type, [GroupType.Choir, GroupType.Section]), eq(group.active, true), coversDate(date))),
+      .where(
+        and(
+          inArray(group.type, [GroupType.Choir, GroupType.Section]),
+          eq(group.active, true),
+          or(isNull(directMembership.endDate), gt(directMembership.endDate, date))
+        )
+      ),
     database.select().from(voiceCapability)
   ])
   return users
     .map(({ id, name }) => {
       const own = memberships.filter(({ membership }) => membership.userId === id)
       const choirs = own
-        .filter(({ type }) => type === GroupType.Choir)
+        .filter(({ type, membership }) => type === GroupType.Choir && membership.startDate <= date)
         .map((row) => ({
           id: row.membership.groupId,
           name: row.name ?? "",
           since: row.membership.startDate as IsoDate
         }))
-      const placements = own.flatMap(({ membership, type, choirId, choirName, sectionVoice }) =>
+      const all = own.flatMap(({ membership, type, choirId, choirName, sectionVoice }) =>
         type === GroupType.Section && choirId && sectionVoice && membership.voice
           ? [
               {
@@ -104,9 +112,11 @@ export async function listPeople(database: OrgStructureDatabase, date: IsoDate):
             ]
           : []
       )
+      const placements = all.filter(({ startDate }) => startDate <= date)
+      const planned = all.filter(({ startDate }) => startDate > date)
       const declared = capabilities.filter(({ userId }) => userId === id).map(({ voice }) => voice)
       const voices = [...new Set([...declared, ...placements.map(({ voice }) => voice)])].sort(compareVoices)
-      return { id, name, choirs, placements, voices }
+      return { id, name, choirs, placements, planned, voices }
     })
     .sort((a, b) => a.name.localeCompare(b.name, "sv"))
 }

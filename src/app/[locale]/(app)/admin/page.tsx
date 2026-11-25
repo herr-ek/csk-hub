@@ -1,13 +1,22 @@
-import { Bell, CalendarDays, Contact, KeyRound, Music, User, Users } from "lucide-react"
+import { Bell, CalendarDays, Contact, KeyRound, Landmark, Mic, Music, User, Users } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { requirePermission } from "@/core/authz"
 import { getTranslations } from "@/core/i18n/server"
 import { ROUTES } from "@/core/navigation/site"
+import { getOrgAttention } from "@/features/org-structure"
+import { Badge } from "@/shared/ui/base/badge"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 
-type AdminResource = { href: string; title: string; description: string; icon: typeof User }
+type AdminResource = {
+  href: string
+  title: string
+  description: string
+  icon: typeof User
+  /** What needs attention, such as "2 vacant". */
+  attention?: string
+}
 
 function AdminResourceCard({ resource }: { resource: AdminResource }) {
   const ResourceIcon = resource.icon
@@ -17,7 +26,10 @@ function AdminResourceCard({ resource }: { resource: AdminResource }) {
         <CardHeader className="flex flex-row items-center gap-4">
           <ResourceIcon className="size-12 text-muted-foreground" aria-hidden="true" />
           <div>
-            <CardTitle>{resource.title}</CardTitle>
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              {resource.title}
+              {resource.attention ? <Badge variant="secondary">{resource.attention}</Badge> : null}
+            </CardTitle>
             <CardDescription>{resource.description}</CardDescription>
           </div>
         </CardHeader>
@@ -46,11 +58,19 @@ function AdminResourcesSkeleton({ resources }: { resources: AdminResource[] }) {
 
 async function AdminResources({ resources }: { resources: AdminResource[] }) {
   await requirePermission({ action: "admin.access" })
+  const [attention, t] = await Promise.all([getOrgAttention(), getTranslations("Admin.attention")])
+  const counts: Partial<Record<string, string>> = {
+    [ROUTES.adminChoirs]: attention.unplaced > 0 ? t("unplaced", { count: attention.unplaced }) : undefined,
+    [ROUTES.adminBoard]: attention.board > 0 ? t("vacant", { count: attention.board }) : undefined,
+    [ROUTES.adminChoirPositions]:
+      attention.choirPositions > 0 ? t("vacant", { count: attention.choirPositions }) : undefined,
+    [ROUTES.adminCommittees]: attention.committees > 0 ? t("missing", { count: attention.committees }) : undefined
+  }
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {resources.map((resource) => (
-        <AdminResourceCard key={resource.href} resource={resource} />
+        <AdminResourceCard key={resource.href} resource={{ ...resource, attention: counts[resource.href] }} />
       ))}
     </div>
   )
@@ -66,10 +86,16 @@ export default async function AdminRoot() {
       icon: KeyRound
     },
     { href: ROUTES.adminUsers, title: t("members"), description: t("membersDescription"), icon: User },
-    { href: ROUTES.adminOrgStructure, title: t("choirs"), description: t("choirsDescription"), icon: Music },
-    { href: ROUTES.adminPositions, title: t("positions"), description: t("positionsDescription"), icon: Contact },
-    { href: ROUTES.adminGigGroups, title: t("gigGroups"), description: t("gigGroupsDescription"), icon: Music },
-    { href: ROUTES.adminOrgStructureGroups, title: t("groups"), description: t("groupsDescription"), icon: Users },
+    { href: ROUTES.adminChoirs, title: t("choirs"), description: t("choirsDescription"), icon: Music },
+    { href: ROUTES.adminBoard, title: t("board"), description: t("boardDescription"), icon: Landmark },
+    {
+      href: ROUTES.adminChoirPositions,
+      title: t("choirPositions"),
+      description: t("choirPositionsDescription"),
+      icon: Contact
+    },
+    { href: ROUTES.adminCommittees, title: t("committees"), description: t("committeesDescription"), icon: Users },
+    { href: ROUTES.adminGigGroups, title: t("gigGroups"), description: t("gigGroupsDescription"), icon: Mic },
     { href: ROUTES.adminEvents, title: t("events"), description: t("eventsDescription"), icon: CalendarDays },
     {
       href: ROUTES.adminNotifications,
