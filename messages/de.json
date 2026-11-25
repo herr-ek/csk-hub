@@ -314,6 +314,10 @@
       "vacant": "{count} unbesetzt",
       "missing": "{count} fehlen",
       "unplaced": "{count} nicht eingeteilt"
+    },
+    "sections": {
+      "organisation": "Organisation",
+      "advanced": "Erweitert"
     }
   },
   "Members": {

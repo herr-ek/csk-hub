@@ -314,6 +314,10 @@
       "vacant": "{count} vacant",
       "missing": "{count} missing",
       "unplaced": "{count} unplaced"
+    },
+    "sections": {
+      "organisation": "Organization",
+      "advanced": "Advanced"
     }
   },
   "Members": {

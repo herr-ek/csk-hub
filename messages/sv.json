@@ -314,6 +314,10 @@
       "vacant": "{count, plural, one {# vakant} other {# vakanta}}",
       "missing": "{count, plural, one {# saknas} other {# saknas}}",
       "unplaced": "{count, plural, one {# oplacerad} other {# oplacerade}}"
+    },
+    "sections": {
+      "organisation": "Organisation",
+      "advanced": "Avancerat"
     }
   },
   "Members": {
