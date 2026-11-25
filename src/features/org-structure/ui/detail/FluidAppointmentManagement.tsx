@@ -133,14 +133,12 @@ export function FluidAppointmentManagement({ detail, today }: { detail: GroupDet
                               label={t("startDate")}
                               name="startDate"
                               defaultValue={appointment.startDate}
-                             
                               required
                             />
                             <DateField
                               label={t("endDate")}
                               name="lastDay"
                               defaultValue={appointment.endDate ? shiftDate(appointment.endDate, -1) : ""}
-                             
                             />
                           </GroupCommandDialog>
                         ) : null}
