@@ -5,6 +5,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react"
 import Link from "next/link"
 import { type FocusEvent, type KeyboardEvent, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
+import { ThemeButtons } from "@/core/theme/ThemeButtons"
 import { toast } from "@/shared/ui/base/toast"
 import { logout } from "./logout"
 import { ROUTES } from "./site"
@@ -99,7 +100,7 @@ export function AccountMenu({ user }: { user: AccountUser }) {
               tabIndex={-1}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
-              className="absolute top-0 left-0 z-50 w-56 overflow-hidden bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-foreground/5 outline-none md:right-0 md:left-auto dark:ring-foreground/10"
+              className="absolute top-0 left-0 z-50 w-56 overflow-hidden bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-foreground/5 outline-none md:-top-2 md:-right-2 md:left-auto dark:ring-foreground/10"
             >
               <div className="flex flex-col items-center gap-3 px-3 pt-3 pb-2">
                 <UserAvatar user={user} />
@@ -116,6 +117,10 @@ export function AccountMenu({ user }: { user: AccountUser }) {
                   <SettingsIcon />
                   {t("routes.accountSettings")}
                 </Link>
+                {/* On small screens the menu sheet has the theme. */}
+                <div className="hidden justify-center py-1 md:flex">
+                  <ThemeButtons />
+                </div>
                 <hr className="mx-3 my-1 border-foreground/5" />
                 <button type="button" className={itemClass} disabled={isPending} onClick={handleLogout}>
                   <LogOutIcon />

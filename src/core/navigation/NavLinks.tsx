@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation"
 import { Suspense } from "react"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { cn } from "@/shared/utils"
+import type { DestinationId } from "./destinations"
 import { isActiveRoute } from "./navigation-utils"
 
-export type NavLinkItem = { id: string; href: string; label: string; badge?: React.ReactNode }
+export type NavLinkItem = { id: DestinationId; href: string; label: string; badge?: React.ReactNode }
 
 export interface NavLinksProps {
   items: NavLinkItem[]

@@ -6,15 +6,18 @@ const admin = { showAdmin: true }
 
 describe("visible destinations", () => {
   test("members see the sections without Admin", () => {
-    expect(visibleDestinations(MENUS.primary, member)).toEqual(["news", "events", "messages", "members"])
+    expect(visibleDestinations(MENUS.topBar, member)).toEqual(["events", "news", "messages", "members"])
+    expect(visibleDestinations(MENUS.sheet, member)).toEqual(["news", "events", "messages", "members"])
   })
 
   test("those with admin access see Admin last", () => {
-    expect(visibleDestinations(MENUS.primary, admin)).toEqual(["news", "events", "messages", "members", "admin"])
+    expect(visibleDestinations(MENUS.topBar, admin)).toEqual(["events", "news", "messages", "members", "admin"])
+    expect(visibleDestinations(MENUS.sheet, admin)).toEqual(["news", "events", "messages", "members", "admin"])
   })
 
   test("signed-out visitors only see the login link", () => {
-    expect(visibleDestinations(MENUS.primary, null)).toEqual(["login"])
+    expect(visibleDestinations(MENUS.topBar, null)).toEqual(["login"])
+    expect(visibleDestinations(MENUS.sheet, null)).toEqual([])
   })
 
   test("the quick-access bar is the same for every member", () => {

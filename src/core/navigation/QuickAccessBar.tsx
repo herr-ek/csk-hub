@@ -9,17 +9,10 @@ import { cn } from "@/shared/utils"
 import { DESTINATIONS, MENUS } from "./destinations"
 import { isActiveRoute } from "./navigation-utils"
 import { slotIndexAt } from "./quick-access"
+import { useCollapseOnScroll } from "./use-collapse-on-scroll"
 
 /** The main navigation slots, in order. */
 const SHORTCUTS = MENUS.quickAccess.map((id) => DESTINATIONS[id])
-
-/** Liquid Glass material: a clear grey tint (darkening light pages, lightening dark ones) with a light blur, a rim lit top and bottom, and a soft shadow. */
-const glass =
-  "relative border border-white/50 bg-neutral-250/25 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(255_255_255/0.2),0_8px_24px_rgb(0_0_0/0.12)] backdrop-blur-sm backdrop-saturate-[1.1] dark:border-white/15 dark:bg-neutral-700/25 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.18),inset_0_-1px_0_rgb(255_255_255/0.06),0_8px_24px_rgb(0_0_0/0.4)]"
-
-/** A faint top-down sheen, as if light catches the upper edge of the glass. */
-const sheen =
-  "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-linear-to-b before:from-white/15 before:to-transparent before:to-60% dark:before:from-white/8"
 
 /**
  * A white wash, hidden until the glass is pressed, that brightens it as an iOS tab bar does under a finger. The glass's
@@ -128,9 +121,7 @@ function Bar({ pathname }: { pathname: string | null }) {
           aria-label={t("quickAccess")}
           onClickCapture={onClickCapture}
           className={cn(
-            glass,
-            sheen,
-            "pointer-events-auto flex origin-bottom items-center justify-center overflow-hidden px-2 py-1 motion-safe:transition-[width,height,border-radius,scale] motion-safe:duration-500",
+            "glass relative pointer-events-auto flex origin-bottom items-center justify-center overflow-hidden px-2 py-1 motion-safe:transition-[width,height,border-radius,scale] motion-safe:duration-500",
             // Like an iOS tab bar, the glass swells and brightens a little under a finger.
             pressWash,
             pressed && !collapsed && "scale-[1.03] after:opacity-35 dark:after:opacity-5"
@@ -330,30 +321,6 @@ function useIsMoving(index: number, duration = 250) {
   }, [index, duration])
 
   return moving
-}
-
-/** Collapsed once the page scrolls down past the top; restored on the way up, after navigating, or on request. */
-function useCollapseOnScroll(pathname: string | null) {
-  const [collapsed, setCollapsed] = useState(false)
-
-  useEffect(() => {
-    // Scroll events from inner panes are captured too, each tracked against its own last position.
-    const lastPositions = new WeakMap<object, number>()
-    const onScroll = (event: Event) => {
-      const source = event.target instanceof Element ? event.target : window
-      const y = source instanceof Element ? source.scrollTop : window.scrollY
-      const lastY = lastPositions.get(source) ?? 0
-      lastPositions.set(source, y)
-      if (y !== lastY) setCollapsed(y > 24 && y > lastY)
-    }
-    document.addEventListener("scroll", onScroll, { capture: true, passive: true })
-    return () => document.removeEventListener("scroll", onScroll, { capture: true })
-  }, [])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: expanding is a response to navigation itself.
-  useEffect(() => setCollapsed(false), [pathname])
-
-  return [collapsed, setCollapsed] as const
 }
 
 /** Publishes the bar's height so fixed-position UI near the bottom edge, such as toasts, can sit above it. */

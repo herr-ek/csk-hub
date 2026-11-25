@@ -2,24 +2,13 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { useHydrated, useTheme } from "@wrksz/themes/client"
-import { Monitor, Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 
 import { useTranslations } from "@/core/i18n/translations"
 import { Button } from "@/shared/ui/base/button"
 import { Select, SelectContent, SelectItem, SelectValue } from "@/shared/ui/base/select"
 import { cn } from "@/shared/utils"
-
-const themes = [
-  { value: "light", icon: Sun },
-  { value: "dark", icon: Moon },
-  { value: "system", icon: Monitor }
-] as const
-
-type Theme = (typeof themes)[number]["value"]
-
-function isTheme(value: unknown): value is Theme {
-  return themes.some((theme) => theme.value === value)
-}
+import { isTheme, type Theme, themes } from "./themes"
 
 export interface ThemeSwitchProps {
   id?: string

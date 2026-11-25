@@ -4,6 +4,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The header's links as icons: always below `lg`, and from `lg` while the header is collapsed. */
+@custom-variant compact-nav {
+  @media (width < 64rem) {
+    @slot;
+  }
+  :where([data-navigation][data-collapsed]) & {
+    @slot;
+  }
+}
+
+/*
+ * Liquid Glass material: a clear grey tint (darkening light pages, lightening dark ones) with a light blur, a rim lit top
+ * and bottom, a soft shadow, and a faint top-down sheen. Position the element.
+ */
+@utility glass {
+  @apply border border-white/50 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(255_255_255/0.2),0_8px_24px_rgb(0_0_0/0.12)] backdrop-blur-sm backdrop-saturate-[1.1] before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-linear-to-b before:from-white/15 before:to-transparent before:to-60% dark:border-white/15 dark:bg-neutral-700/25 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.18),inset_0_-1px_0_rgb(255_255_255/0.06),0_8px_24px_rgb(0_0_0/0.4)] dark:before:from-white/8;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -35,8 +35,10 @@ export type DestinationId = keyof typeof DESTINATIONS
 
 /** What each menu offers, in order. Use `visibleDestinations` to leave out what the viewer may not see. */
 export const MENUS = {
-  /** The links in the header, and in the sheet behind the menu button on small screens. */
-  primary: ["news", "events", "messages", "members", "admin", "login"],
+  /** The links in the header from `md` up, and the login link on every screen. */
+  topBar: ["events", "news", "messages", "members", "admin", "login"],
+  /** The sheet behind the menu button on small screens. */
+  sheet: ["news", "events", "messages", "members", "admin"],
   /** The bar at the bottom of small screens. */
   quickAccess: ["events", "news", "home", "messages", "account"]
 } as const satisfies Record<string, readonly DestinationId[]>

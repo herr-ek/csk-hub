@@ -93,7 +93,16 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html
       lang={locale}
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn(
+        "h-full",
+        // Keeps what is scrolled or focused into view clear of the floating header.
+        "md:has-data-navigation:scroll-pt-20",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable
+      )}
       suppressHydrationWarning
     >
       {/* A definite height, not a minimum: it lets a screen give its overflow to a pane of
