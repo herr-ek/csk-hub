@@ -88,7 +88,7 @@ describe.skipIf(!database)("reference data", () => {
       REFERENCE_DATA.choirs.length +
         REFERENCE_DATA.choirs.reduce((total, item) => total + item.sections.length, 0) +
         REFERENCE_DATA.continuingGroups.length +
-        20
+        18
     )
   })
 

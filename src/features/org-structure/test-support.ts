@@ -2,8 +2,9 @@ import { and, eq } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { group, section } from "@/core/db/schema/org-structure"
+import { voiceCapability } from "@/core/db/schema/voice"
 import { GroupType, type OrgStructureResult, sectionName } from "@/core/org-structure"
-import type { Voice } from "@/features/voice/model"
+import type { Voice, VoiceDivision } from "@/features/voice/model"
 import { createTestDatabase, type TestDatabase } from "../../../test/database"
 import { createChoir } from "./structure"
 
@@ -47,6 +48,13 @@ function fixture({ db, drop }: TestDatabase) {
       const id = crypto.randomUUID()
       await db.insert(user).values({ id, name, email: `${id}@example.com` })
       return id
+    },
+
+    /** A new user who declares that they can sing these Voices. */
+    async singer(...voices: VoiceDivision[]) {
+      const userId = await this.user()
+      await db.insert(voiceCapability).values(voices.map((voice) => ({ userId, voice })))
+      return userId
     },
 
     /** A singleton Group identity, independent of its localized label. */

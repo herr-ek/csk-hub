@@ -353,6 +353,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
 
   test("archiving an ensemble hides its affiliations without ending memberships or leadership", async () => {
     const singer = await member("Archived ensemble leader")
+    await setVoiceCapabilities(db, singer, ["B1"])
     const ensemble = success(
       await createOrganisationGroup(db, { name: unique("Retired ensemble"), type: GroupType.GigGroup })
     )

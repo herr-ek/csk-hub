@@ -1,10 +1,16 @@
 import "server-only"
 
-import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm"
+import { and, eq, gt, gte, inArray, isNull, lte, or } from "drizzle-orm"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { GROUP_POLICIES, GroupType, type IsoDate } from "@/core/org-structure"
 import { contains, familyOf, type VoiceDivision } from "@/features/voice/model"
-import { addDirectMembership, changeDirectMembership, validateUserParticipation } from "./direct-membership"
+import {
+  addDirectMembership,
+  changeDirectMembership,
+  endUncoveredAppointments,
+  validateUserParticipation
+} from "./direct-membership"
+import { cskToday } from "./effective-reads"
 import type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 import { lockUser, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
@@ -70,10 +76,18 @@ export function placeSingerInSection(database: OrgStructureDatabase, input: Plac
   })
 }
 
-type ChangeVoiceInput = { userId: string; choirId: string; voice: VoiceDivision; date: IsoDate }
+type ChangeVoiceInput = {
+  userId: string
+  choirId: string
+  voice: VoiceDivision
+  date: IsoDate
+  endAppointments?: boolean
+}
 
-/** Changes Voice from the requested date while preserving Choir membership and protecting appointments. */
-export function changeVoice(database: OrgStructureDatabase, input: ChangeVoiceInput) {
+/** Changes Voice from the requested date while preserving Choir membership. A Voice in another Section
+ * ends that Section's Stämförälder appointment with `endAppointments`, and is refused without it.
+ */
+export function changeVoice(database: OrgStructureDatabase, input: ChangeVoiceInput, today: IsoDate = cskToday()) {
   return runOrgStructureCommand(database, async (tx) => {
     const date = requireDate(input.date)
     await lockUser(tx, input.userId)
@@ -101,22 +115,36 @@ export function changeVoice(database: OrgStructureDatabase, input: ChangeVoiceIn
     if (current.voice === input.voice) throw new RuleViolation("same-voice")
     const sectionId = await sectionForVoice(tx, input.choirId, input.voice)
     expectSuccess(
-      await changeDirectMembership(tx, {
-        membershipId: current.id,
-        date,
-        groupId: sectionId,
-        endDate: current.endDate,
-        voice: input.voice
-      })
+      await changeDirectMembership(
+        tx,
+        {
+          membershipId: current.id,
+          date,
+          groupId: sectionId,
+          endDate: current.endDate,
+          voice: input.voice,
+          endAppointments: input.endAppointments
+        },
+        today
+      )
     )
     return { sectionId }
   })
 }
 
-type EndMembershipInput = { userId: string; groupId: string; endDate: IsoDate; membershipId?: string }
+type EndMembershipInput = {
+  userId: string
+  groupId: string
+  endDate: IsoDate
+  membershipId?: string
+  endAppointments?: boolean
+}
 
-/** Ends direct membership; leaving a Choir atomically ends its Section and Choir-team periods too. */
-export function endMembership(database: OrgStructureDatabase, input: EndMembershipInput) {
+/** Ends direct membership; leaving a Choir atomically ends its Section and Choir-team periods too.
+ * With `endAppointments`, the Choir's later planned periods are dropped and appointments that lose
+ * their prerequisite end as well; without it they refuse the departure.
+ */
+export function endMembership(database: OrgStructureDatabase, input: EndMembershipInput, today: IsoDate = cskToday()) {
   return runOrgStructureCommand(database, async (tx) => {
     const endDate = requireDate(input.endDate)
     await lockUser(tx, input.userId)
@@ -163,8 +191,40 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
         throw new RuleViolation("period-conflict")
       await tx.update(directMembership).set({ endDate }).where(eq(directMembership.id, row.id))
     }
+    if (input.endAppointments) {
+      await dropPlannedPeriods(tx, input, endDate, today)
+      await endUncoveredAppointments(tx, input.userId, endDate, today)
+    }
     await validateUserParticipation(tx, input.userId)
   })
+}
+
+/** Deletes the periods in a Group, and in a Choir's own Groups, that would begin after a departure. */
+async function dropPlannedPeriods(
+  tx: OrgStructureTransaction,
+  input: { userId: string; groupId: string },
+  endDate: IsoDate,
+  today: IsoDate
+) {
+  if (endDate < today) return
+  const planned = await tx
+    .select({ id: directMembership.id })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .where(
+      and(
+        eq(directMembership.userId, input.userId),
+        or(eq(group.id, input.groupId), eq(group.choirId, input.groupId)),
+        gte(directMembership.startDate, endDate)
+      )
+    )
+  if (planned.length === 0) return
+  await tx.delete(directMembership).where(
+    inArray(
+      directMembership.id,
+      planned.map(({ id }) => id)
+    )
+  )
 }
 
 async function sectionForVoice(tx: OrgStructureTransaction, choirId: string, voice: VoiceDivision) {

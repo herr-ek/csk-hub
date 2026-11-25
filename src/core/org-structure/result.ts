@@ -29,6 +29,7 @@ export type OrgStructureViolation =
   | "invalid-membership-voice"
   | "voice-not-sung-in-choir"
   | "voice-not-sung-in-section"
+  | "voice-not-sung-by-member"
   | "already-in-section"
   | "not-a-singer"
   | "same-voice"

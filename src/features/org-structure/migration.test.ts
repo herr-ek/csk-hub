@@ -122,11 +122,12 @@ describe.skipIf(!database)("consolidated organisation migration", () => {
     }
     const groups = await db.select().from(group)
     const annual = groups.filter(({ type }) => GROUP_POLICIES[type].lifetime === "annual")
-    expect(annual).toHaveLength(20)
+    expect(annual).toHaveLength(18)
     expect(annual.every(({ organisationYear }) => organisationYear === 2026 || organisationYear === 2027)).toBe(true)
     expect(await db.select().from(section)).toHaveLength(12)
     expect(groups.filter(({ type }) => type === GroupType.Choir)).toHaveLength(3)
     expect(groups.filter(({ type }) => type === GroupType.ParentsMeeting)).toHaveLength(1)
+    expect(groups.filter(({ type }) => type === GroupType.MemorisationCommittee)).toHaveLength(1)
     await expect(db.insert(group).values({ type: GroupType.Board }).execute()).rejects.toMatchObject({
       cause: { constraint: "group_organisation_policy_check" }
     })

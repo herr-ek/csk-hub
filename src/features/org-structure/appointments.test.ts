@@ -236,7 +236,7 @@ describe.skipIf(!database)("appointment foundation", () => {
         "4000-10-22"
       )
     )
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     expectSuccess(
       await addDirectMembership(t.db, {
         userId,
@@ -280,7 +280,7 @@ describe.skipIf(!database)("appointment foundation", () => {
   })
 
   test.each(["2037-07-01", "2037-09-01"])(
-    "appointment refuses an overlapping Helper starting %s without changing history",
+    "taking a Position ends a Helper who started %s, and removes one who had not",
     async (start) => {
       const year = start === "2037-07-01" ? 2037 : 2036
       const helperStart = start.replace("2037", String(year))
@@ -319,18 +319,13 @@ describe.skipIf(!database)("appointment foundation", () => {
         contextGroupId: board.id,
         startDate: `${year}-08-01`
       }
-      expect(await appointPosition(t.db, input)).toEqual({ success: false, error: "already-holding-position" })
-      expect(await t.db.select().from(directMembership).where(eq(directMembership.id, helper.id))).toEqual([helper])
-      expect(await t.db.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))).toEqual([])
-
+      const appointment = expectSuccess(await appointPosition(t.db, input))
+      const startedBefore = helperStart < input.startDate
+      expect(await t.db.select().from(directMembership).where(eq(directMembership.id, helper.id))).toEqual(
+        startedBefore ? [{ ...helper, endDate: input.startDate }] : []
+      )
       expect(await listEffectiveMembersAt(t.db, committee.id, `${year}-10-01`)).toMatchObject([{ userId }])
-      expectSuccess(await endDirectMembership(t.db, { membershipId: helper.id, endDate: `${year}-10-01` }))
-      const appointment = expectSuccess(await appointPosition(t.db, { ...input, startDate: `${year}-10-01` }))
       expectSuccess(await endAppointment(t.db, { appointmentId: appointment.id, endDate: `${year + 1}-01-01` }))
-      expect(await t.db.select().from(directMembership).where(eq(directMembership.id, helper.id))).toEqual([
-        { ...helper, endDate: `${year}-10-01` }
-      ])
-      expect(await listEffectiveMembersAt(t.db, committee.id, `${year}-09-30`)).toMatchObject([{ userId }])
       expect(await listEffectiveMembersAt(t.db, committee.id, `${year + 1}-01-01`)).toEqual([])
     }
   )
@@ -964,7 +959,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     const gigGroup = expectSuccess(
       await createOrganisationGroup(t.db, { name: uniqueName("Gig"), type: GroupType.GigGroup }, "4000-10-22")
     )
-    const gigSinger = await t.user()
+    const gigSinger = await t.singer("B1")
     expectSuccess(
       await addDirectMembership(t.db, { userId: gigSinger, groupId: gigGroup.id, startDate: "2054-01-01", voice: "B1" })
     )
@@ -1184,11 +1179,23 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(
       await appointPosition(t.db, {
         userId: await t.user(),
-        positionCode: PositionCode.Conductor,
+        positionCode: PositionCode.MusicLibrarian,
         contextGroupId: await t.groupId("MK"),
         startDate: "2035-07-01"
       })
     ).toEqual({ success: false, error: "not-a-member" })
+    const conductor = await t.user()
+    const conductorInput = {
+      userId: conductor,
+      positionCode: PositionCode.Conductor,
+      contextGroupId: await t.groupId("MK"),
+      startDate: "2035-07-01",
+      endDate: "2036-07-01"
+    }
+    expectSuccess(await appointPosition(t.db, conductorInput))
+    expect(await t.db.select().from(directMembership).where(eq(directMembership.userId, conductor))).toMatchObject([
+      { groupId: await t.groupId("MK"), startDate: "2035-07-01", endDate: "2036-07-01" }
+    ])
     await t.db.transaction(async (tx) => {
       await tx.execute(sql`SET TRANSACTION READ ONLY`)
       expect(await listAppointmentMembersAt(tx, groupId, "2035-10-01")).toEqual([])

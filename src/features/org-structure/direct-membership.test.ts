@@ -21,7 +21,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(t.db, { name: "Voiced gig", type: GroupType.GigGroup })
     ).id
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     expectSuccess(
       await placeSingerInSection(t.db, {
         userId,
@@ -49,7 +49,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
       })
     ).id
     const groupId = gigId
-    const userId = await t.user()
+    const userId = await t.singer("B1", "B2")
     const membership = expectSuccess(
       await addDirectMembership(t.db, {
         userId,
@@ -171,7 +171,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
         "4000-10-22"
       )
     )
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     const membership = expectSuccess(
       await addDirectMembership(t.db, {
         userId,

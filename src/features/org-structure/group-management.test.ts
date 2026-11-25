@@ -18,7 +18,7 @@ describe.skipIf(!database)("concrete Group management", () => {
 
   test("prepares distinct annual sets atomically and idempotently without participation", async () => {
     const first = expectSuccess(await prepareOrganisationYear(t.db, 2026, "4000-10-22"))
-    expect(first).toHaveLength(10)
+    expect(first).toHaveLength(9)
     expect(expectSuccess(await prepareOrganisationYear(t.db, 2026, "4000-10-22"))).toEqual(first)
     const sexmasteri = first.find((row) => row.type === GroupType.SocialCommittee) as { id: string }
     const board = first.find((row) => row.type === GroupType.Board) as { id: string }
@@ -41,7 +41,7 @@ describe.skipIf(!database)("concrete Group management", () => {
       expect(await listDirectMemberships(t.db, row.id)).toEqual([])
       expect(await listAppointmentMembersAt(t.db, row.id, "2027-09-01")).toEqual([])
     }
-    expect(next).toHaveLength(10)
+    expect(next).toHaveLength(9)
     expect(next.some((row) => first.some((other) => other.id === row.id))).toBe(false)
     const rows = await listOrganisationGroups(t.db, "2027-06-30")
     expect(rows.find((row) => row.id === first[0]?.id)?.phase).toBe("current")
@@ -146,7 +146,7 @@ describe.skipIf(!database)("concrete Group management", () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(t.db, { name: "Protected gig", type: GroupType.GigGroup }, "4000-10-22")
     ).id
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     expectSuccess(await addDirectMembership(t.db, { userId, groupId, voice: "B1", startDate: "2030-01-01" }))
     expectSuccess(
       await appointPosition(t.db, {

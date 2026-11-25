@@ -12,7 +12,7 @@ import {
   isAllowedOrganisationYear,
   organisationYearPeriod,
   POSITION_DEFINITIONS,
-  type PositionCode,
+  PositionCode,
   periodsCoverPeriod,
   sectionName
 } from "@/core/org-structure"
@@ -62,7 +62,7 @@ async function resolveGrantGroups(
   return ids
 }
 
-async function requirePrerequisiteCoverage(
+async function prerequisiteCoverage(
   tx: OrgStructureTransaction,
   userId: string,
   contextGroupId: string,
@@ -82,7 +82,38 @@ async function requirePrerequisiteCoverage(
         )
       ))
   ]
-  if (!periodsCoverPeriod(memberships, { startDate, endDate })) throw new RuleViolation("not-a-member")
+  return { memberships, covered: periodsCoverPeriod(memberships, { startDate, endDate }) }
+}
+
+/** Taking a Position replaces Helper participation in the Groups it grants. A Helper period that began
+ * before the appointment ends with it; one planned for later is removed. History is left for validation.
+ */
+async function endHelperParticipation(
+  tx: OrgStructureTransaction,
+  userId: string,
+  groupIds: string[],
+  startDate: IsoDate,
+  endDate: IsoDate | null,
+  today: IsoDate
+) {
+  const helpers = await tx
+    .select({ id: directMembership.id, startDate: directMembership.startDate, type: group.type })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .where(
+      and(
+        eq(directMembership.userId, userId),
+        inArray(directMembership.groupId, groupIds),
+        or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate)),
+        endDate === null ? undefined : lt(directMembership.startDate, endDate)
+      )
+    )
+  for (const helper of helpers) {
+    if (GROUP_POLICIES[helper.type].directMembership !== "helpers") continue
+    if (helper.startDate < startDate)
+      await tx.update(directMembership).set({ endDate: startDate }).where(eq(directMembership.id, helper.id))
+    else if (helper.startDate >= today) await tx.delete(directMembership).where(eq(directMembership.id, helper.id))
+  }
 }
 
 /**
@@ -131,7 +162,8 @@ export function createOrganisationGroup(
  * Records one appointment and resolves its grants from the fixed definitions in one savepoint.
  * Dates are inclusive/exclusive. Annual Choir appointments need an explicit year; annual
  * Group contexts supply their year. Prerequisite participation must cover the entire tenure.
- * Overlapping Helper participation is refused; end it explicitly before appointing.
+ * Helper participation in the granted Groups ends when the appointment starts. A Dirigent who is not
+ * in the Choir becomes a member of it for the tenure, without a Section.
  * All organisation Positions are appointments with one shared tenure across their grants.
  */
 export function appointPosition(
@@ -143,10 +175,15 @@ export function appointPosition(
     organisationYear?: number
     startDate: IsoDate
     endDate?: IsoDate | null
-  }
+  },
+  today: IsoDate = cskToday()
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     await lockUser(tx, input.userId)
+    // Two writers of one Position would otherwise deadlock on its occupancy exclusion.
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:position:${input.contextGroupId}:${input.positionCode}`}))`
+    )
     const context = await requireActiveGroup(tx, input.contextGroupId)
     const definition = POSITION_DEFINITIONS[input.positionCode]
     if (!definition || context.type !== definition.context) throw new RuleViolation("position-not-allowed")
@@ -166,9 +203,17 @@ export function appointPosition(
       (bounds && (startDate < bounds.startDate || endDate === null || endDate > bounds.endDate))
     )
       throw new RuleViolation("period-conflict")
-    if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
+    if (definition.prerequisite) {
+      const { memberships, covered } = await prerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
+      if (!covered) {
+        if (input.positionCode !== PositionCode.Conductor || memberships.length > 0)
+          throw new RuleViolation("not-a-member")
+        await tx.insert(directMembership).values({ userId: input.userId, groupId: context.id, startDate, endDate })
+      }
+    }
 
-    await resolveGrantGroups(tx, definition, context, year ?? undefined)
+    const grantIds = await resolveGrantGroups(tx, definition, context, year ?? undefined)
+    if (grantIds.length > 0) await endHelperParticipation(tx, input.userId, grantIds, startDate, endDate, today)
     const [created] = await tx
       .insert(positionAppointment)
       .values({
@@ -204,7 +249,10 @@ export function endAppointment(database: OrgStructureDatabase, input: { appointm
   })
 }
 
-/** Replaces the holder for one Position/context at an exact boundary, closing every old grant together. */
+/** Replaces the holder for one Position/context at an exact boundary, closing every old grant together.
+ * Naming a holder in `replaces` whose tenure would have begun on that boundary, today or later, swaps
+ * them out entirely; without it, such a holder refuses the command so one Admin never silently undoes another.
+ */
 export function replaceAppointmentHolder(
   database: OrgStructureDatabase,
   input: {
@@ -213,8 +261,10 @@ export function replaceAppointmentHolder(
     contextGroupId: string
     organisationYear?: number
     startDate: IsoDate
-    endDate?: IsoDate
-  }
+    endDate?: IsoDate | null
+    replaces?: string
+  },
+  today: IsoDate = cskToday()
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
@@ -246,16 +296,22 @@ export function replaceAppointmentHolder(
       )
       .for("update")
     if (predecessor) {
-      if (predecessor.startDate === startDate) throw new RuleViolation("period-conflict")
-      await tx.update(positionAppointment).set({ endDate: startDate }).where(eq(positionAppointment.id, predecessor.id))
+      if (predecessor.startDate === startDate) {
+        if (startDate < today || input.replaces !== predecessor.id) throw new RuleViolation("period-conflict")
+        await tx.delete(positionAppointment).where(eq(positionAppointment.id, predecessor.id))
+      } else
+        await tx
+          .update(positionAppointment)
+          .set({ endDate: startDate })
+          .where(eq(positionAppointment.id, predecessor.id))
     }
-    const result = await appointPosition(tx, input)
+    const result = await appointPosition(tx, input, today)
     if (!result.success) throw new RuleViolation(result.error)
     return result.data
   })
 }
 
-/** Cancels a prepared future appointment without rewriting started history. */
+/** Removes an appointment that has not begun, or began today, without rewriting earlier history. */
 export function cancelPreparedAppointment(
   database: OrgStructureDatabase,
   input: { appointmentId: string; today: IsoDate }
@@ -269,7 +325,7 @@ export function cancelPreparedAppointment(
       .where(eq(positionAppointment.id, input.appointmentId))
     if (!appointment) throw new RuleViolation("not-holding-position")
     await lockUser(tx, appointment.userId)
-    if (appointment.startDate <= today) throw new RuleViolation("period-conflict")
+    if (appointment.startDate < today) throw new RuleViolation("period-conflict")
     await tx.delete(positionAppointment).where(eq(positionAppointment.id, appointment.id))
     return { id: appointment.id }
   })
@@ -311,7 +367,11 @@ export function correctAnnualAppointment(
       throw new RuleViolation("period-conflict")
     const historical = endDate <= cskToday()
     if (!context.active && !historical) throw new RuleViolation("group-archived")
-    if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
+    if (
+      definition.prerequisite &&
+      !(await prerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)).covered
+    )
+      throw new RuleViolation("not-a-member")
     await resolveGrantGroups(tx, definition, context, input.organisationYear, historical)
     await tx
       .update(positionAppointment)

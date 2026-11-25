@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm"
 import { AuthorizationDeniedError, createAuthorization } from "@/core/authz/authorization"
 import { user } from "@/core/db/schema/auth"
 import { endMembership, startMembership } from "@/features/org-structure"
+import { setVoiceCapabilities } from "@/features/voice"
 import { createEvent } from "../events"
 import { changeEventStatus } from "../lifecycle"
 import { createEventsTestDatabase, eventInput, expectSuccess } from "../test-support"
@@ -27,6 +28,7 @@ describe.skipIf(!database)("protected Event calendar", () => {
 
   test("fresh calendar reads agree on scheduled future departure and retained viewing from Event start", async () => {
     viewer = await t.user()
+    await setVoiceCapabilities(t.db, viewer, ["B1"])
     const groupId = await t.group("gig-group")
     expect(
       (await startMembership(t.db, { userId: viewer, groupId, voice: "B1", startDate: "2020-01-01" })).success

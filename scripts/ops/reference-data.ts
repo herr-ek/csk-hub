@@ -30,7 +30,7 @@ export const REFERENCE_DATA: {
       sections: [{ voice: "S" }, { voice: "A" }, { voice: "T" }, { voice: "B" }]
     }
   ],
-  continuingGroups: [{ type: GroupType.ParentsMeeting }],
+  continuingGroups: [{ type: GroupType.ParentsMeeting }, { type: GroupType.MemorisationCommittee }],
   annualGroups: (year) =>
     [
       GroupType.Board,
@@ -41,8 +41,7 @@ export const REFERENCE_DATA: {
       GroupType.TourCommittee,
       GroupType.NominationCommittee,
       GroupType.WebTeam,
-      GroupType.Archives,
-      GroupType.MemorisationCommittee
+      GroupType.Archives
     ].map((type) => ({ type, year }))
 }
 

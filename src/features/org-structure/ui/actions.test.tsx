@@ -135,7 +135,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
         type: GroupType.GigGroup
       })
     ).id
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     const sectionId = await t.groupId("KKB")
     expect(
       await addMemberAction(IDLE, form({ groupId: sectionId, userId, voice: "B2", startDate: "2026-08-01" }))

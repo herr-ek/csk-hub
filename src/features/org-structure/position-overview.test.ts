@@ -90,7 +90,7 @@ describe.skipIf(!database)("organisation-wide Position overview", () => {
     archivedGig = expectSuccess(
       await createOrganisationGroup(t.db, { name: "Archived overview ensemble", type: GroupType.GigGroup })
     ).id
-    const leader = await t.user("Retained leader")
+    const leader = await t.singer("B1")
     expectSuccess(
       await addDirectMembership(t.db, { userId: leader, groupId: archivedGig, startDate: "2024-01-01", voice: "B1" })
     )
