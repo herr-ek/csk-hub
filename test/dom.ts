@@ -10,5 +10,9 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator"
  */
 export function registerDom(): void {
   if (GlobalRegistrator.isRegistered) return
+  const { fetch, Headers, Request, Response } = globalThis
   GlobalRegistrator.register({ url: "http://localhost:3000" })
+  // Happy DOM's versions drop the Cookie header as a browser would, which signs out server
+  // tests that run later in the same process.
+  Object.assign(globalThis, { fetch, Headers, Request, Response })
 }
