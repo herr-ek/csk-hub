@@ -9,6 +9,19 @@
   --header-height: 4.75rem;
 }
 
+/* The colour that marks the current section in both navigation bars. */
+:root {
+  --nav-current: var(--primary);
+}
+.dark {
+  --nav-current: color-mix(in oklab, var(--primary), white 55%);
+}
+
+/* The glowing line under the current section. Size and place it where it is used. */
+@utility nav-mark {
+  @apply rounded-full bg-(--nav-current) shadow-[0_0_8px_var(--nav-current)];
+}
+
 /*
  * The header's links as icons: always below `lg`, and from `lg` while the header is collapsed (`CollapsingHeader` sets
  * `data-collapsed`).

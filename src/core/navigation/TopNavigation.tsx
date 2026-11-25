@@ -1,15 +1,16 @@
 "use client"
 
-import { type MotionValue, motion, useMotionTemplate, useReducedMotion, useSpring } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { type PointerEvent, type RefObject, useLayoutEffect, useRef, useState } from "react"
+import { type RefObject, useLayoutEffect, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/base/tooltip"
 import { cn } from "@/shared/utils"
 import { DESTINATIONS } from "./destinations"
 import type { NavLinkItem } from "./NavLinks"
 import { isActiveRoute } from "./navigation-utils"
+import { PointerLight, usePointerLight } from "./PointerLight"
 import { usePendingIndex } from "./use-pending-index"
 
 /** How far the mark stays inside its link's ends, a little short of the name. */
@@ -29,34 +30,25 @@ export function TopNavigation({ items }: { items: NavLinkItem[] }) {
   const pathname = usePathname()
   const reduceMotion = useReducedMotion()
   const listRef = useRef<HTMLUListElement>(null)
-  const lightX = useSpring(0, { stiffness: 350, damping: 35 })
-  const lightY = useSpring(0, { stiffness: 350, damping: 35 })
+  const light = usePointerLight()
 
   const [pendingIndex, choose] = usePendingIndex(pathname)
   const currentIndex = items.findIndex((item) => isActiveRoute(pathname, item.href))
   const markedIndex = pendingIndex ?? currentIndex
   const mark = useItemBox(listRef, markedIndex, items.length)
 
-  /** The light trails the mouse, but starts where it enters rather than where it last left. */
-  function moveLight(event: PointerEvent<HTMLElement>, { jump = false } = {}) {
-    const box = event.currentTarget.getBoundingClientRect()
-    const move = jump || reduceMotion ? "jump" : "set"
-    lightX[move](event.clientX - box.left)
-    lightY[move](event.clientY - box.top)
-  }
-
   return (
     <nav
       aria-label={t("primary")}
-      onPointerEnter={(event) => moveLight(event, { jump: true })}
-      onPointerMove={(event) => moveLight(event)}
+      onPointerEnter={(event) => light.follow(event, { jump: true })}
+      onPointerMove={(event) => light.follow(event)}
       className={cn(
-        "group/bar relative py-1 [--current:var(--primary)] dark:[--current:color-mix(in_oklab,var(--primary),white_55%)]",
+        "group/bar relative py-1",
         // Swells a little when pressed, like the bar on small screens.
         "motion-safe:transition-[scale] motion-safe:duration-300 motion-safe:active:scale-[1.03]"
       )}
     >
-      <PointerLight x={lightX} y={lightY} />
+      <PointerLight x={light.x} y={light.y} />
       <div className="relative">
         {mark ? (
           <motion.span
@@ -68,7 +60,7 @@ export function TopNavigation({ items }: { items: NavLinkItem[] }) {
               opacity: markedIndex === -1 ? 0 : 1
             }}
             transition={reduceMotion ? { duration: 0 } : spring}
-            className="pointer-events-none absolute bottom-0.5 left-0 h-0.5 rounded-full bg-(--current) shadow-[0_0_8px_var(--current)]"
+            className="pointer-events-none absolute bottom-0.5 left-0 h-0.5 nav-mark"
           />
         ) : null}
         <ul ref={listRef} className="flex">
@@ -86,7 +78,7 @@ export function TopNavigation({ items }: { items: NavLinkItem[] }) {
                         onNavigate={() => choose(index)}
                         className={cn(
                           "relative flex h-11 items-center rounded-xl px-4 font-medium text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 motion-safe:transition-colors",
-                          index === markedIndex ? "text-(--current)" : "text-foreground/75 hover:text-foreground"
+                          index === markedIndex ? "text-(--nav-current)" : "text-foreground/75 hover:text-foreground"
                         )}
                       />
                     }
@@ -132,26 +124,6 @@ export function TopNavigation({ items }: { items: NavLinkItem[] }) {
         </ul>
       </div>
     </nav>
-  )
-}
-
-/** Light around the mouse: a soft wash behind the links, and a glow along the line that the mark rests on. */
-function PointerLight({ x, y }: { x: MotionValue<number>; y: MotionValue<number> }) {
-  const wash = useMotionTemplate`radial-gradient(6rem circle at ${x}px ${y}px, color-mix(in oklab, var(--light) 14%, transparent), transparent)`
-  const line = useMotionTemplate`radial-gradient(7rem circle at ${x}px 0px, color-mix(in oklab, var(--primary), white 25%), transparent)`
-  const layer =
-    "pointer-events-none absolute inset-x-0 mask-x-from-[calc(100%-2rem)] opacity-0 group-hover/bar:opacity-100 motion-safe:transition-opacity motion-safe:duration-300"
-
-  return (
-    <>
-      <motion.span
-        aria-hidden="true"
-        style={{ background: wash }}
-        // Fades out above and below, as it does at the ends, instead of stopping at an edge.
-        className={cn(layer, "inset-y-0 mask-y-from-55% [--light:var(--primary)] dark:[--light:var(--foreground)]")}
-      />
-      <motion.span aria-hidden="true" style={{ background: line }} className={cn(layer, "bottom-1.5 h-0.5")} />
-    </>
   )
 }
 

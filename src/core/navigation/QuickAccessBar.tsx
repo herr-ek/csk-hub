@@ -8,6 +8,7 @@ import { useTranslations } from "@/core/i18n/translations"
 import { cn } from "@/shared/utils"
 import { DESTINATIONS, MENUS, visibleDestinations } from "./destinations"
 import { isActiveRoute } from "./navigation-utils"
+import { PointerLight, usePointerLight } from "./PointerLight"
 import { slotIndexAt } from "./quick-access"
 import { useCollapseOnScroll } from "./use-collapse-on-scroll"
 import { usePendingIndex } from "./use-pending-index"
@@ -15,38 +16,29 @@ import { usePendingIndex } from "./use-pending-index"
 /** The main navigation slots, in order. The bar is the same for every User, so it leaves out what only Admins see. */
 const SHORTCUTS = visibleDestinations(MENUS.quickAccess, { showAdmin: false }).map((id) => DESTINATIONS[id])
 
-/**
- * A white wash, hidden until the glass is pressed, that brightens it as an iOS tab bar does under a finger. The glass's
- * backdrop filter makes it a stacking context, so the negative z-index keeps the wash behind the icons.
- */
-const pressWash =
-  "after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-[inherit] after:bg-white after:opacity-0 motion-safe:after:transition-opacity motion-safe:after:duration-200 motion-safe:after:ease-out"
-
-/** Expanded, the pill spans the screen less a small gap at each side, capped so it does not sprawl on small tablets. */
+/** Expanded, the bar spans the screen less a small gap at each side, capped so it does not sprawl on small tablets. */
 const EXPANDED_WIDTH = "min(100vw - 1.5rem, 32rem)"
 /** Slots are 3.5rem (56px) tall, room for an icon over its page name, and share the expanded width equally. */
 const SLOT_REM = 3.5
-/** Collapsed, the pill is a small horizontal capsule: 2rem (32px) wide and 1.5rem (24px) tall inside its insets. */
+/** Collapsed, the bar is a single small button: 2rem (32px) wide and 1.5rem (24px) tall inside its insets. */
 const COLLAPSED_WIDTH_REM = 2
 const COLLAPSED_HEIGHT_REM = 1.5
-/**
- * The pill's padding plus border around its contents. The sides get a little more room than top and bottom so the lens,
- * which is wider than a slot, is not clipped at either end even while it swells.
- */
-const PILL_INSET_X = "calc(1rem + 2px)"
-const PILL_INSET_Y = "calc(0.5rem + 2px)"
-/** Explicit corner radii (half the height) let the shape morph smoothly between the two capsules. */
-const EXPANDED_RADIUS = `calc((${SLOT_REM}rem + ${PILL_INSET_Y}) / 2)`
-const COLLAPSED_RADIUS = `calc((${COLLAPSED_HEIGHT_REM}rem + ${PILL_INSET_Y}) / 2)`
+/** The bar's padding around its contents. */
+const BAR_INSET_X = "calc(1rem + 2px)"
+const BAR_INSET_Y = "calc(0.5rem + 2px)"
+/** Explicit corner radii (half the height) let the bar's shape, and its focus ring, morph smoothly as it collapses. */
+const EXPANDED_RADIUS = `calc((${SLOT_REM}rem + ${BAR_INSET_Y}) / 2)`
+const COLLAPSED_RADIUS = `calc((${COLLAPSED_HEIGHT_REM}rem + ${BAR_INSET_Y}) / 2)`
 
 /** Sits low, just clear of the iPhone home indicator, like a native tab bar. */
 const BAR_BOTTOM = "max(env(safe-area-inset-bottom) - 0.75rem, 0.5rem)"
 /** How far the bar reaches up from the bottom edge; toasts read it to stay clear of the bar. */
-const BAR_OFFSET = `calc(${BAR_BOTTOM} + ${SLOT_REM}rem + ${PILL_INSET_Y})`
+const BAR_OFFSET = `calc(${BAR_BOTTOM} + ${SLOT_REM}rem + ${BAR_INSET_Y})`
+const COLLAPSED_OFFSET = `calc(${BAR_BOTTOM} + ${COLLAPSED_HEIGHT_REM}rem + ${BAR_INSET_Y})`
 
 /**
  * Damped springs sampled into `linear()` easings. The bouncy one overshoots by about 16% and suits small scale changes;
- * the soft one overshoots by about 4% and suits the pill's width, where a full bounce would carry it past the screen
+ * the soft one overshoots by about 4% and suits the bar's width, where a full bounce would carry it past the screen
  * edge.
  */
 const SPRING_BOUNCY =
@@ -60,9 +52,10 @@ const DRAG_THRESHOLD_PX = 8
 const CLICK_SWALLOW_MS = 350
 
 /**
- * The main sections in a floating glass pill on small screens.
- * Sliding a finger along the pill drags the highlight across the slots and opens the one it is released on.
- * While the page scrolls down the pill collapses into a single small button; tapping it or scrolling up restores it.
+ * The main sections along the bottom of small screens, styled like the header's links: names under icons floating over
+ * the page, which blurs away beneath them, and a glowing mark under the current section.
+ * Sliding a finger along the bar drags the mark across the slots and opens the one it is released on.
+ * While the page scrolls down the bar collapses into a single small button; tapping it or scrolling up restores it.
  */
 export function QuickAccessBar() {
   return (
@@ -95,8 +88,9 @@ function Bar({ pathname }: { pathname: string | null }) {
     choose(index)
     router.push(SHORTCUTS[index].href)
   })
-  const lensIndex = dragIndex ?? pendingIndex ?? activeIndex
-  const lensMoving = useIsMoving(lensIndex)
+  const markIndex = dragIndex ?? pendingIndex ?? activeIndex
+  const markMoving = useIsMoving(markIndex)
+  const light = usePointerLight()
 
   return (
     <>
@@ -114,22 +108,34 @@ function Bar({ pathname }: { pathname: string | null }) {
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center md:hidden"
         style={{ paddingBottom: BAR_BOTTOM }}
       >
+        {/* Keeps the bar readable over whatever scrolls beneath it, as the header does, and shrinks with it. */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 -z-10 mask-t-from-50% bg-background/80 backdrop-blur-lg motion-safe:transition-[height] motion-safe:duration-500"
+          style={{
+            height: `calc(${collapsed ? COLLAPSED_OFFSET : BAR_OFFSET} + 1.5rem)`,
+            transitionTimingFunction: SPRING_SOFT
+          }}
+        />
         <nav
           aria-label={t("quickAccess")}
+          data-pressed={pressed && !collapsed ? "" : undefined}
           onClickCapture={onClickCapture}
+          onPointerDown={(event) => light.follow(event, { jump: true })}
+          onPointerMove={(event) => light.follow(event)}
           className={cn(
-            "glass relative pointer-events-auto flex origin-bottom items-center justify-center overflow-hidden px-2 py-1 motion-safe:transition-[width,height,border-radius,scale] motion-safe:duration-500",
-            // Like an iOS tab bar, the glass swells and brightens a little under a finger.
-            pressWash,
-            pressed && !collapsed && "scale-[1.03] after:opacity-35 dark:after:opacity-5"
+            "group/bar relative pointer-events-auto flex origin-bottom items-center justify-center overflow-hidden px-2 py-1 motion-safe:transition-[width,height,border-radius,scale] motion-safe:duration-500",
+            // Like the header's links, the bar swells a little under a finger, and a light follows it.
+            pressed && !collapsed && "scale-[1.03]"
           )}
           style={{
             transitionTimingFunction: `${SPRING_SOFT}, ${SPRING_SOFT}, ${SPRING_SOFT}, ${SPRING_BOUNCY}`,
-            width: collapsed ? `calc(${COLLAPSED_WIDTH_REM}rem + ${PILL_INSET_X})` : EXPANDED_WIDTH,
-            height: `calc(${collapsed ? COLLAPSED_HEIGHT_REM : SLOT_REM}rem + ${PILL_INSET_Y})`,
+            width: collapsed ? `calc(${COLLAPSED_WIDTH_REM}rem + ${BAR_INSET_X})` : EXPANDED_WIDTH,
+            height: `calc(${collapsed ? COLLAPSED_HEIGHT_REM : SLOT_REM}rem + ${BAR_INSET_Y})`,
             borderRadius: collapsed ? COLLAPSED_RADIUS : EXPANDED_RADIUS
           }}
         >
+          <PointerLight x={light.x} y={light.y} />
           <div
             ref={rowRef}
             onPointerDown={(event) => startGesture(event)}
@@ -139,29 +145,28 @@ function Bar({ pathname }: { pathname: string | null }) {
               collapsed && "pointer-events-none scale-75 opacity-0"
             )}
             style={{
-              // Fixed at the expanded width so the slots keep their size while the pill shrinks around them.
-              width: `calc(${EXPANDED_WIDTH} - ${PILL_INSET_X})`,
+              // Fixed at the expanded width so the slots keep their size while the bar shrinks around them.
+              width: `calc(${EXPANDED_WIDTH} - ${BAR_INSET_X})`,
               transitionTimingFunction: SPRING_BOUNCY
             }}
           >
             {/*
-              The lens: one wide glass pill, centred in its slot, that rests on the current page, follows a dragging
-              finger, and swells slightly while it is on the move. The outer track steps a whole slot at a time.
+              The mark: a glowing line under the current section, as in the header, that follows a dragging finger and
+              stretches while it is on the move. The outer track steps a whole slot at a time.
             */}
             <span
               aria-hidden="true"
               className={cn(
-                "pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center motion-safe:transition-[translate,opacity] motion-safe:duration-200 motion-safe:ease-out",
-                lensIndex === -1 && "opacity-0"
+                "pointer-events-none absolute inset-y-0 left-0 flex items-end justify-center motion-safe:transition-[translate,opacity] motion-safe:duration-200 motion-safe:ease-out",
+                markIndex === -1 && "opacity-0"
               )}
-              style={{ width: `calc(100% / ${slotCount})`, translate: `${Math.max(lensIndex, 0) * 100}% 0` }}
+              style={{ width: `calc(100% / ${slotCount})`, translate: `${Math.max(markIndex, 0) * 100}% 0` }}
             >
-              {/* No spring here: retargeted slot by slot under a dragging finger, an overshoot makes the lens wobble. */}
+              {/* No spring here: retargeted slot by slot under a dragging finger, an overshoot makes the mark wobble. */}
               <span
                 className={cn(
-                  "h-[3.375rem] w-[calc(100%+0.5rem)] max-w-28 shrink-0 rounded-full bg-foreground/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.4)] motion-safe:transition-[scale,background-color] motion-safe:duration-200 motion-safe:ease-out dark:bg-white/15",
-                  (dragIndex !== null || lensMoving) && "scale-[1.1]",
-                  dragIndex !== null && "bg-foreground/15 dark:bg-white/25"
+                  "mb-px h-0.5 w-8 nav-mark motion-safe:transition-[scale] motion-safe:duration-200 motion-safe:ease-out",
+                  (dragIndex !== null || markMoving) && "scale-x-150"
                 )}
               />
             </span>
@@ -171,7 +176,7 @@ function Bar({ pathname }: { pathname: string | null }) {
                 href={href}
                 aria-current={index === activeIndex ? "page" : undefined}
                 onClick={() => choose(index)}
-                className={slotClass(index === lensIndex)}
+                className={slotClass(index === markIndex)}
               >
                 <Icon className="size-6" aria-hidden="true" />
                 <SlotLabel>{t(label)}</SlotLabel>
@@ -189,12 +194,14 @@ function Bar({ pathname }: { pathname: string | null }) {
               startGesture(event, { swallowTap: true })
             }}
             className={cn(
-              "absolute inset-0 flex touch-none items-center justify-center rounded-[inherit] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-[opacity,scale] motion-safe:duration-400",
+              "absolute inset-0 flex touch-none items-center justify-center rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-[opacity,scale] motion-safe:duration-400",
+              activeIndex === -1 ? "text-foreground" : "text-(--nav-current)",
               collapsed ? "opacity-100" : "pointer-events-none scale-50 opacity-0"
             )}
             style={{ transitionTimingFunction: SPRING_BOUNCY }}
           >
             <CollapsedIcon className="size-5" aria-hidden="true" />
+            {activeIndex === -1 ? null : <span aria-hidden="true" className="absolute bottom-px h-0.5 w-4 nav-mark" />}
           </button>
         </nav>
       </div>
@@ -204,8 +211,8 @@ function Bar({ pathname }: { pathname: string | null }) {
 
 function slotClass(highlighted: boolean) {
   return cn(
-    "relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors",
-    highlighted && "text-foreground"
+    "relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-foreground/75 outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors",
+    highlighted && "text-(--nav-current)"
   )
 }
 
@@ -217,7 +224,7 @@ function SlotLabel({ children }: { children: string }) {
 /**
  * Lets a finger slide along the row of slots: past a small threshold the press becomes a drag that reports the slot
  * under the finger, and releasing selects it. A press that never moves stays an ordinary tap on the slot it hit.
- * A gesture may also begin off the row, on the collapsed pill, so one motion can expand the bar and pick a slot;
+ * A gesture may also begin off the row, on the collapsed bar, so one motion can expand the bar and pick a slot;
  * `swallowTap` then keeps a press that never moves from also tapping whichever slot the bar opened under it.
  * `pressed` is true while a finger (not a mouse) is down.
  */
@@ -264,7 +271,7 @@ function useDragToSelect(rowRef: RefObject<HTMLElement | null>, slotCount: numbe
     // Armed from the start: the bar opening under the finger can make the browser cancel the touch.
     if (swallowTap) swallowNextClick()
 
-    // Window listeners follow the pointer wherever it goes: from the collapsed pill onto the row, or off the bar.
+    // Window listeners follow the pointer wherever it goes: from the collapsed bar onto the row, or off the bar.
     const move = (moved: globalThis.PointerEvent) => {
       if (moved.pointerId !== pointerId) return
       if (!dragging && Math.abs(moved.clientX - startX) < DRAG_THRESHOLD_PX) return
@@ -303,7 +310,7 @@ function useDragToSelect(rowRef: RefObject<HTMLElement | null>, slotCount: numbe
   return { dragIndex, pressed, startGesture, onClickCapture }
 }
 
-/** True for a moment after `index` changes from one slot to another, while the lens slides across. */
+/** True for a moment after `index` changes from one slot to another, while the mark slides across. */
 function useIsMoving(index: number, duration = 250) {
   const [moving, setMoving] = useState(false)
   const previous = useRef(index)
