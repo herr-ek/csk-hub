@@ -1,3 +1,4 @@
+import Form from "next/form"
 import Link from "next/link"
 import { Suspense } from "react"
 import { getRequestSession } from "@/core/auth/session.server"
@@ -12,12 +13,14 @@ import { Badge } from "@/shared/ui/base/badge"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/base/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/shared/ui/base/empty"
+import { Input } from "@/shared/ui/base/input"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
 import { UnpublishedNotice } from "./compose/UnpublishedNotice"
+import { NewsSearchButton, Reveal } from "./news-motion"
 import { PostTime } from "./PostTime"
 import { PostByline } from "./post-byline"
-import { listNewsFeed, listOwnDrafts } from "./service"
+import { listNewsFeed, listOwnDrafts, NEWS_FEED_PAGE_SIZE, searchNewsFeed } from "./service"
 import { listUnreadPostIds } from "./unread"
 
 function NewsHeader({ children }: { children?: React.ReactNode }) {
@@ -67,10 +70,16 @@ async function listUnreadForCurrentUser() {
   return session ? listUnreadPostIds(session.user.id) : new Set<string>()
 }
 
-export async function NewsScreen({ searchParams }: { searchParams: Promise<{ page?: string | string[] }> }) {
+export async function NewsScreen({
+  searchParams
+}: {
+  searchParams: Promise<{ query?: string | string[]; page?: string | string[] }>
+}) {
   const params = await searchParams
+  const query = typeof params.query === "string" ? params.query.trim() : ""
+  const page = typeof params.page === "string" ? Number(params.page) : 1
   const [{ entries, pages, hasMore }, unread, canPublish, t] = await Promise.all([
-    listNewsFeed(typeof params.page === "string" ? Number(params.page) : 1),
+    query ? searchNewsFeed(query, page) : listNewsFeed(page),
     listUnreadForCurrentUser(),
     can({ action: "post.create" }),
     getTranslations("Posts")
@@ -93,47 +102,75 @@ export async function NewsScreen({ searchParams }: { searchParams: Promise<{ pag
         </Suspense>
       ) : null}
 
+      <Form action={ROUTES.news} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <label htmlFor="news-search" className="mb-2 block text-sm font-medium">
+            {t("searchLabel")}
+          </label>
+          <Input
+            id="news-search"
+            name="query"
+            type="search"
+            maxLength={200}
+            defaultValue={query}
+            key={query}
+            placeholder={t("searchPlaceholder")}
+          />
+        </div>
+        <NewsSearchButton />
+        {query ? (
+          <Link href={ROUTES.news} className={buttonVariants({ variant: "outline" })}>
+            {t("clearSearch")}
+          </Link>
+        ) : null}
+      </Form>
+
       {entries.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>{t("emptyTitle")}</EmptyTitle>
-            <EmptyDescription>{t("emptyDescription")}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        // Keyed by the query, so a second search with no matches visibly answers again.
+        <Reveal key={query}>
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>{t(query ? "noResultsTitle" : "emptyTitle")}</EmptyTitle>
+              <EmptyDescription>{t(query ? "noResultsDescription" : "emptyDescription")}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </Reveal>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry) => {
+          {entries.map((entry, index) => {
             const isUnread = unread.has(entry.id)
             return (
               <li key={entry.id}>
-                <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
-                  <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                    <CardHeader>
-                      <CardTitle className={cn("text-lg break-words", isUnread && "font-semibold")}>
-                        {entry.title}
-                      </CardTitle>
-                      {isUnread ? (
-                        <CardAction>
-                          <Badge>{t("unread")}</Badge>
-                        </CardAction>
-                      ) : null}
-                      <CardDescription>
-                        <PostByline
-                          authorName={entry.authorName}
-                          publishedAt={entry.publishedAt}
-                          editedAt={entry.editedAt}
+                <Reveal order={index % NEWS_FEED_PAGE_SIZE}>
+                  <Link href={newsPostPath(entry.id)} className="group block focus-visible:outline-none">
+                    <Card className="transition-colors group-hover:bg-muted/50 group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                      <CardHeader>
+                        <CardTitle className={cn("text-lg break-words", isUnread && "font-semibold")}>
+                          {entry.title}
+                        </CardTitle>
+                        {isUnread ? (
+                          <CardAction>
+                            <Badge>{t("unread")}</Badge>
+                          </CardAction>
+                        ) : null}
+                        <CardDescription>
+                          <PostByline
+                            authorName={entry.authorName}
+                            publishedAt={entry.publishedAt}
+                            editedAt={entry.editedAt}
+                          />
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <RichTextContent
+                          document={entry.body}
+                          linksAsText
+                          className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
                         />
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <RichTextContent
-                        document={entry.body}
-                        linksAsText
-                        className="max-h-24 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
-                      />
-                    </CardContent>
-                  </Card>
-                </Link>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </Reveal>
               </li>
             )
           })}
@@ -141,7 +178,7 @@ export async function NewsScreen({ searchParams }: { searchParams: Promise<{ pag
       )}
       {hasMore ? (
         <Link
-          href={`${ROUTES.news}?${new URLSearchParams({ page: String(pages + 1) })}`}
+          href={`${ROUTES.news}?${new URLSearchParams({ ...(query ? { query } : {}), page: String(pages + 1) })}`}
           scroll={false}
           className={cn(buttonVariants({ variant: "outline" }), "self-center")}
         >
