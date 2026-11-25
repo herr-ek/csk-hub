@@ -551,7 +551,13 @@ if (!process.env.CSK_ACTIVITY_TEST) {
 
       test("published Post events and personal reads propagate, Draft content stays private", async () => {
         const member = await singer()
-        const content = { title: "Private Draft", body: { type: "doc" as const, content: [] } }
+        const content = {
+          title: "Private Draft",
+          body: { type: "doc" as const, content: [] },
+          publisherGroupId: null,
+          audienceAll: true,
+          targets: []
+        }
         const post = await createPost({ authorId: member.userId, content, publish: false })
         expect(await testDatabase.db.select().from(activityDelivery)).toHaveLength(0)
         await saveDraft({ authorId: member.userId, postId: post.id, content, publish: true })

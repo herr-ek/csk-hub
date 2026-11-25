@@ -10,7 +10,13 @@ import * as reads from "./service"
 const database = await createTestDatabase()
 
 function content(title: string, text = "Vi sjunger i Vasakyrkan."): PostContent {
-  return { title, body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] } }
+  return {
+    title,
+    body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] },
+    publisherGroupId: null,
+    audienceAll: true,
+    targets: []
+  }
 }
 
 describe.skipIf(!database)("a Post's lifecycle", () => {

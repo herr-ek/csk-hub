@@ -9,8 +9,8 @@ import { queuePublicActivity } from "@/core/realtime/outbox"
 import type { RichTextDocument } from "@/features/rich-text"
 import { isPostId, type PostsDatabase } from "./service"
 
-/** Validated content. Production commands supply an explicit address; legacy callers retain all-CSK. */
-export type PostContent = { title: string; body: RichTextDocument } & Partial<PostAddress>
+/** Validated content with its publisher and audience, which never default to all of CSK. */
+export type PostContent = { title: string; body: RichTextDocument } & PostAddress
 type SavedPost = { id: string }
 
 async function replaceTargets(database: PostsDatabase, postId: string, targets: PostAudienceTarget[]) {
@@ -24,7 +24,7 @@ export async function createPost(
   database: PostsDatabase = db
 ): Promise<SavedPost> {
   return database.transaction(async (tx) => {
-    const { targets = [], title, body, publisherGroupId = null, audienceAll = true } = input.content
+    const { targets, title, body, publisherGroupId, audienceAll } = input.content
     const content = { title, body, publisherGroupId, audienceAll }
     const now = input.publish ? new Date() : null
     const [created] = await tx
@@ -46,16 +46,13 @@ async function saveContent(
   return database.transaction(async (tx) => {
     const { targets, title, body, publisherGroupId, audienceAll } = input.content
     const content = { title, body, publisherGroupId, audienceAll }
-    const oldTargets =
-      targets === undefined
-        ? []
-        : await tx
-            .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
-            .from(postTarget)
-            .where(eq(postTarget.postId, input.postId))
-    const audienceChanged = targets !== undefined && !samePostTargets(oldTargets, targets)
+    const oldTargets = await tx
+      .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
+      .from(postTarget)
+      .where(eq(postTarget.postId, input.postId))
+    const audienceChanged = !samePostTargets(oldTargets, targets)
     const changed = sql`(${post.title} is distinct from ${content.title} or ${post.body} is distinct from ${JSON.stringify(content.body)}::jsonb
-      or ${audienceChanged} or ${post.audienceAll} is distinct from ${content.audienceAll ?? sql`${post.audienceAll}`})`
+      or ${audienceChanged} or ${post.audienceAll} is distinct from ${content.audienceAll})`
     const edited = sql`${changed} and (${post.publishedAt} is not null or (${post.publisherGroupId} is not null and ${post.firstPublishedAt} is not null))`
     const groupEdit = sql`${post.publisherGroupId} is not null and ${edited}`
     const state = input.draft
@@ -79,7 +76,7 @@ async function saveContent(
       .where(and(eq(post.id, input.postId), isNull(post.discardedAt), state))
       .returning({ id: post.id })
     if (!saved) return null
-    if (targets !== undefined) await replaceTargets(tx, saved.id, targets)
+    await replaceTargets(tx, saved.id, targets)
     if (input.publish || !input.draft) await queuePublicActivity(tx, { kind: "posts.changed" })
     return saved
   })

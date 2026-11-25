@@ -32,7 +32,17 @@ describe.skipIf(!database)("adopted Post authorization", () => {
 
   async function notice(authorId: string, publish: boolean) {
     return createPost(
-      { authorId, publish, content: { title: "Notice", body: { type: "doc", content: [{ type: "paragraph" }] } } },
+      {
+        authorId,
+        publish,
+        content: {
+          title: "Notice",
+          body: { type: "doc", content: [{ type: "paragraph" }] },
+          publisherGroupId: null,
+          audienceAll: true,
+          targets: []
+        }
+      },
       t.db
     )
   }

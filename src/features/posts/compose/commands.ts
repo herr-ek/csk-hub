@@ -7,7 +7,6 @@ import {
   type PermissionRequest,
   withCurrentRequest
 } from "@/core/authz"
-import type { PostAddress } from "@/core/authz/model"
 import { db } from "@/core/db"
 import { post, postTarget } from "@/core/db/schema/posts"
 import { logger } from "@/core/logging"
@@ -24,7 +23,6 @@ export type PostWriteResult<Success extends object = object> =
   | { status: "unavailable" }
   | { status: "conflict" }
 
-type PostSubmission = lifecycle.PostContent & PostAddress
 type Dependencies = { database?: AuthorizationDatabase; withAccess?: typeof withCurrentRequest }
 type PostAction = "post.create" | "post.update" | "post.publish" | "post.unpublish" | "post.discard"
 
@@ -32,7 +30,7 @@ async function writePost<Saved extends { id: string }>(
   action: PostAction,
   postId: string | null,
   revision: number | undefined,
-  content: PostSubmission | undefined,
+  content: lifecycle.PostContent | undefined,
   publishing: boolean,
   write: (actorId: string, tx: AuthorizationDatabase) => Promise<Saved | null>,
   { database = db, withAccess = withCurrentRequest }: Dependencies
@@ -91,7 +89,7 @@ async function writePost<Saved extends { id: string }>(
 
 /** Validate content before calling; identity, relationships and resources are reloaded here. */
 export async function createPostCommand(
-  content: PostSubmission,
+  content: lifecycle.PostContent,
   publish: boolean,
   dependencies: Dependencies = {}
 ): Promise<PostWriteResult> {
@@ -109,7 +107,7 @@ export async function createPostCommand(
 /** Revision is mandatory for existing resources; stale saves preserve newer content. */
 export async function saveDraftCommand(
   postId: string,
-  content: PostSubmission,
+  content: lifecycle.PostContent,
   publish: boolean,
   revision: number,
   dependencies: Dependencies = {}
@@ -127,7 +125,7 @@ export async function saveDraftCommand(
 
 export async function editPublishedPostCommand(
   postId: string,
-  content: PostSubmission,
+  content: lifecycle.PostContent,
   revision: number,
   dependencies: Dependencies = {}
 ): Promise<PostWriteResult> {
