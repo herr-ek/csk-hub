@@ -67,12 +67,12 @@ parent Board above Board 26/27 and Board 27/28.
 | `gig-committee` | CSK-wide | Annual | Helpers | One per year |
 | `social-committee` | CSK-wide | Annual | Helpers | One per year |
 | `concert-committee` | CSK-wide | Annual | Helpers | One per year |
-| `recruitment-committee` | CSK-wide | Annual | Helpers | One per year |
+| `recruitment-committee` | CSK-wide | Annual | Helpers, each with a Voice family | One per year |
 | `tour-committee` | CSK-wide | Annual | Helpers | One per year; only one operates at a time |
 | `nomination-committee` | CSK-wide | Annual | Yes; no Positions | One per year |
 | `web-team` | CSK-wide | Annual | Yes; no Positions | One per year |
 | `archives` | CSK-wide | Annual | Yes; no Positions | One per year |
-| `memorisation-committee` | CSK-wide | Annual | Yes; no Positions | One per year |
+| `memorisation-committee` | CSK-wide | Continuing | Yes; no Positions | One |
 | `parents-meeting` | CSK-wide | Continuing | No | One continuing identity |
 | `equipment-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
 | `party-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
@@ -87,7 +87,7 @@ participation,
 not a way to bypass the rules of a known formal Group type.
 
 Annual types require a year; continuing and fluid types forbid it. Continuing identities
-such as Choirs and Föräldramötet persist across July. Fluid teams and appointments have no
+such as Choirs, Föräldramötet and Utantillkommittén persist across July. Fluid teams and appointments have no
 automatic June deadline. Preparing a year creates the required annual Groups, reusing existing
 identities; it never copies people or renews appointments.
 
@@ -163,7 +163,8 @@ direct_membership (
   group_id uuid NOT NULL REFERENCES group(id) ON DELETE RESTRICT,
   start_date date NOT NULL,
   end_date date NULL,
-  voice voice_division NULL
+  voice voice_division NULL,
+  voice_family voice_family NULL -- Rekryteringskommittén only
 )
 
 position_appointment (
@@ -207,7 +208,7 @@ from `POSITION_DEFINITIONS`, the appointment's context, and its explicit organis
 Archived targets remain included for historical reads. The same catalogue applies to current,
 future, and historical appointments; policy changes deliberately reinterpret all years. There
 are no policy snapshots or versions. Creation and correction still validate that every required
-concrete target exists and is available, and refuse overlapping Helper participation.
+concrete target exists and is available, and end Helper participation that an appointment replaces.
 
 The context does not automatically grant Membership. For a Board Position it is a granted
 Group; for a choir responsibility it is an eligibility prerequisite. These meanings are
@@ -334,7 +335,8 @@ The database checks important local invariants; it is not a complete substitute 
 | One person's periods in the same Group cannot overlap, including finite historical/future periods. | DB: `direct_membership_overlap_excl` |
 | Board and Föräldramötet reject direct Membership. | Trigger: `direct_membership_policy_check` |
 | Annual direct Membership fits its Group's year and has a finite end. | Trigger: `direct_membership_annual_check` |
-| Voice exists exactly on Section and gig-group Memberships; Section Voices must contain the singer division. | Trigger: `direct_membership_voice_check`; domain restricts it to divisions |
+| Voice exists exactly on Section and gig-group Memberships, and a Voice family exactly on Rekryteringskommittén's; Section Voices must contain the singer division. | Trigger: `direct_membership_voice_check`; domain restricts it to divisions |
+| A gig Voice or recruitment Voice family is one the User declares or sings in a Section when it is given; never checked again. | App: membership addition and Voice changes |
 | Choir-scoped participation is covered by Choir Membership. | App: dated participation validation |
 | A singer has at most one overlapping Section Membership per Choir. | App: dated placement validation under the User lock |
 | Multiple Choirs are allowed, each with independent placement and Voice. | App: singer placement commands |
@@ -354,7 +356,7 @@ The database checks important local invariants; it is not a complete substitute 
 | Grant type is allowed, annual target year agrees, and a target of the context type is the exact context Group. | App: one shared catalogue-derived membership query, using unique Group identities |
 | Every required target Group exists and is available at assignment/correction. | App: catalogue-driven target validation inside the command transaction |
 | Prerequisite direct Membership covers the whole tenure. | App: coverage checks on assignment/correction and Membership changes |
-| Overlapping Helper participation is refused when the appointment grants that committee. | App: participation validation in the appointment transaction |
+| Helper participation never overlaps an appointment granting that committee. Appointing ends a Helper period at the tenure's start and removes one planned for later; a Helper period that began within a backdated tenure refuses it. | App: appointment command, then participation validation |
 | Ending an appointment never restores a Helper Membership. | App: explicit new direct addition required |
 | Archival preserves Membership and appointment periods, including current and future participation. | App: archival changes Group visibility only; Choir archival also covers its Sections |
 
@@ -375,7 +377,7 @@ Organisation commands run in a transaction, or a nested savepoint when given a t
 They use User/appointment/year advisory locks and row locks where appropriate to serialize
 conflicting operations. Known constraint errors become typed rule violations such as
 `position-taken`, `already-holding-elected-post`, and `period-conflict`. A refused command
-rolls back its writes, including appointment changes. Helper records are never changed by appointment commands.
+rolls back its writes, including appointment changes.
 
 Appointment corrections retain the appointment UUID, validate the proposed person, code,
 context, year, and period, then update the single appointment atomically. Its derived
@@ -384,9 +386,9 @@ are explicit operations. Cancelling a prepared appointment deletes it and remove
 Memberships. Ending an existing appointment updates its tenure; earlier dated reads still derive
 its historical Memberships from the retained appointment.
 
-Before appointing a Helper, an Admin must explicitly end the overlapping Helper period.
-Appointment commands refuse overlaps without changing Helper records, preserving both past
-and scheduled participation. No later Helper period is implicitly restored when the appointment ends.
+Appointing a Helper ends their Helper period when the tenure begins, in the same transaction. Past
+participation is kept, and no Helper period is restored when the appointment ends. Correcting an
+appointment never changes Helper records; an overlap refuses the correction.
 
 Annual Groups become current on 1 July of their `organisation_year` and historical on the
 following 1 July. They cannot be manually archived: `group_annual_active_check` requires
@@ -441,7 +443,7 @@ CREATE DOMAIN voice_division AS voice CHECK (VALUE IN ('S1','S2','A1','A2','T1',
 | --- | --- |
 | `voice` | `section.voice`: family or division |
 | `voice_division` | `direct_membership.voice`, `voice_capability.voice`: divisions only |
-| `voice_family` | Voice-family audiences in the separate news model |
+| `voice_family` | `direct_membership.voice_family`, and Voice-family audiences in the separate news model |
 
 When comparing a domain over this enum, cast to the base enum, for example
 `voice_capability.voice::voice = 'B1'`. Keys, ordering, and `DISTINCT` work without that

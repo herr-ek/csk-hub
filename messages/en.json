@@ -867,10 +867,7 @@
       "voice-not-sung-by-member": "They neither declare that Voice nor sing it in a Choir."
     },
     "management": {
-      "prepare": "Prepare annual Groups",
-      "prepareDescription": "Create the required Groups for a year. Existing Groups are reused; members and appointments are never copied.",
       "year": "Organisational year (starting year)",
-      "yearHelp": "For 26/27, enter 2026. The year runs from 1 July to 30 June.",
       "edit": "Edit Group",
       "current": "Current",
       "future": "Prepared / future",
@@ -896,8 +893,7 @@
       "voice": "Voice",
       "section": "Section",
       "yearRequired": "Choose a year for this annual Group.",
-      "groupIdentity": "{type} · {year}",
-      "derivedName": "The label is generated from the group type, year, and choir."
+      "groupIdentity": "{type} · {year}"
     },
     "positionLabels": {
       "Chair": "Chair",
@@ -1485,7 +1481,6 @@
       "changeVoice": "Change Voice",
       "changeVoiceTitle": "Change {name}'s Voice",
       "changeVoiceDescription": "Another Section's Voice moves the singer there.",
-      "move": "Move",
       "movesTo": "Moves to {section}.",
       "endsPositions": "This also ends: {positions}.",
       "leave": "Leave {choir}",

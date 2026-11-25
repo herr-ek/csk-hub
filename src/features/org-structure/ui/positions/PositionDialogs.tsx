@@ -56,21 +56,14 @@ export function FillPositionDialog({
   only?: string[]
 }) {
   const t = useTranslations("OrgAdmin.positions")
-  const types = useTranslations("Groups.types")
   const format = useFormatter()
   const positionName = usePositionName()
-  const { people, today } = usePeople()
-  const [pickedId, setPickedId] = useState<string>()
+  const { today } = usePeople()
   const { current, planned } = holdersByStatus(slot.holders, today)
   const start = defaultStart(slot.organisationYear, today)
   const replaced = current ?? (start > today ? planned[0] : undefined)
-  const picked = people.find(({ id }) => id === pickedId)
-  const helping = helpers.filter(({ userId }) => userId === pickedId)
-  const joinsChoir =
-    slot.positionCode === PositionCode.Conductor && picked && !picked.choirs.some(({ id }) => id === slot.choir?.id)
   const bounds = slot.organisationYear === null ? null : organisationYearPeriod(slot.organisationYear)
   const longDate = (date: string) => format.dateTime(new Date(`${date}T12:00:00Z`), { dateStyle: "long" })
-  const options = candidates(slot, people).filter(({ id }) => id !== replaced?.userId && (!only || only.includes(id)))
 
   return (
     <GroupCommandDialog
@@ -92,15 +85,44 @@ export function FillPositionDialog({
         <input type="hidden" name="organisationYear" value={slot.organisationYear} />
       )}
       {replaced ? <input type="hidden" name="replaces" value={replaced.appointmentId} /> : null}
-      <PersonPicker label={t("person")} name="userId" people={options} onPick={([userId]) => setPickedId(userId)} />
-      {helping.map(({ type }) => (
-        <Notice key={type}>
-          {t("endsHelper", { name: picked?.name ?? "", committee: types(groupTypeKey(type)) })}
-        </Notice>
-      ))}
-      {joinsChoir ? <Notice>{t("joinsChoir", { name: picked.name, choir: slot.choir?.name ?? "" })}</Notice> : null}
+      <CandidateField slot={slot} helpers={helpers} only={only} replacedId={replaced?.userId} />
       <DatesField start={start} min={bounds?.startDate} max={bounds ? shiftDate(bounds.endDate, -1) : undefined} />
     </GroupCommandDialog>
+  )
+}
+
+/** The candidates, and what else happens to the one picked. Mounted with its dialog, so each opening starts afresh. */
+function CandidateField({
+  slot,
+  helpers,
+  only,
+  replacedId
+}: {
+  slot: PositionSlot
+  helpers: { userId: string; type: GroupType }[]
+  only?: string[]
+  replacedId?: string
+}) {
+  const t = useTranslations("OrgAdmin.positions")
+  const types = useTranslations("Groups.types")
+  const { people } = usePeople()
+  const [pickedId, setPickedId] = useState<string>()
+  const options = candidates(slot, people).filter(({ id }) => id !== replacedId && (!only || only.includes(id)))
+  const picked = people.find(({ id }) => id === pickedId)
+  const joinsChoir =
+    slot.positionCode === PositionCode.Conductor && picked && !picked.choirs.some(({ id }) => id === slot.choir?.id)
+  return (
+    <>
+      <PersonPicker label={t("person")} name="userId" people={options} onPick={([userId]) => setPickedId(userId)} />
+      {helpers
+        .filter(({ userId }) => userId === pickedId)
+        .map(({ type }) => (
+          <Notice key={type}>
+            {t("endsHelper", { name: picked?.name ?? "", committee: types(groupTypeKey(type)) })}
+          </Notice>
+        ))}
+      {joinsChoir ? <Notice>{t("joinsChoir", { name: picked.name, choir: slot.choir?.name ?? "" })}</Notice> : null}
+    </>
   )
 }
 

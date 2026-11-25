@@ -3,7 +3,7 @@
 import { type ReactElement, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { GroupType, positionCodeKey } from "@/core/org-structure"
-import { contains, VOICE_DIVISIONS, type VoiceDivision } from "@/features/voice/model"
+import { contains, VOICE_DIVISIONS } from "@/features/voice/model"
 import { DateField, SelectField } from "@/shared/forms/fields"
 import { Button } from "@/shared/ui/base/button"
 import type { ChoirStructure, DependentAppointment, Person, SingerPlacement } from "../../roster-reads"
@@ -57,15 +57,6 @@ export function PlaceSingerDialog({
   trigger: ReactElement
 }) {
   const t = useTranslations("OrgAdmin.choirs")
-  const suggested = choirs.find((choir) => voiceOptions(choir).some(({ voice }) => person.voices.includes(voice)))
-  const [choirId, setChoirId] = useState((suggested ?? choirs[0])?.id ?? "")
-  const choir = choirs.find(({ id }) => id === choirId)
-  const firstVoice = (candidate: ChoirStructure | undefined) => {
-    const voices = candidate ? voiceOptions(candidate).map(({ voice }) => voice) : []
-    return voices.find((voice) => person.voices.includes(voice)) ?? voices[0] ?? ""
-  }
-  const [voice, setVoice] = useState<string>(firstVoice(choir))
-  if (!choir) return null
   return (
     <GroupCommandDialog
       trigger={trigger}
@@ -75,20 +66,39 @@ export function PlaceSingerDialog({
       submitLabel={t("place")}
     >
       <input type="hidden" name="userId" value={person.id} />
+      <PlacementFields person={person} choirs={choirs} />
+      <DateField label={t("firstDay")} name="startDate" defaultValue={today} required />
+    </GroupCommandDialog>
+  )
+}
+
+/** A Choir and one of its Voices, starting on one the person can sing. */
+function PlacementFields({ person, choirs }: { person: Person; choirs: ChoirStructure[] }) {
+  const t = useTranslations("OrgAdmin.choirs")
+  const firstVoice = (candidate: ChoirStructure | undefined) => {
+    const voices = candidate ? voiceOptions(candidate).map(({ voice }) => voice) : []
+    return voices.find((voice) => person.voices.includes(voice)) ?? voices[0] ?? ""
+  }
+  const suggested = choirs.find((choir) => voiceOptions(choir).some(({ voice }) => person.voices.includes(voice)))
+  const [choir, setChoir] = useState(suggested ?? choirs[0])
+  const [voice, setVoice] = useState<string>(firstVoice(choir))
+  if (!choir) return null
+  return (
+    <>
       <SelectField
         label={t("choir")}
         name="choirId"
-        value={choirId}
-        onValueChange={(next) => {
-          setChoirId(next)
-          setVoice(firstVoice(choirs.find(({ id }) => id === next)))
+        value={choir.id}
+        onValueChange={(id) => {
+          const next = choirs.find((candidate) => candidate.id === id) ?? choir
+          setChoir(next)
+          setVoice(firstVoice(next))
         }}
         required
         options={choirs.map(({ id, name }) => ({ value: id, label: name }))}
       />
       <VoiceField choir={choir} value={voice} onChange={setVoice} />
-      <DateField label={t("firstDay")} name="startDate" defaultValue={today} required />
-    </GroupCommandDialog>
+    </>
   )
 }
 
@@ -120,12 +130,6 @@ export function ChangeVoiceDialog({
   today: string
 }) {
   const t = useTranslations("OrgAdmin.choirs")
-  const [voice, setVoice] = useState<string>(placement.voice)
-  const section = voiceOptions(choir).find((option) => option.voice === (voice as VoiceDivision))?.section
-  const moves = section !== undefined && section.id !== placement.sectionId
-  const ended = moves
-    ? dependents.filter(({ userId, contextGroupId }) => userId === person.id && contextGroupId === placement.sectionId)
-    : []
   return (
     <GroupCommandDialog
       trigger={
@@ -136,15 +140,42 @@ export function ChangeVoiceDialog({
       title={t("changeVoiceTitle", { name: person.name })}
       description={t("changeVoiceDescription")}
       action={changeVoiceAction}
-      submitLabel={t(moves ? "move" : "changeVoice")}
+      submitLabel={t("changeVoice")}
     >
       <input type="hidden" name="userId" value={person.id} />
       <input type="hidden" name="choirId" value={choir.id} />
-      <VoiceField choir={choir} value={voice} onChange={setVoice} />
-      {moves ? <Notice>{t("movesTo", { section: section.name })}</Notice> : null}
-      <EndedPositions appointments={ended} />
+      <NewVoiceFields
+        placement={placement}
+        choir={choir}
+        dependents={dependents.filter(
+          ({ userId, contextGroupId }) => userId === person.id && contextGroupId === placement.sectionId
+        )}
+      />
       <DateField label={t("from")} name="startDate" defaultValue={today} min={placement.startDate} required />
     </GroupCommandDialog>
+  )
+}
+
+/** The new Voice, and the Section and Positions it would leave. */
+function NewVoiceFields({
+  placement,
+  choir,
+  dependents
+}: {
+  placement: SingerPlacement
+  choir: ChoirStructure
+  dependents: DependentAppointment[]
+}) {
+  const t = useTranslations("OrgAdmin.choirs")
+  const [voice, setVoice] = useState<string>(placement.voice)
+  const section = voiceOptions(choir).find((option) => option.voice === voice)?.section
+  const moves = section !== undefined && section.id !== placement.sectionId
+  return (
+    <>
+      <VoiceField choir={choir} value={voice} onChange={setVoice} />
+      {moves ? <Notice>{t("movesTo", { section: section.name })}</Notice> : null}
+      <EndedPositions appointments={moves ? dependents : []} />
+    </>
   )
 }
 

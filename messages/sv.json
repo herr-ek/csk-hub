@@ -867,10 +867,7 @@
       "voice-not-sung-by-member": "Personen har varken angett stämman eller sjunger den i en kör."
     },
     "management": {
-      "prepare": "Förbered årsgrupper",
-      "prepareDescription": "Skapa de grupper som behövs för ett verksamhetsår. Befintliga grupper återanvänds; medlemmar och posttillsättningar kopieras aldrig.",
       "year": "Verksamhetsår (startår)",
-      "yearHelp": "Ange 2026 för 26/27. Året löper från 1 juli till 30 juni.",
       "edit": "Redigera grupp",
       "current": "Nuvarande",
       "future": "Förberedd / framtida",
@@ -896,8 +893,7 @@
       "voice": "Stämma",
       "section": "Stämgrupp",
       "yearRequired": "Välj verksamhetsår för denna årsgrupp.",
-      "groupIdentity": "{type} · {year}",
-      "derivedName": "Namnet skapas utifrån gruppens typ, verksamhetsår och kör."
+      "groupIdentity": "{type} · {year}"
     },
     "positionLabels": {
       "Chair": "Ordförande",
@@ -1485,7 +1481,6 @@
       "changeVoice": "Byt stämma",
       "changeVoiceTitle": "Byt stämma för {name}",
       "changeVoiceDescription": "En annan stämgrupps stämma flyttar sångaren dit.",
-      "move": "Flytta",
       "movesTo": "Flyttas till {section}.",
       "endsPositions": "Det här avslutar också: {positions}.",
       "leave": "Lämna {choir}",

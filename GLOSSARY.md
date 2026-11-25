@@ -97,6 +97,8 @@ _Avoid_: Part, sub-voice
 **Voice capability**:
 A User's self-reported ability to sing a Voice division, independent of their Section
 Memberships. Being able to sing a whole Voice family means being able to sing both of its divisions.
+Joining a gig group or Rekryteringskommittén in a Voice requires a matching capability or a Section
+Voice when joining; later changes to either do not end the participation.
 _Avoid_: Section Membership, vocal range
 
 **Part**:
@@ -121,8 +123,8 @@ such as a singer's placement or a Helper's participation.
 _Avoid_: Position appointment
 
 **Helper**:
-A person explicitly added to a Group without a Position in it; taking a Position replaces
-their participation as a Helper. The Board has no Helpers, while Choir and Section singers
+A person explicitly added to a Group without a Position in it; taking a Position ends their
+participation as a Helper from the day it begins. The Board has no Helpers, while Choir and Section singers
 retain their singing Membership when they take or leave a Position.
 _Avoid_: Position holder, singer
 
@@ -135,7 +137,7 @@ _Avoid_: Calendar year, season
 **Annual group**:
 A Group for one Organisational year, such as Styret 26/27, that year's Sexmästeri, or that
 year's Turnékommitté; the next year's Group is a different Group of the same type.
-Arkivariet and Webmästeriet also renew annually, while roddgrupper, festgrupper,
+Arkivariet and Webmästeriet also renew annually, while Utantillkommittén, roddgrupper, festgrupper,
 rephelgsgrupper, and gig groups have no yearly renewal.
 _Avoid_: Continuing group with yearly editions
 
@@ -143,6 +145,15 @@ _Avoid_: Continuing group with yearly editions
 The continuing Group consisting of the current Stämföräldrar and the current Board's
 Sekreterare. It has no yearly renewal of its own; its membership follows those appointments.
 _Avoid_: Annual group
+
+**Rekryteringskommittén**:
+The annual Group of the Vice ordförande and Helpers each chosen as a Voice family, usually one
+for each of S, A, T and B. Extra Helpers have a Voice family too; the Vice ordförande has none.
+_Avoid_: Gig group, Section
+
+**Valberedningen**:
+The annual Group that prepares elections. It should include someone from each Choir; a singer in two
+Choirs counts for both. A missing Choir is a reminder, never a rule.
 
 **CSK-wide**:
 For CSK as a whole rather than internal to one Choir; members from any Choir can participate.

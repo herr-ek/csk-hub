@@ -867,10 +867,7 @@
       "voice-not-sung-by-member": "Die Person hat diese Stimme weder angegeben noch singt sie sie in einem Chor."
     },
     "management": {
-      "prepare": "Jahresgruppen vorbereiten",
-      "prepareDescription": "Erstelle die erforderlichen Gruppen für ein Jahr. Bestehende Gruppen werden wiederverwendet; Mitglieder und Amtsbesetzungen werden niemals kopiert.",
       "year": "Organisationsjahr (Startjahr)",
-      "yearHelp": "Gib für 26/27 das Jahr 2026 ein. Das Jahr läuft vom 1. Juli bis zum 30. Juni.",
       "edit": "Gruppe bearbeiten",
       "current": "Aktuell",
       "future": "Vorbereitet / zukünftig",
@@ -896,8 +893,7 @@
       "voice": "Stimme",
       "section": "Stimmgruppe",
       "yearRequired": "Wähle ein Organisationsjahr für diese Jahresgruppe.",
-      "groupIdentity": "{type} · {year}",
-      "derivedName": "Die Bezeichnung wird aus Gruppentyp, Organisationsjahr und Chor abgeleitet."
+      "groupIdentity": "{type} · {year}"
     },
     "positionLabels": {
       "Chair": "Vorsitzende:r",
@@ -1485,7 +1481,6 @@
       "changeVoice": "Stimme ändern",
       "changeVoiceTitle": "Stimme von {name} ändern",
       "changeVoiceDescription": "Die Stimme einer anderen Stimmgruppe verschiebt die Person dorthin.",
-      "move": "Verschieben",
       "movesTo": "Wechselt zu {section}.",
       "endsPositions": "Damit endet auch: {positions}.",
       "leave": "{choir} verlassen",

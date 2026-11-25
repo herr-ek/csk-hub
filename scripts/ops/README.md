@@ -105,7 +105,7 @@ On an empty database the demo contains:
 - Varied Choir join dates from 2021–2025, Section and division changes, independent
   self-reported Voice capabilities, and some Users who have declared none.
 - Fixed annual Groups for the current and following Organisational year, the continuing
-  Föräldramötet, and example Choir teams, a gig group, and a project group. Formal Positions
+  Föräldramötet and Utantillkommittén, and example Choir teams, a gig group, and a project group. Formal Positions
   are code-controlled definitions; the basic seed leaves appointments for Admins to assign.
 - 24 fictional Swedish Posts with paragraphs, headings, lists, emphasis and blockquotes,
   published by the example Admins between August 2025 and October 2026. They use the editor's

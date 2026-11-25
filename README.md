@@ -117,8 +117,12 @@ commands are also available; see [local demo data](scripts/ops/README.md#local-d
 | --- | --- | --- |
 | `/` | Authenticated home page | User |
 | `/admin` | Admin surface (currently a placeholder) | Admin |
-| `/admin/org-structure` | Choirs and Sections: placing singers and changing their Voice | Admin |
-| `/admin/org-structure/groups` | Every other group, its Members and Positions, and the Position catalogue | Admin |
+| `/admin/choirs` | Choirs and Sections: placing singers, and the balance across CSK | Admin |
+| `/admin/board` | The Board's Positions by Organisational year | Admin |
+| `/admin/choir-positions` | Each Choir's Positions and Föräldramötet | Admin |
+| `/admin/committees` | Committees and other CSK-wide Groups, with their Helpers and members | Admin |
+| `/admin/gig-groups` | Gig groups, their line-ups and Gigledare | Admin |
+| `/admin/group-history/[groupId]` | One Group's past participation and corrections | Admin |
 | `/me` | Own profile | Active User |
 | `/me/edit` | Edit own Voice capabilities | Active User |
 | `/me/settings` | Account settings | User |
