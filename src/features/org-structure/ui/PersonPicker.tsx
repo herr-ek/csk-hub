@@ -14,10 +14,12 @@ type PickerProps = {
   name: string
   onPick?: (userIds: string[]) => void
   multiple?: boolean
+  /** Allows picking nobody. */
+  optional?: boolean
 }
 
-/** A searchable list of people; the picked ones are submitted with the form and one is required. */
-export function PersonPicker({ label, people, name, onPick, multiple = false }: PickerProps) {
+/** A searchable list of people; the picked ones are submitted with the form and, unless optional, one is required. */
+export function PersonPicker({ label, people, name, onPick, multiple = false, optional = false }: PickerProps) {
   const t = useTranslations("OrgAdmin.picker")
   const id = useId()
   const [search, setSearch] = useState("")
@@ -82,7 +84,7 @@ export function PersonPicker({ label, people, name, onPick, multiple = false }: 
       {/* Holds the browser's required check, which a list of choices filtered by a search cannot. */}
       <input
         value={picked.join(",")}
-        required
+        required={!optional}
         onChange={() => {}}
         tabIndex={-1}
         aria-hidden="true"

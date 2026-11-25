@@ -1,93 +1,86 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getTranslations } from "@/core/i18n/server"
 import { PageBreadcrumb } from "@/core/navigation/PageBreadcrumb"
-import { cskToday, GroupType, groupTypeKey, POSITION_DEFINITIONS } from "@/core/org-structure"
+import { ROUTES } from "@/core/navigation/site"
+import { cskToday, GroupType } from "@/core/org-structure"
 import { Badge } from "@/shared/ui/base/badge"
+import { buttonVariants } from "@/shared/ui/base/button"
 import { Skeleton } from "@/shared/ui/base/skeleton"
-import { AppointmentManagement } from "./AppointmentManagement"
-import { FluidAppointmentManagement } from "./FluidAppointmentManagement"
-import { MembersSection } from "./MembersSection"
-import { getGroupDetail } from "./query"
+import { cn } from "@/shared/utils"
+import { committeePath, gigGroupPath } from "../command-state"
+import { PeopleProvider } from "../PeopleContext"
+import { HistoryTabs } from "./HistoryTabs"
+import { type GroupHistory, getGroupHistory } from "./query"
 
+/** The page that manages a Group: its place in the menu, and the address that shows it. */
+function managedOn({ id, type, organisationYear }: GroupHistory["group"]) {
+  switch (type) {
+    case GroupType.Choir:
+    case GroupType.Section:
+      return { route: "adminChoirs", href: ROUTES.adminChoirs } as const
+    case GroupType.Board:
+      return { route: "adminBoard", href: `${ROUTES.adminBoard}?year=${organisationYear}` } as const
+    case GroupType.GigGroup:
+      return { route: "adminGigGroups", href: gigGroupPath(id) } as const
+    case GroupType.ParentsMeeting:
+      return { route: "adminChoirPositions", href: ROUTES.adminChoirPositions } as const
+    case GroupType.EquipmentTeam:
+    case GroupType.PartyTeam:
+    case GroupType.RehearsalWeekendTeam:
+      return { route: "adminCommittees", href: ROUTES.adminCommittees } as const
+    default:
+      return {
+        route: "adminCommittees",
+        href: committeePath(type === GroupType.Other ? id : type, organisationYear ?? undefined)
+      } as const
+  }
+}
+
+/** A Group's past, current and planned participation, for correcting what is recorded. */
 export async function GroupHistoryScreen({ groupId }: { groupId: string }) {
-  const date = cskToday()
-  const [detail, t, types, history] = await Promise.all([
-    getGroupDetail(groupId, date),
+  const today = cskToday()
+  const [history, t, groups, routes] = await Promise.all([
+    getGroupHistory(groupId, today),
+    getTranslations("OrgAdmin.history"),
     getTranslations("Groups"),
-    getTranslations("Groups.types"),
-    getTranslations("OrgAdmin.history")
+    getTranslations("Navigation.routes")
   ])
-  if (!detail) notFound()
-  const { group } = detail
-  const route =
-    group.type === GroupType.Choir || group.type === GroupType.Section
-      ? "adminChoirs"
-      : group.type === GroupType.Board
-        ? "adminBoard"
-        : group.type === GroupType.GigGroup
-          ? "adminGigGroups"
-          : group.type === GroupType.ParentsMeeting
-            ? "adminChoirPositions"
-            : "adminCommittees"
-  const fluidAppointmentContext =
-    group.type === GroupType.Choir || group.type === GroupType.Section || group.type === GroupType.GigGroup
-
+  if (!history) notFound()
+  const { group, people, sectionVoice } = history
+  const { route, href } = managedOn(group)
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-2">
-        <PageBreadcrumb route={route} current={history("titleFor", { name: group.name })} />
+    <PeopleProvider people={people} today={today}>
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+        <PageBreadcrumb route={route} current={t("titleFor", { name: group.name })} />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="flex flex-wrap items-center gap-2 font-heading text-2xl font-semibold">
-              {history("titleFor", { name: group.name })}
-              {group.active ? null : <Badge variant="secondary">{t("archived")}</Badge>}
+              {t("titleFor", { name: group.name })}
+              {sectionVoice ? <Badge variant="outline">{sectionVoice}</Badge> : null}
+              {group.active ? null : <Badge variant="secondary">{groups("archived")}</Badge>}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {group.choir
-                ? t("detail.typeInChoir", { type: types(groupTypeKey(group.type)), choir: group.choir.name })
-                : t("detail.typeCskWide", { type: types(groupTypeKey(group.type)) })}
+            <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+              {t(group.active ? "description" : "archivedDescription")}
             </p>
-            {group.organisationYear !== null ? (
-              <Badge variant="outline">
-                {t("management.yearValue", { start: group.organisationYear, end: group.organisationYear + 1 })}
-              </Badge>
-            ) : null}
-            {detail.sectionVoice ? (
-              <div className="mt-2 flex flex-wrap gap-1">
-                <Badge variant="outline">{detail.sectionVoice}</Badge>
-              </div>
-            ) : null}
           </div>
+          <Link href={href} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            {t("manage", { page: routes(route) })}
+          </Link>
         </div>
-        <p className="text-sm text-muted-foreground">{history("description")}</p>
-        {group.active ? null : <p className="text-sm text-muted-foreground">{t("detail.archivedNotice")}</p>}
-      </div>
-
-      <MembersSection detail={detail} today={date} />
-      {Object.values(POSITION_DEFINITIONS).some(
-        ({ context, endPolicy }) => context === group.type && endPolicy === "annual"
-      ) ? (
-        <AppointmentManagement detail={detail} today={date} />
-      ) : null}
-      {fluidAppointmentContext &&
-      (Object.values(POSITION_DEFINITIONS).some(
-        ({ context, endPolicy }) => context === group.type && endPolicy === "fluid"
-      ) ||
-        detail.appointments.some(({ organisationYear }) => organisationYear === null)) ? (
-        <FluidAppointmentManagement detail={detail} today={date} />
-      ) : null}
-    </main>
+        <HistoryTabs history={history} />
+      </main>
+    </PeopleProvider>
   )
 }
 
 export async function GroupHistoryScreenSkeleton() {
-  const t = await getTranslations("Groups")
+  const t = await getTranslations("OrgAdmin.history")
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
-      <span className="sr-only">{t("detail.loading")}</span>
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" aria-busy="true">
+      <span className="sr-only">{t("loading")}</span>
       <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-64 w-full rounded-xl" />
-      <Skeleton className="h-48 w-full rounded-xl" />
+      <Skeleton className="h-64 w-full rounded-2xl" />
     </main>
   )
 }

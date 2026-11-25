@@ -12,9 +12,10 @@ export function groupHistoryPath(groupId: string) {
   return `${ROUTES.adminGroupHistory}/${groupId}`
 }
 
-/** A committee's roster in a year; `key` is its Group type, or an Other Group's id. */
-export function committeePath(key: string, year: number) {
-  return `${ROUTES.adminCommittees}?committee=${encodeURIComponent(key)}&year=${year}`
+/** A committee's roster, in a year when it has one; `key` is its Group type, or an Other Group's id. */
+export function committeePath(key: string, year?: number) {
+  const path = `${ROUTES.adminCommittees}?committee=${encodeURIComponent(key)}`
+  return year === undefined ? path : `${path}&year=${year}`
 }
 
 export function gigGroupPath(groupId: string) {

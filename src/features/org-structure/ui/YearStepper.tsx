@@ -3,6 +3,7 @@ import Link from "next/link"
 import { useFormatter, useTranslations } from "@/core/i18n/translations"
 import { type IsoDate, organisationYearPeriod } from "@/core/org-structure"
 import { buttonVariants } from "@/shared/ui/base/button"
+import { cn } from "@/shared/utils"
 import { yearLabel, yearPhase } from "../roster"
 
 /** Steps between Organisational years; each year is its own address. */
@@ -20,14 +21,11 @@ export function YearStepper({
   const t = useTranslations("OrgAdmin.year")
   const step = (to: number, label: string, Icon: typeof ChevronLeftIcon) =>
     years.includes(to) ? (
-      <Link href={href(to)} aria-label={label} className={buttonVariants({ variant: "outline", size: "icon" })}>
+      <Link href={href(to)} aria-label={label} className={cn(buttonVariants({ variant: "outline", size: "icon" }))}>
         <Icon aria-hidden="true" />
       </Link>
     ) : (
-      <span
-        aria-hidden="true"
-        className={buttonVariants({ variant: "outline", size: "icon", className: "opacity-40" })}
-      >
+      <span aria-hidden="true" className={cn(buttonVariants({ variant: "outline", size: "icon" }), "opacity-40")}>
         <Icon />
       </span>
     )
