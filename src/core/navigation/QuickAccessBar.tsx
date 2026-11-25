@@ -1,25 +1,17 @@
 "use client"
 
-import { CalendarDays, CircleUser, EllipsisIcon, House, type LucideIcon, MessageCircle, Newspaper } from "lucide-react"
+import { EllipsisIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { type MouseEvent, type PointerEvent, type RefObject, Suspense, useEffect, useRef, useState } from "react"
 import { useTranslations } from "@/core/i18n/translations"
 import { cn } from "@/shared/utils"
+import { DESTINATIONS, MENUS } from "./destinations"
 import { isActiveRoute } from "./navigation-utils"
 import { slotIndexAt } from "./quick-access"
-import { ROUTES } from "./site"
-
-type ShortcutLabel = "events" | "routes.news" | "routes.home" | "routes.messages" | "profile"
 
 /** The main navigation slots, in order. */
-const SHORTCUTS: { label: ShortcutLabel; href: string; icon: LucideIcon; current?: false }[] = [
-  { label: "events", href: ROUTES.events, icon: CalendarDays },
-  { label: "routes.news", href: ROUTES.news, icon: Newspaper },
-  { label: "routes.home", href: ROUTES.home, icon: House },
-  { label: "routes.messages", href: ROUTES.messages, icon: MessageCircle },
-  { label: "profile", href: ROUTES.account, icon: CircleUser }
-]
+const SHORTCUTS = MENUS.quickAccess.map((id) => DESTINATIONS[id])
 
 /** Liquid Glass material: a clear grey tint (darkening light pages, lightening dark ones) with a light blur, a rim lit top and bottom, and a soft shadow. */
 const glass =
@@ -97,10 +89,7 @@ function Bar({ pathname }: { pathname: string | null }) {
   useBottomBarOffset()
 
   const slotCount = SHORTCUTS.length
-  const activeIndex =
-    pathname === null
-      ? -1
-      : SHORTCUTS.findIndex((shortcut) => shortcut.current !== false && isActiveRoute(pathname, shortcut.href))
+  const activeIndex = pathname === null ? -1 : SHORTCUTS.findIndex((shortcut) => isActiveRoute(pathname, shortcut.href))
   const CollapsedIcon = activeIndex === -1 ? EllipsisIcon : SHORTCUTS[activeIndex].icon
 
   // The slot just chosen, held while its page loads so the lens does not fall back to the old page in the meantime.

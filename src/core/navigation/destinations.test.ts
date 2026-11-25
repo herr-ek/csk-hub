@@ -1,0 +1,26 @@
+import { describe, expect, test } from "bun:test"
+import { MENUS, visibleDestinations } from "./destinations"
+
+const member = { showAdmin: false }
+const admin = { showAdmin: true }
+
+describe("visible destinations", () => {
+  test("members see the sections without Admin", () => {
+    expect(visibleDestinations(MENUS.primary, member)).toEqual(["news", "events", "messages", "members"])
+  })
+
+  test("those with admin access see Admin last", () => {
+    expect(visibleDestinations(MENUS.primary, admin)).toEqual(["news", "events", "messages", "members", "admin"])
+  })
+
+  test("signed-out visitors only see the login link", () => {
+    expect(visibleDestinations(MENUS.primary, null)).toEqual(["login"])
+  })
+
+  test("the quick-access bar is the same for every member", () => {
+    const slots = ["events", "news", "home", "messages", "account"] as const
+    expect(visibleDestinations(MENUS.quickAccess, member)).toEqual([...slots])
+    expect(visibleDestinations(MENUS.quickAccess, admin)).toEqual([...slots])
+    expect(visibleDestinations(MENUS.quickAccess, null)).toEqual([])
+  })
+})

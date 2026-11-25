@@ -4,41 +4,17 @@ import { getRequestSession } from "@/core/auth/session.server"
 import { can } from "@/core/authz"
 import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
-import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
+import { ROUTES } from "@/core/navigation/site"
 import { cn } from "@/shared/utils"
 import { ThemeSwitch } from "../theme/ThemeSwitch"
 import { AccountMenu } from "./AccountMenu"
+import { DESTINATIONS, MENUS, visibleDestinations } from "./destinations"
 import { MobileNavigation } from "./MobileNavigation"
 import { NavLinks } from "./NavLinks"
 import { QuickAccessBar } from "./QuickAccessBar"
 import { RefreshOnReturn } from "./RefreshOnReturn"
 import { UnreadBadge, UnreadIndicator } from "./UnreadBadge"
 import type { UnreadSources } from "./unread-sources"
-
-export type NavigationRoute = {
-  id: NavigationRouteId
-  section: "member" | "admin"
-  label: string
-}
-
-export function getNavigationItems(
-  config: NavigationConfig | null,
-  t: (key: "admin" | "events" | "messages" | "members" | "myAccount" | "login" | "news") => string
-): NavigationRoute[] {
-  const authenticatedRoutes = [
-    { id: "news" as const, section: "member" as const, label: t("news") },
-    { id: "events" as const, section: "member" as const, label: t("events") },
-    { id: "messages" as const, section: "member" as const, label: t("messages") },
-    { id: "members" as const, section: "member" as const, label: t("members") },
-    { id: "admin" as const, section: "admin" as const, label: t("admin") }
-  ]
-  const loginRoute = { id: "login" as const, section: "member" as const, label: t("login") }
-
-  const routes = config
-    ? authenticatedRoutes.filter((route) => route.section !== "admin" || config.showAdmin)
-    : [loginRoute]
-  return routes
-}
 
 export type NavigationConfig = {
   showAdmin: boolean
@@ -51,12 +27,12 @@ export interface AppNavigationTemplateProps {
 }
 export function AppNavigationTemplate({ config, unreadSources = {} }: AppNavigationTemplateProps) {
   const t = useTranslations("Navigation")
-  const items = getNavigationItems(config, t).map((item) => ({
-    id: item.id,
-    href: ROUTES[item.id],
-    label: item.label,
+  const items = visibleDestinations(MENUS.primary, config).map((id) => ({
+    id,
+    href: DESTINATIONS[id].href,
+    label: t(DESTINATIONS[id].label),
     // Only render unread badge when not in suspense fallback.
-    badge: config ? <UnreadBadge count={unreadSources[item.id]} /> : undefined
+    badge: config ? <UnreadBadge count={unreadSources[id]} /> : undefined
   }))
 
   return (
