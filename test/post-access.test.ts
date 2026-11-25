@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"
-import { and, defineRelations, eq, sql } from "drizzle-orm"
+import { and, defineRelations, eq, inArray, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { createTranslator } from "next-intl"
 import { Pool } from "pg"
@@ -57,6 +57,10 @@ describe("Group Post access end to end", () => {
       database: db,
       withAccess: createAuthorization({ database: db, readSession: async () => ({ user: { id } }) }).withCurrentRequest
     }
+  }
+  /** Every page: the tests share one database, so a Post may sit beyond the first. */
+  async function wholeFeed(withAccess: ReturnType<typeof dependencies>["withAccess"]) {
+    return (await reads.listNewsFeed(1_000, db, withAccess)).entries
   }
   async function membership(userId: string, groupId: string) {
     await db
@@ -124,8 +128,8 @@ describe("Group Post access end to end", () => {
 
   test("restricted feed, direct links, unread IDs/counts/expiry and marker insertion agree", async () => {
     const id = await publish()
-    expect((await reads.listNewsFeed(db, dependencies(singer).withAccess)).map((p) => p.id)).toContain(id)
-    expect((await reads.listNewsFeed(db, dependencies(outsider).withAccess)).map((p) => p.id)).not.toContain(id)
+    expect((await wholeFeed(dependencies(singer).withAccess)).map((p) => p.id)).toContain(id)
+    expect((await wholeFeed(dependencies(outsider).withAccess)).map((p) => p.id)).not.toContain(id)
     expect(await reads.getPublishedPost(id, db, dependencies(outsider).withAccess)).toBeNull()
     expect((await reads.listLatestPosts(3, db, dependencies(singer).withAccess)).map((p) => p.id)).toContain(id)
     expect((await reads.listLatestPosts(3, db, dependencies(outsider).withAccess)).map((p) => p.id)).not.toContain(id)
@@ -290,7 +294,7 @@ describe("Group Post access end to end", () => {
     for (const id of [alice, bob, singer, outsider, admin]) {
       const actor = { userId: id, isAdmin: id === admin }
       const relationships = await getPostAuthorizationFacts(db, id)
-      const feed = new Set((await reads.listNewsFeed(db, dependencies(id).withAccess)).map((p) => p.id))
+      const feed = new Set((await wholeFeed(dependencies(id).withAccess)).map((p) => p.id))
       for (const postId of ids) {
         const targets = await db
           .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
@@ -360,7 +364,7 @@ describe("Group Post access end to end", () => {
     ]
     for (const [userId, expected] of cases) {
       const relationships = await getPostAuthorizationFacts(db, userId)
-      const feed = new Set((await reads.listNewsFeed(db, dependencies(userId).withAccess)).map((p) => p.id))
+      const feed = new Set((await wholeFeed(dependencies(userId).withAccess)).map((p) => p.id))
       const unreadIds = await unread.listUnreadPostIds(userId)
       expect(await unread.countUnreadPosts(userId)).toBe(unreadIds.size)
       expect((await unread.nextUnreadPostChangeAt(userId)) !== null).toBe(unreadIds.size > 0)
@@ -388,9 +392,7 @@ describe("Group Post access end to end", () => {
           ? [{ groupName: "KK", voiceFamily: "S" as const }]
           : [{ groupName: null, voiceFamily: "B" as const }]
       expect((await reads.getPublishedPost(mixed, db, dependencies(userId).withAccess))?.targets).toEqual(expected)
-      expect(
-        (await reads.listNewsFeed(db, dependencies(userId).withAccess)).find((p) => p.id === mixed)?.targets
-      ).toEqual(expected)
+      expect((await wholeFeed(dependencies(userId).withAccess)).find((p) => p.id === mixed)?.targets).toEqual(expected)
     }
     expect((await reads.getPublishedPost(mixed, db, dependencies(alice).withAccess))?.targets).toEqual([])
     expect((await reads.getEditablePost(mixed, db, dependencies(alice).withAccess))?.targets).toHaveLength(2)
@@ -498,7 +500,7 @@ describe("Group Post access end to end", () => {
     for (const userId of [reader, creator, representative, admin]) {
       const visible = userId !== reader
       const detail = await reads.getPublishedPost(id, db, dependencies(userId).withAccess)
-      const preview = (await reads.listNewsFeed(db, dependencies(userId).withAccess)).find((p) => p.id === id)
+      const preview = (await wholeFeed(dependencies(userId).withAccess)).find((p) => p.id === id)
       for (const result of [detail, preview]) {
         expect(result).toMatchObject({
           publisherName: expect.stringMatching(/Board/),
@@ -527,7 +529,7 @@ describe("Group Post access end to end", () => {
     const id = await publish(admin, personal([kk, mk, gigGroup]))
     const summaries = async () => [
       await reads.getPublishedPost(id, db, dependencies(reader).withAccess),
-      (await reads.listNewsFeed(db, dependencies(reader).withAccess)).find((p) => p.id === id)
+      (await wholeFeed(dependencies(reader).withAccess)).find((p) => p.id === id)
     ]
     for (const result of await summaries()) {
       expect(result?.targets).toHaveLength(2)
@@ -609,6 +611,36 @@ describe("Group Post access end to end", () => {
     })
   })
 
+  test("Posts a reader cannot see take up no room on a feed page", async () => {
+    const outsiderPost = await publish(alice, { publisherGroupId: null, audienceAll: true, targets: [] })
+    const restricted: string[] = []
+    for (let index = 0; index <= reads.NEWS_FEED_PAGE_SIZE; index++) restricted.push(await publish())
+    // A page of restricted Posts ahead of the one the outsider may read, all ahead of the shared feed.
+    await db
+      .update(post)
+      .set({ publishedAt: new Date(Date.UTC(3000, 0, 1)) })
+      .where(eq(post.id, outsiderPost))
+    await db
+      .update(post)
+      .set({ publishedAt: new Date(Date.UTC(3000, 0, 2)) })
+      .where(inArray(post.id, restricted))
+
+    const hidden = await reads.listNewsFeed(1, db, dependencies(outsider).withAccess)
+    expect(hidden.entries[0]?.id).toBe(outsiderPost)
+    expect(hidden.entries.filter((entry) => restricted.includes(entry.id))).toEqual([])
+
+    const addressed = await reads.listNewsFeed(1, db, dependencies(singer).withAccess)
+    expect(addressed.entries).toHaveLength(reads.NEWS_FEED_PAGE_SIZE)
+    expect(addressed.entries.every((entry) => restricted.includes(entry.id))).toBe(true)
+    expect(addressed.hasMore).toBe(true)
+
+    // Later tests expect ordinary publication times.
+    await db
+      .update(post)
+      .set({ publishedAt: new Date() })
+      .where(inArray(post.id, [...restricted, outsiderPost]))
+  })
+
   test("Post reads do not queue behind a membership change holding the same User's lock", async () => {
     let release!: () => void
     const released = new Promise<void>((resolve) => (release = resolve))
@@ -619,7 +651,7 @@ describe("Group Post access end to end", () => {
     const { withAccess } = dependencies(alice)
     try {
       const outcome = await Promise.race([
-        reads.listNewsFeed(db, withAccess).then(() => "read"),
+        reads.listNewsFeed(1, db, withAccess).then(() => "read"),
         new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 2000))
       ])
       expect(outcome).toBe("read")
