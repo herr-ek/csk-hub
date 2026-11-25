@@ -4,7 +4,7 @@ type GroupPolicy = {
   scope: "csk" | "choir"
   lifetime: "annual" | "continuing" | "fluid"
   directMembership: "yes" | "helpers" | "placement" | "no"
-  cardinality: "singleton" | "choir-singleton" | "multiple" | "existing-choirs" | "four-sections"
+  cardinality: "singleton" | "multiple" | "existing-choirs" | "four-sections"
 }
 
 /** Fixed organisation policy keyed by stable Group type codes. */
@@ -61,19 +61,6 @@ export const GROUP_POLICIES = {
     lifetime: "continuing",
     directMembership: "no",
     cardinality: "singleton"
-  },
-  [GroupType.EquipmentTeam]: {
-    scope: "choir",
-    lifetime: "fluid",
-    directMembership: "yes",
-    cardinality: "choir-singleton"
-  },
-  [GroupType.PartyTeam]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
-  [GroupType.RehearsalWeekendTeam]: {
-    scope: "choir",
-    lifetime: "fluid",
-    directMembership: "yes",
-    cardinality: "choir-singleton"
   },
   [GroupType.GigGroup]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" },
   [GroupType.Other]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" }

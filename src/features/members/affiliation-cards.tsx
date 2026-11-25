@@ -82,7 +82,6 @@ export async function ChoirCard({ choir }: { choir: ProfileAffiliations["choirs"
             ) : null}
           </div>
         ) : null}
-        {choir.groups.length ? <GroupList groups={choir.groups} /> : null}
       </CardContent>
     </Card>
   )

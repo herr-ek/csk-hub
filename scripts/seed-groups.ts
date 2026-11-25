@@ -3,7 +3,7 @@ import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
 import { voiceCapability } from "@/core/db/schema/voice"
-import { GroupType, hasExplicitGroupName } from "@/core/org-structure"
+import { GroupType } from "@/core/org-structure"
 import { assertLocalDatabase } from "./ops/guards"
 import { SEED_USERS, type SeedDatabase } from "./ops/seed-data"
 
@@ -22,14 +22,9 @@ type Division = NonNullable<typeof directMembership.$inferInsert.voice>
 
 const CHOIRS = ["MK", "DK", "KK"]
 
-const EXAMPLE_GROUPS: { name: string; type: GroupType; choir?: string }[] = [
+const EXAMPLE_GROUPS: { name: string; type: GroupType }[] = [
   { name: "Jubileumskommittén", type: GroupType.Other },
-  { name: "Giggrupp vår", type: GroupType.GigGroup },
-  ...CHOIRS.flatMap((choir) => [
-    { name: `${choir} roddgrupp`, type: GroupType.EquipmentTeam, choir },
-    { name: `${choir} festgrupp`, type: GroupType.PartyTeam, choir },
-    { name: `${choir} rephelgsgrupp`, type: GroupType.RehearsalWeekendTeam, choir }
-  ])
+  { name: "Giggrupp vår", type: GroupType.GigGroup }
 ]
 
 const SEED_START_DATE = "2025-08-25"
@@ -47,21 +42,12 @@ async function seed(database: Database) {
   const created: string[] = []
 
   for (const example of EXAMPLE_GROUPS) {
-    const choirId = example.choir ? await requireChoir(database, example.choir) : null
-    if (
-      hasExplicitGroupName(example.type)
-        ? await activeGroupId(database, example.name, choirId)
-        : (
-            await database
-              .select()
-              .from(group)
-              .where(and(eq(group.type, example.type), eq(group.choirId, choirId as string), eq(group.active, true)))
-          ).length > 0
-    )
-      continue
-    await database
-      .insert(group)
-      .values({ name: hasExplicitGroupName(example.type) ? example.name : null, type: example.type, choirId })
+    const [existing] = await database
+      .select({ id: group.id })
+      .from(group)
+      .where(and(eq(group.name, example.name), eq(group.active, true), isNull(group.choirId)))
+    if (existing) continue
+    await database.insert(group).values(example)
     created.push(example.name)
   }
 
@@ -152,22 +138,6 @@ async function sectionSlots(database: Database) {
     divisions: (voice.length === 1 ? [`${voice}1`, `${voice}2`] : [voice]) as Division[],
     members: sizes.find(({ groupId }) => groupId === sectionId)?.members ?? 0
   }))
-}
-
-async function requireChoir(database: Database, name: string) {
-  const id = await activeGroupId(database, name, null)
-  if (!id) throw new Error(`Choir ${name} is missing; run \`bun run ops reference-data\` first.`)
-  return id
-}
-
-async function activeGroupId(database: Database, name: string, choirId: string | null) {
-  const [row] = await database
-    .select({ id: group.id })
-    .from(group)
-    .where(
-      and(eq(group.name, name), eq(group.active, true), choirId ? eq(group.choirId, choirId) : isNull(group.choirId))
-    )
-  return row?.id
 }
 
 if (import.meta.main) {

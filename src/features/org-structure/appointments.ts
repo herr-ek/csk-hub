@@ -19,8 +19,7 @@ import {
 import { appointmentMemberships } from "./appointment-memberships"
 import { validateUserParticipation } from "./direct-membership"
 import { cskToday } from "./effective-reads"
-import { requireChoirTeamAvailable } from "./group-cardinality"
-import { requireActiveGroup, requireChoir, requireGroup } from "./lookup"
+import { requireActiveGroup, requireGroup } from "./lookup"
 import {
   lockUser,
   type OrgStructureDatabase,
@@ -117,9 +116,8 @@ async function endHelperParticipation(
 }
 
 /**
- * Creates an explicitly modelled Group. Annual types require an integer organisationYear
- * from 1000 through 9998; other types forbid it. Choir-scoped types require choirId;
- * CSK-wide types forbid it. Choirs/Sections still use createChoir. Names are required only
+ * Creates an explicitly modelled CSK-wide Group. Annual types require an integer organisationYear
+ * from 1000 through 9998; other types forbid it. Choirs/Sections still use createChoir. Names are required only
  * for explicitly named types; derived-label types ignore a supplied name and store null.
  */
 export function createOrganisationGroup(
@@ -127,7 +125,6 @@ export function createOrganisationGroup(
   input: {
     name?: string
     type: Exclude<GroupType, GroupType.Choir | GroupType.Section>
-    choirId?: string
     organisationYear?: number
   },
   today: IsoDate = cskToday()
@@ -136,10 +133,8 @@ export function createOrganisationGroup(
     const policy = GROUP_POLICIES[input.type]
     if (!policy || (input.type as GroupType) === GroupType.Choir || (input.type as GroupType) === GroupType.Section)
       throw new RuleViolation("choir-created-with-sections")
-    if ((policy.scope === "choir") !== Boolean(input.choirId)) throw new RuleViolation("invalid-group-scope")
     const name = hasExplicitGroupName(input.type) ? input.name?.trim() : null
     if (hasExplicitGroupName(input.type) && !name) throw new RuleViolation("invalid-group-name")
-    if (input.choirId) await requireChoir(tx, input.choirId)
     if (
       (policy.lifetime === "annual") !== (input.organisationYear !== undefined) ||
       (input.organisationYear !== undefined &&
@@ -148,10 +143,9 @@ export function createOrganisationGroup(
       throw new RuleViolation("period-conflict")
     if (input.organisationYear !== undefined && !isAllowedOrganisationYear(input.organisationYear, requireDate(today)))
       throw new RuleViolation("organisation-year-too-far-ahead")
-    await requireChoirTeamAvailable(tx, input)
     const [created] = await tx
       .insert(group)
-      .values({ ...input, name })
+      .values({ name, type: input.type, organisationYear: input.organisationYear })
       .returning({ id: group.id })
     if (!created) throw new Error("Group creation returned no record.")
     return created

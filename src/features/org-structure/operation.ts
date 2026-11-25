@@ -25,7 +25,6 @@ const CONSTRAINT_VIOLATIONS: Record<string, OrgStructureViolation> = {
   group_annual_active_check: "annual-group-lifecycle-derived",
   group_annual_identity_unique: "group-name-taken",
   group_continuing_singleton_unique: "group-name-taken",
-  group_choir_team_unique: "group-name-taken",
   group_organisation_policy_check: "position-not-allowed",
   group_organisation_year_check: "period-conflict",
   position_appointment_occupancy_excl: "position-taken",

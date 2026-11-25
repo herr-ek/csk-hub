@@ -24,8 +24,8 @@ import { voice, voiceDivision, voiceFamily } from "./voice"
 // Drizzle cannot express every database invariant. The Voice domains are described in
 // `./voice.ts`; `drizzle/20261116194645_redesign-organisation-appointments/migration.sql` also maintains
 // NULLS NOT DISTINCT name uniqueness, range exclusions and organisation policy triggers.
-// `drizzle/20261125211225_recruitment-voices-and-continuing-memorisation/migration.sql` replaces the Group policy and
-// direct Membership functions. Drizzle neither generates nor diffs these additions; preserve them in
+// `drizzle/20261125211225_recruitment-voices-and-continuing-memorisation/migration.sql` replaces the
+// direct Membership function and `drizzle/20261125215928_remove-choir-teams/migration.sql` the Group policies. Drizzle neither generates nor diffs these additions; preserve them in
 // later migrations.
 
 export const groupType = pgEnum("group_type", GroupType)
@@ -58,16 +58,6 @@ export const group = pgTable(
       .where(
         sql`${table.type} IN (${sql.join(
           [GroupType.ParentsMeeting, GroupType.MemorisationCommittee].map((type) => sql`${type}`.inlineParams()),
-          sql`, `
-        )})`
-      ),
-    uniqueIndex("group_choir_team_unique")
-      .on(table.type, table.choirId)
-      .where(
-        sql`${table.active} AND ${table.type} IN (${sql.join(
-          [GroupType.EquipmentTeam, GroupType.PartyTeam, GroupType.RehearsalWeekendTeam].map((type) =>
-            sql`${type}`.inlineParams()
-          ),
           sql`, `
         )})`
       ),

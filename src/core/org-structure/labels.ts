@@ -32,7 +32,7 @@ export type GroupLabelInput = {
 }
 
 export type GroupLabelTranslator = (
-  key: `types.${GroupTypeKey}` | "labels.annual" | "labels.choirTeam",
+  key: `types.${GroupTypeKey}` | "labels.annual",
   values?: Record<string, string | number>
 ) => string
 
@@ -45,10 +45,6 @@ export function formatGroupLabel(group: GroupLabelInput, translate: GroupLabelTr
     if (group.organisationYear === null) throw new Error("Annual Group has no organisational year.")
     const year = `${String(group.organisationYear).slice(-2)}/${String(group.organisationYear + 1).slice(-2)}`
     return translate("labels.annual", { type, year })
-  }
-  if (GROUP_POLICIES[group.type].scope === "choir") {
-    if (!group.choirName) throw new Error("Choir team has no owning Choir name.")
-    return translate("labels.choirTeam", { type, choir: group.choirName })
   }
   return type
 }

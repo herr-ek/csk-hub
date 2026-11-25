@@ -146,5 +146,4 @@ of them are for Admins.
 
 Inactive Users are left out of current rosters, counts and pickers, and stay in a finished year. An
 Inactive holder is shown as such with a way to replace them, because they still hold the Position.
-Missing Voices, Choirs and holders are reminders and never refuse a change. Choir teams (roddgrupp,
-festgrupp, rephelgsgrupp) keep their rules and data but are hidden from these pages.
+Missing Voices, Choirs and holders are reminders and never refuse a change.

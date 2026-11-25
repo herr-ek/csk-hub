@@ -22,19 +22,9 @@ export function buildAffiliations(memberships: MemberGroup[], holdings: MemberPo
         activeGroups
           .filter((group) => group.type === GroupType.Section && group.choirId === choir.groupId)
           .map(withPositions)
-          .at(0) ?? null,
-      groups: activeGroups
-        .filter((group) => group.choirId === choir.groupId && group.type !== GroupType.Section)
-        .map(withPositions)
+          .at(0) ?? null
     }))
   const groups = activeGroups.filter((group) => !group.choirId && group.type !== GroupType.Choir).map(withPositions)
-  // Archiving a Choir does not archive its other Groups. Keep those active Memberships visible.
-  const otherGroups = activeGroups
-    .filter(
-      (group) =>
-        group.choirId && group.type !== GroupType.Section && !choirs.some((choir) => choir.groupId === group.choirId)
-    )
-    .map(withPositions)
   const summary = positions.map((holding) => ({
     id: holding.id,
     positionCode: holding.positionCode,
@@ -50,7 +40,7 @@ export function buildAffiliations(memberships: MemberGroup[], holdings: MemberPo
       .filter((context) => activeGroups.some((group) => group.groupId === context.id))
       .map((context) => ({ id: context.id, name: context.name, choirName: context.choirName }))
   }))
-  return { choirs, groups, otherGroups, positions: summary }
+  return { choirs, groups, positions: summary }
 }
 
 export type ProfileAffiliations = ReturnType<typeof buildAffiliations>

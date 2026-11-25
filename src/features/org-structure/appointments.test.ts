@@ -829,7 +829,7 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(await listEffectiveMembersAt(t.db, nextCommittee.id, "2050-07-01")).toMatchObject([{ userId: successor }])
   })
 
-  test("annual and scoped singleton identities are enforced independently of editable names", async () => {
+  test("annual and continuing singleton identities are enforced independently of editable names", async () => {
     const results = await Promise.all(
       ["A", "B"].map((name) =>
         createOrganisationGroup(t.db, { name, type: GroupType.Board, organisationYear: 2032 }, "4000-10-22")
@@ -846,31 +846,6 @@ describe.skipIf(!database)("appointment foundation", () => {
       success: false,
       error: "group-name-taken"
     })
-    const choirId = await t.groupId("MK")
-    expectSuccess(
-      await createOrganisationGroup(t.db, { name: "MK rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
-    )
-    expect(
-      await createOrganisationGroup(
-        t.db,
-        { name: "MK other rodd", type: GroupType.EquipmentTeam, choirId },
-        "4000-10-22"
-      )
-    ).toEqual({
-      success: false,
-      error: "group-type-taken"
-    })
-    expectSuccess(
-      await createOrganisationGroup(
-        t.db,
-        {
-          name: "DK rodd",
-          type: GroupType.EquipmentTeam,
-          choirId: await t.groupId("DK")
-        },
-        "4000-10-22"
-      )
-    )
     for (const name of ["Gig A", "Gig B"])
       expectSuccess(await createOrganisationGroup(t.db, { name, type: GroupType.GigGroup }, "4000-10-22"))
   })

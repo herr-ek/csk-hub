@@ -24,7 +24,7 @@ Dates are PostgreSQL `date` values, without a time of day.
 
 | Term | Meaning | Representation |
 | --- | --- | --- |
-| Group | A concrete set of participants, either CSK-wide or belonging to one Choir. | `group` |
+| Group | A concrete set of participants, CSK-wide or, for a Section, belonging to one Choir. | `group` |
 | Choir | MK, DK, or KK; itself a CSK-wide Group. | `group` + `choir` extension |
 | Section | The people in a Choir singing one Voice, such as KKB or MKB1. | `group` + `section` extension |
 | Voice family | S, A, T, or B. A musical line, never a Group. | `voice_family` domain |
@@ -51,8 +51,8 @@ than Position. A Part in a musical arrangement is a repertoire concept, outside 
 ## Group identity, scope, and lifetime
 
 A Group is CSK-wide when `choir_id IS NULL`, or belongs directly to one Choir otherwise.
-There is no deeper hierarchy. A Choir itself is CSK-wide; its Sections and choir teams
-reference its `choir.group_id`. A gig group is CSK-wide and may contain singers from
+There is no deeper hierarchy. A Choir itself is CSK-wide; its Sections
+reference its `choir.group_id`, and no other Group belongs to a Choir. A gig group is CSK-wide and may contain singers from
 several Choirs.
 
 Annual Groups have separate UUIDs for each year. Their localized display labels are derived
@@ -74,9 +74,6 @@ parent Board above Board 26/27 and Board 27/28.
 | `archives` | CSK-wide | Annual | Yes; no Positions | One per year |
 | `memorisation-committee` | CSK-wide | Continuing | Yes; no Positions | One |
 | `parents-meeting` | CSK-wide | Continuing | No | One continuing identity |
-| `equipment-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
-| `party-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
-| `rehearsal-weekend-team` | One Choir | Fluid | Yes; no Positions | At most one active per Choir |
 | `gig-group` | CSK-wide | Fluid | Singers with a Voice division | Multiple |
 | `other` | CSK-wide | Fluid | Yes; no Positions | Multiple |
 
@@ -87,7 +84,7 @@ participation,
 not a way to bypass the rules of a known formal Group type.
 
 Annual types require a year; continuing and fluid types forbid it. Continuing identities
-such as Choirs, Föräldramötet and Utantillkommittén persist across July. Fluid teams and appointments have no
+such as Choirs, Föräldramötet and Utantillkommittén persist across July. Fluid Groups and appointments have no
 automatic June deadline. Preparing a year creates the required annual Groups, reusing existing
 identities; it never copies people or renews appointments.
 
@@ -103,7 +100,6 @@ identities; it never copies people or renews appointments.
 | Styret 27/28 | `board` | null | 2027 | — |
 | Konsertmästeriet 26/27 | `concert-committee` | null | 2026 | — |
 | Föräldramötet | `parents-meeting` | null | null | — |
-| MK roddgrupp | `equipment-team` | MK | null | — |
 | A particular gig ensemble | `gig-group` | null | null | — |
 
 
@@ -112,7 +108,6 @@ identities; it never copies people or renews appointments.
 | Category | Stored `name` | Display label |
 | --- | --- | --- |
 | Annual Groups | Null | Localized Group type + organisational year |
-| Choir teams | Null | Owning Choir's explicit name + localized team type |
 | Parents meeting | Null | Localized Group type |
 | Choirs | Required nonblank name | Their editable individual name, such as MK |
 | Sections | Null | Owning Choir name + Section Voice, such as MK + B1 → MKB1 or KK + B → KKB |
@@ -122,14 +117,14 @@ identities; it never copies people or renews appointments.
 validation and the schema check use this list. Renaming a derived-label Group is refused;
 Group creation and edits store null for those types even if an old caller supplies a name.
 Derived names are not copied into storage or used as identity. Renaming a Choir changes its
-Sections' and teams' displayed labels immediately, without updating their rows. A singer's Voice
+Sections' displayed labels immediately, without updating their rows. A singer's Voice
 division does not determine the Section name: a B2 singer in KK belongs to KKB.
 
 The English enum member names (for example `GroupType.ConcertCommittee` and
 `PositionCode.FirstConcertMaster`) are independent of the stable storage codes.
 `groupTypeKey` and `positionCodeKey` provide English intl keys. All display text lives in
 the English, Swedish, and German message catalogues, not in `POSITION_DEFINITIONS`.
-`formatGroupLabel` uses ICU templates for annual and Choir-team labels so each locale owns
+`formatGroupLabel` uses an ICU template for annual labels so each locale owns
 word order. Domain reads return identities and nullable explicit names; presentation reads
 resolve localized labels for group lists, details, assignment context choices, and profiles.
 
@@ -319,12 +314,11 @@ The database checks important local invariants; it is not a complete substitute 
 | A Choir is CSK-wide; a Section belongs to a Choir. | DB: `group_choir_csk_wide_check`, `group_section_in_choir_check` |
 | Fixed catalogue scope applies, and a year exists exactly for annual types. | Trigger: `organisation_group_policy_check` |
 | Annual type/year identities are unique, including archived ones. | DB: `group_annual_identity_unique` |
-| Föräldramötet has one continuing identity, including archived Groups. | DB: `group_continuing_singleton_unique` |
+| Föräldramötet and Utantillkommittén each have one continuing identity, including archived Groups. | DB: `group_continuing_singleton_unique` |
 | Annual Groups cannot be manually archived; their lifecycle follows their organisational year. | DB: `group_annual_active_check` |
-| At most one active Roddgrupp, Festgrupp, or Rephelg per Choir and type. | DB: `group_choir_team_unique` |
 | Choir/Section extensions match their Group types; four Sections per Choir with non-overlapping Voices. | App: Choir creation and structure commands |
 | Turnékommitté participation belongs to one committee per year, with no overlap across years. | DB annual identity plus triggers bounding participation to its year |
-| Structural edits cannot invalidate existing participation. | App: type/scope/year changes are refused when direct Membership, context appointments, or grants reference the Group, including history |
+| Structural edits cannot invalidate existing participation. | App: type/year changes are refused when direct Membership, context appointments, or grants reference the Group, including history |
 | Choir and Section reference structure is preserved. | App: ordinary Group editing cannot change their structural identity |
 
 ### Direct Membership and singer placement

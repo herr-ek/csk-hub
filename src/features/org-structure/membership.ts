@@ -140,7 +140,7 @@ type EndMembershipInput = {
   endAppointments?: boolean
 }
 
-/** Ends direct membership; leaving a Choir atomically ends its Section and Choir-team periods too.
+/** Ends direct membership; leaving a Choir atomically ends its Section periods too.
  * With `endAppointments`, the Choir's later planned periods are dropped and appointments that lose
  * their prerequisite end as well; without it they refuse the departure.
  */

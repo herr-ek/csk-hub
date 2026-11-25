@@ -717,7 +717,6 @@
     "groupContext": "{group} ({choir})",
     "association": "CSK",
     "username": "@{username}",
-    "otherGroups": "Övriga grupper",
     "sectionVoice": "Stämgruppens stämma: {voice}",
     "searching": "Söker…",
     "editProfile": "Redigera profil",
@@ -753,9 +752,6 @@
       "GigGroup": "Giggrupp",
       "GigCommittee": "Gigmästeri",
       "SocialCommittee": "Sexmästeri",
-      "EquipmentTeam": "Roddgrupp",
-      "PartyTeam": "Festgrupp",
-      "RehearsalWeekendTeam": "Rephelgsgrupp",
       "ConcertCommittee": "Konsertmästeri",
       "RecruitmentCommittee": "Rekryteringskommitté",
       "TourCommittee": "Turnékommitté",
@@ -772,7 +768,6 @@
       "annual-group-lifecycle-derived": "Årsgrupper följer sitt verksamhetsår och kan inte arkiveras manuellt.",
       "group-archived": "Gruppen är arkiverad och kan inte längre ändras.",
       "group-name-taken": "Det finns redan en aktiv grupp med det namnet här.",
-      "choir-not-found": "Kören kunde inte hittas.",
       "choir-created-with-sections": "Körer och stämgrupper kan inte skapas här.",
       "section-count": "En kör behöver exakt fyra stämgrupper.",
       "voice-in-several-sections": "En stämma kan bara höra till en stämgrupp per kör.",
@@ -797,11 +792,9 @@
       "invalid-input": "Kontrollera formuläret och försök igen.",
       "unexpected": "Något gick fel. Försök igen.",
       "invalid-group-name": "Ange ett gruppnamn som inte är tomt.",
-      "invalid-group-scope": "Välj en kör för denna grupptyp, eller ta bort kören för en CSK-gemensam typ.",
       "group-has-participation": "Gruppen har deltagarposter. Hantera medlemskap och posttillsättningar innan typ, kör eller verksamhetsår ändras.",
       "direct-membership-forbidden": "Medlemskap i denna grupp ges bara genom posttillsättningar.",
       "membership-dependency": "En beroende posttillsättning eller ett medlemskap måste hanteras före ändringen.",
-      "group-type-taken": "Det finns redan en aktiv grupp av denna typ för kören. Redigera eller arkivera den befintliga gruppen innan en ny skapas.",
       "annual-group-needs-year": "Denna årsgrupp saknar ett fastställt verksamhetsår. Förbered eller välj en grupp för rätt år, eller fastställ gruppens år innan deltagande läggs till eller korrigeras.",
       "organisation-year-too-far-ahead": "Årsgrupper kan bara förberedas till och med nästa verksamhetsår.",
       "group-name-derived": "Gruppens namn härleds från dess typ, verksamhetsår, kör eller sektionens stämma och kan inte ändras.",
@@ -826,8 +819,7 @@
       "GigLeader": "Gigledare"
     },
     "labels": {
-      "annual": "{type} {year}",
-      "choirTeam": "{choir} · {type}"
+      "annual": "{type} {year}"
     }
   },
   "Events": {

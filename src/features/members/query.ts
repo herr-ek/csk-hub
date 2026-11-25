@@ -42,11 +42,9 @@ export async function getProfile(memberId?: string) {
       email: readEmail ? profile.email : null,
       choirs: profile.choirs.map((choir) => ({
         ...namedGroup(choir),
-        section: choir.section ? namedGroup(choir.section) : null,
-        groups: choir.groups.map(namedGroup)
+        section: choir.section ? namedGroup(choir.section) : null
       })),
       groups: profile.groups.map(namedGroup),
-      otherGroups: profile.otherGroups.map(namedGroup),
       positions: profile.positions.map((position) => ({
         ...position,
         contextName: groupLabel(position.contextGroupId),

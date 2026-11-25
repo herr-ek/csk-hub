@@ -33,7 +33,7 @@ describe.skipIf(!database)("seedGroups", () => {
     const users = [await newUser(), await newUser()]
 
     const { created, placed } = await seedGroups(t.db)
-    expect(created).toContain("KK roddgrupp")
+    expect(created).toContain("Giggrupp vår")
     expect(placed).toBe(2)
 
     for (const userId of users) {

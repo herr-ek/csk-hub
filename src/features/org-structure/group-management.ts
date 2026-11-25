@@ -13,7 +13,6 @@ import {
 import { appointmentMemberships } from "./appointment-memberships"
 import { createOrganisationGroup } from "./appointments"
 import { cskToday } from "./effective-reads"
-import { requireChoirTeamAvailable } from "./group-cardinality"
 import { type OrgStructureDatabase, RuleViolation, requireDate, runOrgStructureCommand } from "./operation"
 
 /** Prepares the required annual set, reusing concrete identities; never copies participation. */
@@ -76,7 +75,6 @@ export function updateOrganisationGroup(
     groupId: string
     name?: string
     type: GroupType
-    choirId?: string | null
     organisationYear?: number | null
   },
   today: IsoDate = cskToday()
@@ -86,12 +84,10 @@ export function updateOrganisationGroup(
     if (!current) throw new RuleViolation("group-not-found")
     const name = hasExplicitGroupName(input.type) ? input.name?.trim() : null
     if (hasExplicitGroupName(input.type) && !name) throw new RuleViolation("invalid-group-name")
-    const choirId = input.choirId ?? null
     const organisationYear = input.organisationYear ?? null
     if (organisationYear !== null && !isAllowedOrganisationYear(organisationYear, requireDate(today)))
       throw new RuleViolation("organisation-year-too-far-ahead")
-    const structural =
-      current.type !== input.type || current.choirId !== choirId || current.organisationYear !== organisationYear
+    const structural = current.type !== input.type || current.organisationYear !== organisationYear
     if (!current.active && structural) throw new RuleViolation("group-archived")
     if (
       current.type === GroupType.Choir ||
@@ -111,30 +107,18 @@ export function updateOrganisationGroup(
         .then((result) => result.rows)
       if (dependencies && structural) throw new RuleViolation("group-has-participation")
       const policy = GROUP_POLICIES[input.type]
-      if ((policy.scope === "choir") !== Boolean(choirId)) throw new RuleViolation("invalid-group-scope")
       if ((policy.lifetime === "annual") !== (organisationYear !== null)) throw new RuleViolation("period-conflict")
       if (
         organisationYear !== null &&
         (!Number.isInteger(organisationYear) || organisationYear < 1000 || organisationYear > 9998)
       )
         throw new RuleViolation("period-conflict")
-      if (choirId) {
-        const [choir] = await tx
-          .select()
-          .from(group)
-          .where(and(eq(group.id, choirId), eq(group.type, GroupType.Choir), eq(group.active, true)))
-          .for("share")
-        if (!choir) throw new RuleViolation("choir-not-found")
-      }
     }
-    if (current.active && current.type !== GroupType.Choir && current.type !== GroupType.Section)
-      await requireChoirTeamAvailable(tx, { type: input.type, choirId, exceptGroupId: current.id })
     await tx
       .update(group)
       .set({
         name,
         type: input.type,
-        choirId,
         organisationYear
       })
       .where(eq(group.id, current.id))

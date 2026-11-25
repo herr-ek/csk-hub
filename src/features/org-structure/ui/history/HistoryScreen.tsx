@@ -25,10 +25,6 @@ function managedOn({ id, type, organisationYear }: GroupHistory["group"]) {
       return { route: "adminGigGroups", href: gigGroupPath(id) } as const
     case GroupType.ParentsMeeting:
       return { route: "adminChoirPositions", href: ROUTES.adminChoirPositions } as const
-    case GroupType.EquipmentTeam:
-    case GroupType.PartyTeam:
-    case GroupType.RehearsalWeekendTeam:
-      return { route: "adminCommittees", href: ROUTES.adminCommittees } as const
     default:
       return {
         route: "adminCommittees",

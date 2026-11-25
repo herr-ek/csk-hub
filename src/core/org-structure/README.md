@@ -33,7 +33,7 @@ lowercase kebab-case codes, independent of translated labels, just like Position
 The consolidated redesign migration renames the legacy PostgreSQL enum values in place.
 `group-names.ts` owns the enum-based list of explicitly named types, shared by command
 validation and the database constraint. `labels.ts` formats derived labels through a supplied
-intl translator: annual type + year, Choir team type + Choir name, and the parents meeting's
+intl translator: annual type + year, and the parents meeting's
 type label. Only Choirs, GigGroups, and Other Groups store individual names.
 Section names derive from the current owning Choir name and the Section Voice (KK + B → KKB),
 independent of a singer's division. Section rows store no name and cannot be renamed.

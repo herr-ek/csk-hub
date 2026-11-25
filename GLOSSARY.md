@@ -13,7 +13,7 @@ Chalmers Sångkör is the single student association served by the platform. CSK
 _Avoid_: Tenant, configurable organization
 
 **Choir**:
-One of CSK's three permanent ensembles: Manskören (MK), Kammarkören (KK), or Damkören (DK). New singers are placed in one of these Choirs; the Choirs usually rehearse separately but may take part in joint activities. A Choir is a Group of its own, always CSK-wide, and other Groups may belong to it.
+One of CSK's three permanent ensembles: Manskören (MK), Kammarkören (KK), or Damkören (DK). New singers are placed in one of these Choirs; the Choirs usually rehearse separately but may take part in joint activities. A Choir is a Group of its own, always CSK-wide, and its Sections belong to it.
 _Avoid_: CSK, temporary project ensemble
 
 **Admin**:
@@ -73,7 +73,7 @@ _Avoid_: Timeline, wall, dashboard, newsletter
 
 **Group**:
 A set of people in CSK with Memberships over time: a Choir, a Section, the Board, a
-committee, a gig group, a roddgrupp and so on. A Group is either CSK-wide or belongs
+committee, a gig group and so on. Every Group is CSK-wide except Sections, which belong
 directly to one Choir; there is no deeper hierarchy. Groups are archived, never deleted.
 _Avoid_: Team, role, Conversation
 
@@ -114,7 +114,7 @@ _Avoid_: Voice, part, stämma
 **Membership**:
 Being part of a Group, either through a Position appointment or independently as a singer or
 Helper. Choir and Section Memberships are not bound to an Organisational year; membership in a
-Group belonging to a Choir implies membership in that Choir.
+Section implies membership in its Choir.
 _Avoid_: Enrolment, role
 
 **Direct Membership**:
@@ -137,8 +137,8 @@ _Avoid_: Calendar year, season
 **Annual group**:
 A Group for one Organisational year, such as Styret 26/27, that year's Sexmästeri, or that
 year's Turnékommitté; the next year's Group is a different Group of the same type.
-Arkivariet and Webmästeriet also renew annually, while Utantillkommittén, roddgrupper, festgrupper,
-rephelgsgrupper, and gig groups have no yearly renewal.
+Arkivariet and Webmästeriet also renew annually, while Utantillkommittén and gig groups have no
+yearly renewal.
 _Avoid_: Continuing group with yearly editions
 
 **Föräldramötet**:
@@ -162,7 +162,7 @@ Ekonomiskt Ansvarig.
 _Avoid_: Choir-scoped, all Choirs separately
 
 **Choir-scoped**:
-Specific to one Choir, with the same Group or Position recurring in each Choir.
+Specific to one Choir, with the same Position recurring in each Choir.
 _Avoid_: CSK-wide
 
 **Section-scoped**:

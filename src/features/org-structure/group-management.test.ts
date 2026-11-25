@@ -92,7 +92,7 @@ describe.skipIf(!database)("concrete Group management", () => {
     expect(await listDirectMemberships(t.db, groupId)).toEqual(before)
   })
 
-  test("empty concrete Groups can change type, scope and year under fixed policies", async () => {
+  test("empty concrete Groups can change type and year under fixed policies", async () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(t.db, { name: "Empty gig", type: GroupType.GigGroup }, "4000-10-22")
     ).id
@@ -109,19 +109,6 @@ describe.skipIf(!database)("concrete Group management", () => {
       )
     )
     expect(
-      await updateOrganisationGroup(
-        t.db,
-        {
-          groupId,
-          name: "Wrong scope",
-          type: GroupType.Archives,
-          organisationYear: 2037,
-          choirId: await t.groupId("MK")
-        },
-        "4000-10-22"
-      )
-    ).toEqual({ success: false, error: "invalid-group-scope" })
-    expect(
       await createOrganisationGroup(t.db, { name: "Parallel gig one", type: GroupType.GigGroup }, "4000-10-22")
     ).toMatchObject({
       success: true
@@ -130,15 +117,6 @@ describe.skipIf(!database)("concrete Group management", () => {
       await createOrganisationGroup(t.db, { name: "Parallel gig two", type: GroupType.GigGroup }, "4000-10-22")
     ).toMatchObject({
       success: true
-    })
-    const choirId = await t.groupId("MK")
-    expectSuccess(
-      await createOrganisationGroup(t.db, { name: "One rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
-    )
-    expect(
-      await createOrganisationGroup(t.db, { name: "Second rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
-    ).toMatchObject({
-      success: false
     })
   })
 
@@ -186,89 +164,6 @@ describe.skipIf(!database)("concrete Group management", () => {
       prepareOrganisationYear(t.db, 2043, "4000-10-22")
     ])
     expect(expectSuccess(first)).toEqual(expectSuccess(second))
-  })
-  test("Choir-team cardinality excludes archived Groups", async () => {
-    const choirId = await t.groupId("DK")
-    const existingId = expectSuccess(
-      await createOrganisationGroup(
-        t.db,
-        { name: "DK rephelg", type: GroupType.RehearsalWeekendTeam, choirId },
-        "4000-10-22"
-      )
-    ).id
-    expect(
-      await createOrganisationGroup(
-        t.db,
-        { name: "New DK rephelg", type: GroupType.RehearsalWeekendTeam, choirId },
-        "4000-10-22"
-      )
-    ).toEqual({
-      success: false,
-      error: "group-type-taken"
-    })
-    const editableId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Candidate gig", type: GroupType.GigGroup }, "4000-10-22")
-    ).id
-    expect(
-      await updateOrganisationGroup(
-        t.db,
-        {
-          groupId: editableId,
-          name: "Edited DK rephelg",
-          type: GroupType.RehearsalWeekendTeam,
-          choirId
-        },
-        "4000-10-22"
-      )
-    ).toEqual({ success: false, error: "group-type-taken" })
-    expect((await listOrganisationGroups(t.db, "2026-10-21")).find((row) => row.id === editableId)).toMatchObject({
-      name: "Candidate gig",
-      type: GroupType.GigGroup,
-      choirId: null
-    })
-    expectSuccess(await archiveGroup(t.db, existingId))
-    expectSuccess(
-      await updateOrganisationGroup(
-        t.db,
-        {
-          groupId: editableId,
-          name: "Edited DK rephelg",
-          type: GroupType.RehearsalWeekendTeam,
-          choirId
-        },
-        "4000-10-22"
-      )
-    )
-  })
-  test("concurrent Choir-team creation and reclassification have one winner", async () => {
-    const choirId = await t.groupId("DK")
-    const candidate = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Racing candidate gig", type: GroupType.GigGroup }, "4000-10-22")
-    )
-    const results = await Promise.all([
-      createOrganisationGroup(
-        t.db,
-        { name: "Racing rodd creation", type: GroupType.EquipmentTeam, choirId },
-        "4000-10-22"
-      ),
-      updateOrganisationGroup(
-        t.db,
-        {
-          groupId: candidate.id,
-          name: "Racing rodd edit",
-          type: GroupType.EquipmentTeam,
-          choirId
-        },
-        "4000-10-22"
-      )
-    ])
-    expect(results.filter((result) => result.success)).toHaveLength(1)
-    expect(results.find((result) => !result.success)).toEqual({ success: false, error: "group-type-taken" })
-    expect(
-      (await listOrganisationGroups(t.db, "2026-10-21")).filter(
-        (row) => row.active && row.type === GroupType.EquipmentTeam && row.choirId === choirId
-      )
-    ).toHaveLength(1)
   })
 })
 

@@ -717,7 +717,6 @@
     "groupContext": "{group} ({choir})",
     "association": "CSK",
     "username": "@{username}",
-    "otherGroups": "Weitere Gruppen",
     "sectionVoice": "Stimme der Stimmgruppe: {voice}",
     "searching": "Suche läuft…",
     "editProfile": "Profil bearbeiten",
@@ -753,9 +752,6 @@
       "GigGroup": "Auftrittsgruppe",
       "GigCommittee": "Auftrittsausschuss",
       "SocialCommittee": "Festausschuss",
-      "EquipmentTeam": "Probenaufbau-Team",
-      "PartyTeam": "Festgruppe",
-      "RehearsalWeekendTeam": "Probenwochenendgruppe",
       "ConcertCommittee": "Konzertausschuss",
       "RecruitmentCommittee": "Rekrutierungsausschuss",
       "TourCommittee": "Tourneeausschuss",
@@ -772,7 +768,6 @@
       "annual-group-lifecycle-derived": "Jahresgruppen folgen ihrem Organisationsjahr und können nicht manuell archiviert werden.",
       "group-archived": "Diese Gruppe ist archiviert und kann nicht mehr geändert werden.",
       "group-name-taken": "Hier gibt es bereits eine aktive Gruppe mit diesem Namen.",
-      "choir-not-found": "Der Chor wurde nicht gefunden.",
       "choir-created-with-sections": "Chöre und Stimmgruppen können hier nicht erstellt werden.",
       "section-count": "Ein Chor braucht genau vier Stimmgruppen.",
       "voice-in-several-sections": "Eine Stimme kann in einem Chor nur zu einer Stimmgruppe gehören.",
@@ -797,11 +792,9 @@
       "invalid-input": "Prüfe das Formular und versuche es erneut.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
       "invalid-group-name": "Gib einen nicht leeren Gruppennamen ein.",
-      "invalid-group-scope": "Wähle für diesen Gruppentyp einen Chor oder entferne den Chor bei einem CSK-weiten Typ.",
       "group-has-participation": "Diese Gruppe hat Teilnahmeeinträge. Bearbeite Mitgliedschaften und Amtsbesetzungen, bevor du Typ, Chor oder Jahr änderst.",
       "direct-membership-forbidden": "Die Mitgliedschaft in dieser Gruppe entsteht ausschließlich durch Amtsbesetzungen.",
       "membership-dependency": "Eine abhängige Amtsbesetzung oder Mitgliedschaft muss vor dieser Änderung bearbeitet werden.",
-      "group-type-taken": "Für diesen Chor besteht bereits eine aktive Gruppe dieses Typs. Bearbeite oder archiviere die bestehende Gruppe, bevor du eine weitere erstellst.",
       "annual-group-needs-year": "Diese Jahresgruppe hat noch kein festgelegtes Jahr. Bereite eine Gruppe für das gewünschte Jahr vor oder wähle sie aus, oder kläre zuerst das Jahr dieser Gruppe, bevor du die Teilnahme hinzufügst oder korrigierst.",
       "organisation-year-too-far-ahead": "Jahresgruppen können nur bis zum nächsten Organisationsjahr vorbereitet werden.",
       "group-name-derived": "Die Bezeichnung dieser Gruppe wird aus Typ, Organisationsjahr, Chor oder der Stimme der Sektion abgeleitet und kann nicht geändert werden.",
@@ -826,8 +819,7 @@
       "GigLeader": "Gigleitung"
     },
     "labels": {
-      "annual": "{type} {year}",
-      "choirTeam": "{choir} · {type}"
+      "annual": "{type} {year}"
     }
   },
   "Events": {
