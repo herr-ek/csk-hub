@@ -76,6 +76,22 @@ export async function lockUser(tx: OrgStructureTransaction, userId: string) {
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:user:${userId}`}))`)
 }
 
+/**
+ * Serializes commands that give a Position a holder, so they wait here instead of on each other
+ * inside the occupancy exclusion constraint, which deadlocks. Name every Position the command
+ * writes; the locks are taken in a fixed order. Call once, after every `lockUser` and before the
+ * first write to `position_appointment`.
+ */
+export async function lockPositions(
+  tx: OrgStructureTransaction,
+  positions: { contextGroupId: string; positionCode: string }[]
+) {
+  const keys = positions.map(
+    ({ contextGroupId, positionCode }) => `org-structure:position:${contextGroupId}:${positionCode}`
+  )
+  for (const key of [...new Set(keys)].sort()) await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key}))`)
+}
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 export function requireDate(value: IsoDate): IsoDate {

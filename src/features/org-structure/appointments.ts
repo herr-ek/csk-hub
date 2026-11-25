@@ -21,6 +21,7 @@ import { validateUserParticipation } from "./direct-membership"
 import { cskToday } from "./effective-reads"
 import { requireActiveGroup, requireGroup } from "./lookup"
 import {
+  lockPositions,
   lockUser,
   type OrgStructureDatabase,
   type OrgStructureTransaction,
@@ -176,10 +177,7 @@ export function appointPosition(
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     await lockUser(tx, input.userId)
-    // Two writers of one Position would otherwise deadlock on its occupancy exclusion.
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:position:${input.contextGroupId}:${input.positionCode}`}))`
-    )
+    await lockPositions(tx, [input])
     const context = await requireActiveGroup(tx, input.contextGroupId)
     const definition = POSITION_DEFINITIONS[input.positionCode]
     if (!definition || context.type !== definition.context) throw new RuleViolation("position-not-allowed")
@@ -244,6 +242,7 @@ export function endAppointment(database: OrgStructureDatabase, input: { appointm
       .where(eq(positionAppointment.id, input.appointmentId))
     if (!appointment) throw new RuleViolation("not-holding-position")
     await lockUser(tx, appointment.userId)
+    await lockPositions(tx, [appointment])
     const endDate = requireDate(input.endDate)
     if (endDate <= appointment.startDate || (appointment.endDate !== null && endDate > appointment.endDate))
       throw new RuleViolation("period-conflict")
@@ -286,6 +285,7 @@ export function replaceAppointmentHolder(
       ...new Set([input.userId, candidate?.userId].filter((id): id is string => Boolean(id)))
     ].sort())
       await lockUser(tx, userId)
+    await lockPositions(tx, [input])
     const [predecessor] = await tx
       .select()
       .from(positionAppointment)
@@ -375,6 +375,7 @@ export function correctAnnualAppointment(
       .where(eq(positionAppointment.id, input.appointmentId))
     if (!existing) throw new RuleViolation("not-holding-position")
     for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
+    await lockPositions(tx, [existing, input])
     const definition = POSITION_DEFINITIONS[input.positionCode]
     if (!definition) throw new RuleViolation("position-not-allowed")
     const context = await requireGroup(tx, input.contextGroupId)
@@ -433,6 +434,7 @@ export function correctFluidAppointment(
       .where(eq(positionAppointment.id, input.appointmentId))
     if (!existing) throw new RuleViolation("not-holding-position")
     for (const userId of [...new Set([existing.userId, input.userId])].sort()) await lockUser(tx, userId)
+    await lockPositions(tx, [existing, input])
     const definition = POSITION_DEFINITIONS[input.positionCode]
     if (definition?.endPolicy !== "fluid") throw new RuleViolation("position-not-allowed")
     const context = await requireGroup(tx, input.contextGroupId)

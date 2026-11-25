@@ -474,6 +474,43 @@ describe.skipIf(!database)("appointment foundation", () => {
     expect(await listAppointmentMembersAt(t.db, board.id, "2027-09-01")).toHaveLength(1)
   })
 
+  test("a handover racing an appointment to the same Position does not deadlock", async () => {
+    const board = expectSuccess(
+      await createOrganisationGroup(
+        t.db,
+        { name: "Board 45/46", type: GroupType.Board, organisationYear: 2045 },
+        "4000-10-22"
+      )
+    )
+    const [incumbent, appointee, successor] = [await t.user(), await t.user(), await t.user()]
+    const position = { positionCode: PositionCode.Chair, contextGroupId: board.id, startDate: "2045-10-01" }
+    expectSuccess(await appointPosition(t.db, { ...position, userId: incumbent, startDate: "2045-07-01" }))
+    async function waitForBlocked(count: number) {
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const { rows } = await t.db.execute<{ blocked: number }>(sql`
+          SELECT count(*)::int AS blocked FROM pg_stat_activity
+          WHERE datname = current_database() AND wait_event_type = 'Lock'
+        `)
+        if ((rows[0]?.blocked ?? 0) >= count) return
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+      throw new Error("The commands never blocked")
+    }
+
+    // Holding the Group stops the appointment once it has its Position lock, and lets the handover catch up.
+    const { appointed, replaced } = await t.db.transaction(async (tx) => {
+      await tx.select().from(group).where(eq(group.id, board.id)).for("update")
+      const appointed = appointPosition(t.db, { ...position, userId: appointee })
+      await waitForBlocked(1)
+      const replaced = replaceAppointmentHolder(t.db, { ...position, userId: successor })
+      await waitForBlocked(2)
+      return { appointed, replaced }
+    })
+    expect(await appointed).toEqual({ success: false, error: "position-taken" })
+    expectSuccess(await replaced)
+    expect(await listAppointmentMembersAt(t.db, board.id, "2045-10-01")).toMatchObject([{ userId: successor }])
+  })
+
   test("a refusal inside a caller transaction preserves its savepoint and leaves no partial appointment", async () => {
     const board = expectSuccess(
       await createOrganisationGroup(
