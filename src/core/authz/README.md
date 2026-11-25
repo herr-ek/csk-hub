@@ -105,6 +105,8 @@ It validates the session **before** leasing a transaction connection, then loads
 current User inside the transaction. All checks use `access.requirePermission` or
 `access.can` from that one operation snapshot. Acquire relationship and resource locks
 inside the callback; never call the standalone session-resolving guards while holding them.
+Pass `{ readOnly: true }` as the third argument for work that only reads: its statements share one
+committed state and need no row locks to agree.
 
 Better Auth may need another connection for session validation. Starting many transactions
 before checking sessions, or rechecking sessions after taking a Member's relationship lock,

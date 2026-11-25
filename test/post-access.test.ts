@@ -661,6 +661,58 @@ describe("Group Post access end to end", () => {
     }
   })
 
+  test("Post reads neither wait for a save nor make one wait, and cannot write", async () => {
+    const id = await publish()
+    const { withAccess } = dependencies(alice)
+    const readAll = () =>
+      Promise.all([
+        reads.listNewsFeed(1, db, withAccess),
+        reads.listLatestPosts(3, db, withAccess),
+        reads.getPublishedPost(id, db, withAccess),
+        reads.getEditablePost(id, db, withAccess),
+        reads.listOwnDrafts(db, withAccess)
+      ]).then(() => "read")
+    await db.transaction(async (tx) => {
+      await tx.select({ id: post.id }).from(post).where(eq(post.id, id)).for("update")
+      const outcome = await Promise.race([
+        readAll(),
+        new Promise<string>((resolve) => setTimeout(() => resolve("blocked"), 2000))
+      ])
+      expect(outcome).toBe("read")
+    })
+    await withAccess(
+      async (_access, tx) => {
+        await tx.select({ id: post.id }).from(post).where(eq(post.id, id))
+        await db.select({ id: post.id }).from(post).where(eq(post.id, id)).for("update", { noWait: true })
+        await expect(tx.update(post).set({ title: "Changed" }).where(eq(post.id, id)).execute()).rejects.toMatchObject({
+          cause: { code: "25006" }
+        })
+      },
+      db,
+      { readOnly: true }
+    )
+    // Nested in a transaction under way, one committed state cannot be promised, so it is refused.
+    await expect(
+      db.transaction(async (tx) => withAccess(async () => "read", tx, { readOnly: true }))
+    ).rejects.toMatchObject({ cause: { code: "25001" } })
+  })
+
+  test("an audience edit committed during a read does not mix into it", async () => {
+    const id = await publish()
+    const { withAccess } = dependencies(singer)
+    const targets = await withAccess(
+      async (_access, tx) => {
+        await tx.select({ id: post.id }).from(post).where(eq(post.id, id))
+        await db.delete(postTarget).where(eq(postTarget.postId, id))
+        return tx.select({ groupId: postTarget.groupId }).from(postTarget).where(eq(postTarget.postId, id))
+      },
+      db,
+      { readOnly: true }
+    )
+    expect(targets).toEqual([{ groupId: kk }])
+    expect(await reads.getPublishedPost(id, db, withAccess)).toBeNull()
+  })
+
   test("parallel reads and competing saves complete when session validation uses another connection", async () => {
     const id = await publish()
     const pool = new Pool({ connectionString: database?.url, max: 2, connectionTimeoutMillis: 150 })

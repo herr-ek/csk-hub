@@ -18,7 +18,7 @@ import { group } from "@/core/db/schema/org-structure"
 import { post, postTarget } from "@/core/db/schema/posts"
 import { getPostAuthorizationFacts, listLocalizedGroupLabels } from "@/features/org-structure"
 import type { RichTextDocument } from "@/features/rich-text"
-import { editableUnpublishedVisibility, getPostReadScope, publishedPostVisibility } from "./access"
+import { editableUnpublishedVisibility, getPostReadScope, POST_READ, publishedPostVisibility } from "./access"
 
 export type PostsDatabase = AuthorizationDatabase
 export type NewsFeedEntry = {
@@ -78,7 +78,7 @@ const publishedPostColumns = {
 type PublishedRow = PostAttributes &
   Omit<NewsFeedEntry, "showAuthor" | "targets" | "publishedAt" | "body"> & { publishedAt: Date | null }
 
-/** Shape protected metadata only after the Post rows and the actor's relationship facts have been read. */
+/** Call in the same read-only transaction as the Post rows and relationship facts, so the targets agree with both. */
 async function publishedReadModels<Row extends PublishedRow>(
   rows: Row[],
   database: PostsDatabase,
@@ -110,7 +110,7 @@ async function publishedReadModels<Row extends PublishedRow>(
   return rows.flatMap((row) => {
     if (!row.publishedAt) return []
     const audience = targets.filter((target) => target.postId === row.id)
-    // Recheck after locking the Post and loading its current targets in a fresh statement.
+    // The policy has the last word over the SQL filter that selected the row.
     const context = { post: row, relationships, targets: audience }
     if (!access.can({ action: "post.read", context })) return []
     const showAuthor = access.can({ action: "post.readAttribution", context })
@@ -154,7 +154,6 @@ function selectPublishedCandidates<Columns extends SelectedFields>(
     .leftJoin(editor, eq(post.lastEditorId, editor.id))
     .leftJoin(group, eq(post.publisherGroupId, group.id))
     .where(filter)
-    .for("share", { of: post })
 }
 
 export const NEWS_FEED_PAGE_SIZE = 20
@@ -194,20 +193,24 @@ async function readNewsFeed(
   // The count arrives from the URL, so anything may.
   const shown = Number.isSafeInteger(pages) && pages > 0 ? pages : 1
   const limit = shown * NEWS_FEED_PAGE_SIZE
-  return withAccess(async (access, tx) => {
-    const { actor, relationships } = await getPostReadScope(tx, access)
-    const rows = await selectPublishedCandidates(
-      tx,
-      publishedPostColumns,
-      and(publishedPostVisibility(tx, actor, relationships), matches)
-    )
-      // The id breaks ties, so a Post never shows twice or goes missing across pages.
-      .orderBy(desc(post.publishedAt), desc(post.id))
-      // One row past the budget tells whether there is more, without counting the table.
-      .limit(limit + 1)
-    const entries = await publishedReadModels(rows.slice(0, limit), tx, access, relationships)
-    return { entries, pages: shown, hasMore: rows.length > limit }
-  }, database)
+  return withAccess(
+    async (access, tx) => {
+      const { actor, relationships } = await getPostReadScope(tx, access)
+      const rows = await selectPublishedCandidates(
+        tx,
+        publishedPostColumns,
+        and(publishedPostVisibility(tx, actor, relationships), matches)
+      )
+        // The id breaks ties, so a Post never shows twice or goes missing across pages.
+        .orderBy(desc(post.publishedAt), desc(post.id))
+        // One row past the budget tells whether there is more, without counting the table.
+        .limit(limit + 1)
+      const entries = await publishedReadModels(rows.slice(0, limit), tx, access, relationships)
+      return { entries, pages: shown, hasMore: rows.length > limit }
+    },
+    database,
+    POST_READ
+  )
 }
 
 /** The newest visible Posts for the home overview, without their bodies. */
@@ -216,18 +219,22 @@ export async function listLatestPosts(
   database: PostsDatabase = db,
   withAccess = withCurrentRequest
 ): Promise<Omit<NewsFeedEntry, "body" | "targets">[]> {
-  return withAccess(async (access, tx) => {
-    const { actor, relationships } = await getPostReadScope(tx, access)
-    const { body: _body, ...columns } = publishedPostColumns
-    const rows = await selectPublishedCandidates(tx, columns, publishedPostVisibility(tx, actor, relationships))
-      .orderBy(desc(post.publishedAt))
-      .limit(count)
-    const visible = await publishedReadModels(rows, tx, access, relationships)
-    return visible.map(({ targets: _targets, ...row }) => row)
-  }, database)
+  return withAccess(
+    async (access, tx) => {
+      const { actor, relationships } = await getPostReadScope(tx, access)
+      const { body: _body, ...columns } = publishedPostColumns
+      const rows = await selectPublishedCandidates(tx, columns, publishedPostVisibility(tx, actor, relationships))
+        .orderBy(desc(post.publishedAt))
+        .limit(count)
+      const visible = await publishedReadModels(rows, tx, access, relationships)
+      return visible.map(({ targets: _targets, ...row }) => row)
+    },
+    database,
+    POST_READ
+  )
 }
 
-/** Missing and forbidden resources are indistinguishable; serialize with recall and audience edits. */
+/** Missing and forbidden resources are indistinguishable. */
 export async function getPublishedPost(
   postId: string,
   database: PostsDatabase = db,
@@ -235,20 +242,24 @@ export async function getPublishedPost(
 ): Promise<PublishedPost | null> {
   if (!isPostId(postId)) return null
   try {
-    return await withAccess(async (access, tx) => {
-      const { actor, relationships } = await getPostReadScope(tx, access)
-      const [row] = await selectPublishedCandidates(
-        tx,
-        { ...publishedPostColumns, revision: post.revision },
-        and(eq(post.id, postId), publishedPostVisibility(tx, actor, relationships))
-      )
-      if (!row) return null
-      const [visible] = await publishedReadModels([row], tx, access, relationships)
-      if (!visible) return null
-      const { revision, ...detail } = visible
-      const canManage = access.can({ action: "post.unpublish", context: { post: row, relationships } })
-      return { ...detail, manageRevision: canManage ? revision : null }
-    }, database)
+    return await withAccess(
+      async (access, tx) => {
+        const { actor, relationships } = await getPostReadScope(tx, access)
+        const [row] = await selectPublishedCandidates(
+          tx,
+          { ...publishedPostColumns, revision: post.revision },
+          and(eq(post.id, postId), publishedPostVisibility(tx, actor, relationships))
+        )
+        if (!row) return null
+        const [visible] = await publishedReadModels([row], tx, access, relationships)
+        if (!visible) return null
+        const { revision, ...detail } = visible
+        const canManage = access.can({ action: "post.unpublish", context: { post: row, relationships } })
+        return { ...detail, manageRevision: canManage ? revision : null }
+      },
+      database,
+      POST_READ
+    )
   } catch (error) {
     if (error instanceof AuthorizationDeniedError) return null
     throw error
@@ -260,28 +271,31 @@ export async function listOwnDrafts(
   database: PostsDatabase = db,
   withAccess = withCurrentRequest
 ): Promise<DraftSummary[]> {
-  return withAccess(async (access, tx) => {
-    const { actor, relationships } = await getPostReadScope(tx, access)
-    const rows = await tx
-      .select({
-        id: post.id,
-        title: post.title,
-        savedAt: post.updatedAt,
-        firstPublishedAt: post.firstPublishedAt,
-        publisherGroupId: post.publisherGroupId
-      })
-      .from(post)
-      .where(editableUnpublishedVisibility(actor, relationships))
-      .orderBy(desc(post.updatedAt))
-      .for("share")
-    return rows.map(({ firstPublishedAt, publisherGroupId, ...row }) => ({
-      ...row,
-      recalled: firstPublishedAt !== null && publisherGroupId !== null
-    }))
-  }, database)
+  return withAccess(
+    async (access, tx) => {
+      const { actor, relationships } = await getPostReadScope(tx, access)
+      const rows = await tx
+        .select({
+          id: post.id,
+          title: post.title,
+          savedAt: post.updatedAt,
+          firstPublishedAt: post.firstPublishedAt,
+          publisherGroupId: post.publisherGroupId
+        })
+        .from(post)
+        .where(editableUnpublishedVisibility(actor, relationships))
+        .orderBy(desc(post.updatedAt))
+      return rows.map(({ firstPublishedAt, publisherGroupId, ...row }) => ({
+        ...row,
+        recalled: firstPublishedAt !== null && publisherGroupId !== null
+      }))
+    },
+    database,
+    POST_READ
+  )
 }
 
-/** Load complete trusted facts and establish editing authority in the same locked transaction. */
+/** Load complete trusted facts and establish editing authority from one committed state; saves recheck under lock. */
 export async function getEditablePost(
   postId: string,
   database: PostsDatabase = db,
@@ -289,33 +303,36 @@ export async function getEditablePost(
 ): Promise<EditablePost | null> {
   if (!isPostId(postId)) return null
   try {
-    return await withAccess(async (access, tx) => {
-      const { relationships } = await getPostReadScope(tx, access)
-      const [row] = await tx
-        .select()
-        .from(post)
-        .where(and(eq(post.id, postId), isNull(post.discardedAt)))
-        .for("share")
-      access.requirePermission({ action: "post.update", context: { post: row ?? null, relationships } })
-      if (!row) return null
-      const targets = await tx
-        .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
-        .from(postTarget)
-        .where(eq(postTarget.postId, postId))
-      return {
-        id: row.id,
-        title: row.title,
-        body: row.body,
-        savedAt: row.updatedAt,
-        state: row.publishedAt ? "published" : "draft",
-        publisherGroupId: row.publisherGroupId,
-        audienceAll: row.audienceAll,
-        targets,
-        revision: row.revision,
-        identityFixed: row.firstPublishedAt !== null || row.publishedAt !== null,
-        recalled: row.firstPublishedAt !== null && row.publisherGroupId !== null && row.publishedAt === null
-      }
-    }, database)
+    return await withAccess(
+      async (access, tx) => {
+        const { relationships } = await getPostReadScope(tx, access)
+        const [row] = await tx
+          .select()
+          .from(post)
+          .where(and(eq(post.id, postId), isNull(post.discardedAt)))
+        access.requirePermission({ action: "post.update", context: { post: row ?? null, relationships } })
+        if (!row) return null
+        const targets = await tx
+          .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
+          .from(postTarget)
+          .where(eq(postTarget.postId, postId))
+        return {
+          id: row.id,
+          title: row.title,
+          body: row.body,
+          savedAt: row.updatedAt,
+          state: row.publishedAt ? "published" : "draft",
+          publisherGroupId: row.publisherGroupId,
+          audienceAll: row.audienceAll,
+          targets,
+          revision: row.revision,
+          identityFixed: row.firstPublishedAt !== null || row.publishedAt !== null,
+          recalled: row.firstPublishedAt !== null && row.publisherGroupId !== null && row.publishedAt === null
+        }
+      },
+      database,
+      POST_READ
+    )
   } catch (error) {
     if (error instanceof AuthorizationDeniedError) return null
     throw error
@@ -332,24 +349,28 @@ export async function getPostComposeOptions({
   withAccess?: typeof withCurrentRequest
   fixedPublisherId?: string | null
 } = {}) {
-  return withAccess(async (access, tx) => {
-    const actor = access.requirePermission({ action: "app.access" })
-    const relationships = await getPostAuthorizationFacts(tx, actor.userId)
-    const labels = await listLocalizedGroupLabels(tx)
-    const groups = relationships.groups
-      .map(({ id, active }) => ({ id, active, name: labels.get(id) ?? "" }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-    const publishers = relationships.groups.filter((g) => canRepresentPostGroup(actor, g, relationships))
-    const fixedPublisher = actor.isAdmin
-      ? relationships.groups.find((g) => g.id === fixedPublisherId && !g.active)
-      : undefined
-    const audiencesByPublisher: Record<string, string[]> = {}
-    for (const publisher of [null, ...publishers, ...(fixedPublisher ? [fixedPublisher] : [])]) {
-      audiencesByPublisher[publisher?.id ?? ""] = relationships.groups
-        .filter((target) => canAddressPostGroup(actor, target, publisher, relationships))
-        .map((g) => g.id)
-    }
-    return { groups, publishers: groups.filter((g) => publishers.some((p) => p.id === g.id)), audiencesByPublisher }
-  }, database)
+  return withAccess(
+    async (access, tx) => {
+      const actor = access.requirePermission({ action: "app.access" })
+      const relationships = await getPostAuthorizationFacts(tx, actor.userId)
+      const labels = await listLocalizedGroupLabels(tx)
+      const groups = relationships.groups
+        .map(({ id, active }) => ({ id, active, name: labels.get(id) ?? "" }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+      const publishers = relationships.groups.filter((g) => canRepresentPostGroup(actor, g, relationships))
+      const fixedPublisher = actor.isAdmin
+        ? relationships.groups.find((g) => g.id === fixedPublisherId && !g.active)
+        : undefined
+      const audiencesByPublisher: Record<string, string[]> = {}
+      for (const publisher of [null, ...publishers, ...(fixedPublisher ? [fixedPublisher] : [])]) {
+        audiencesByPublisher[publisher?.id ?? ""] = relationships.groups
+          .filter((target) => canAddressPostGroup(actor, target, publisher, relationships))
+          .map((g) => g.id)
+      }
+      return { groups, publishers: groups.filter((g) => publishers.some((p) => p.id === g.id)), audiencesByPublisher }
+    },
+    database,
+    POST_READ
+  )
 }
 export type PostComposeOptions = Awaited<ReturnType<typeof getPostComposeOptions>>

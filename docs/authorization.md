@@ -114,10 +114,10 @@ Features must coordinate any stronger guarantees with their permission-changing 
 Post writes take the actor's organisational advisory lock, then shared locks on their current
 Membership and appointment Groups, any Group IDs selected in a write, and the owning Choirs of locked
 Sections. Compose options are presentation hints.
-Post reads take no User or Group locks: they read the actor's current relationships as committed at
-the start of each statement, so a page load never queues behind a membership change. Home, News home,
-News feed and detail reads share-lock candidate Posts and recheck readership against targets loaded
-from those relationships. Writing a read marker also rechecks visibility after locking the Post. Post commands
+Post reads take no locks: each runs in one read-only, repeatable-read transaction, so the actor, their
+relationships, the Posts and the targets all come from one committed state. A page load never queues
+behind a membership change or a save, and a save never queues behind page loads. Readership is
+rechecked by policy after the SQL filter. Writing a read marker rechecks visibility after locking the Post. Post commands
 take `FOR UPDATE` on the Post before authorizing and writing. The guard and persistence predicates
 both enforce the lifecycle rules.
 
@@ -142,7 +142,7 @@ Features retain their additional coordination:
 | `posts/lifecycle.ts` | Low-level server persistence; caller must establish authority in the same transaction; author/state/discard predicates retained |
 | `posts/service.ts/listNewsFeed` | Published Posts visible to the current reader |
 | `posts/service.ts/listOwnDrafts` | Current author's private Drafts and Recalled Group Posts they can manage |
-| `posts/service.ts/getPublishedPost`, `getEditablePost` | Guard and content read share a transaction/Post lock; forbidden or absent returns null |
+| `posts/service.ts/getPublishedPost`, `getEditablePost` | Guard and content read share one read-only snapshot; forbidden or absent returns null |
 | News, detail and compose screens | Resource capabilities shape controls; direct reads and action submissions check independently |
 | `core/auth/route-access.ts` | Composition route available to authenticated Users; no per-resource queries in Proxy |
 

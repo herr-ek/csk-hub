@@ -29,10 +29,13 @@ export async function getPostScope(
   return { actor, relationships }
 }
 
+/** The access every Post read asks for: one committed state throughout, with no locks and no writes. */
+export const POST_READ = { readOnly: true } as const
+
 /**
  * For reads: the actor's current relationships with no User or Group locks, so a page load never
- * queues behind a membership change. Each read sees committed state at its start, which is enough
- * here; anything that saves must use getPostScope.
+ * queues behind a membership change. Use inside `POST_READ` access; anything that saves must use
+ * getPostScope.
  */
 export async function getPostReadScope(database: OrgStructureTransaction, access: RequestAuthorization) {
   const actor = access.requirePermission({ action: "app.access" })

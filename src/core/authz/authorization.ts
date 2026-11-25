@@ -1,6 +1,6 @@
 import "server-only"
 
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import type { Database } from "@/core/db"
 import { user } from "@/core/db/schema/auth"
 import { hasAdminRole } from "@/shared/roles"
@@ -88,13 +88,22 @@ export function createAuthorization({ database, readSession }: Dependencies) {
    * Validate the session before leasing a transaction connection, then resolve current User
    * facts inside the transaction. Reuse its snapshot for every resource check. Call on a
    * database client: session validation may itself need a connection from the same pool.
+   *
+   * Pass `readOnly` for work that only reads. All its statements then see one committed state,
+   * so rows need no locks to agree with each other, and any write fails.
    */
   async function withCurrentRequest<T>(
     work: (access: RequestAuthorization, tx: AuthorizationTransaction) => Promise<T>,
-    connection = database
+    connection = database,
+    { readOnly = false }: { readOnly?: boolean } = {}
   ): Promise<T> {
     const session = await readSession()
-    return connection.transaction(async (tx) => work(snapshot(await getActor(tx, session)), tx))
+    return connection.transaction(async (tx) => {
+      // A statement rather than transaction options: Postgres refuses it inside a transaction
+      // already under way, where the options would be silently ignored.
+      if (readOnly) await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY`)
+      return work(snapshot(await getActor(tx, session)), tx)
+    })
   }
 
   /** Resolves a fresh actor for this check. Expected denials are false; session/DB failures propagate. */
