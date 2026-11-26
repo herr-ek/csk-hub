@@ -611,18 +611,19 @@ describe("Group Post access end to end", () => {
     })
   })
 
-  test("Posts a reader cannot see take up no room on a feed page", async () => {
+  test("Posts a reader cannot see take up no room in the feed or search results", async () => {
+    const title = `ord${crypto.randomUUID().replaceAll("-", "")}`
     const outsiderPost = await publish(alice, { publisherGroupId: null, audienceAll: true, targets: [] })
     const restricted: string[] = []
     for (let index = 0; index <= reads.NEWS_FEED_PAGE_SIZE; index++) restricted.push(await publish())
     // A page of restricted Posts ahead of the one the outsider may read, all ahead of the shared feed.
     await db
       .update(post)
-      .set({ publishedAt: new Date(Date.UTC(3000, 0, 1)) })
+      .set({ title, publishedAt: new Date(Date.UTC(3000, 0, 1)) })
       .where(eq(post.id, outsiderPost))
     await db
       .update(post)
-      .set({ publishedAt: new Date(Date.UTC(3000, 0, 2)) })
+      .set({ title, publishedAt: new Date(Date.UTC(3000, 0, 2)) })
       .where(inArray(post.id, restricted))
 
     const hidden = await reads.listNewsFeed(1, db, dependencies(outsider).withAccess)
@@ -633,6 +634,14 @@ describe("Group Post access end to end", () => {
     expect(addressed.entries).toHaveLength(reads.NEWS_FEED_PAGE_SIZE)
     expect(addressed.entries.every((entry) => restricted.includes(entry.id))).toBe(true)
     expect(addressed.hasMore).toBe(true)
+
+    const hiddenSearch = await reads.searchNewsFeed(title, 1, db, dependencies(outsider).withAccess)
+    expect(hiddenSearch.entries.map((entry) => entry.id)).toEqual([outsiderPost])
+    expect(hiddenSearch.hasMore).toBe(false)
+
+    const addressedSearch = await reads.searchNewsFeed(title, 1, db, dependencies(singer).withAccess)
+    expect(addressedSearch.entries.map((entry) => entry.id)).toEqual(addressed.entries.map((entry) => entry.id))
+    expect(addressedSearch.hasMore).toBe(true)
 
     // Later tests expect ordinary publication times.
     await db
