@@ -17,6 +17,11 @@
   --nav-current: color-mix(in oklab, var(--primary), white 55%);
 }
 
+/* The ring of glass around the avatar in the header from `md` up. The account button wears it, so it morphs with the menu. */
+@utility avatar-ring {
+  @apply glass rounded-full bg-neutral-200/40;
+}
+
 /* The glowing line under the current section. Size and place it where it is used. */
 @utility nav-mark {
   @apply rounded-full bg-(--nav-current) shadow-[0_0_8px_var(--nav-current)];

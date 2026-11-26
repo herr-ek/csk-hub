@@ -61,7 +61,8 @@ export function AccountMenu({ user }: { user: AccountUser }) {
       buttonLabel={t("myAccount")}
       panelLabel={t("myAccount")}
       button={<UserAvatar user={user} />}
-      buttonClassName="overflow-hidden"
+      // In its ring, the avatar lets the glass show through, so the two read as one disc.
+      buttonClassName="overflow-hidden md:avatar-ring md:-inset-2 md:p-1.75 md:*:bg-transparent"
       panelClassName="top-0 left-0 w-56 md:-top-2 md:-right-2 md:left-auto"
     >
       {(close) => (

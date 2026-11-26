@@ -9,7 +9,7 @@ type NavigationFrameProps = Omit<ComponentProps<"header">, "children"> & {
   links?: ReactNode
   /** What sits at the far end, such as the menu button on small screens. */
   end?: ReactNode
-  /** The avatar: at the start on small screens, in a ring of glass at the end from `md` up. */
+  /** The avatar: at the start on small screens, at the end from `md` up. It draws its own ring (`avatar-ring`). */
   account?: ReactNode
 }
 
@@ -42,7 +42,7 @@ export function NavigationFrame({ links, end, account, ...props }: NavigationFra
           {links ? <div className="pointer-events-auto col-start-2 row-start-1 hidden md:block">{links}</div> : null}
           {end ? <div className="pointer-events-auto col-start-3 row-start-1 justify-self-end">{end}</div> : null}
           {account ? (
-            <div className="pointer-events-auto relative col-start-1 row-start-1 justify-self-start md:glass md:col-start-3 md:justify-self-end md:rounded-full md:bg-neutral-200/40 md:p-1.75">
+            <div className="pointer-events-auto relative col-start-1 row-start-1 justify-self-start md:col-start-3 md:justify-self-end md:p-2">
               {account}
             </div>
           ) : null}

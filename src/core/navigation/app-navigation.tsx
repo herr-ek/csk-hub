@@ -75,7 +75,12 @@ function NavigationPlaceholder() {
     <NavigationFrame
       aria-busy
       links={<Skeleton className="h-5 w-80 lg:w-120" />}
-      account={<Skeleton className="size-9 rounded-full" />}
+      account={
+        <>
+          <span aria-hidden="true" className="absolute inset-0 md:avatar-ring" />
+          <Skeleton className="relative size-9 rounded-full" />
+        </>
+      }
     />
   )
 }
