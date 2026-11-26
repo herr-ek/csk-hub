@@ -141,12 +141,17 @@ export const positionAppointment = pgTable(
     contextGroupId: uuid("context_group_id")
       .notNull()
       .references(() => group.id, { onDelete: "restrict" }),
+    // The Choir Membership created specifically for a Dirigent appointment.
+    createdMembershipId: uuid("created_membership_id").references(() => directMembership.id, {
+      onDelete: "set null"
+    }),
     organisationYear: integer("organisation_year"),
     startDate: date("start_date").notNull(),
     endDate: date("end_date")
   },
   (table) => [
     index("position_appointment_user_idx").on(table.userId),
+    index("position_appointment_created_membership_idx").on(table.createdMembershipId),
     check("position_appointment_period_check", sql`${table.endDate} IS NULL OR ${table.endDate} > ${table.startDate}`),
     check(
       "position_appointment_year_check",

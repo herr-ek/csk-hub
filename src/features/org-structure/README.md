@@ -31,13 +31,15 @@ Commands enforce the relationships the database cannot fully express:
 - Choir, Section, and gig-group appointments require independent direct Membership throughout
   the tenure. Taking or ending the responsibility preserves that Membership. A Dirigent from outside
   the Choir is the exception: appointing one adds Choir Membership, without a Section, for the tenure.
+  Cancelling or swapping a planned Dirigent removes the Membership created for that appointment.
   Ending or changing prerequisite participation is refused if it would invalidate an appointment,
   unless the caller passes `endAppointments`, which a form does only after naming what will end.
 - One Position has at most one holder in its context on a date. A person holds at most one
   Position in a particular Board at a time. Appointments in distinct contexts may coexist.
 - Taking a Position ends Helper participation in its granted Groups when the tenure begins, and
   removes a Helper period planned for later. A Helper period that began within a backdated tenure
-  refuses it, so that history is never rewritten.
+  refuses it, so that history is never rewritten. To resume Helper participation after the tenure,
+  add a new Helper period.
 - A change on the day something begins, when that day is not past, corrects it instead of leaving a
   record of a day: a Voice change, a removed member, a cancelled or swapped holder. Swapping a holder
   requires naming them in `replaces`, so one Admin never silently undoes another's choice.

@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
@@ -84,8 +84,9 @@ async function prerequisiteCoverage(
   return { memberships, covered: periodsCoverPeriod(memberships, { startDate, endDate }) }
 }
 
-/** Taking a Position replaces Helper participation in the Groups it grants. A Helper period that began
- * before the appointment ends with it; one planned for later is removed. History is left for validation.
+/** Taking a Position replaces overlapping Helper participation in the Groups it grants. An earlier
+ * Helper period ends at the start of the tenure, and an overlapping planned period is removed.
+ * Resuming as a Helper after the tenure requires a new period. History is left for validation.
  */
 async function endHelperParticipation(
   tx: OrgStructureTransaction,
@@ -157,7 +158,8 @@ export function createOrganisationGroup(
  * Dates are inclusive/exclusive. Annual Choir appointments need an explicit year; annual
  * Group contexts supply their year. Prerequisite participation must cover the entire tenure.
  * Helper participation in the granted Groups ends when the appointment starts. A Dirigent who is not
- * in the Choir becomes a member of it for the tenure, without a Section.
+ * in the Choir becomes a member of it for the tenure, without a Section. Cancelling or swapping a
+ * planned Dirigent removes the Membership created for it. Ending the tenure preserves Membership.
  * All organisation Positions are appointments with one shared tenure across their grants.
  */
 export function appointPosition(
@@ -197,12 +199,18 @@ export function appointPosition(
       (bounds && (startDate < bounds.startDate || endDate === null || endDate > bounds.endDate))
     )
       throw new RuleViolation("period-conflict")
+    let createdMembershipId: string | undefined
     if (definition.prerequisite) {
       const { memberships, covered } = await prerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
       if (!covered) {
         if (input.positionCode !== PositionCode.Conductor || memberships.length > 0)
           throw new RuleViolation("not-a-member")
-        await tx.insert(directMembership).values({ userId: input.userId, groupId: context.id, startDate, endDate })
+        const [membership] = await tx
+          .insert(directMembership)
+          .values({ userId: input.userId, groupId: context.id, startDate, endDate })
+          .returning({ id: directMembership.id })
+        if (!membership) throw new Error("Membership creation returned no record.")
+        createdMembershipId = membership.id
       }
     }
 
@@ -214,6 +222,7 @@ export function appointPosition(
         userId: input.userId,
         positionCode: input.positionCode,
         contextGroupId: context.id,
+        createdMembershipId,
         organisationYear: annual ? year : null,
         startDate,
         endDate
@@ -292,7 +301,7 @@ export function replaceAppointmentHolder(
     if (predecessor) {
       if (predecessor.startDate === startDate) {
         if (startDate < today || input.replaces !== predecessor.id) throw new RuleViolation("period-conflict")
-        await tx.delete(positionAppointment).where(eq(positionAppointment.id, predecessor.id))
+        await deletePreparedAppointment(tx, predecessor.id, today)
       } else
         await tx
           .update(positionAppointment)
@@ -301,6 +310,7 @@ export function replaceAppointmentHolder(
     }
     const result = await appointPosition(tx, input, today)
     if (!result.success) throw new RuleViolation(result.error)
+    if (predecessor && predecessor.userId !== input.userId) await validateUserParticipation(tx, predecessor.userId)
     return result.data
   })
 }
@@ -319,10 +329,29 @@ export function cancelPreparedAppointment(
       .where(eq(positionAppointment.id, input.appointmentId))
     if (!appointment) throw new RuleViolation("not-holding-position")
     await lockUser(tx, appointment.userId)
-    if (appointment.startDate < today) throw new RuleViolation("period-conflict")
-    await tx.delete(positionAppointment).where(eq(positionAppointment.id, appointment.id))
+    await deletePreparedAppointment(tx, appointment.id, today)
+    await validateUserParticipation(tx, appointment.userId)
     return { id: appointment.id }
   })
+}
+
+async function deletePreparedAppointment(tx: OrgStructureTransaction, id: string, today: IsoDate) {
+  const [deleted] = await tx
+    .delete(positionAppointment)
+    .where(and(eq(positionAppointment.id, id), gte(positionAppointment.startDate, today)))
+    .returning()
+  if (!deleted) throw new RuleViolation("period-conflict")
+  if (deleted.createdMembershipId)
+    await tx
+      .delete(directMembership)
+      .where(
+        and(
+          eq(directMembership.id, deleted.createdMembershipId),
+          eq(directMembership.userId, deleted.userId),
+          eq(directMembership.groupId, deleted.contextGroupId),
+          eq(directMembership.startDate, deleted.startDate)
+        )
+      )
 }
 
 /** Corrects an existing annual appointment and re-resolves every granted Group atomically. */
@@ -374,6 +403,7 @@ export function correctAnnualAppointment(
         positionCode: input.positionCode,
         contextGroupId: context.id,
         organisationYear: input.organisationYear,
+        createdMembershipId: null,
         startDate,
         endDate
       })
@@ -420,6 +450,13 @@ export function correctFluidAppointment(
         positionCode: input.positionCode,
         contextGroupId: context.id,
         organisationYear: null,
+        createdMembershipId:
+          existing.positionCode === input.positionCode &&
+          existing.userId === input.userId &&
+          existing.contextGroupId === context.id &&
+          existing.startDate === startDate
+            ? existing.createdMembershipId
+            : null,
         startDate,
         endDate
       })

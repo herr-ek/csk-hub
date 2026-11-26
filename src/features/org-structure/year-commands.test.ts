@@ -2,7 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test"
 import { eq } from "drizzle-orm"
 import { directMembership, group, positionAppointment } from "@/core/db/schema/org-structure"
 import { GroupType, PositionCode } from "@/core/org-structure"
-import { createOrganisationGroup, listAppointmentsOfUser } from "./appointments"
+import {
+  appointPosition,
+  cancelPreparedAppointment,
+  createOrganisationGroup,
+  endAppointment,
+  listAppointmentsOfUser
+} from "./appointments"
 import { addDirectMembership, changeDirectMembership, removeDirectMembership } from "./direct-membership"
 import { changeVoice, endMembership, placeSinger } from "./membership"
 import { createOrgStructureTestDatabase, expectSuccess, uniqueName } from "./test-support"
@@ -37,6 +43,30 @@ describe.skipIf(!database)("filling a year", () => {
     ])
   })
 
+  test("swapping or cancelling a planned Dirigent only removes membership created for that plan", async () => {
+    const choirId = await t.groupId("DK")
+    const [outsider, member] = [await t.user(), await t.user()]
+    const startDate = "2061-01-01"
+    const slot = { positionCode: PositionCode.Conductor, contextGroupId: choirId, startDate }
+    const existing = expectSuccess(await addDirectMembership(t.db, { userId: member, groupId: choirId, startDate }))
+    const plan = expectSuccess(await fillPosition(t.db, { ...slot, userId: outsider }, TODAY))
+    expect(await membershipsOf(outsider)).toMatchObject([{ groupId: choirId, startDate }])
+
+    const replacement = expectSuccess(await fillPosition(t.db, { ...slot, userId: member, replaces: plan.id }, TODAY))
+    expect(await listAppointmentsOfUser(t.db, outsider)).toEqual([])
+    expect(await membershipsOf(outsider)).toEqual([])
+    expectSuccess(await cancelPreparedAppointment(t.db, { appointmentId: replacement.id, today: TODAY }))
+    expect(await membershipsOf(member)).toMatchObject([{ id: existing.id }])
+
+    const plannedAgain = expectSuccess(await fillPosition(t.db, { ...slot, userId: outsider }, TODAY))
+    expectSuccess(await cancelPreparedAppointment(t.db, { appointmentId: plannedAgain.id, today: TODAY }))
+    expect(await membershipsOf(outsider)).toEqual([])
+
+    const appointed = expectSuccess(await fillPosition(t.db, { ...slot, userId: outsider }, TODAY))
+    expectSuccess(await endAppointment(t.db, { appointmentId: appointed.id, endDate: "2061-02-01" }))
+    expect(await membershipsOf(outsider)).toMatchObject([{ groupId: choirId, startDate, endDate: null }])
+  })
+
   test("a year too far ahead, or a finished one, is never set up", async () => {
     const input = { positionCode: PositionCode.Chair, userId: await t.user() }
     expect(await fillPosition(t.db, { ...input, organisationYear: 2062, startDate: "2062-07-01" }, TODAY)).toEqual({
@@ -45,10 +75,34 @@ describe.skipIf(!database)("filling a year", () => {
     })
     expect(await fillPosition(t.db, { ...input, organisationYear: 2040, startDate: "2040-07-01" }, TODAY)).toEqual({
       success: false,
-      error: "group-not-found"
+      error: "period-conflict"
     })
     expect(await groupsOf(2062)).toEqual([])
     expect(await groupsOf(2040)).toEqual([])
+  })
+
+  test("finished years reject routine fills while History can still record appointments", async () => {
+    const organisationYear = 2020
+    const startDate = "2020-07-01"
+    const contextGroupId = expectSuccess(
+      await createOrganisationGroup(t.db, { type: GroupType.Board, organisationYear })
+    ).id
+    const userId = await t.user()
+    const input = { contextGroupId, userId, positionCode: PositionCode.Chair, organisationYear, startDate }
+    expect(await fillPosition(t.db, input, TODAY)).toEqual({ success: false, error: "period-conflict" })
+    expectSuccess(await appointPosition(t.db, input))
+
+    const groupId = expectSuccess(
+      await createOrganisationGroup(t.db, { type: GroupType.TourCommittee, organisationYear })
+    ).id
+    const members = [{ userId: await t.user() }]
+    for (const target of [{ groupId }, { type: GroupType.TourCommittee, organisationYear }]) {
+      expect(await addGroupMembers(t.db, { target, members, startDate }, TODAY)).toEqual({
+        success: false,
+        error: "period-conflict"
+      })
+    }
+    expectSuccess(await addDirectMembership(t.db, { ...members[0], groupId, startDate }))
   })
 
   test("a holder filling in runs until the next planned one", async () => {
@@ -119,7 +173,7 @@ describe.skipIf(!database)("filling a year", () => {
     ).toEqual({ success: false, error: "invalid-membership-voice" })
   })
 
-  test("a refill takes out leavers, changes Voices and brings in joiners, or does nothing", async () => {
+  test.each(["2060-11-20", "2061-01-10"])("a refill on %s changes the entire line-up or does nothing", async (date) => {
     const groupId = expectSuccess(
       await createOrganisationGroup(t.db, { name: uniqueName("Refill"), type: GroupType.GigGroup })
     ).id
@@ -142,7 +196,7 @@ describe.skipIf(!database)("filling a year", () => {
         t.db,
         {
           groupId,
-          date: "2061-01-10",
+          date,
           leave: [leaving.id],
           voices: [{ membershipId: staying.id, voice: "B2" }],
           join: [{ userId: joiner, voice }]
@@ -153,10 +207,10 @@ describe.skipIf(!database)("filling a year", () => {
     expect(await membershipsOf(leaver)).toMatchObject([{ endDate: null }])
 
     expectSuccess(await refill("T1"))
-    expect(await membershipsOf(leaver)).toMatchObject([{ endDate: "2061-01-10" }])
-    expect(await listAppointmentsOfUser(t.db, leaver)).toMatchObject([{ endDate: "2061-01-10" }])
+    expect(await membershipsOf(leaver)).toMatchObject([{ endDate: date }])
+    expect(await listAppointmentsOfUser(t.db, leaver)).toMatchObject([{ endDate: date }])
     expect(await membershipsOf(stayer)).toMatchObject([{ voice: "B2", startDate: "2059-01-01" }])
-    expect(await membershipsOf(joiner)).toMatchObject([{ voice: "T1", startDate: "2061-01-10" }])
+    expect(await membershipsOf(joiner)).toMatchObject([{ voice: "T1", startDate: date }])
   })
 })
 

@@ -211,7 +211,7 @@ export function removeDirectMembership(
         throw new RuleViolation("period-conflict")
       await tx.update(directMembership).set({ endDate: date }).where(eq(directMembership.id, current.id))
     }
-    if (input.endAppointments) await endUncoveredAppointments(tx, current.userId, date < today ? today : date, today)
+    if (input.endAppointments) await endUncoveredAppointments(tx, current.userId, date, today)
     await validateUserParticipation(tx, current.userId)
     return { id: current.id }
   })

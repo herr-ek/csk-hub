@@ -98,8 +98,11 @@ export function addGroupMembers(
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     let groupId: string
-    if ("groupId" in input.target) groupId = input.target.groupId
-    else {
+    if ("groupId" in input.target) {
+      groupId = input.target.groupId
+      const { organisationYear } = await requireGroup(tx, groupId)
+      if (organisationYear !== null) requireOpenYear(organisationYear, today)
+    } else {
       const { type, organisationYear } = input.target
       if (GROUP_POLICIES[type].lifetime !== "annual") throw new RuleViolation("group-not-found")
       await ensureYear(tx, organisationYear, today)
@@ -177,10 +180,14 @@ export function refillGigGroup(
   })
 }
 
-/** Sets up the annual Groups of the current or next year when they are missing; an earlier year is history. */
+/** Sets up the annual Groups of the current or next year when they are missing. */
 async function ensureYear(tx: OrgStructureTransaction, year: number, today: IsoDate) {
-  if (year < currentOrganisationYear(today)) return
+  requireOpenYear(year, today)
   succeed(await prepareOrganisationYear(tx, year, today))
+}
+
+function requireOpenYear(year: number, today: IsoDate) {
+  if (year < currentOrganisationYear(today)) throw new RuleViolation("period-conflict")
 }
 
 async function annualGroupId(tx: OrgStructureTransaction, type: GroupType, year: number) {
