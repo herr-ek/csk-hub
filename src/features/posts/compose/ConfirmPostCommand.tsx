@@ -28,28 +28,37 @@ const COPY = {
 
 /**
  * A button that asks before changing a Post's state for good — recalling a published Post,
- * throwing a draft away. The action sends the Admin to the feed once it is done.
+ * throwing a draft away. The action sends the Member to the feed once it is done.
  */
 export function ConfirmPostCommand({
   command,
-  action
+  action,
+  revision
 }: {
   command: PostCommand
-  action: (state: PostCommandState) => Promise<PostCommandState>
+  revision: number
+  action: (state: PostCommandState, formData: FormData) => Promise<PostCommandState>
 }) {
   const t = useTranslations("Posts")
   const common = useTranslations("Common")
   const copy = COPY[command]
   const formId = useId()
-  const [open, setOpen] = useState(false)
-  const [state, submit, pending] = useActionState<PostCommandState>(action, { status: "idle" })
+  const [confirmedRevision, setConfirmedRevision] = useState<number | null>(null)
+  const [state, submit, pending] = useActionState<PostCommandState, FormData>(action, { status: "idle" })
 
   // The form sits outside the dialog so it adds no gap to the dialog's layout; the
   // confirm button reaches it through its `form` attribute.
   return (
     <>
-      <form id={formId} action={submit} />
-      <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+      <form id={formId} action={submit}>
+        <input type="hidden" name="revision" value={confirmedRevision ?? revision} />
+      </form>
+      <AlertDialog
+        open={confirmedRevision !== null}
+        onOpenChange={(open) => {
+          if (!pending) setConfirmedRevision((confirmed) => (open ? (confirmed ?? revision) : null))
+        }}
+      >
         <AlertDialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
           {t(copy.label)}
         </AlertDialogTrigger>

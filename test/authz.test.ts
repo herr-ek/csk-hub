@@ -93,7 +93,15 @@ describe.skipIf(!database)("authorization server enforcement", () => {
   test("one operation's actor snapshot drives can, requirePermission and attribution", async () => {
     const member = await actor()
     const access = await member.access.forCurrentRequest()
-    const post = { id: crypto.randomUUID(), authorId: member.id, publishedAt: null, discardedAt: null }
+    const post = {
+      id: crypto.randomUUID(),
+      authorId: member.id,
+      publishedAt: null,
+      discardedAt: null,
+      publisherGroupId: null,
+      firstPublishedAt: null,
+      audienceAll: true
+    }
     const request: PermissionRequest = {
       action: "post.update",
       context: { post }

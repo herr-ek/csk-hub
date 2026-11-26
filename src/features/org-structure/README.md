@@ -51,7 +51,8 @@ Commands enforce the relationships the database cannot fully express:
 ## Integration
 
 Application writes go through this server-only feature. Commands accept a database or a caller's
-transaction, use savepoints, and return typed rule violations. Per-user locks serialize changes;
+transaction, use savepoints, and return typed rule violations. Per-user locks, then
+per-Position locks for commands that write appointments, serialize changes;
 database range exclusions protect occupancy and overlapping direct periods. Hand-written policy
 functions, triggers, and constraints must remain aligned with the catalogue in later migrations.
 Operational seeds are the deliberate writer exception and must preserve the same invariants.

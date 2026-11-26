@@ -5,8 +5,8 @@
  */
 export const UNPUBLISHED_NOTICE_PARAM = "unpublished"
 
-export type UnpublishedTo = "own" | "author"
+export type UnpublishedTo = "own" | "author" | "group"
 
 export function isUnpublishedTo(value: string | null): value is UnpublishedTo {
-  return value === "own" || value === "author"
+  return value === "own" || value === "author" || value === "group"
 }

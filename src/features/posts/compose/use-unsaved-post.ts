@@ -1,18 +1,27 @@
 import { useCallback, useMemo, useRef } from "react"
+import type { PostAddress } from "@/core/authz/model"
 import type { RichTextDocument } from "@/features/rich-text"
 import { useUnsavedForm } from "@/shared/hooks/use-unsaved-form"
 import { postDocument } from "../post-document"
+import { postTargetValuesSchema } from "./schemas"
 
 /** What the form holds, as the storage keeps it: the body is the editor's document as JSON. */
-type StoredPost = { title: string; body: string | null }
+type StoredPost = { title: string; body: string | null } & Partial<PostAddress>
 
-export type UnsavedPost = { title: string; body: RichTextDocument | undefined }
+export type UnsavedPost = { title: string; body: RichTextDocument | undefined } & Partial<PostAddress>
 
 function parseStoredPost(value: unknown): StoredPost | null {
   if (typeof value !== "object" || value === null) return null
-  const { title, body } = value as Partial<StoredPost>
+  const { title, body, publisherGroupId, audienceAll, targets } = value as Partial<StoredPost>
   if (typeof title !== "string") return null
-  return { title, body: typeof body === "string" ? body : null }
+  const parsedTargets = postTargetValuesSchema.safeParse(targets)
+  return {
+    title,
+    body: typeof body === "string" ? body : null,
+    ...(publisherGroupId === null || typeof publisherGroupId === "string" ? { publisherGroupId } : {}),
+    ...(typeof audienceAll === "boolean" ? { audienceAll } : {}),
+    ...(parsedTargets.success ? { targets: parsedTargets.data } : {})
+  }
 }
 
 /**
@@ -33,6 +42,7 @@ export function useUnsavedPost({ slot, version, initial }: { slot: string; versi
   const restored = useMemo<UnsavedPost | null>(
     () =>
       unsaved.restored && {
+        ...unsaved.restored,
         title: unsaved.restored.title,
         body: unsaved.restored.body ? (postDocument.parse(unsaved.restored.body) ?? undefined) : undefined
       },
@@ -40,21 +50,28 @@ export function useUnsavedPost({ slot, version, initial }: { slot: string; versi
   )
 
   // The first edit copies the untouched field from the restored copy or `initial`, so the copy is always whole.
-  const { title: initialTitle, body: initialBody } = initial
+  const { title: initialTitle, body: initialBody, publisherGroupId, audienceAll, targets } = initial
   const { keep } = unsaved
   const restoredCopy = unsaved.restored
   const change = useCallback(
     (values: Partial<StoredPost>) => {
       const base = latest.current ??
-        restoredCopy ?? { title: initialTitle, body: initialBody ? JSON.stringify(initialBody) : null }
+        restoredCopy ?? {
+          title: initialTitle,
+          body: initialBody ? JSON.stringify(initialBody) : null,
+          ...(publisherGroupId !== undefined ? { publisherGroupId } : {}),
+          ...(audienceAll !== undefined ? { audienceAll } : {}),
+          ...(targets ? { targets } : {})
+        }
       latest.current = { ...base, ...values }
       keep(latest.current)
     },
-    [keep, restoredCopy, initialTitle, initialBody]
+    [keep, restoredCopy, initialTitle, initialBody, publisherGroupId, audienceAll, targets]
   )
 
   // Stable too: the editor re-renders whenever its `onChange` changes identity.
   const changeTitle = useCallback((title: string) => change({ title }), [change])
+  const changeAddress = useCallback((address: PostAddress) => change(address), [change])
   const changeBody = useCallback((body: RichTextDocument) => change({ body: JSON.stringify(body) }), [change])
 
   const { discard: discardCopy } = unsaved
@@ -64,5 +81,21 @@ export function useUnsavedPost({ slot, version, initial }: { slot: string; versi
     discardCopy()
   }, [discardCopy])
 
-  return { restored, changeTitle, changeBody, saving: unsaved.saving, saveFailed: unsaved.saveFailed, discard }
+  const { saved: markSaved } = unsaved
+  const saved = useCallback(() => {
+    latest.current = null
+    markSaved()
+    discardCopy()
+  }, [markSaved, discardCopy])
+
+  return {
+    saved,
+    restored,
+    changeTitle,
+    changeBody,
+    changeAddress,
+    saving: unsaved.saving,
+    saveFailed: unsaved.saveFailed,
+    discard
+  }
 }

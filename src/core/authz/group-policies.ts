@@ -10,9 +10,9 @@ import type {
 export function holdsCurrentPosition(
   actor: AuthorizationActor,
   positionAppointments: readonly PositionAppointmentAttributes[],
-  groupId: string
+  groupId: string,
+  today = cskToday()
 ): boolean {
-  const today = cskToday()
   return positionAppointments.some(
     (holding) =>
       holding.userId === actor.userId &&
@@ -24,12 +24,12 @@ export function holdsCurrentPosition(
 
 function canRepresentGroup(
   actor: AuthorizationActor,
-  { group, positionAppointments }: PermissionContext["group.publishPost" | "group.manageContent" | "group.manageEvents"]
+  { group, positionAppointments, today }: PermissionContext["group.publishPost"]
 ): boolean {
   if (!group?.active) return false
   if (actor.isAdmin) return true
   if (group.type === GroupType.Choir) return false
-  return holdsCurrentPosition(actor, positionAppointments, group.id)
+  return holdsCurrentPosition(actor, positionAppointments, group.id, today)
 }
 
 function canAdministerGroup(
@@ -41,7 +41,7 @@ function canAdministerGroup(
 
 /** Group authority is not permission to act on arbitrary Post or Event instances. */
 export const groupPolicies = {
-  "group.publishPost": canRepresentGroup,
+  "group.publishPost": (actor, context) => context.group?.type !== GroupType.Choir && canRepresentGroup(actor, context),
   "group.manageContent": canRepresentGroup,
   "group.manageEvents": canRepresentGroup,
   "group.manageMemberships": canAdministerGroup,

@@ -38,6 +38,8 @@ export type { OrgStructureDatabase, OrgStructureTransaction } from "./operation"
 export {
   getCurrentPositionHolder,
   getGroupAuthorizationFacts,
+  getPostAuthorizationFacts,
+  getPostRefreshFacts,
   listActiveGroups,
   listChoirMembersByVoiceFamily,
   listCurrentChoirAffiliationsOfUsers,
@@ -47,6 +49,7 @@ export {
   listGroupNames,
   listMembershipsOfUser,
   listMembershipsOnDate,
+  lockCurrentGroupAuthorizationFacts,
   lockGroupAuthorizationFacts,
   lockGroupForReference
 } from "./reads"

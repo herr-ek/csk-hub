@@ -32,7 +32,17 @@ describe.skipIf(!database)("adopted Post authorization", () => {
 
   async function notice(authorId: string, publish: boolean) {
     return createPost(
-      { authorId, publish, content: { title: "Notice", body: { type: "doc", content: [{ type: "paragraph" }] } } },
+      {
+        authorId,
+        publish,
+        content: {
+          title: "Notice",
+          body: { type: "doc", content: [{ type: "paragraph" }] },
+          publisherGroupId: null,
+          audienceAll: true,
+          targets: []
+        }
+      },
       t.db
     )
   }
@@ -43,13 +53,13 @@ describe.skipIf(!database)("adopted Post authorization", () => {
     const admin = await actor("admin")
     const draft = await notice(owner.userId, false)
     const published = await notice(owner.userId, true)
-    const own = owner.access.requirePermission
-    const foreign = other.access.requirePermission
+    const own = owner.access.withCurrentRequest
+    const foreign = other.access.withCurrentRequest
     expect((await listOwnDrafts(t.db, own)).map((p) => p.id)).toEqual([draft.id])
     expect(await listOwnDrafts(t.db, foreign)).toEqual([])
     expect(await getEditablePost(published.id, t.db, own)).toMatchObject({ id: published.id })
     expect(await getEditablePost(published.id, t.db, foreign)).toBeNull()
-    expect(await getEditablePost(draft.id, t.db, admin.access.requirePermission)).toBeNull()
+    expect(await getEditablePost(draft.id, t.db, admin.access.withCurrentRequest)).toBeNull()
     expect(await getPublishedPost(draft.id, t.db, foreign)).toBeNull()
     await t.db.update(user).set({ banned: true }).where(eq(user.id, other.userId))
     await expect(listNewsFeed(1, t.db, foreign)).rejects.toBeInstanceOf(AuthorizationDeniedError)
@@ -72,9 +82,9 @@ describe.skipIf(!database)("adopted Post authorization", () => {
       await blocked(async (other) => other.update(post).set({ publishedAt: null }).where(eq(post.id, published.id)))
     })
     await t.db.update(user).set({ banned: true }).where(eq(user.id, owner.userId))
-    expect(await getEditablePost(published.id, t.db, owner.access.requirePermission)).toBeNull()
+    expect(await getEditablePost(published.id, t.db, owner.access.withCurrentRequest)).toBeNull()
     await t.db.update(user).set({ banned: false }).where(eq(user.id, owner.userId))
     await t.db.delete(session).where(eq(session.id, owner.sessionId))
-    expect(await getEditablePost(published.id, t.db, owner.access.requirePermission)).toBeNull()
+    expect(await getEditablePost(published.id, t.db, owner.access.withCurrentRequest)).toBeNull()
   })
 })

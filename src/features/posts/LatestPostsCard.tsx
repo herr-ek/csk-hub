@@ -21,7 +21,7 @@ export async function LatestPostsCard({ className }: { className?: string }) {
               <Link href={newsPostPath(post.id)} className={`${overviewRowClassName} flex-col gap-0.5`}>
                 <span className="font-medium break-words">{post.title}</span>
                 <span className="text-sm text-muted-foreground">
-                  <PostByline authorName={post.authorName} publishedAt={post.publishedAt} editedAt={null} />
+                  <PostByline {...post} editedAt={null} />
                 </span>
               </Link>
             </li>

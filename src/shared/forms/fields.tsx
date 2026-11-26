@@ -89,14 +89,16 @@ export function SelectField({
   defaultValue,
   value,
   onValueChange,
-  required
+  required,
+  disabled
 }: FieldChrome & {
   name: string
-  options: { value: string; label: string }[]
+  options: { value: string; label: string; disabled?: boolean }[]
   defaultValue?: string
   value?: string
   onValueChange?: (value: string) => void
   required?: boolean
+  disabled?: boolean
 }) {
   const id = useId()
   const initial = defaultValue ?? options[0]?.value
@@ -111,13 +113,14 @@ export function SelectField({
         {...controlled}
         onValueChange={(next) => onValueChange?.(next ?? "")}
         required={required}
+        disabled={disabled}
       >
         <SelectTrigger id={id} aria-invalid={invalid} className="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
+            <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
             </SelectItem>
           ))}

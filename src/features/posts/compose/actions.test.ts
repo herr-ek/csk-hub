@@ -1,331 +1,256 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { AuthorizationDeniedError } from "@/core/authz/authorization"
-
-const scheduleActivityDispatch = mock()
-mock.module("@/features/messaging/activity", () => ({ scheduleActivityDispatch }))
+import type { PostWriteResult } from "./commands"
 
 const POST_ID = "11111111-1111-4111-8111-111111111111"
-
-const requirePermission = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
-const resource = { id: POST_ID, authorId: "admin-1", publishedAt: null, discardedAt: null }
-const tx = { select: () => ({ from: () => ({ where: () => ({ for: async () => [resource] }) }) }) }
-mock.module("@/core/db", () => ({ db: { transaction: async (run: (tx: unknown) => Promise<unknown>) => run(tx) } }))
-const revalidatePath = mock(() => undefined)
+const GROUP_ID = "22222222-2222-4222-8222-222222222222"
+const scheduleActivityDispatch = mock()
+const revalidatePath = mock()
 const redirect = mock((location: string) => {
   throw new Error(`NEXT_REDIRECT:${location}`)
 })
-const createPost = mock(async (): Promise<{ id: string }> => ({ id: POST_ID }))
-const saveDraft = mock(async (): Promise<{ id: string } | null> => ({ id: POST_ID }))
-const editPublishedPost = mock(async (): Promise<{ id: string } | null> => ({ id: POST_ID }))
-const unpublishPost = mock(async (): Promise<{ authorId: string | null } | null> => ({ authorId: "admin-1" }))
-const discardDraft = mock(async () => true)
-const loggerError = mock(() => undefined)
-
-class DeniedError extends Error {
-  readonly code = "AUTHORIZATION_DENIED"
-}
-
-mock.module("@/core/authz", () => ({
-  requirePermission,
-  AUTHORIZATION_DENIED: "AUTHORIZATION_DENIED",
-  AuthorizationDeniedError
+const success: PostWriteResult = { status: "success", postId: POST_ID, revision: 8 }
+const createPostCommand = mock(async (): Promise<PostWriteResult> => success)
+const saveDraftCommand = mock(async (): Promise<PostWriteResult> => success)
+const editPublishedPostCommand = mock(async (): Promise<PostWriteResult> => success)
+const unpublishPostCommand = mock(
+  async (): Promise<PostWriteResult<{ unpublishedTo: "group" }>> => ({
+    ...success,
+    status: "success",
+    postId: POST_ID,
+    unpublishedTo: "group"
+  })
+)
+const discardDraftCommand = mock(async (): Promise<PostWriteResult> => success)
+mock.module("./commands", () => ({
+  createPostCommand,
+  saveDraftCommand,
+  editPublishedPostCommand,
+  unpublishPostCommand,
+  discardDraftCommand
 }))
-mock.module("../lifecycle", () => ({ createPost, saveDraft, editPublishedPost, unpublishPost, discardDraft }))
-mock.module("@/core/logging", () => ({ logger: { error: loggerError } }))
+mock.module("@/features/messaging/activity", () => ({ scheduleActivityDispatch }))
 mock.module("next/cache", () => ({ revalidatePath }))
-// The mock holds for the whole test run, so it keeps the other exports for later test files.
 const navigation = await import("next/navigation")
 mock.module("next/navigation", () => ({ ...navigation, redirect }))
-
-import * as actions from "./actions"
-
-const TITLE = "Höstkonsert"
-/** The document as the editor's hidden field carries it. */
-const BODY_DOCUMENT = {
-  type: "doc",
-  content: [{ type: "paragraph", content: [{ type: "text", text: "Vi sjunger i Vasakyrkan." }] }]
-}
-const BODY = JSON.stringify(BODY_DOCUMENT)
-const CONTENT = { title: TITLE, body: BODY_DOCUMENT }
+const actions = await import("./actions")
 const IDLE = { status: "idle" } as const
-
-function postFormData({ title = TITLE, body = BODY, intent }: { title?: string; body?: string; intent?: string } = {}) {
+const BODY = JSON.stringify({
+  type: "doc",
+  content: [{ type: "paragraph", content: [{ type: "text", text: "Rehearsal" }] }]
+})
+function form(intent?: string) {
   const data = new FormData()
-  data.set("title", title)
-  data.set("body", body)
+  data.set("title", "Notice")
+  data.set("body", BODY)
+  data.set("audience", "all")
+  data.set("revision", "7")
   if (intent) data.set("intent", intent)
   return data
 }
 
 beforeEach(() => {
-  scheduleActivityDispatch.mockClear()
-  for (const fn of [requirePermission, revalidatePath, redirect, loggerError]) fn.mockClear()
-  requirePermission.mockResolvedValue({ state: "authenticated", userId: "admin-1" })
-  createPost.mockReset()
-  createPost.mockResolvedValue({ id: POST_ID })
-  saveDraft.mockReset()
-  saveDraft.mockResolvedValue({ id: POST_ID })
-  editPublishedPost.mockReset()
-  editPublishedPost.mockResolvedValue({ id: POST_ID })
-  unpublishPost.mockReset()
-  unpublishPost.mockResolvedValue({ authorId: "admin-1" })
-  discardDraft.mockReset()
-  discardDraft.mockResolvedValue(true)
+  for (const fn of [createPostCommand, saveDraftCommand, editPublishedPostCommand, discardDraftCommand]) {
+    fn.mockReset()
+    fn.mockResolvedValue(success)
+  }
+  for (const fn of [revalidatePath, redirect, scheduleActivityDispatch, unpublishPostCommand]) fn.mockClear()
 })
 
-describe("writing a new Post", () => {
-  test("publishes it against its author and sends the Admin to its permalink", async () => {
-    await expect(actions.createPost(IDLE, postFormData({ intent: "publish" }))).rejects.toThrow(
-      `NEXT_REDIRECT:/news/${POST_ID}`
+describe("Post form transport", () => {
+  test("only explicit Publish publishes, with validated publisher and audience values", async () => {
+    const data = form("publish")
+    data.set("publisherGroupId", GROUP_ID)
+    data.set("audience", "groups")
+    data.set(
+      "targets",
+      JSON.stringify([
+        { groupId: GROUP_ID, voiceFamily: null },
+        { groupId: GROUP_ID, voiceFamily: null }
+      ])
     )
-
-    expect(requirePermission).toHaveBeenCalledWith({ action: "post.create" }, tx)
-    expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: true }, tx)
-    expect(revalidatePath).toHaveBeenCalledWith("/news")
-    expect(scheduleActivityDispatch).toHaveBeenCalledTimes(1)
-  })
-
-  test("keeps it as a draft and opens it for further writing", async () => {
-    await expect(actions.createPost(IDLE, postFormData({ intent: "draft" }))).rejects.toThrow(
-      `NEXT_REDIRECT:/news/${POST_ID}/edit`
-    )
-
-    expect(createPost).toHaveBeenCalledWith({ authorId: "admin-1", content: CONTENT, publish: false }, tx)
-    expect(scheduleActivityDispatch).not.toHaveBeenCalled()
-  })
-
-  test("publishes only when Publish was pressed, never by default", async () => {
-    await expect(actions.createPost(IDLE, postFormData())).rejects.toThrow(`NEXT_REDIRECT:/news/${POST_ID}/edit`)
-
-    expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ publish: false }), tx)
-  })
-
-  test("refuses a User without the post:create permission, without writing anything", async () => {
-    requirePermission.mockRejectedValue(new DeniedError())
-
-    await expect(actions.createPost(IDLE, postFormData({ intent: "publish" }))).resolves.toEqual({
-      status: "error",
-      error: "writeUnauthorized",
-      values: { title: TITLE, body: BODY }
-    })
-
-    expect(createPost).not.toHaveBeenCalled()
-  })
-
-  test("treats a failed authorization lookup as retryable rather than a refusal", async () => {
-    requirePermission.mockRejectedValue(new Error("connection refused"))
-
-    await expect(actions.createPost(IDLE, postFormData())).resolves.toEqual({
-      status: "error",
-      error: "saveFailed",
-      values: { title: TITLE, body: BODY }
-    })
-
-    expect(loggerError).toHaveBeenCalledTimes(1)
-    expect(createPost).not.toHaveBeenCalled()
-  })
-
-  test("stores what the Post schema allows, not what the browser sent", async () => {
-    const smuggled = JSON.stringify({
-      type: "doc",
-      content: [
-        { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Not a title" }] },
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "click", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }]
-        }
-      ]
-    })
-
-    await expect(actions.createPost(IDLE, postFormData({ body: smuggled }))).rejects.toThrow("NEXT_REDIRECT")
-
-    expect(createPost).toHaveBeenCalledWith(
+    await expect(actions.createPost(IDLE, data)).rejects.toThrow(`NEXT_REDIRECT:/news/${POST_ID}`)
+    expect(createPostCommand).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: {
-          title: TITLE,
-          body: {
-            type: "doc",
+        publisherGroupId: GROUP_ID,
+        audienceAll: false,
+        targets: [{ groupId: GROUP_ID, voiceFamily: null }]
+      }),
+      true
+    )
+    await expect(actions.createPost(IDLE, form())).rejects.toThrow(`NEXT_REDIRECT:/news/${POST_ID}/edit`)
+    expect(createPostCommand).toHaveBeenLastCalledWith(expect.anything(), false)
+  })
+
+  test("invalid content and forged IDs never reach a command", async () => {
+    for (const [field, value] of [
+      ["title", " "],
+      ["body", "invalid"],
+      ["publisherGroupId", "not-a-uuid"],
+      ["targets", "not-json"],
+      ["revision", "-1"]
+    ]) {
+      const data = form("publish")
+      data.set(field, value)
+      expect(await actions.createPost(IDLE, data)).toMatchObject({ status: "error", error: "formInvalid" })
+    }
+    expect(createPostCommand).not.toHaveBeenCalled()
+  })
+
+  test("transports mixed Group/Voice targets and rejects empty rules and division/capability filters", async () => {
+    const targets = [
+      { groupId: GROUP_ID, voiceFamily: "S" },
+      { groupId: null, voiceFamily: "B" }
+    ]
+    const data = form("publish")
+    data.set("audience", "targets")
+    data.set("targets", JSON.stringify(targets))
+    await expect(actions.createPost(IDLE, data)).rejects.toThrow("NEXT_REDIRECT")
+    expect(createPostCommand).toHaveBeenCalledWith(expect.objectContaining({ targets }), true)
+    createPostCommand.mockClear()
+    for (const invalid of [
+      [{ groupId: null, voiceFamily: null }],
+      [{ groupId: null, voiceFamily: "B2" }],
+      [{ groupId: "forged", voiceFamily: "B" }],
+      [{ groupId: null, voiceFamily: "unknown" }],
+      Array.from({ length: 101 }, () => ({ groupId: null, voiceFamily: "B" }))
+    ]) {
+      data.set("targets", JSON.stringify(invalid))
+      expect(await actions.createPost(IDLE, data)).toMatchObject({ status: "error", error: "formInvalid" })
+    }
+    expect(createPostCommand).not.toHaveBeenCalled()
+    const incomplete = [...targets, { groupId: null, voiceFamily: null }]
+    data.set("targets", JSON.stringify(incomplete))
+    expect(await actions.createPost(IDLE, data)).toMatchObject({
+      status: "error",
+      error: "formInvalid",
+      values: { targets: incomplete }
+    })
+  })
+
+  test("an incomplete audience row returns a specific error beside that row", async () => {
+    const data = form("publish")
+    data.set("audience", "targets")
+    data.set(
+      "targets",
+      JSON.stringify([
+        { groupId: GROUP_ID, voiceFamily: "B" },
+        { groupId: null, voiceFamily: null }
+      ])
+    )
+    expect(await actions.createPost(IDLE, data)).toMatchObject({
+      status: "error",
+      error: "formInvalid",
+      targetErrors: [1]
+    })
+    expect(createPostCommand).not.toHaveBeenCalled()
+  })
+
+  test("a publish or a published edit without an audience is an Audience error; a draft may have none", async () => {
+    const noAudience = form("publish")
+    noAudience.set("audience", "")
+    expect(await actions.createPost(IDLE, noAudience)).toMatchObject({
+      status: "error",
+      error: "formInvalid",
+      audienceRequired: true
+    })
+    expect(await actions.editPublishedPost(POST_ID, IDLE, noAudience)).toMatchObject({
+      status: "error",
+      error: "formInvalid",
+      audienceRequired: true
+    })
+    expect(createPostCommand).not.toHaveBeenCalled()
+    expect(editPublishedPostCommand).not.toHaveBeenCalled()
+
+    noAudience.set("intent", "draft")
+    expect(await actions.saveDraft(POST_ID, IDLE, noAudience)).toMatchObject({ status: "saved" })
+    expect(saveDraftCommand).toHaveBeenCalledWith(POST_ID, expect.objectContaining({ audienceAll: false }), false, 7)
+  })
+
+  test("sanitizes unsupported document markup before writing", async () => {
+    const data = form()
+    data.set(
+      "body",
+      JSON.stringify({
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
             content: [
-              { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Not a title" }] },
-              { type: "paragraph", content: [{ type: "text", text: "click" }] }
+              { type: "text", text: "click", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }
             ]
           }
-        }
+        ]
+      })
+    )
+    await expect(actions.createPost(IDLE, data)).rejects.toThrow("NEXT_REDIRECT")
+    expect(createPostCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "click" }] }] }
       }),
-      tx
+      false
     )
   })
 
-  test("refuses a body that is not a Post document, without authorizing anything", async () => {
-    const plainText = "Plain text from the old textarea"
+  test("saving a draft acknowledges the new revision without navigating away", async () => {
+    const result = await actions.saveDraft(POST_ID, IDLE, form("draft"))
+    expect(result).toMatchObject({ status: "saved", revision: 8, values: { title: "Notice", body: BODY } })
+    expect(redirect).not.toHaveBeenCalled()
+  })
 
-    await expect(actions.createPost(IDLE, postFormData({ body: plainText }))).resolves.toEqual({
+  test("forwards the loaded revision on saves and publications", async () => {
+    await expect(actions.saveDraft(POST_ID, IDLE, form("publish"))).rejects.toThrow("NEXT_REDIRECT")
+    expect(saveDraftCommand).toHaveBeenCalledWith(POST_ID, expect.anything(), true, 7)
+    await expect(actions.editPublishedPost(POST_ID, IDLE, form())).rejects.toThrow("NEXT_REDIRECT")
+    expect(editPublishedPostCommand).toHaveBeenCalledWith(POST_ID, expect.anything(), 7)
+  })
+
+  test.each([
+    ["unauthorized", "writeUnauthorized"],
+    ["failed", "saveFailed"],
+    ["unavailable", "postUnavailable"],
+    ["conflict", "editConflict"]
+  ] as const)("%s preserves the entire submission", async (status, error) => {
+    editPublishedPostCommand.mockResolvedValue({ status })
+    const data = form()
+    data.set("publisherGroupId", GROUP_ID)
+    expect(await actions.editPublishedPost(POST_ID, IDLE, data)).toEqual({
       status: "error",
-      error: "formInvalid",
-      values: { title: TITLE, body: plainText }
-    })
-
-    expect(requirePermission).not.toHaveBeenCalled()
-    expect(createPost).not.toHaveBeenCalled()
-  })
-
-  test("requires a title and a body before authorizing anything", async () => {
-    await expect(actions.createPost(IDLE, postFormData({ title: "   " }))).resolves.toMatchObject({
-      error: "formInvalid",
-      values: { title: "   ", body: BODY }
-    })
-    await expect(actions.createPost(IDLE, postFormData({ body: "  " }))).resolves.toMatchObject({
-      error: "formInvalid",
-      values: { title: TITLE, body: "  " }
-    })
-
-    expect(requirePermission).not.toHaveBeenCalled()
-    expect(createPost).not.toHaveBeenCalled()
-  })
-
-  test("hands the Admin their post back when the write fails", async () => {
-    createPost.mockRejectedValue(new Error("connection refused"))
-
-    await expect(actions.createPost(IDLE, postFormData({ intent: "publish" }))).resolves.toEqual({
-      status: "error",
-      error: "saveFailed",
-      values: { title: TITLE, body: BODY }
-    })
-
-    expect(redirect).not.toHaveBeenCalled()
-  })
-})
-
-describe("working on a draft", () => {
-  test("saves it as the acting Admin's own draft and reloads its edit page", async () => {
-    await expect(actions.saveDraft(POST_ID, IDLE, postFormData({ intent: "draft" }))).rejects.toThrow(
-      `NEXT_REDIRECT:/news/${POST_ID}/edit`
-    )
-
-    expect(requirePermission).toHaveBeenCalledWith({ action: "post.update", context: { post: resource } }, tx)
-    expect(saveDraft).toHaveBeenCalledWith(
-      { postId: POST_ID, authorId: "admin-1", content: CONTENT, publish: false },
-      tx
-    )
-  })
-
-  test("publishes it explicitly and sends the Admin to its permalink", async () => {
-    await expect(actions.saveDraft(POST_ID, IDLE, postFormData({ intent: "publish" }))).rejects.toThrow(
-      `NEXT_REDIRECT:/news/${POST_ID}`
-    )
-
-    expect(saveDraft).toHaveBeenCalledWith(expect.objectContaining({ publish: true }), tx)
-  })
-
-  test("says the Post is gone when it is no longer a draft of theirs", async () => {
-    saveDraft.mockResolvedValue(null)
-
-    await expect(actions.saveDraft(POST_ID, IDLE, postFormData({ intent: "publish" }))).resolves.toEqual({
-      status: "error",
-      error: "postUnavailable",
-      values: { title: TITLE, body: BODY }
+      error,
+      values: {
+        title: "Notice",
+        body: BODY,
+        publisherGroupId: GROUP_ID,
+        audienceAll: true,
+        targets: [],
+        revision: "7"
+      }
     })
     expect(redirect).not.toHaveBeenCalled()
   })
-})
 
-describe("editing a published Post", () => {
-  test("needs post:update, changes the Post and returns to its permalink", async () => {
-    await expect(actions.editPublishedPost(POST_ID, IDLE, postFormData())).rejects.toThrow(
-      `NEXT_REDIRECT:/news/${POST_ID}`
-    )
+  test.each([undefined, "", "-1", "1.5", "9007199254740992"])(
+    "existing Post actions reject revision %s before invoking a command",
+    async (revision) => {
+      const data = form()
+      if (revision === undefined) data.delete("revision")
+      else data.set("revision", revision)
+      const conflict = { status: "error", error: "editConflict" }
+      expect(await actions.saveDraft(POST_ID, IDLE, data)).toMatchObject({ ...conflict, values: { body: BODY } })
+      expect(await actions.editPublishedPost(POST_ID, IDLE, data)).toMatchObject({
+        ...conflict,
+        values: { body: BODY }
+      })
+      expect(await actions.unpublishPost(POST_ID, IDLE, data)).toEqual({ status: "error", error: "commandConflict" })
+      expect(await actions.discardDraft(POST_ID, IDLE, data)).toEqual({ status: "error", error: "commandConflict" })
+      for (const command of [saveDraftCommand, editPublishedPostCommand, unpublishPostCommand, discardDraftCommand])
+        expect(command).not.toHaveBeenCalled()
+    }
+  )
 
-    expect(requirePermission).toHaveBeenCalledWith({ action: "post.update", context: { post: resource } }, tx)
-    expect(editPublishedPost).toHaveBeenCalledWith({ postId: POST_ID, content: CONTENT }, tx)
-    expect(revalidatePath).toHaveBeenCalledWith(`/news/${POST_ID}`)
-  })
-
-  test("refuses a User without post:update, without writing anything", async () => {
-    requirePermission.mockRejectedValue(new DeniedError())
-
-    await expect(actions.editPublishedPost(POST_ID, IDLE, postFormData())).resolves.toMatchObject({
-      error: "writeUnauthorized"
-    })
-    expect(editPublishedPost).not.toHaveBeenCalled()
-  })
-
-  test("says the Post is gone when it was unpublished in the meantime", async () => {
-    editPublishedPost.mockResolvedValue(null)
-
-    await expect(actions.editPublishedPost(POST_ID, IDLE, postFormData())).resolves.toMatchObject({
-      error: "postUnavailable",
-      values: { title: TITLE, body: BODY }
-    })
-  })
-})
-
-describe("unpublishing a Post", () => {
-  test("needs post.unpublish, recalls the Post and returns to the feed, which confirms it", async () => {
-    await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=own")
-
-    expect(requirePermission).toHaveBeenCalledWith({ action: "post.unpublish", context: { post: resource } }, tx)
-    expect(unpublishPost).toHaveBeenCalledWith(POST_ID, tx)
-    expect(revalidatePath).toHaveBeenCalledWith(`/news/${POST_ID}`)
-  })
-
-  test("tells the feed when the Post went back to another author's drafts", async () => {
-    unpublishPost.mockResolvedValue({ authorId: "author-2" })
-    await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=author")
-
-    unpublishPost.mockResolvedValue({ authorId: null })
-    await expect(actions.unpublishPost(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=author")
-  })
-
-  test("refuses a User without post.unpublish", async () => {
-    requirePermission.mockRejectedValue(new DeniedError())
-
-    await expect(actions.unpublishPost(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "writeUnauthorized" })
-    expect(unpublishPost).not.toHaveBeenCalled()
-  })
-
-  test("says the Post is gone when it is not published", async () => {
-    unpublishPost.mockResolvedValue(null)
-
-    await expect(actions.unpublishPost(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "postUnavailable" })
-    expect(redirect).not.toHaveBeenCalled()
-  })
-
-  test("reports a failed write as retryable", async () => {
-    unpublishPost.mockRejectedValue(new Error("connection refused"))
-
-    await expect(actions.unpublishPost(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "unpublishFailed" })
-    expect(loggerError).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe("discarding a draft", () => {
-  test("throws away the acting Admin's own draft and returns to the feed", async () => {
-    await expect(actions.discardDraft(POST_ID, IDLE)).rejects.toThrow("NEXT_REDIRECT:/news")
-
-    expect(requirePermission).toHaveBeenCalledWith({ action: "post.discard", context: { post: resource } }, tx)
-    expect(discardDraft).toHaveBeenCalledWith({ postId: POST_ID, authorId: "admin-1" }, tx)
-    expect(revalidatePath).toHaveBeenCalledWith("/news")
-    expect(scheduleActivityDispatch).not.toHaveBeenCalled()
-  })
-
-  test("refuses a User without post:create", async () => {
-    requirePermission.mockRejectedValue(new DeniedError())
-
-    await expect(actions.discardDraft(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "writeUnauthorized" })
-    expect(discardDraft).not.toHaveBeenCalled()
-  })
-
-  test("says the draft is gone when it is not a live draft of theirs", async () => {
-    discardDraft.mockResolvedValue(false)
-
-    await expect(actions.discardDraft(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "postUnavailable" })
-    expect(redirect).not.toHaveBeenCalled()
-  })
-
-  test("reports a failed write as retryable", async () => {
-    discardDraft.mockRejectedValue(new Error("connection refused"))
-
-    await expect(actions.discardDraft(POST_ID, IDLE)).resolves.toEqual({ status: "error", error: "discardFailed" })
-    expect(loggerError).toHaveBeenCalledWith("news.post.discard-failed", expect.anything())
+  test("recall and discard forward revisions and describe shared recall", async () => {
+    await expect(actions.unpublishPost(POST_ID, IDLE, form())).rejects.toThrow("NEXT_REDIRECT:/news?unpublished=group")
+    expect(unpublishPostCommand).toHaveBeenCalledWith(POST_ID, 7)
+    await expect(actions.discardDraft(POST_ID, IDLE, form())).rejects.toThrow("NEXT_REDIRECT:/news")
+    expect(discardDraftCommand).toHaveBeenCalledWith(POST_ID, 7)
   })
 })

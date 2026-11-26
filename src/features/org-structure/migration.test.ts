@@ -79,10 +79,13 @@ describe.skipIf(!database)("consolidated organisation migration", () => {
     const { db, url } = database as NonNullable<typeof database>
     const userId = crypto.randomUUID()
     await db.insert(user).values({ id: userId, name: "Existing User", email: `${userId}@example.com` })
-    const [announcement] = await db
-      .insert(post)
-      .values({ title: "Existing Post", body: { type: "doc", content: [] }, authorId: userId })
-      .returning()
+    const {
+      rows: [announcement]
+    } = await db.execute<{ id: string; title: string; body: unknown; authorId: string }>(sql`
+      INSERT INTO post (title, body, author_id)
+      VALUES ('Existing Post', '{"type":"doc","content":[]}'::jsonb, ${userId})
+      RETURNING id, title, body, author_id AS "authorId"
+    `)
     if (!announcement) throw new Error("Missing Post fixture")
     await db.insert(postRead).values({ userId, postId: announcement.id })
     const users = await db.select().from(user)
@@ -93,7 +96,7 @@ describe.skipIf(!database)("consolidated organisation migration", () => {
     expect(await db.select().from(group)).toEqual([])
     expect(await db.select().from(user)).toEqual(users)
     expect(await db.select().from(postRead)).toEqual(reads)
-    expect(await db.select().from(post)).toEqual([announcement])
+    expect(await db.select().from(post)).toMatchObject([{ ...announcement, audienceAll: true, publisherGroupId: null }])
     expect(
       await db.execute(sql`SELECT to_regclass('public.group_member') AS legacy_memberships,
       to_regclass('public.position_holder') AS legacy_holdings,

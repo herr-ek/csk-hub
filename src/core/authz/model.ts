@@ -1,11 +1,16 @@
 import type { user } from "@/core/db/schema/auth"
 import type { event } from "@/core/db/schema/events"
 import type { group, positionAppointment } from "@/core/db/schema/org-structure"
-import type { post } from "@/core/db/schema/posts"
+import type { post, postTarget } from "@/core/db/schema/posts"
 import type { AudienceMembership, AudienceTarget } from "./event-audience"
 
 /** Minimal resource facts, loaded on the server by the feature performing the operation. */
-export type PostAttributes = Readonly<Pick<typeof post.$inferSelect, "id" | "authorId" | "publishedAt" | "discardedAt">>
+export type PostAttributes = Readonly<
+  Pick<
+    typeof post.$inferSelect,
+    "id" | "authorId" | "publishedAt" | "discardedAt" | "publisherGroupId" | "firstPublishedAt" | "audienceAll"
+  >
+>
 export type GroupAttributes = Readonly<Pick<typeof group.$inferSelect, "id" | "type" | "active">>
 export type MemberAttributes = Readonly<Pick<typeof user.$inferSelect, "id" | "banned">>
 
@@ -14,7 +19,20 @@ export type PositionAppointmentAttributes = Readonly<
   Pick<typeof positionAppointment.$inferSelect, "userId" | "contextGroupId" | "positionCode" | "startDate" | "endDate">
 >
 
-type PostContext = Readonly<{ post: PostAttributes | null }>
+export type PostGroupAttributes = GroupAttributes & Readonly<{ choirId: string | null }>
+export type PostRelationships = Readonly<{
+  today: string
+  groups: readonly PostGroupAttributes[]
+  memberships: readonly (Pick<AudienceMembership, "groupId" | "voice" | "startDate" | "endDate"> & { userId: string })[]
+  positionAppointments: readonly PositionAppointmentAttributes[]
+}>
+export type PostAudienceTarget = Pick<typeof postTarget.$inferSelect, "groupId" | "voiceFamily">
+export type PostAddress = { publisherGroupId: string | null; audienceAll: boolean; targets: PostAudienceTarget[] }
+type PostContext = Readonly<{
+  post: PostAttributes | null
+  relationships?: PostRelationships
+  targets?: readonly PostAudienceTarget[]
+}>
 type GroupContext = Readonly<{ group: GroupAttributes | null }>
 type GroupWorkContext = GroupContext &
   Readonly<{
@@ -46,8 +64,7 @@ type MemberContext = Readonly<{ member: MemberAttributes | null }>
 
 /**
  * The facts required for each action. Supply attributes, never precomputed permission booleans.
- * Null resources represent missing records and deny access. These contracts cover today's schema;
- * Group-authored Posts and audience changes still need their own contexts and policies.
+ * Null resources represent missing records and deny access. Post contexts include existing resources, relationship facts and proposed publication values.
  */
 export type PermissionContext = {
   "memberId.issue": undefined
@@ -55,11 +72,13 @@ export type PermissionContext = {
   "app.access": undefined
   "post.create": undefined
   "post.read": PostContext
+  "post.readAttribution": PostContext
   "post.update": PostContext
   "post.publish": PostContext
   "post.unpublish": PostContext
   "post.discard": PostContext
-  "group.publishPost": GroupWorkContext
+  "post.address": PostContext & Readonly<{ proposed: PostAddress; publishing: boolean }>
+  "group.publishPost": GroupWorkContext & Readonly<{ today?: string }>
   "group.manageContent": GroupWorkContext
   "group.manageEvents": GroupWorkContext
   "group.manageMemberships": GroupContext

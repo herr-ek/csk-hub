@@ -10,14 +10,14 @@ import { Skeleton } from "@/shared/ui/base/skeleton"
 import { cn } from "@/shared/utils"
 import { unpublishPost } from "./compose/actions"
 import { ConfirmPostCommand } from "./compose/ConfirmPostCommand"
+import { PostAudience } from "./PostAudience"
 import { PostByline } from "./post-byline"
-import { getEditablePost, getPublishedPost } from "./service"
+import { getPublishedPost } from "./service"
 import { PostReadMarker } from "./unread"
 
 /** Changing a published Post, offered only to whoever may make the change. */
-async function PostControls({ postId }: { postId: string }) {
-  const [canChange, t] = await Promise.all([getEditablePost(postId), getTranslations("Posts")])
-  if (!canChange) return null
+async function PostControls({ postId, revision }: { postId: string; revision: number }) {
+  const t = await getTranslations("Posts")
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -27,7 +27,7 @@ async function PostControls({ postId }: { postId: string }) {
       >
         {t("editPost")}
       </Link>
-      <ConfirmPostCommand command="unpublish" action={unpublishPost.bind(null, postId)} />
+      <ConfirmPostCommand revision={revision} command="unpublish" action={unpublishPost.bind(null, postId)} />
     </div>
   )
 }
@@ -45,14 +45,15 @@ export async function PostScreen({ postId }: { postId: string }) {
         <div className="min-w-0">
           <PageBreadcrumb route="news" current={post.title} />
         </div>
-        <PostControls postId={post.id} />
+        {post.manageRevision !== null ? <PostControls postId={post.id} revision={post.manageRevision} /> : null}
       </div>
       <article className="flex flex-col gap-4">
         <header>
           <h1 className="font-heading text-2xl font-semibold break-words">{post.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            <PostByline authorName={post.authorName} publishedAt={post.publishedAt} editedAt={post.editedAt} />
+            <PostByline {...post} />
           </p>
+          <PostAudience className="mt-2" audienceAll={post.audienceAll} targets={post.targets} />
         </header>
         <RichTextContent document={post.body} />
       </article>

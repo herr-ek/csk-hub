@@ -1,8 +1,10 @@
 import "server-only"
 
-import { type AnyColumn, and, asc, eq, gt, inArray, isNull, lte, or, type SQL, sql } from "drizzle-orm"
+import { type AnyColumn, and, asc, eq, gt, inArray, isNull, lte, or, type SQL, type SQLWrapper, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
+import { user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
-import { GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
+import { currentOrganisationYear, GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
 import { appointmentMemberships } from "./appointment-memberships"
 import { listEffectiveMembersAt } from "./appointments"
@@ -97,42 +99,49 @@ export async function listMembershipsOnDate(database: OrgStructureDatabase, date
 }
 
 /** Direct and appointment-derived Memberships, optionally of one User, whose period `within` accepts. */
-async function datedMemberships(
+function datedMembershipQuery(
   database: OrgStructureDatabase,
   userId: string | undefined,
   within: (period: { startDate: AnyColumn; endDate: AnyColumn }) => SQL | undefined
 ) {
   const derived = appointmentMemberships(database)
-  const [direct, granted] = await Promise.all([
-    database
-      .select({
-        userId: directMembership.userId,
-        groupId: group.id,
-        groupType: group.type,
-        choirId: group.choirId,
-        voice: directMembership.voice,
-        startDate: directMembership.startDate,
-        endDate: directMembership.endDate
-      })
-      .from(directMembership)
-      .innerJoin(group, eq(group.id, directMembership.groupId))
-      .where(and(userId ? eq(directMembership.userId, userId) : undefined, within(directMembership))),
-    database
-      .select({
-        userId: positionAppointment.userId,
-        groupId: group.id,
-        groupType: group.type,
-        choirId: group.choirId,
-        voice: sql<null>`NULL`,
-        startDate: positionAppointment.startDate,
-        endDate: positionAppointment.endDate
-      })
-      .from(derived)
-      .innerJoin(group, eq(group.id, derived.groupId))
-      .innerJoin(positionAppointment, eq(positionAppointment.id, derived.appointmentId))
-      .where(and(userId ? eq(positionAppointment.userId, userId) : undefined, within(positionAppointment)))
-  ])
-  return [...direct, ...granted].sort(
+  return database
+    .select({
+      userId: directMembership.userId,
+      groupId: group.id,
+      groupType: group.type,
+      choirId: group.choirId,
+      voice: directMembership.voice,
+      startDate: directMembership.startDate,
+      endDate: directMembership.endDate
+    })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .where(and(userId ? eq(directMembership.userId, userId) : undefined, within(directMembership)))
+    .unionAll(
+      database
+        .select({
+          userId: positionAppointment.userId,
+          groupId: group.id,
+          groupType: group.type,
+          choirId: group.choirId,
+          voice: sql<null>`NULL`.as("voice"),
+          startDate: positionAppointment.startDate,
+          endDate: positionAppointment.endDate
+        })
+        .from(derived)
+        .innerJoin(group, eq(group.id, derived.groupId))
+        .innerJoin(positionAppointment, eq(positionAppointment.id, derived.appointmentId))
+        .where(and(userId ? eq(positionAppointment.userId, userId) : undefined, within(positionAppointment)))
+    )
+}
+
+async function datedMemberships(
+  database: OrgStructureDatabase,
+  userId: string | undefined,
+  within: (period: { startDate: AnyColumn; endDate: AnyColumn }) => SQL | undefined
+) {
+  return (await datedMembershipQuery(database, userId, within)).sort(
     (a, b) => a.startDate.localeCompare(b.startDate) || a.groupId.localeCompare(b.groupId)
   )
 }
@@ -195,7 +204,7 @@ export async function listChoirMembersByVoiceFamily(
  */
 export function listActiveGroups(database: OrgStructureDatabase, alsoGroupIds: string[] = []) {
   return database
-    .select({ id: group.id, name: group.name, type: group.type, active: group.active })
+    .select({ id: group.id, name: group.name, type: group.type, active: group.active, choirId: group.choirId })
     .from(group)
     .where(or(eq(group.active, true), alsoGroupIds.length > 0 ? inArray(group.id, alsoGroupIds) : undefined))
 }
@@ -229,11 +238,62 @@ export async function lockGroupForReference(tx: OrgStructureTransaction, groupId
  */
 export async function getGroupAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
   const groups = await database.select({ id: group.id, type: group.type, active: group.active }).from(group)
-  const positionAppointments = await database
-    .select()
-    .from(positionAppointment)
-    .where(eq(positionAppointment.userId, userId))
+  const positionAppointments = await listPositionAppointments(database, userId)
   return { groups, positionAppointments }
+}
+
+/** Organisational facts for Post audience and publisher selection, including the Stockholm date. */
+export async function getPostAuthorizationFacts(database: OrgStructureDatabase, userId: string) {
+  const facts = await getPostRelationshipFacts(database, userId)
+  const groups = await database.select(postGroupColumns).from(group)
+  return { ...facts, groups: postGroupsAt(groups, facts.today) }
+}
+
+/** Current facts for Post refresh recipients, read together in one statement inside the Post write. */
+export async function getPostRefreshFacts(database: OrgStructureDatabase) {
+  const today = cskToday()
+  const users = database
+    .select({ id: user.id, role: user.role })
+    .from(user)
+    .where(or(eq(user.banned, false), isNull(user.banned)))
+  const groups = database.select(postGroupColumns).from(group)
+  const memberships = datedMembershipQuery(database, undefined, ({ startDate, endDate }) =>
+    and(lte(startDate, today), or(isNull(endDate), gt(endDate, today)))
+  )
+  const appointments = database
+    .select({
+      userId: positionAppointment.userId,
+      contextGroupId: positionAppointment.contextGroupId,
+      positionCode: positionAppointment.positionCode,
+      startDate: positionAppointment.startDate,
+      endDate: positionAppointment.endDate
+    })
+    .from(positionAppointment)
+    .where(
+      and(
+        lte(positionAppointment.startDate, today),
+        or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, today))
+      )
+    )
+  const [snapshot] = await database
+    .select({
+      users: snapshotRows<Awaited<typeof users>>(users, sql`"id", "role"`),
+      groups: snapshotRows<Awaited<typeof groups>>(groups, sql`"id", "type", "active", "choirId", "organisationYear"`),
+      memberships: snapshotRows<Awaited<typeof memberships>>(
+        memberships,
+        sql`"userId", "groupId", "groupType", "choirId", "voice", "startDate", "endDate"`
+      ),
+      positionAppointments: snapshotRows<Awaited<typeof appointments>>(
+        appointments,
+        sql`"userId", "contextGroupId", "positionCode", "startDate", "endDate"`
+      )
+    })
+    .from(sql`(values (1)) as snapshot`)
+  return { ...snapshot, today, groups: postGroupsAt(snapshot.groups, today) }
+}
+
+function snapshotRows<Rows>(query: SQLWrapper, columns: SQL) {
+  return sql<Rows>`(select coalesce(jsonb_agg(facts), '[]'::jsonb) from (${query}) as facts(${columns}))`
 }
 
 /**
@@ -243,14 +303,75 @@ export async function getGroupAuthorizationFacts(database: OrgStructureDatabase,
  */
 export async function lockGroupAuthorizationFacts(tx: OrgStructureTransaction, userId: string, groupIds: string[]) {
   await lockUser(tx, userId)
-  if (groupIds.length > 0) {
-    await tx
-      .select({ id: group.id })
+  if (groupIds.length > 0) await lockAuthorizationGroups(tx, inArray(group.id, [...new Set(groupIds)]))
+  return getGroupAuthorizationFacts(tx, userId)
+}
+
+/** Load current relationships and lock their Groups plus any explicitly selected Groups. */
+export async function lockCurrentGroupAuthorizationFacts(
+  tx: OrgStructureTransaction,
+  userId: string,
+  selectedGroupIds: string[]
+) {
+  await lockUser(tx, userId)
+  const facts = await getPostRelationshipFacts(tx, userId)
+  const ids = [
+    ...new Set([
+      ...facts.memberships
+        .filter((membership) => membership.startDate <= facts.today)
+        .map((membership) => membership.groupId),
+      ...facts.positionAppointments.map((appointment) => appointment.contextGroupId),
+      ...selectedGroupIds
+    ])
+  ]
+  if (ids.length === 0) return { groups: [], ...facts }
+  const selectedSection = alias(group, "selected_section")
+  const sectionChoirs = tx
+    .select({ id: selectedSection.choirId })
+    .from(selectedSection)
+    .where(and(inArray(selectedSection.id, ids), eq(selectedSection.type, GroupType.Section)))
+  const groups = await lockAuthorizationGroups(tx, or(inArray(group.id, ids), inArray(group.id, sectionChoirs)))
+  return { ...facts, groups: postGroupsAt(groups, facts.today) }
+}
+
+async function getPostRelationshipFacts(database: OrgStructureDatabase, userId: string) {
+  const today = cskToday()
+  const positionAppointments = await listPositionAppointments(database, userId)
+  const memberships = (await listMembershipsOfUser(database, userId, { from: today })).map((membership) => ({
+    ...membership,
+    userId
+  }))
+  return { today, memberships, positionAppointments }
+}
+
+function listPositionAppointments(database: OrgStructureDatabase, userId: string) {
+  return database.select().from(positionAppointment).where(eq(positionAppointment.userId, userId))
+}
+
+const postGroupColumns = {
+  id: group.id,
+  type: group.type,
+  active: group.active,
+  choirId: group.choirId,
+  organisationYear: group.organisationYear
+}
+
+function postGroupsAt(groups: Pick<typeof group.$inferSelect, keyof typeof postGroupColumns>[], date: IsoDate) {
+  const currentYear = currentOrganisationYear(date)
+  return groups.map(({ organisationYear, ...group }) => ({
+    ...group,
+    active: group.active && (organisationYear === null || organisationYear === currentYear)
+  }))
+}
+
+function lockAuthorizationGroups(tx: OrgStructureTransaction, filter: SQL | undefined) {
+  return (
+    tx
+      .select(postGroupColumns)
       .from(group)
-      .where(inArray(group.id, [...new Set(groupIds)].sort()))
+      .where(filter)
       // Choir archival locks its Choir before updating Sections; preserve that order here.
       .orderBy(sql`case when ${group.type} = ${GroupType.Choir} then 0 else 1 end`, asc(group.id))
       .for("share")
-  }
-  return getGroupAuthorizationFacts(tx, userId)
+  )
 }

@@ -5,9 +5,8 @@ import { ROUTES } from "@/core/navigation/site"
 import { ContentPage } from "@/shared/layouts/content-page"
 import { Skeleton } from "@/shared/ui/base/skeleton"
 import { PostTime } from "../PostTime"
-import { getEditablePost } from "../service"
+import { getEditablePost, getPostComposeOptions } from "../service"
 import { discardDraft, editPublishedPost, saveDraft } from "./actions"
-import { ConfirmPostCommand } from "./ConfirmPostCommand"
 import { PostForm } from "./PostForm"
 
 export async function EditPostScreen({ postId }: { postId: string }) {
@@ -15,34 +14,40 @@ export async function EditPostScreen({ postId }: { postId: string }) {
   // Someone else's draft, and a Post the reader may not change, look like no Post at all.
   if (!post) notFound()
 
-  const t = await getTranslations("Posts")
+  const [t, options] = await Promise.all([
+    getTranslations("Posts"),
+    getPostComposeOptions({ fixedPublisherId: post.identityFixed ? post.publisherGroupId : null })
+  ])
   const draft = post.state === "draft"
 
   return (
-    <ContentPage fill>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold">{draft ? t("editDraft") : t("editPublished")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {draft ? (
-              <>
-                {t("draftSaved")} <PostTime date={post.savedAt} withTime /> {t("bylineSeparator")}{" "}
-                {t("draftDescription")}
-              </>
-            ) : (
-              t("editPublishedDescription")
-            )}
-          </p>
-        </div>
-        {draft ? <ConfirmPostCommand command="discard" action={discardDraft.bind(null, post.id)} /> : null}
-      </div>
-      {/* Keyed on the save, so a reloaded draft starts the editor from what was stored. */}
+    <ContentPage>
       <PostForm
-        key={post.savedAt.toISOString()}
+        key={post.id}
         action={draft ? saveDraft.bind(null, post.id) : editPublishedPost.bind(null, post.id)}
-        stage={post.state}
+        stage={post.recalled ? "recalled" : post.state}
+        canPublish={!post.recalled || post.canRepublish}
+        discardAction={draft && !post.recalled ? discardDraft.bind(null, post.id) : undefined}
+        header={
+          <div>
+            <h1 className="font-heading text-2xl font-semibold">
+              {post.recalled ? t("editRecalled") : draft ? t("editDraft") : t("editPublished")}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {draft ? (
+                <>
+                  {t("draftSaved")} <PostTime date={post.savedAt} withTime /> {t("bylineSeparator")}{" "}
+                  {t(post.recalled ? "recalledDescription" : "draftDescription")}
+                </>
+              ) : (
+                t("editPublishedDescription")
+              )}
+            </p>
+          </div>
+        }
+        options={options}
         initial={post}
-        unsaved={{ slot: post.id, version: post.savedAt.toISOString() }}
+        unsaved={{ slot: post.id, version: String(post.revision) }}
         cancelHref={draft ? ROUTES.news : newsPostPath(post.id)}
       />
     </ContentPage>
@@ -51,7 +56,7 @@ export async function EditPostScreen({ postId }: { postId: string }) {
 
 export function EditPostScreenSkeleton() {
   return (
-    <ContentPage fill busy>
+    <ContentPage busy>
       <div className="flex flex-col gap-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-72" />
