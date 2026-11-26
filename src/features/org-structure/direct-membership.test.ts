@@ -21,7 +21,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
     const groupId = expectSuccess(
       await createOrganisationGroup(t.db, { name: "Voiced gig", type: GroupType.GigGroup })
     ).id
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     expectSuccess(
       await placeSingerInSection(t.db, {
         userId,
@@ -49,7 +49,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
       })
     ).id
     const groupId = gigId
-    const userId = await t.user()
+    const userId = await t.singer("B1", "B2")
     const membership = expectSuccess(
       await addDirectMembership(t.db, {
         userId,
@@ -171,7 +171,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
         "4000-10-22"
       )
     )
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     const membership = expectSuccess(
       await addDirectMembership(t.db, {
         userId,
@@ -228,7 +228,7 @@ describe.skipIf(!database)("dated direct Membership", () => {
     expect(await listDirectMembersAt(t.db, groupId, "2028-05-01")).toEqual([])
   })
 
-  test("fixed direct policies, Choir scope, and fluid lifetime apply to public additions", async () => {
+  test("fixed direct policies and fluid lifetime apply to public additions", async () => {
     for (const type of [GroupType.Board, GroupType.ParentsMeeting] as const) {
       const groupId = expectSuccess(
         await createOrganisationGroup(
@@ -247,28 +247,10 @@ describe.skipIf(!database)("dated direct Membership", () => {
       })
       expect(await listDirectMemberships(t.db, groupId)).toEqual([])
     }
-    const choirId = await t.groupId("KK")
-    expect(
-      await createOrganisationGroup(t.db, { name: "Missing choir", type: GroupType.EquipmentTeam }, "4000-10-22")
-    ).toEqual({
-      success: false,
-      error: "invalid-group-scope"
-    })
     const groupId = expectSuccess(
-      await createOrganisationGroup(
-        t.db,
-        { name: "KK fluid rodd", type: GroupType.EquipmentTeam, choirId },
-        "4000-10-22"
-      )
+      await createOrganisationGroup(t.db, { name: uniqueName("Fluid"), type: GroupType.Other }, "4000-10-22")
     ).id
     const userId = await t.user()
-    expect(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" })).toEqual({
-      success: false,
-      error: "not-a-choir-member"
-    })
-    expectSuccess(
-      await addDirectMembership(t.db, { userId, groupId: await t.groupId("KKB"), voice: "B2", startDate: "2026-09-01" })
-    )
     expectSuccess(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" }))
     expect(await listDirectMembersAt(t.db, groupId, "2029-07-01")).toMatchObject([{ userId, endDate: null }])
   })
@@ -358,23 +340,14 @@ describe.skipIf(!database)("dated direct Membership", () => {
       error: "already-in-section"
     })
   })
-  test("leaving a Choir ends its Section and Choir-team membership in one command", async () => {
+  test("leaving a Choir ends its Section membership in one command", async () => {
     const userId = await t.user()
     const choirId = await t.groupId("MK")
-    expectSuccess(
-      await placeSingerInSection(t.db, {
-        userId,
-        sectionId: await t.groupId("MKB1"),
-        voice: "B1",
-        startDate: "2026-09-01"
-      })
-    )
-    const groupId = expectSuccess(
-      await createOrganisationGroup(t.db, { name: "Departure fest", type: GroupType.PartyTeam, choirId }, "4000-10-22")
-    ).id
-    expectSuccess(await addDirectMembership(t.db, { userId, groupId, startDate: "2026-09-01" }))
+    const sectionId = await t.groupId("MKB1")
+    expectSuccess(await placeSingerInSection(t.db, { userId, sectionId, voice: "B1", startDate: "2026-09-01" }))
     expectSuccess(await endMembership(t.db, { userId, groupId: choirId, endDate: "2027-01-01" }))
-    expect(await listDirectMembersAt(t.db, groupId, "2027-01-01")).toEqual([])
+    expect(await listDirectMembersAt(t.db, choirId, "2027-01-01")).toEqual([])
+    expect(await listDirectMembersAt(t.db, sectionId, "2027-01-01")).toEqual([])
   })
   test("annual Groups cannot be created without their year", async () => {
     expect(

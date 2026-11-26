@@ -7,7 +7,17 @@ export type GroupCommandError = OrgStructureViolation | "invalid-input" | "unexp
 
 export type GroupCommandState = CommandState<GroupCommandError>
 
-/** The detail page of one group. */
-export function groupDetailPath(groupId: string) {
-  return `${ROUTES.adminOrgStructure}/${groupId}`
+/** A Group's past participation and its corrections. */
+export function groupHistoryPath(groupId: string) {
+  return `${ROUTES.adminGroupHistory}/${groupId}`
+}
+
+/** A committee's roster, in a year when it has one; `key` is its Group type, or an Other Group's id. */
+export function committeePath(key: string, year?: number) {
+  const path = `${ROUTES.adminCommittees}?committee=${encodeURIComponent(key)}`
+  return year === undefined ? path : `${path}&year=${year}`
+}
+
+export function gigGroupPath(groupId: string) {
+  return `${ROUTES.adminGigGroups}/${groupId}`
 }

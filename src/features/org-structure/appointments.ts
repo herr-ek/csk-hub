@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
@@ -12,15 +12,14 @@ import {
   isAllowedOrganisationYear,
   organisationYearPeriod,
   POSITION_DEFINITIONS,
-  type PositionCode,
+  PositionCode,
   periodsCoverPeriod,
   sectionName
 } from "@/core/org-structure"
 import { appointmentMemberships } from "./appointment-memberships"
 import { validateUserParticipation } from "./direct-membership"
 import { cskToday } from "./effective-reads"
-import { requireChoirTeamAvailable } from "./group-cardinality"
-import { requireActiveGroup, requireChoir, requireGroup } from "./lookup"
+import { requireActiveGroup, requireGroup } from "./lookup"
 import {
   lockUser,
   type OrgStructureDatabase,
@@ -62,7 +61,7 @@ async function resolveGrantGroups(
   return ids
 }
 
-async function requirePrerequisiteCoverage(
+async function prerequisiteCoverage(
   tx: OrgStructureTransaction,
   userId: string,
   contextGroupId: string,
@@ -82,13 +81,44 @@ async function requirePrerequisiteCoverage(
         )
       ))
   ]
-  if (!periodsCoverPeriod(memberships, { startDate, endDate })) throw new RuleViolation("not-a-member")
+  return { memberships, covered: periodsCoverPeriod(memberships, { startDate, endDate }) }
+}
+
+/** Taking a Position replaces overlapping Helper participation in the Groups it grants. An earlier
+ * Helper period ends at the start of the tenure, and an overlapping planned period is removed.
+ * Resuming as a Helper after the tenure requires a new period. History is left for validation.
+ */
+async function endHelperParticipation(
+  tx: OrgStructureTransaction,
+  userId: string,
+  groupIds: string[],
+  startDate: IsoDate,
+  endDate: IsoDate | null,
+  today: IsoDate
+) {
+  const helpers = await tx
+    .select({ id: directMembership.id, startDate: directMembership.startDate, type: group.type })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .where(
+      and(
+        eq(directMembership.userId, userId),
+        inArray(directMembership.groupId, groupIds),
+        or(isNull(directMembership.endDate), gt(directMembership.endDate, startDate)),
+        endDate === null ? undefined : lt(directMembership.startDate, endDate)
+      )
+    )
+  for (const helper of helpers) {
+    if (GROUP_POLICIES[helper.type].directMembership !== "helpers") continue
+    if (helper.startDate < startDate)
+      await tx.update(directMembership).set({ endDate: startDate }).where(eq(directMembership.id, helper.id))
+    else if (helper.startDate >= today) await tx.delete(directMembership).where(eq(directMembership.id, helper.id))
+  }
 }
 
 /**
- * Creates an explicitly modelled Group. Annual types require an integer organisationYear
- * from 1000 through 9998; other types forbid it. Choir-scoped types require choirId;
- * CSK-wide types forbid it. Choirs/Sections still use createChoir. Names are required only
+ * Creates an explicitly modelled CSK-wide Group. Annual types require an integer organisationYear
+ * from 1000 through 9998; other types forbid it. Choirs/Sections still use createChoir. Names are required only
  * for explicitly named types; derived-label types ignore a supplied name and store null.
  */
 export function createOrganisationGroup(
@@ -96,7 +126,6 @@ export function createOrganisationGroup(
   input: {
     name?: string
     type: Exclude<GroupType, GroupType.Choir | GroupType.Section>
-    choirId?: string
     organisationYear?: number
   },
   today: IsoDate = cskToday()
@@ -105,10 +134,8 @@ export function createOrganisationGroup(
     const policy = GROUP_POLICIES[input.type]
     if (!policy || (input.type as GroupType) === GroupType.Choir || (input.type as GroupType) === GroupType.Section)
       throw new RuleViolation("choir-created-with-sections")
-    if ((policy.scope === "choir") !== Boolean(input.choirId)) throw new RuleViolation("invalid-group-scope")
     const name = hasExplicitGroupName(input.type) ? input.name?.trim() : null
     if (hasExplicitGroupName(input.type) && !name) throw new RuleViolation("invalid-group-name")
-    if (input.choirId) await requireChoir(tx, input.choirId)
     if (
       (policy.lifetime === "annual") !== (input.organisationYear !== undefined) ||
       (input.organisationYear !== undefined &&
@@ -117,10 +144,9 @@ export function createOrganisationGroup(
       throw new RuleViolation("period-conflict")
     if (input.organisationYear !== undefined && !isAllowedOrganisationYear(input.organisationYear, requireDate(today)))
       throw new RuleViolation("organisation-year-too-far-ahead")
-    await requireChoirTeamAvailable(tx, input)
     const [created] = await tx
       .insert(group)
-      .values({ ...input, name })
+      .values({ name, type: input.type, organisationYear: input.organisationYear })
       .returning({ id: group.id })
     if (!created) throw new Error("Group creation returned no record.")
     return created
@@ -131,7 +157,9 @@ export function createOrganisationGroup(
  * Records one appointment and resolves its grants from the fixed definitions in one savepoint.
  * Dates are inclusive/exclusive. Annual Choir appointments need an explicit year; annual
  * Group contexts supply their year. Prerequisite participation must cover the entire tenure.
- * Overlapping Helper participation is refused; end it explicitly before appointing.
+ * Helper participation in the granted Groups ends when the appointment starts. A Dirigent who is not
+ * in the Choir becomes a member of it for the tenure, without a Section. Cancelling or swapping a
+ * planned Dirigent removes the Membership created for it. Ending the tenure preserves Membership.
  * All organisation Positions are appointments with one shared tenure across their grants.
  */
 export function appointPosition(
@@ -143,10 +171,15 @@ export function appointPosition(
     organisationYear?: number
     startDate: IsoDate
     endDate?: IsoDate | null
-  }
+  },
+  today: IsoDate = cskToday()
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     await lockUser(tx, input.userId)
+    // Two writers of one Position would otherwise deadlock on its occupancy exclusion.
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`org-structure:position:${input.contextGroupId}:${input.positionCode}`}))`
+    )
     const context = await requireActiveGroup(tx, input.contextGroupId)
     const definition = POSITION_DEFINITIONS[input.positionCode]
     if (!definition || context.type !== definition.context) throw new RuleViolation("position-not-allowed")
@@ -166,15 +199,30 @@ export function appointPosition(
       (bounds && (startDate < bounds.startDate || endDate === null || endDate > bounds.endDate))
     )
       throw new RuleViolation("period-conflict")
-    if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
+    let createdMembershipId: string | undefined
+    if (definition.prerequisite) {
+      const { memberships, covered } = await prerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
+      if (!covered) {
+        if (input.positionCode !== PositionCode.Conductor || memberships.length > 0)
+          throw new RuleViolation("not-a-member")
+        const [membership] = await tx
+          .insert(directMembership)
+          .values({ userId: input.userId, groupId: context.id, startDate, endDate })
+          .returning({ id: directMembership.id })
+        if (!membership) throw new Error("Membership creation returned no record.")
+        createdMembershipId = membership.id
+      }
+    }
 
-    await resolveGrantGroups(tx, definition, context, year ?? undefined)
+    const grantIds = await resolveGrantGroups(tx, definition, context, year ?? undefined)
+    if (grantIds.length > 0) await endHelperParticipation(tx, input.userId, grantIds, startDate, endDate, today)
     const [created] = await tx
       .insert(positionAppointment)
       .values({
         userId: input.userId,
         positionCode: input.positionCode,
         contextGroupId: context.id,
+        createdMembershipId,
         organisationYear: annual ? year : null,
         startDate,
         endDate
@@ -204,7 +252,10 @@ export function endAppointment(database: OrgStructureDatabase, input: { appointm
   })
 }
 
-/** Replaces the holder for one Position/context at an exact boundary, closing every old grant together. */
+/** Replaces the holder for one Position/context at an exact boundary, closing every old grant together.
+ * Naming a holder in `replaces` whose tenure would have begun on that boundary, today or later, swaps
+ * them out entirely; without it, such a holder refuses the command so one Admin never silently undoes another.
+ */
 export function replaceAppointmentHolder(
   database: OrgStructureDatabase,
   input: {
@@ -213,8 +264,10 @@ export function replaceAppointmentHolder(
     contextGroupId: string
     organisationYear?: number
     startDate: IsoDate
-    endDate?: IsoDate
-  }
+    endDate?: IsoDate | null
+    replaces?: string
+  },
+  today: IsoDate = cskToday()
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     const startDate = requireDate(input.startDate)
@@ -246,16 +299,23 @@ export function replaceAppointmentHolder(
       )
       .for("update")
     if (predecessor) {
-      if (predecessor.startDate === startDate) throw new RuleViolation("period-conflict")
-      await tx.update(positionAppointment).set({ endDate: startDate }).where(eq(positionAppointment.id, predecessor.id))
+      if (predecessor.startDate === startDate) {
+        if (startDate < today || input.replaces !== predecessor.id) throw new RuleViolation("period-conflict")
+        await deletePreparedAppointment(tx, predecessor.id, today)
+      } else
+        await tx
+          .update(positionAppointment)
+          .set({ endDate: startDate })
+          .where(eq(positionAppointment.id, predecessor.id))
     }
-    const result = await appointPosition(tx, input)
+    const result = await appointPosition(tx, input, today)
     if (!result.success) throw new RuleViolation(result.error)
+    if (predecessor && predecessor.userId !== input.userId) await validateUserParticipation(tx, predecessor.userId)
     return result.data
   })
 }
 
-/** Cancels a prepared future appointment without rewriting started history. */
+/** Removes an appointment that has not begun, or began today, without rewriting earlier history. */
 export function cancelPreparedAppointment(
   database: OrgStructureDatabase,
   input: { appointmentId: string; today: IsoDate }
@@ -269,10 +329,29 @@ export function cancelPreparedAppointment(
       .where(eq(positionAppointment.id, input.appointmentId))
     if (!appointment) throw new RuleViolation("not-holding-position")
     await lockUser(tx, appointment.userId)
-    if (appointment.startDate <= today) throw new RuleViolation("period-conflict")
-    await tx.delete(positionAppointment).where(eq(positionAppointment.id, appointment.id))
+    await deletePreparedAppointment(tx, appointment.id, today)
+    await validateUserParticipation(tx, appointment.userId)
     return { id: appointment.id }
   })
+}
+
+async function deletePreparedAppointment(tx: OrgStructureTransaction, id: string, today: IsoDate) {
+  const [deleted] = await tx
+    .delete(positionAppointment)
+    .where(and(eq(positionAppointment.id, id), gte(positionAppointment.startDate, today)))
+    .returning()
+  if (!deleted) throw new RuleViolation("period-conflict")
+  if (deleted.createdMembershipId)
+    await tx
+      .delete(directMembership)
+      .where(
+        and(
+          eq(directMembership.id, deleted.createdMembershipId),
+          eq(directMembership.userId, deleted.userId),
+          eq(directMembership.groupId, deleted.contextGroupId),
+          eq(directMembership.startDate, deleted.startDate)
+        )
+      )
 }
 
 /** Corrects an existing annual appointment and re-resolves every granted Group atomically. */
@@ -311,7 +390,11 @@ export function correctAnnualAppointment(
       throw new RuleViolation("period-conflict")
     const historical = endDate <= cskToday()
     if (!context.active && !historical) throw new RuleViolation("group-archived")
-    if (definition.prerequisite) await requirePrerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)
+    if (
+      definition.prerequisite &&
+      !(await prerequisiteCoverage(tx, input.userId, context.id, startDate, endDate)).covered
+    )
+      throw new RuleViolation("not-a-member")
     await resolveGrantGroups(tx, definition, context, input.organisationYear, historical)
     await tx
       .update(positionAppointment)
@@ -320,6 +403,7 @@ export function correctAnnualAppointment(
         positionCode: input.positionCode,
         contextGroupId: context.id,
         organisationYear: input.organisationYear,
+        createdMembershipId: null,
         startDate,
         endDate
       })
@@ -366,6 +450,13 @@ export function correctFluidAppointment(
         positionCode: input.positionCode,
         contextGroupId: context.id,
         organisationYear: null,
+        createdMembershipId:
+          existing.positionCode === input.positionCode &&
+          existing.userId === input.userId &&
+          existing.contextGroupId === context.id &&
+          existing.startDate === startDate
+            ? existing.createdMembershipId
+            : null,
         startDate,
         endDate
       })

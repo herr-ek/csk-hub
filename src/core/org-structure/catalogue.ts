@@ -4,7 +4,7 @@ type GroupPolicy = {
   scope: "csk" | "choir"
   lifetime: "annual" | "continuing" | "fluid"
   directMembership: "yes" | "helpers" | "placement" | "no"
-  cardinality: "singleton" | "choir-singleton" | "multiple" | "existing-choirs" | "four-sections"
+  cardinality: "singleton" | "multiple" | "existing-choirs" | "four-sections"
 }
 
 /** Fixed organisation policy keyed by stable Group type codes. */
@@ -52,7 +52,7 @@ export const GROUP_POLICIES = {
   [GroupType.Archives]: { scope: "csk", lifetime: "annual", directMembership: "yes", cardinality: "singleton" },
   [GroupType.MemorisationCommittee]: {
     scope: "csk",
-    lifetime: "annual",
+    lifetime: "continuing",
     directMembership: "yes",
     cardinality: "singleton"
   },
@@ -62,22 +62,24 @@ export const GROUP_POLICIES = {
     directMembership: "no",
     cardinality: "singleton"
   },
-  [GroupType.EquipmentTeam]: {
-    scope: "choir",
-    lifetime: "fluid",
-    directMembership: "yes",
-    cardinality: "choir-singleton"
-  },
-  [GroupType.PartyTeam]: { scope: "choir", lifetime: "fluid", directMembership: "yes", cardinality: "choir-singleton" },
-  [GroupType.RehearsalWeekendTeam]: {
-    scope: "choir",
-    lifetime: "fluid",
-    directMembership: "yes",
-    cardinality: "choir-singleton"
-  },
   [GroupType.GigGroup]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" },
   [GroupType.Other]: { scope: "csk", lifetime: "fluid", directMembership: "yes", cardinality: "multiple" }
 } as const satisfies Record<GroupType, GroupPolicy>
+
+/** The CSK-wide Groups managed as rosters, in the order Admins see them. The Board is a set of Positions instead. */
+export const COMMITTEE_TYPES = [
+  GroupType.SocialCommittee,
+  GroupType.GigCommittee,
+  GroupType.ConcertCommittee,
+  GroupType.RecruitmentCommittee,
+  GroupType.TourCommittee,
+  GroupType.NominationCommittee,
+  GroupType.WebTeam,
+  GroupType.Archives,
+  GroupType.MemorisationCommittee
+] as const
+
+export type CommitteeType = (typeof COMMITTEE_TYPES)[number]
 
 type PositionDefinition = {
   context: GroupType

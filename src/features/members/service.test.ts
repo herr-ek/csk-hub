@@ -89,20 +89,11 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     success(await changeVoice(db, { userId: singer, choirId: kk.choirId, voice: "B2", date: "2026-09-01" }))
     success(await placeSinger(db, { userId: singer, choirId: mk.choirId, voice: "T2", startDate: "2024-08-20" }))
     await setVoiceCapabilities(db, singer, ["B1", "B2", "T1"])
-    const committee = success(
-      await createOrganisationGroup(
-        db,
-        { name: unique("Crew"), type: GroupType.EquipmentTeam, choirId: kk.choirId },
-        "4000-10-22"
-      )
-    )
-    success(await startMembership(db, { userId: singer, groupId: committee.id, startDate: "2025-01-01" }))
     const profile = await getMemberProfile(db, singer, singer)
     expect(profile?.choirs).toHaveLength(2)
     expect(profile?.choirs.find((item) => item.groupId === kk.choirId)).toMatchObject({
       startDate: "2023-08-20",
-      section: { voice: "B2", sectionVoice: "B", startDate: "2026-09-01" },
-      groups: [{ groupId: committee.id }]
+      section: { voice: "B2", sectionVoice: "B", startDate: "2026-09-01" }
     })
     expect(profile?.capabilities).toEqual(["T1", "B1", "B2"])
     expect(profile?.groups).toEqual([])
@@ -114,7 +105,6 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
     success(await archiveGroup(db, kk.choirId))
     const afterArchive = await getMemberProfile(db, singer, singer)
     expect(afterArchive?.choirs.map((item) => item.groupId)).toEqual([mk.choirId])
-    expect(afterArchive?.otherGroups.map((item) => item.groupId)).toEqual([committee.id])
   })
 
   test("a Choir member without a Section remains valid", async () => {
@@ -353,6 +343,7 @@ describe.skipIf(!database)("Member profile and directory reads", () => {
 
   test("archiving an ensemble hides its affiliations without ending memberships or leadership", async () => {
     const singer = await member("Archived ensemble leader")
+    await setVoiceCapabilities(db, singer, ["B1"])
     const ensemble = success(
       await createOrganisationGroup(db, { name: unique("Retired ensemble"), type: GroupType.GigGroup })
     )

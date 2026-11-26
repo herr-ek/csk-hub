@@ -1,15 +1,10 @@
 import { afterAll, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
-import { renderToStaticMarkup } from "react-dom/server"
 import * as authz from "@/core/authz"
 import { directMembership, group } from "@/core/db/schema/org-structure"
-import { NextIntlClientProvider } from "@/core/i18n/client"
-import { getMessages } from "@/core/i18n/messages"
 import * as intlServer from "@/core/i18n/server"
 import { GroupType, organisationYearPeriod, PositionCode } from "@/core/org-structure"
 import { createOrgStructureTestDatabase, expectSuccess } from "../test-support"
-import { groupDetailPath } from "./command-state"
-import { GroupsOverview } from "./groups/overview"
 
 const database = await createOrgStructureTestDatabase()
 const requireAdmin = mock(async () => ({ state: "authenticated" as const, userId: "admin-1" }))
@@ -19,31 +14,20 @@ mock.module("@/core/authz", () => ({ ...authz, requirePermission: requireAdmin }
 mock.module("next/cache", () => ({ revalidatePath }))
 mock.module("@/core/i18n/server", () => ({ ...intlServer, getTranslations: async () => (key: string) => key }))
 
-const { createGroupAction, renameGroupAction, archiveGroupAction, prepareYearAction, editGroupAction } = await import(
-  "./groups/actions"
+const { addMembersAction, archiveGroupAction, createOtherGroupAction, removeMemberAction, renameGroupAction } =
+  await import("./committees/actions")
+const { createGigGroupAction, refillGigGroupAction } = await import("./gig-groups/actions")
+const { changeVoiceAction, leaveChoirAction, placeSingerAction } = await import("./choirs/actions")
+const { fillPositionAction, vacatePositionAction } = await import("./positions/actions")
+const { getGroupHistory } = await import("./history/query")
+const { correctMembershipAction, correctTenureAction, recordMembershipAction, recordTenureAction } = await import(
+  "./history/actions"
 )
-const { addMemberAction, endMembershipAction, changeVoiceAction } = await import("./detail/actions")
-const { getGroupDetail } = await import("./detail/query")
-const { getGroupsOverview } = await import("./groups/query")
-const {
-  assignAppointmentAction,
-  replaceAppointmentAction,
-  correctAppointmentAction,
-  endAppointmentAction,
-  cancelAppointmentAction
-} = await import("./detail/appointment-actions")
-const {
-  addDirectMemberAction,
-  correctDirectMemberAction,
-  changeDirectMemberAction,
-  endDirectMemberAction,
-  endChoirMemberAction
-} = await import("./detail/direct-actions")
-const { appointPosition, createOrganisationGroup, listAppointmentMembersAt, listEffectiveMembersAt } = await import(
+const { appointPosition, createOrganisationGroup, listAppointmentsOfUser, listEffectiveMembersAt } = await import(
   "../appointments"
 )
-const { listDirectMembersAt, listDirectMemberships } = await import("../direct-membership")
-const { listOrganisationGroups } = await import("../group-management")
+const { addDirectMembership, listDirectMembersAt, listDirectMemberships } = await import("../direct-membership")
+const { listOrganisationGroups, prepareOrganisationYear } = await import("../group-management")
 const IDLE = { status: "idle" } as const
 function form(values: Record<string, string | string[]>) {
   const data = new FormData()
@@ -71,24 +55,22 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
 
   test("guards every exported mutation before parsing or changing state", async () => {
     const actions = [
-      createGroupAction,
+      createOtherGroupAction,
+      createGigGroupAction,
+      refillGigGroupAction,
       renameGroupAction,
       archiveGroupAction,
-      prepareYearAction,
-      editGroupAction,
-      addDirectMemberAction,
-      correctDirectMemberAction,
-      changeDirectMemberAction,
-      endDirectMemberAction,
-      endChoirMemberAction,
-      addMemberAction,
-      endMembershipAction,
+      addMembersAction,
+      removeMemberAction,
+      fillPositionAction,
+      vacatePositionAction,
+      placeSingerAction,
+      leaveChoirAction,
       changeVoiceAction,
-      assignAppointmentAction,
-      replaceAppointmentAction,
-      correctAppointmentAction,
-      endAppointmentAction,
-      cancelAppointmentAction
+      recordMembershipAction,
+      correctMembershipAction,
+      recordTenureAction,
+      correctTenureAction
     ]
     const denied = new Error("denied")
     requireAdmin.mockImplementation(async () => {
@@ -100,21 +82,112 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
   })
 
   test("refuses forged annual years beyond the following year without revalidation", async () => {
-    expect(await prepareYearAction(IDLE, form({ organisationYear: "2055" }))).toEqual({
-      status: "error",
-      error: "organisation-year-too-far-ahead"
-    })
+    const userId = await t.user()
     expect(
-      await createGroupAction(IDLE, form({ name: "Too early Board", type: GroupType.Board, organisationYear: "2055" }))
+      await fillPositionAction(
+        IDLE,
+        form({ userId, positionCode: PositionCode.Chair, organisationYear: "2055", startDate: "2055-07-01" })
+      )
+    ).toEqual({ status: "error", error: "organisation-year-too-far-ahead" })
+    expect(
+      await addMembersAction(
+        IDLE,
+        form({ type: GroupType.Archives, organisationYear: "2055", userIds: userId, startDate: "2055-07-01" })
+      )
     ).toEqual({ status: "error", error: "organisation-year-too-far-ahead" })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 
-  test("creates annual identities and refuses direct Board membership", async () => {
-    const year = 2052
+  test("plans, swaps and clears a holder, and vacates one who has begun", async () => {
+    const [first, second] = [await t.user(), await t.user()]
+    const board = (userId: string, extra: Record<string, string> = {}) =>
+      fillPositionAction(
+        IDLE,
+        form({
+          userId,
+          positionCode: PositionCode.Treasurer,
+          organisationYear: "2054",
+          startDate: "2054-07-01",
+          ...extra
+        })
+      )
+    expect(await board(first)).toMatchObject({ status: "success" })
+    expect(await board(second)).toEqual({ status: "error", error: "period-conflict" })
+    const [planned] = await listAppointmentsOfUser(t.db, first)
+    if (!planned) throw new Error("Expected the planned holder.")
+    expect(await board(second, { replaces: planned.id })).toMatchObject({ status: "success" })
+    const [swapped] = await listAppointmentsOfUser(t.db, second)
+    if (!swapped) throw new Error("Expected the swapped holder.")
+    expect(await vacatePositionAction(IDLE, form({ appointmentId: swapped.id }))).toMatchObject({ status: "success" })
+    expect(await listAppointmentsOfUser(t.db, second)).toEqual([])
+
+    const current = { organisationYear: "2053", startDate: "2053-08-01" }
+    expect(await board(first, current)).toMatchObject({ status: "success" })
+    const [held] = await listAppointmentsOfUser(t.db, first)
+    if (!held) throw new Error("Expected the current holder.")
+    expect(await vacatePositionAction(IDLE, form({ appointmentId: held.id }))).toEqual({
+      status: "error",
+      error: "period-conflict"
+    })
+    expect(await vacatePositionAction(IDLE, form({ appointmentId: held.id, lastDay: "2053-10-22" }))).toMatchObject({
+      status: "success"
+    })
+    expect(await listAppointmentsOfUser(t.db, first)).toMatchObject([{ endDate: "2053-10-23" }])
+  })
+
+  test("adds several members at once and takes one out", async () => {
+    const [first, second] = [await t.user(), await t.user()]
     expect(
-      await createGroupAction(IDLE, form({ type: GroupType.Board, organisationYear: String(year) }))
+      await addMembersAction(
+        IDLE,
+        form({ type: GroupType.WebTeam, organisationYear: "2053", userIds: [first, second], startDate: "2053-10-22" })
+      )
     ).toMatchObject({ status: "success" })
+    const [team] = await t.db
+      .select()
+      .from(group)
+      .where(and(eq(group.type, GroupType.WebTeam), eq(group.organisationYear, 2053)))
+    if (!team) throw new Error("Expected the year's Group.")
+    const memberships = await listDirectMemberships(t.db, team.id)
+    expect(memberships.map(({ userId }) => userId).sort()).toEqual([first, second].sort())
+    expect(
+      await removeMemberAction(IDLE, form({ membershipId: requireTestValue(memberships[0], "Membership").id }))
+    ).toMatchObject({ status: "success" })
+    expect(await listDirectMemberships(t.db, team.id)).toHaveLength(1)
+    expect(await addMembersAction(IDLE, form({ userIds: first, startDate: "2053-10-22" }))).toEqual({
+      status: "error",
+      error: "invalid-input"
+    })
+  })
+
+  test("a refill parses its leavers, Voices and joiners", async () => {
+    const groupId = expectSuccess(
+      await createOrganisationGroup(t.db, { name: "Refilled ensemble", type: GroupType.GigGroup })
+    ).id
+    const [leaver, joiner] = [await t.singer("S1", "S2"), await t.singer("A1")]
+    const joined = await refillGigGroupAction(
+      IDLE,
+      form({ groupId, date: "2053-01-10", join: [`S1:${leaver}`, `A1:${joiner}`] })
+    )
+    expect(joined).toMatchObject({ status: "success" })
+    const [membership] = (await listDirectMemberships(t.db, groupId)).filter(({ userId }) => userId === leaver)
+    const id = requireTestValue(membership, "Membership").id
+    expect(await refillGigGroupAction(IDLE, form({ groupId, date: "2053-10-22", voices: `S2:${id}` }))).toMatchObject({
+      status: "success"
+    })
+    expect(await refillGigGroupAction(IDLE, form({ groupId, date: "2053-10-22", leave: id }))).toMatchObject({
+      status: "success"
+    })
+    expect(await listDirectMembersAt(t.db, groupId, "2053-10-22")).toMatchObject([{ userId: joiner, voice: "A1" }])
+    expect(await refillGigGroupAction(IDLE, form({ groupId, date: "2053-10-22", join: "B:someone" }))).toEqual({
+      status: "error",
+      error: "invalid-input"
+    })
+  })
+
+  test("refuses direct Board membership", async () => {
+    const year = 2052
+    expectSuccess(await createOrganisationGroup(t.db, { type: GroupType.Board, organisationYear: year }, "2053-10-22"))
     const [board] = await t.db
       .select()
       .from(group)
@@ -122,7 +195,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     if (!board) throw new Error("Missing Board")
     expect(board.name).toBeNull()
     expect(
-      await addDirectMemberAction(
+      await recordMembershipAction(
         IDLE,
         form({ groupId: board.id, userId: await t.user(), startDate: organisationYearPeriod(year).startDate })
       )
@@ -137,17 +210,20 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
         type: GroupType.GigGroup
       })
     ).id
-    const userId = await t.user()
+    const userId = await t.singer("B1")
     const sectionId = await t.groupId("KKB")
     expect(
-      await addMemberAction(IDLE, form({ groupId: sectionId, userId, voice: "B2", startDate: "2026-08-01" }))
+      await placeSingerAction(
+        IDLE,
+        form({ choirId: await t.groupId("KK"), userId, voice: "B2", startDate: "2026-08-01" })
+      )
     ).toMatchObject({ status: "success" })
-    expect(await addDirectMemberAction(IDLE, form({ groupId, userId, startDate: "2026-09-01" }))).toEqual({
+    expect(await recordMembershipAction(IDLE, form({ groupId, userId, startDate: "2026-09-01" }))).toEqual({
       status: "error",
       error: "invalid-membership-voice"
     })
     expect(
-      await addDirectMemberAction(IDLE, form({ groupId, userId, voice: "B1", startDate: "2026-09-01" }))
+      await recordMembershipAction(IDLE, form({ groupId, userId, voice: "B1", startDate: "2026-09-01" }))
     ).toMatchObject({
       status: "success"
     })
@@ -155,21 +231,43 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(await listEffectiveMembersAt(t.db, sectionId, "2026-10-01")).toMatchObject([{ userId, voice: "B2" }])
   })
 
-  test("creates, renames, archives, and passes typed policy failures through the action boundary", async () => {
-    expect(await createGroupAction(IDLE, form({ name: " ", type: GroupType.GigGroup }))).toEqual({
-      status: "error",
-      error: "invalid-group-name"
+  test("the dedicated gig workflow fixes type and scope despite forged form fields", async () => {
+    expect(
+      await createGigGroupAction(
+        IDLE,
+        form({
+          name: "Dedicated ensemble",
+          type: GroupType.Board,
+          choirId: await t.groupId("KK"),
+          organisationYear: "2099"
+        })
+      )
+    ).toMatchObject({ status: "success" })
+    expect(await named("Dedicated ensemble")).toMatchObject({
+      type: GroupType.GigGroup,
+      choirId: null,
+      organisationYear: null,
+      active: true
     })
-    expect(await createGroupAction(IDLE, form({ name: "Action gig", type: GroupType.GigGroup }))).toMatchObject({
+    expect(revalidatePath).toHaveBeenCalledWith("/[locale]/(app)/admin", "layout")
+  })
+
+  test("creates, renames, archives, and passes typed policy failures through the action boundary", async () => {
+    expect(await createOtherGroupAction(IDLE, form({ name: " " }))).toEqual({
+      status: "error",
+      error: "invalid-input"
+    })
+    expect(await createOtherGroupAction(IDLE, form({ name: "Action group", type: GroupType.Board }))).toMatchObject({
       status: "success"
     })
-    const row = await named("Action gig")
+    const row = await named("Action group")
+    expect(row).toMatchObject({ type: GroupType.Other, choirId: null, organisationYear: null })
     if (!row) throw new Error("Expected the created Group.")
-    expect(await renameGroupAction(IDLE, form({ groupId: row.id, name: "Renamed action gig" }))).toMatchObject({
+    expect(await renameGroupAction(IDLE, form({ groupId: row.id, name: "Renamed action group" }))).toMatchObject({
       status: "success"
     })
     expect(await archiveGroupAction(IDLE, form({ groupId: row.id }))).toMatchObject({ status: "success" })
-    expect((await named("Renamed action gig"))?.active).toBe(false)
+    expect((await named("Renamed action group"))?.active).toBe(false)
     expect(await archiveGroupAction(IDLE, form({ groupId: await t.groupId("KKB") }))).toEqual({
       status: "error",
       error: "section-archived-with-choir"
@@ -177,31 +275,15 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(revalidatePath).toHaveBeenCalled()
   })
 
-  test("next year's prepared Groups appear on the default Groups overview", async () => {
-    setSystemTime(new Date("2026-11-21T12:00:00Z"))
-    expect(await prepareYearAction(IDLE, form({ organisationYear: "2027" }))).toMatchObject({ status: "success" })
-    const prepared = await t.db.select().from(group).where(eq(group.organisationYear, 2027))
-    expect(prepared.length).toBeGreaterThan(0)
-
-    const overview = await getGroupsOverview()
-    const markup = renderToStaticMarkup(
-      <NextIntlClientProvider locale="en" timeZone="Europe/Stockholm" messages={getMessages("en")}>
-        <GroupsOverview overview={overview} />
-      </NextIntlClientProvider>
-    )
-    for (const { id } of prepared) expect(markup).toContain(`href="${groupDetailPath(id)}"`)
-    expect(markup).toContain(getMessages("en").Groups.management.future)
-  })
-
-  test("prepares annual groups and applies inclusive dates to direct membership actions", async () => {
-    expect(await prepareYearAction(IDLE, form({ organisationYear: "2050" }))).toMatchObject({ status: "success" })
+  test("applies inclusive dates to direct membership actions", async () => {
+    expectSuccess(await prepareOrganisationYear(t.db, 2050))
     const archive = (await listOrganisationGroups(t.db, "2050-09-01")).find(
       (row) => row.type === GroupType.Archives && row.organisationYear === 2050
     )
     if (!archive) throw new Error("Expected the prepared Arkivarie Group.")
     const userId = await t.user()
     expect(
-      await addDirectMemberAction(
+      await recordMembershipAction(
         IDLE,
         form({ groupId: archive.id, userId, startDate: "2050-09-01", lastDay: "2051-06-30" })
       )
@@ -210,17 +292,10 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     const [membership] = await listDirectMemberships(t.db, archive.id)
     if (!membership) throw new Error("Expected the direct Membership.")
     expect(
-      await changeDirectMemberAction(
-        IDLE,
-        form({ membershipId: membership.id, groupId: archive.id, startDate: "2050-10-01", lastDay: "2051-06-30" })
-      )
-    ).toMatchObject({ status: "success" })
-    const changed = (await listDirectMemberships(t.db, archive.id)).find((row) => row.startDate === "2050-10-01")
-    expect(
-      await correctDirectMemberAction(
+      await correctMembershipAction(
         IDLE,
         form({
-          membershipId: requireTestValue(changed, "corrected Membership").id,
+          membershipId: membership.id,
           groupId: archive.id,
           startDate: "2050-10-01",
           lastDay: "2051-05-31"
@@ -230,10 +305,10 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     const directBeforeRefusal = await listDirectMemberships(t.db, archive.id)
     revalidatePath.mockClear()
     expect(
-      await correctDirectMemberAction(
+      await correctMembershipAction(
         IDLE,
         form({
-          membershipId: requireTestValue(changed, "corrected Membership").id,
+          membershipId: membership.id,
           groupId: archive.id,
           startDate: "2050-10-01",
           lastDay: "2051-07-01"
@@ -242,55 +317,64 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     ).toEqual({ status: "error", error: "period-conflict" })
     expect(await listDirectMemberships(t.db, archive.id)).toEqual(directBeforeRefusal)
     expect(revalidatePath).not.toHaveBeenCalled()
-    expect(
-      await editGroupAction(
-        IDLE,
-        form({ groupId: archive.id, name: "Bad year correction", type: GroupType.Archives, organisationYear: "2051" })
-      )
-    ).toEqual({ status: "error", error: "group-has-participation" })
-    expect(
-      await endDirectMemberAction(
-        IDLE,
-        form({ membershipId: requireTestValue(changed, "corrected Membership").id, lastDay: "2051-04-30" })
-      )
-    ).toMatchObject({ status: "success" })
-    expect(
-      await t.db
-        .select()
-        .from(directMembership)
-        .where(eq(directMembership.id, requireTestValue(changed, "corrected Membership").id))
-    ).toMatchObject([{ endDate: "2051-05-01" }])
-    expect(revalidatePath).toHaveBeenCalled()
+    expect(await t.db.select().from(directMembership).where(eq(directMembership.id, membership.id))).toMatchObject([
+      { startDate: "2050-10-01", endDate: "2051-06-01" }
+    ])
   })
 
-  test("the Choir member actions place into a Section, change Voice, and end Choir-owned Membership atomically", async () => {
+  test("singers are placed, change Voice and leave; ending a Position must be acknowledged", async () => {
     const userId = await t.user()
     const sectionId = await t.groupId("KKB")
     const choirId = await t.groupId("KK")
+    const place = (user: string, voice: string, choir: string) =>
+      placeSingerAction(IDLE, form({ choirId: choir, userId: user, voice, startDate: "2024-08-01" }))
+    expect(await place(userId, "B2", choirId)).toMatchObject({ status: "success" })
+    expect(await place(await t.user(), "S1", await t.groupId("MK"))).toEqual({
+      status: "error",
+      error: "voice-not-sung-in-choir"
+    })
     expect(
-      await addMemberAction(IDLE, form({ groupId: sectionId, userId, voice: "B2", startDate: "2024-08-01" }))
+      await changeVoiceAction(IDLE, form({ choirId, userId, voice: "B1", startDate: "2025-01-01" }))
     ).toMatchObject({ status: "success" })
-    expect(
-      await addMemberAction(
-        IDLE,
-        form({ groupId: sectionId, userId: await t.user(), voice: "T1", startDate: "2024-08-01" })
-      )
-    ).toEqual({ status: "error", error: "voice-not-sung-in-section" })
-    expect(
-      await changeVoiceAction(IDLE, form({ groupId: sectionId, userId, voice: "B1", date: "2025-01-01" }))
-    ).toMatchObject({ status: "success" })
-    expect(await endMembershipAction(IDLE, form({ groupId: choirId, userId, endDate: "2025-06-01" }))).toMatchObject({
+    expectSuccess(await createOrganisationGroup(t.db, { type: GroupType.ParentsMeeting }))
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: PositionCode.SectionParent,
+        contextGroupId: sectionId,
+        startDate: "2025-02-01"
+      })
+    )
+    const leave = { choirId, userId, lastDay: "2025-06-01" }
+    expect(await leaveChoirAction(IDLE, form(leave))).toEqual({ status: "error", error: "membership-dependency" })
+    expect(await leaveChoirAction(IDLE, form({ ...leave, endAppointments: "true" }))).toMatchObject({
       status: "success"
     })
     expect(await listDirectMembersAt(t.db, choirId, "2025-06-01")).toMatchObject([{ userId }])
     expect(await listDirectMembersAt(t.db, choirId, "2025-06-02")).toEqual([])
-    expect(await listDirectMembersAt(t.db, sectionId, "2025-06-01")).toMatchObject([{ userId }])
     expect(await listDirectMembersAt(t.db, sectionId, "2025-06-02")).toEqual([])
+    expect(await listAppointmentsOfUser(t.db, userId)).toMatchObject([{ endDate: "2025-06-02" }])
+  })
+
+  test("leaving a Choir accepts the last day of an already bounded membership", async () => {
+    const userId = await t.user()
+    const choirId = await t.groupId("MK")
+    const sectionId = await t.groupId("MKB1")
+    const lastDay = "2053-10-22"
+    const endDate = "2053-10-23"
+    expectSuccess(
+      await addDirectMembership(t.db, { userId, groupId: sectionId, voice: "B1", startDate: "2053-10-01", endDate })
+    )
+
+    expect(await leaveChoirAction(IDLE, form({ choirId, userId, lastDay }))).toMatchObject({ status: "success" })
+    for (const groupId of [choirId, sectionId]) {
+      expect(await listDirectMembersAt(t.db, groupId, lastDay)).toContainEqual(expect.objectContaining({ userId }))
+      expect(await listDirectMembersAt(t.db, groupId, endDate)).not.toContainEqual(expect.objectContaining({ userId }))
+    }
   })
 
   test("historical corrections offer archived sibling Sections but future corrections remain refused", async () => {
     setSystemTime(new Date("2026-10-22T12:00:00Z"))
-    const { addDirectMembership } = await import("../direct-membership")
     const choirId = await t.groupId("KK")
     const sourceSection = await t.groupId("KKS")
     const archivedDestination = await t.groupId("KKB")
@@ -305,11 +389,11 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(membership.success).toBe(true)
     if (!membership.success) return
     expect(await archiveGroupAction(IDLE, form({ groupId: choirId }))).toMatchObject({ status: "success" })
-    const detail = await getGroupDetail(sourceSection, "2026-10-21")
+    const detail = await getGroupHistory(sourceSection, "2026-10-21")
     expect(detail?.placementSections).toHaveLength(4)
     expect(detail?.placementSections.find(({ id }) => id === archivedDestination)).toMatchObject({ active: false })
     expect(
-      await correctDirectMemberAction(
+      await correctMembershipAction(
         IDLE,
         form({
           membershipId: membership.data.id,
@@ -324,7 +408,7 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
       [{ groupId: archivedDestination, voice: "B1", startDate: "2020-01-01", endDate: "2020-07-01" }]
     )
     expect(
-      await correctDirectMemberAction(
+      await correctMembershipAction(
         IDLE,
         form({
           membershipId: membership.data.id,
@@ -340,164 +424,66 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     )
   })
 
-  test("the Choir row departure action ends Section and team periods atomically and rolls back on a dependency", async () => {
-    const { createOrganisationGroup } = await import("../appointments")
-    const { addDirectMembership } = await import("../direct-membership")
-    const first = await t.user("Choir departure")
-    const choirId = await t.groupId("MK")
-    const sectionId = await t.groupId("MKB1")
-    const team = await createOrganisationGroup(
-      t.db,
-      { name: "KK team", type: GroupType.EquipmentTeam, choirId },
-      "4000-10-22"
-    )
-    expect(team.success).toBe(true)
-    if (!team.success) return
-    const choirMembership = await addDirectMembership(t.db, {
-      userId: first,
-      groupId: choirId,
-      startDate: "2024-08-01"
-    })
-    await addDirectMembership(t.db, { userId: first, groupId: sectionId, voice: "B1", startDate: "2024-08-01" })
-    await addDirectMembership(t.db, { userId: first, groupId: team.data.id, startDate: "2024-08-01" })
-    if (!choirMembership.success) throw new Error(choirMembership.error)
-    expect(
-      await endChoirMemberAction(
-        IDLE,
-        form({ membershipId: choirMembership.data.id, groupId: choirId, userId: first, lastDay: "2025-06-30" })
-      )
-    ).toMatchObject({ status: "success" })
-    expect(await listDirectMembersAt(t.db, choirId, "2025-07-01")).toEqual([])
-    expect(await listDirectMembersAt(t.db, sectionId, "2025-07-01")).toEqual([])
-    expect(await listDirectMembersAt(t.db, team.data.id, "2025-07-01")).toEqual([])
-    expect(
-      await endChoirMemberAction(
-        IDLE,
-        form({ membershipId: choirMembership.data.id, groupId: choirId, userId: first, lastDay: "2025-06-30" })
-      )
-    ).toMatchObject({ status: "success" })
-    expect(
-      await endChoirMemberAction(
-        IDLE,
-        form({ membershipId: choirMembership.data.id, groupId: choirId, userId: first, lastDay: "2026-06-30" })
-      )
-    ).toEqual({ status: "error", error: "period-conflict" })
-    expect(await listDirectMembersAt(t.db, choirId, "2025-07-01")).toEqual([])
-
-    const second = await t.user("Protected singer")
-    const protectedMembership = await addDirectMembership(t.db, {
-      userId: second,
-      groupId: choirId,
-      startDate: "2024-08-01"
-    })
-    await addDirectMembership(t.db, { userId: second, groupId: sectionId, voice: "B1", startDate: "2024-08-01" })
-    if (!protectedMembership.success) throw new Error(protectedMembership.error)
-    const { appointPosition } = await import("../appointments")
-    expect(
-      await appointPosition(t.db, {
-        userId: second,
-        positionCode: PositionCode.Conductor,
-        contextGroupId: choirId,
-        startDate: "2024-08-01",
-        endDate: null
-      })
-    ).toMatchObject({ success: true })
-    expect(
-      await endChoirMemberAction(
-        IDLE,
-        form({ membershipId: protectedMembership.data.id, groupId: choirId, userId: second, lastDay: "2025-06-30" })
-      )
-    ).toEqual({
-      status: "error",
-      error: "membership-dependency"
-    })
-    expect(await listDirectMembersAt(t.db, choirId, "2025-07-01")).toMatchObject([{ userId: second }])
-    expect(await listDirectMembersAt(t.db, sectionId, "2025-07-01")).toMatchObject([{ userId: second }])
-    expect(revalidatePath).toHaveBeenCalled()
-  })
-
-  test("replaces, corrects, ends, and cancels appointments through typed server actions", async () => {
-    expect(await prepareYearAction(IDLE, form({ organisationYear: "2054" }))).toMatchObject({ status: "success" })
-    const board = (await listOrganisationGroups(t.db, "2054-08-01")).find(
-      (row) => row.type === GroupType.Board && row.organisationYear === 2054
+  test("records and corrects annual tenures, within their year and without replacing anyone", async () => {
+    expectSuccess(await prepareOrganisationYear(t.db, 2051))
+    const board = (await listOrganisationGroups(t.db, "2051-08-01")).find(
+      (row) => row.type === GroupType.Board && row.organisationYear === 2051
     )
     if (!board) throw new Error("Expected the prepared Board.")
-    const first = await t.user(),
-      next = await t.user()
+    const [first, next] = [await t.user(), await t.user()]
     const input = {
       positionCode: PositionCode.Chair,
       contextGroupId: board.id,
-      organisationYear: "2054",
-      startDate: "2054-08-01",
-      lastDay: "2055-06-30"
+      organisationYear: "2051",
+      startDate: "2051-08-01",
+      lastDay: "2052-06-30"
     }
-    expect(await assignAppointmentAction(IDLE, form({ ...input, userId: first }))).toMatchObject({ status: "success" })
+    expect(await recordTenureAction(IDLE, form({ ...input, userId: first }))).toMatchObject({ status: "success" })
+    expect(await recordTenureAction(IDLE, form({ ...input, userId: next, startDate: "2052-02-01" }))).toEqual({
+      status: "error",
+      error: "position-taken"
+    })
+    const [tenure] = await listAppointmentsOfUser(t.db, first)
+    const appointmentId = requireTestValue(tenure, "recorded tenure").id
     expect(
-      await replaceAppointmentAction(IDLE, form({ ...input, userId: next, startDate: "2055-02-01" }))
+      await correctTenureAction(IDLE, form({ ...input, appointmentId, userId: next, lastDay: "2052-01-31" }))
     ).toMatchObject({ status: "success" })
-    expect(await listAppointmentMembersAt(t.db, board.id, "2055-02-01")).toMatchObject([{ userId: next }])
-    const currentMember = (await listAppointmentMembersAt(t.db, board.id, "2055-02-01"))[0]
-    if (!currentMember?.appointments[0]) throw new Error("Expected the current appointment.")
-    const current = currentMember.appointments[0]
-    expect(
-      await correctAppointmentAction(
-        IDLE,
-        form({ appointmentId: current.id, ...input, userId: next, startDate: "2055-02-01" })
-      )
-    ).toMatchObject({ status: "success" })
-    const appointmentBeforeRefusal = await listAppointmentMembersAt(t.db, board.id, "2055-02-01")
+    expect(await listAppointmentsOfUser(t.db, first)).toEqual([])
+    const corrected = await listAppointmentsOfUser(t.db, next)
+    expect(corrected).toMatchObject([{ id: appointmentId, endDate: "2052-02-01" }])
     revalidatePath.mockClear()
-    expect(
-      await correctAppointmentAction(
-        IDLE,
-        form({
-          appointmentId: current.id,
-          ...input,
-          userId: next,
-          startDate: "2055-02-01",
-          lastDay: "2055-07-01"
-        })
-      )
-    ).toEqual({ status: "error", error: "period-conflict" })
-    expect(await listAppointmentMembersAt(t.db, board.id, "2055-02-01")).toEqual(appointmentBeforeRefusal)
+    for (const lastDay of ["2052-07-01", ""])
+      expect(await correctTenureAction(IDLE, form({ ...input, appointmentId, userId: next, lastDay }))).toEqual({
+        status: "error",
+        error: "period-conflict"
+      })
+    expect(await listAppointmentsOfUser(t.db, next)).toEqual(corrected)
     expect(revalidatePath).not.toHaveBeenCalled()
-    expect(await endAppointmentAction(IDLE, form({ appointmentId: current.id, lastDay: "2055-05-31" }))).toMatchObject({
-      status: "success"
-    })
-    const future = await appointPosition(t.db, {
-      userId: await t.user(),
-      positionCode: PositionCode.ViceChair,
-      contextGroupId: board.id,
-      startDate: "2054-09-01"
-    })
-    if (!future.success) throw new Error(future.error)
-    expect(await cancelAppointmentAction(IDLE, form({ appointmentId: future.data.id }))).toMatchObject({
-      status: "success"
-    })
-    expect(await listAppointmentMembersAt(t.db, board.id, "2054-10-01")).toMatchObject([{ userId: first }])
-    expect(revalidatePath).toHaveBeenCalled()
   })
 
-  test("the cancel action trusts server time and refuses a forged date after an appointment started", async () => {
-    expect(await prepareYearAction(IDLE, form({ organisationYear: "2024" }))).toMatchObject({ status: "success" })
-    const board = (await listOrganisationGroups(t.db, "2024-09-01")).find(
-      (row) => row.type === GroupType.Board && row.organisationYear === 2024
-    )
-    if (!board) throw new Error("Expected the prepared Board.")
+  test("the history separates a Group's own tenures from those that grant it", async () => {
+    expectSuccess(await prepareOrganisationYear(t.db, 2049))
+    const groups = await listOrganisationGroups(t.db, "2049-08-01")
+    const ofType = (type: GroupType) =>
+      requireTestValue(
+        groups.find((row) => row.type === type && row.organisationYear === 2049),
+        type
+      ).id
     const userId = await t.user()
-    const appointment = await appointPosition(t.db, {
-      userId,
-      positionCode: PositionCode.Chair,
-      contextGroupId: board.id,
-      startDate: "2024-09-01"
+    expectSuccess(
+      await appointPosition(t.db, {
+        userId,
+        positionCode: PositionCode.ViceChair,
+        contextGroupId: ofType(GroupType.Board),
+        startDate: "2049-07-01"
+      })
+    )
+    expect(await getGroupHistory(ofType(GroupType.Board))).toMatchObject({ appointments: [{ userId }], granted: [] })
+    expect(await getGroupHistory(ofType(GroupType.RecruitmentCommittee))).toMatchObject({
+      appointments: [],
+      granted: [{ userId, contextGroupId: ofType(GroupType.Board) }]
     })
-    if (!appointment.success) throw new Error(appointment.error)
-    revalidatePath.mockClear()
-    expect(
-      await cancelAppointmentAction(IDLE, form({ appointmentId: appointment.data.id, today: "2024-08-01" }))
-    ).toEqual({ status: "error", error: "period-conflict" })
-    expect(await listAppointmentMembersAt(t.db, board.id, "2024-10-01")).toMatchObject([{ userId }])
-    expect(revalidatePath).not.toHaveBeenCalled()
+    expect(await getGroupHistory(crypto.randomUUID())).toBeNull()
   })
 })
 

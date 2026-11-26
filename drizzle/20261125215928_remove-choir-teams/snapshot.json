@@ -1,0 +1,85 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5017eb86-280b-475d-8f9f-e965cc19e17e",
+  "prevIds": [
+    "07969cd7-d65a-41a2-95f9-53d80fe195fc"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group",
+        "group_choir_team_unique"
+      ],
+      "writes": [
+        "s|idx|public.group_choir_team_unique",
+        "n|idx|public.group_choir_team_unique",
+        "e|idx|public.group_choir_team_unique",
+        "n|rel|public.group_choir_team_unique"
+      ],
+      "reads": [
+        "e|tbl|public.group",
+        "n|sch|public",
+        "e|col|public.group.type",
+        "e|col|public.group.choir_id"
+      ],
+      "sharedWrites": []
+    },
+    {
+      "statementType": "recreate_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "group_type"
+      ],
+      "writes": [
+        "s|enum|public.group_type",
+        "n|enum|public.group_type",
+        "e|enum|public.group_type",
+        "n|type|public.group_type",
+        "s|colprop|public.group.type.type",
+        "s|colprop|public.group.type.default"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.type"
+      ],
+      "sqlHash": "4ad6236149c21664"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"group_choir_team_unique\"]"
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"group_type\"]",
+      "set": {
+        "values": [
+          "choir",
+          "section",
+          "board",
+          "gig-group",
+          "gig-committee",
+          "social-committee",
+          "concert-committee",
+          "recruitment-committee",
+          "tour-committee",
+          "nomination-committee",
+          "web-team",
+          "parents-meeting",
+          "archives",
+          "memorisation-committee",
+          "other"
+        ]
+      }
+    }
+  ]
+}

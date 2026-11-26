@@ -15,7 +15,7 @@ import {
 import { EXPLICIT_GROUP_NAME_TYPES } from "@/core/org-structure/group-names"
 import { GroupType, type PositionCode } from "@/core/org-structure/identifiers"
 import { user } from "./auth"
-import { voice, voiceDivision } from "./voice"
+import { voice, voiceDivision, voiceFamily } from "./voice"
 
 // Groups, their Memberships, and Positions held in them: the organisation's structure. Every
 // write to these tables goes through `src/features/org-structure`, which enforces the rules the
@@ -24,7 +24,9 @@ import { voice, voiceDivision } from "./voice"
 // Drizzle cannot express every database invariant. The Voice domains are described in
 // `./voice.ts`; `drizzle/20261116194645_redesign-organisation-appointments/migration.sql` also maintains
 // NULLS NOT DISTINCT name uniqueness, range exclusions and organisation policy triggers.
-// Drizzle neither generates nor diffs these additions; preserve them in later migrations.
+// `drizzle/20261125211225_recruitment-voices-and-continuing-memorisation/migration.sql` replaces the
+// direct Membership function and `drizzle/20261125215928_remove-choir-teams/migration.sql` the Group policies. Drizzle neither generates nor diffs these additions; preserve them in
+// later migrations.
 
 export const groupType = pgEnum("group_type", GroupType)
 
@@ -53,14 +55,9 @@ export const group = pgTable(
       .where(sql`${table.organisationYear} IS NOT NULL`),
     uniqueIndex("group_continuing_singleton_unique")
       .on(table.type)
-      .where(sql`${table.type} = ${GroupType.ParentsMeeting}`.inlineParams()),
-    uniqueIndex("group_choir_team_unique")
-      .on(table.type, table.choirId)
       .where(
-        sql`${table.active} AND ${table.type} IN (${sql.join(
-          [GroupType.EquipmentTeam, GroupType.PartyTeam, GroupType.RehearsalWeekendTeam].map((type) =>
-            sql`${type}`.inlineParams()
-          ),
+        sql`${table.type} IN (${sql.join(
+          [GroupType.ParentsMeeting, GroupType.MemorisationCommittee].map((type) => sql`${type}`.inlineParams()),
           sql`, `
         )})`
       ),
@@ -121,7 +118,10 @@ export const directMembership = pgTable(
     startDate: date("start_date").notNull(),
     endDate: date("end_date"),
     // Required for Sections and gig groups; null elsewhere, enforced by the policy trigger.
-    voice: voiceDivision("voice")
+    voice: voiceDivision("voice"),
+    // Required for Rekryteringskommittén, whose Helpers are chosen as S, A, T or B; null elsewhere,
+    // enforced by the policy trigger.
+    voiceFamily: voiceFamily("voice_family")
   },
   (table) => [
     index("direct_membership_group_idx").on(table.groupId),
@@ -141,12 +141,17 @@ export const positionAppointment = pgTable(
     contextGroupId: uuid("context_group_id")
       .notNull()
       .references(() => group.id, { onDelete: "restrict" }),
+    // The Choir Membership created specifically for a Dirigent appointment.
+    createdMembershipId: uuid("created_membership_id").references(() => directMembership.id, {
+      onDelete: "set null"
+    }),
     organisationYear: integer("organisation_year"),
     startDate: date("start_date").notNull(),
     endDate: date("end_date")
   },
   (table) => [
     index("position_appointment_user_idx").on(table.userId),
+    index("position_appointment_created_membership_idx").on(table.createdMembershipId),
     check("position_appointment_period_check", sql`${table.endDate} IS NULL OR ${table.endDate} > ${table.startDate}`),
     check(
       "position_appointment_year_check",

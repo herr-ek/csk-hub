@@ -31,7 +31,7 @@ export async function MemberProfileScreen({ memberId }: { memberId?: string }) {
       <ProfileHeader data={data} />
       <ProfilePositions positions={profile.positions} />
       <ProfileChoirs choirs={profile.choirs} />
-      <ProfileGroups groups={profile.groups} otherGroups={profile.otherGroups} />
+      <ProfileGroups groups={profile.groups} />
       <ProfileVoices capabilities={profile.capabilities} />
     </main>
   )
@@ -150,28 +150,17 @@ async function ProfileChoirs({ choirs }: { choirs: Profile["choirs"] }) {
   )
 }
 
-async function ProfileGroups({ groups, otherGroups }: Pick<Profile, "groups" | "otherGroups">) {
+async function ProfileGroups({ groups }: Pick<Profile, "groups">) {
   const t = await getTranslations("MemberProfiles")
+  if (groups.length === 0) return null
   return (
-    <>
-      {groups.length ? (
-        <section aria-labelledby="groups-title">
-          <h2 id="groups-title" className="mb-4 flex items-center gap-2 font-heading text-xl font-semibold">
-            <Users className="size-5 text-primary" aria-hidden="true" />
-            {t("groups")}
-          </h2>
-          <MemberGroupsCard groups={groups} />
-        </section>
-      ) : null}
-      {otherGroups.length ? (
-        <section aria-labelledby="other-groups-title">
-          <h2 id="other-groups-title" className="mb-4 font-heading text-xl font-semibold">
-            {t("otherGroups")}
-          </h2>
-          <MemberGroupsCard groups={otherGroups} />
-        </section>
-      ) : null}
-    </>
+    <section aria-labelledby="groups-title">
+      <h2 id="groups-title" className="mb-4 flex items-center gap-2 font-heading text-xl font-semibold">
+        <Users className="size-5 text-primary" aria-hidden="true" />
+        {t("groups")}
+      </h2>
+      <MemberGroupsCard groups={groups} />
+    </section>
   )
 }
 

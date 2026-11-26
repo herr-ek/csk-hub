@@ -1,0 +1,134 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "30862dc4-b713-4e58-a462-fdad3f6670fd",
+  "prevIds": [
+    "5017eb86-280b-475d-8f9f-e965cc19e17e"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "position_appointment",
+        "created_membership_id"
+      ],
+      "writes": [
+        "s|col|public.position_appointment.created_membership_id",
+        "n|col|public.position_appointment.created_membership_id",
+        "e|col|public.position_appointment.created_membership_id"
+      ],
+      "reads": [
+        "n|tbl|public.position_appointment",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "position_appointment",
+        "position_appointment_created_membership_idx"
+      ],
+      "writes": [
+        "s|idx|public.position_appointment_created_membership_idx",
+        "n|idx|public.position_appointment_created_membership_idx",
+        "e|idx|public.position_appointment_created_membership_idx",
+        "n|rel|public.position_appointment_created_membership_idx"
+      ],
+      "reads": [
+        "n|tbl|public.position_appointment",
+        "n|sch|public",
+        "n|col|public.position_appointment.created_membership_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "position_appointment"
+      ],
+      "writes": [
+        "s|fk|public.position_appointment.position_appointment_Y2FLUgdKxazO_fkey",
+        "n|fk|public.position_appointment.position_appointment_Y2FLUgdKxazO_fkey",
+        "e|fk|public.position_appointment.position_appointment_Y2FLUgdKxazO_fkey",
+        "n|con|public.position_appointment.position_appointment_Y2FLUgdKxazO_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.position_appointment",
+        "n|sch|public",
+        "n|tbl|public.direct_membership",
+        "n|sch|public",
+        "n|col|public.position_appointment.created_membership_id",
+        "n|col|public.direct_membership.id",
+        "e|uniqueness|public.direct_membership.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "created_membership_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_created_membership_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "created_membership_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "position_appointment",
+        "name": "position_appointment_Y2FLUgdKxazO_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "created_membership_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "direct_membership",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

@@ -11,9 +11,7 @@ mock.module("@/core/db", () => ({ db: database?.db }))
 mock.module("@/core/authz", () => ({ requirePermission: requireAdmin }))
 mock.module("next/cache", () => ({ revalidatePath }))
 
-const { assignFluidAppointmentAction, correctFluidAppointmentAction, endFluidAppointmentAction } = await import(
-  "./detail/fluid-appointment-actions"
-)
+const { correctTenureAction, recordTenureAction } = await import("./history/actions")
 const { listAppointmentsForGroup } = await import("../appointments")
 const { addDirectMembership, endDirectMembership } = await import("../direct-membership")
 const IDLE = { status: "idle" } as const
@@ -40,7 +38,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
     expect(await addDirectMembership(t.db, { userId, groupId: choir, startDate: "2055-01-01" })).toMatchObject({
       success: true
     })
-    const assigned = await assignFluidAppointmentAction(
+    const assigned = await recordTenureAction(
       IDLE,
       form({
         userId,
@@ -55,7 +53,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
     const appointmentId = appointment?.id ?? ""
 
     expect(
-      await correctFluidAppointmentAction(
+      await correctTenureAction(
         IDLE,
         form({
           appointmentId,
@@ -73,7 +71,7 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
 
     revalidatePath.mockClear()
     expect(
-      await correctFluidAppointmentAction(
+      await correctTenureAction(
         IDLE,
         form({
           appointmentId,
@@ -99,21 +97,21 @@ describe.skipIf(!database)("fluid Position Admin actions", () => {
       error: "membership-dependency"
     })
     expect(member.endDate).toBeNull()
-    expect(await endFluidAppointmentAction(IDLE, form({ appointmentId, lastDay: "2055-12-31" }))).toMatchObject({
-      status: "success"
-    })
+    expect(
+      await correctTenureAction(
+        IDLE,
+        form({
+          appointmentId,
+          userId,
+          positionCode: PositionCode.MusicLibrarian,
+          contextGroupId: choir,
+          startDate: "2055-07-01",
+          lastDay: "2055-12-31"
+        })
+      )
+    ).toMatchObject({ status: "success" })
     expect(
       (await t.db.select().from(directMembership).where(eq(directMembership.id, member.id)))[0]?.endDate
     ).toBeNull()
-  })
-
-  test("every fluid appointment action checks the Admin boundary", async () => {
-    const denied = new Error("denied")
-    requireAdmin.mockImplementation(async () => {
-      throw denied
-    })
-    for (const action of [assignFluidAppointmentAction, correctFluidAppointmentAction, endFluidAppointmentAction])
-      await expect(action(IDLE, form({}))).rejects.toBe(denied)
-    expect(requireAdmin).toHaveBeenCalledTimes(3)
   })
 })

@@ -20,19 +20,29 @@ periods at today's date, including scheduled end dates and excluding future star
 
 Commands enforce the relationships the database cannot fully express:
 
-- Section and gig-group Memberships require a Voice division; all other direct Memberships
-  have none. A gig Voice is independent of Section placement. Gig Voice edits
+- Section and gig-group Memberships require a Voice division, and Rekryteringskommittén's Helpers a
+  Voice family; all other direct Memberships have neither. Joining a gig group or Rekryteringskommittén,
+  or changing Voice there, requires a matching capability or a current Section Voice, checked only
+  then. A gig Voice is independent of Section placement. Gig Voice edits
   update membership metadata without changing its identity or dates. A Section's Voice contains the singer's Voice division. Choir participation covers every
   Section period, with at most one overlapping Section in each Choir.
 - A Position's context has the type fixed by its code. Required companion Groups must exist,
   and annual companions match the appointment year.
 - Choir, Section, and gig-group appointments require independent direct Membership throughout
-  the tenure. Taking or ending the responsibility preserves that Membership. Ending or changing
-  prerequisite participation is refused if it would invalidate an appointment.
+  the tenure. Taking or ending the responsibility preserves that Membership. A Dirigent from outside
+  the Choir is the exception: appointing one adds Choir Membership, without a Section, for the tenure.
+  Cancelling or swapping a planned Dirigent removes the Membership created for that appointment.
+  Ending or changing prerequisite participation is refused if it would invalidate an appointment,
+  unless the caller passes `endAppointments`, which a form does only after naming what will end.
 - One Position has at most one holder in its context on a date. A person holds at most one
   Position in a particular Board at a time. Appointments in distinct contexts may coexist.
-- Taking a Position refuses overlapping Helper participation in its granted Groups. End the
-  Helper period explicitly first; appointments never delete or truncate Helper history.
+- Taking a Position ends Helper participation in its granted Groups when the tenure begins, and
+  removes a Helper period planned for later. A Helper period that began within a backdated tenure
+  refuses it, so that history is never rewritten. To resume Helper participation after the tenure,
+  add a new Helper period.
+- A change on the day something begins, when that day is not past, corrects it instead of leaving a
+  record of a day: a Voice change, a removed member, a cancelled or swapped holder. Swapping a holder
+  requires naming them in `replaces`, so one Admin never silently undoes another's choice.
 - Section names use the owning Choir name and the Section Voice, such as KKB for both B1 and B2
   singers in KK's B Section. Choir renames change the label without changing Section identities.
 - Group names follow the fixed naming policy. Annual lifecycle follows the year; manual
@@ -113,3 +123,29 @@ The cutover tests cover refusal with unchanged legacy data/schema/ledger and mig
 organisation followed by repeatable reference seeding with valid annual years. Enum renames
 remain necessary because earlier migrations define the legacy PostgreSQL enum even without rows.
 Reference seeding matches Sections by Choir and Voice and retains stable seed UUID tokens.
+
+## Filling a year
+
+`fillPosition`, `addGroupMembers` and `refillGigGroup` are the everyday commands behind the Admin pages.
+The first person planned in the current or next year sets up all of that year's annual Groups; a finished
+year is never set up. Reads in `roster-reads.ts` therefore list every Position and committee of a year
+whether or not its Groups exist. `roster.ts` holds the universal rules both sides share: what counts as
+vacant or missing, the default dates, and the one place a singer takes when CSK sings as one choir.
+
+## Admin pages
+
+Each page belongs to one future audience, so that access can later be given page by page; today all
+of them are for Admins.
+
+| Page | What it manages |
+| --- | --- |
+| Choirs and voices | Singers only: Sections and Voices, by Choir or as one choir. No Positions. |
+| Board | Its eight Positions, a year at a time. |
+| Choir Positions | Each Choir's Positions, the annual ones for this year and next, and Stämföräldrar. |
+| Committees | Rosters, with Positions set elsewhere shown read-only, and other CSK-wide Groups. |
+| Gig groups | Line-ups by Voice, saved as one refill, and Gigledare. |
+| Group history | Corrections and past periods of any Group. |
+
+Inactive Users are left out of current rosters, counts and pickers, and stay in a finished year. An
+Inactive holder is shown as such with a way to replace them, because they still hold the Position.
+Missing Voices, Choirs and holders are reminders and never refuse a change.

@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "07969cd7-d65a-41a2-95f9-53d80fe195fc",
+  "prevIds": [
+    "3825c907-87df-41a8-9f97-b0598544597e",
+    "ec4717d4-1f07-442a-9fe2-32b3213cab65"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "direct_membership",
+        "voice_family"
+      ],
+      "writes": [
+        "s|col|public.direct_membership.voice_family",
+        "n|col|public.direct_membership.voice_family",
+        "e|col|public.direct_membership.voice_family"
+      ],
+      "reads": [
+        "n|tbl|public.direct_membership",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "group",
+        "group_continuing_singleton_unique"
+      ],
+      "writes": [
+        "s|idx|public.group_continuing_singleton_unique",
+        "n|idx|public.group_continuing_singleton_unique",
+        "e|idx|public.group_continuing_singleton_unique",
+        "n|rel|public.group_continuing_singleton_unique"
+      ],
+      "reads": [
+        "n|tbl|public.group",
+        "n|sch|public",
+        "n|col|public.group.type"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "4b616caf63d6eb9a"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "direct_membership",
+        "name": "voice_family",
+        "type": "voice_family",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"group_continuing_singleton_unique\"]",
+      "set": {
+        "where": "\"type\" IN ('parents-meeting', 'memorisation-committee')"
+      }
+    }
+  ]
+}

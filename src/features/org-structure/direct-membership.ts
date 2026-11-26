@@ -1,9 +1,10 @@
 import "server-only"
 
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
+import { voiceCapability } from "@/core/db/schema/voice"
 import {
   GROUP_POLICIES,
   GroupType,
@@ -14,7 +15,7 @@ import {
   periodsCoverPeriod,
   sectionName
 } from "@/core/org-structure"
-import { contains, isVoiceDivision, type VoiceDivision } from "@/features/voice/model"
+import { contains, divisionsOf, isVoiceDivision, type VoiceDivision, type VoiceFamily } from "@/features/voice/model"
 import { appointmentMemberships } from "./appointment-memberships"
 import { cskToday } from "./effective-reads"
 import { requireActiveGroup, requireGroup } from "./lookup"
@@ -34,16 +35,20 @@ type MembershipInput = {
   startDate: IsoDate
   endDate?: IsoDate | null
   voice?: VoiceDivision | null
+  voiceFamily?: VoiceFamily | null
 }
 
 /** Adds a dated direct member or Helper. Annual end defaults to 1 July (exclusive).
- * Sections and gig groups require a Voice division; other Groups forbid one.
+ * Sections and gig groups require a Voice division and Rekryteringskommittén a Voice family; other Groups
+ * forbid both. Gig groups and Rekryteringskommittén also require that the User can sing it: a matching
+ * capability, or a matching Section Voice on the start date. That is never checked again afterwards.
  * Section placement creates independent Choir participation when missing. Board/Föräldramötet refuse additions.
  */
 export function addDirectMembership(database: OrgStructureDatabase, input: MembershipInput) {
   return runOrgStructureCommand(database, async (tx) => {
     await lockUser(tx, input.userId)
     const values = await membershipValues(tx, input)
+    await requireSungVoice(tx, values)
     await ensurePlacementChoir(tx, values)
     const [created] = await tx.insert(directMembership).values(values).returning({ id: directMembership.id })
     await validateUserParticipation(tx, input.userId)
@@ -62,7 +67,8 @@ export async function listDirectMemberships(database: OrgStructureDatabase, grou
       email: user.email,
       startDate: directMembership.startDate,
       endDate: directMembership.endDate,
-      voice: directMembership.voice
+      voice: directMembership.voice,
+      voiceFamily: directMembership.voiceFamily
     })
     .from(directMembership)
     .innerJoin(user, eq(user.id, directMembership.userId))
@@ -116,12 +122,14 @@ export function correctDirectMembership(
     startDate: IsoDate
     endDate: IsoDate | null
     voice?: VoiceDivision | null
+    voiceFamily?: VoiceFamily | null
   }
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     const current = await membershipForEdit(tx, input.membershipId)
     await requireAllowedMembershipTransfer(tx, current.groupId, input.groupId)
     const values = await membershipValues(tx, { ...input, userId: current.userId }, true)
+    if (values.voice !== current.voice || values.voiceFamily !== current.voiceFamily) await requireSungVoice(tx, values)
     await tx.update(directMembership).set(values).where(eq(directMembership.id, current.id))
     await validateUserParticipation(tx, current.userId)
     return { id: current.id }
@@ -129,8 +137,11 @@ export function correctDirectMembership(
 }
 
 /** Voice-only edits in a gig group retain the membership identity and dates.
- * Other changes close the previous period at `date` and open its successor.
+ * Other changes close the previous period at `date` and open its successor. A change on the day a
+ * period starts corrects it in place, as long as that day is not in the past.
  * Use correctDirectMembership instead when fixing an erroneous historical record.
+ * With `endAppointments`, appointments that lose their prerequisite end on `date` instead of
+ * refusing the change.
  */
 export function changeDirectMembership(
   database: OrgStructureDatabase,
@@ -140,7 +151,9 @@ export function changeDirectMembership(
     groupId: string
     endDate: IsoDate | null
     voice?: VoiceDivision | null
-  }
+    endAppointments?: boolean
+  },
+  today: IsoDate = cskToday()
 ) {
   return runOrgStructureCommand(database, async (tx) => {
     const current = await membershipForEdit(tx, input.membershipId)
@@ -157,18 +170,111 @@ export function changeDirectMembership(
         endDate: current.endDate,
         voice: input.voice
       })
+      if (values.voice !== current.voice) await requireSungVoice(tx, values)
       await tx.update(directMembership).set({ voice: values.voice }).where(eq(directMembership.id, current.id))
       return { id: current.id }
     }
-    if (date <= current.startDate || (current.endDate !== null && date >= current.endDate))
+    const corrects = date === current.startDate && date >= today
+    if ((!corrects && date <= current.startDate) || (current.endDate !== null && date >= current.endDate))
       throw new RuleViolation("period-conflict")
     await requireAllowedMembershipTransfer(tx, current.groupId, input.groupId)
     const values = await membershipValues(tx, { ...input, userId: current.userId, startDate: date })
+    if (corrects) {
+      await tx.update(directMembership).set(values).where(eq(directMembership.id, current.id))
+      if (input.endAppointments) await endUncoveredAppointments(tx, current.userId, date, today)
+      await validateUserParticipation(tx, current.userId)
+      return { id: current.id }
+    }
     await tx.update(directMembership).set({ endDate: date }).where(eq(directMembership.id, current.id))
     const [created] = await tx.insert(directMembership).values(values).returning({ id: directMembership.id })
+    if (input.endAppointments) await endUncoveredAppointments(tx, current.userId, date, today)
     await validateUserParticipation(tx, current.userId)
     return created as { id: string }
   })
+}
+
+/** Removes someone from a Group from `date`, the first day they are no longer a member. Participation
+ * that has not begun, or began today, is deleted rather than kept as a record of a day. Appointments
+ * that lose their prerequisite end with `endAppointments`; without it they refuse the removal.
+ */
+export function removeDirectMembership(
+  database: OrgStructureDatabase,
+  input: { membershipId: string; date: IsoDate; endAppointments?: boolean },
+  today: IsoDate = cskToday()
+) {
+  return runOrgStructureCommand(database, async (tx) => {
+    const current = await membershipForEdit(tx, input.membershipId)
+    const date = requireDate(input.date)
+    if (current.startDate >= today) await tx.delete(directMembership).where(eq(directMembership.id, current.id))
+    else {
+      if (date <= current.startDate || (current.endDate !== null && date > current.endDate))
+        throw new RuleViolation("period-conflict")
+      await tx.update(directMembership).set({ endDate: date }).where(eq(directMembership.id, current.id))
+    }
+    if (input.endAppointments) await endUncoveredAppointments(tx, current.userId, date, today)
+    await validateUserParticipation(tx, current.userId)
+    return { id: current.id }
+  })
+}
+
+/** Ends, on `date`, each appointment whose prerequisite Membership no longer covers it. One that would
+ * not have begun is removed. Appointments already over are left for validation to judge.
+ */
+export async function endUncoveredAppointments(
+  tx: OrgStructureTransaction,
+  userId: string,
+  date: IsoDate,
+  today: IsoDate
+) {
+  const appointments = await tx
+    .select()
+    .from(positionAppointment)
+    .where(
+      and(
+        eq(positionAppointment.userId, userId),
+        or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, date))
+      )
+    )
+  for (const appointment of appointments) {
+    if (!POSITION_DEFINITIONS[appointment.positionCode].prerequisite) continue
+    const periods = await tx
+      .select({ startDate: directMembership.startDate, endDate: directMembership.endDate })
+      .from(directMembership)
+      .where(and(eq(directMembership.userId, userId), eq(directMembership.groupId, appointment.contextGroupId)))
+    if (periodsCoverPeriod(periods, appointment)) continue
+    if (appointment.startDate < date)
+      await tx.update(positionAppointment).set({ endDate: date }).where(eq(positionAppointment.id, appointment.id))
+    else if (appointment.startDate >= today)
+      await tx.delete(positionAppointment).where(eq(positionAppointment.id, appointment.id))
+  }
+}
+
+/** Refuses a gig Voice or recruitment Voice the User neither declares nor sings in a Section. */
+async function requireSungVoice(tx: OrgStructureTransaction, input: typeof directMembership.$inferInsert) {
+  const target = await requireGroup(tx, input.groupId)
+  if (target.type !== GroupType.GigGroup && target.type !== GroupType.RecruitmentCommittee) return
+  const accepted = input.voiceFamily ? divisionsOf(input.voiceFamily) : input.voice ? [input.voice] : []
+  const [capability] = await tx
+    .select({ voice: voiceCapability.voice })
+    .from(voiceCapability)
+    .where(and(eq(voiceCapability.userId, input.userId), inArray(sql`${voiceCapability.voice}::voice`, accepted)))
+    .limit(1)
+  if (capability) return
+  const [sung] = await tx
+    .select({ id: directMembership.id })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .where(
+      and(
+        eq(directMembership.userId, input.userId),
+        eq(group.type, GroupType.Section),
+        inArray(sql`${directMembership.voice}::voice`, accepted),
+        lte(directMembership.startDate, input.startDate),
+        or(isNull(directMembership.endDate), gt(directMembership.endDate, input.startDate))
+      )
+    )
+    .limit(1)
+  if (!sung) throw new RuleViolation("voice-not-sung-by-member")
 }
 
 /** Ends a selected period at an exclusive boundary, including a prepared future or historical period. */
@@ -229,7 +335,10 @@ async function membershipValues(tx: OrgStructureTransaction, input: MembershipIn
   } else if (target.type === GroupType.GigGroup) {
     if (!isVoiceDivision(voice)) throw new RuleViolation("invalid-membership-voice")
   } else if (voice !== null) throw new RuleViolation("invalid-membership-voice")
-  return { userId: input.userId, groupId: input.groupId, startDate, endDate, voice }
+  const voiceFamily = input.voiceFamily ?? null
+  if ((target.type === GroupType.RecruitmentCommittee) !== (voiceFamily !== null))
+    throw new RuleViolation("invalid-membership-voice")
+  return { userId: input.userId, groupId: input.groupId, startDate, endDate, voice, voiceFamily }
 }
 
 async function ensurePlacementChoir(tx: OrgStructureTransaction, input: typeof directMembership.$inferInsert) {

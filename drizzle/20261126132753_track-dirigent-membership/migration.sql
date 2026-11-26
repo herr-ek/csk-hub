@@ -1,0 +1,3 @@
+ALTER TABLE "position_appointment" ADD COLUMN "created_membership_id" uuid;--> statement-breakpoint
+CREATE INDEX "position_appointment_created_membership_idx" ON "position_appointment" ("created_membership_id");--> statement-breakpoint
+ALTER TABLE "position_appointment" ADD CONSTRAINT "position_appointment_Y2FLUgdKxazO_fkey" FOREIGN KEY ("created_membership_id") REFERENCES "direct_membership"("id") ON DELETE SET NULL;

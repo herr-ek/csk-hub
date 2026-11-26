@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { and, eq } from "drizzle-orm"
 import { directMembership } from "@/core/db/schema/org-structure"
-import { GroupType, PositionCode } from "@/core/org-structure"
+import { PositionCode } from "@/core/org-structure"
 import { addDirectMembership, listDirectMembersAt } from "./direct-membership"
 import { changeVoice, endMembership, placeSinger, placeSingerInSection, startMembership } from "./membership"
 import { createOrgStructureTestDatabase, expectSuccess } from "./test-support"
@@ -11,25 +11,12 @@ describe.skipIf(!database)("Choir and Section Membership commands", () => {
   const t = database as NonNullable<typeof database>
   afterAll(() => t.drop())
 
-  test("a Choir-team Membership requires dated Choir coverage and Section Membership uses placement", async () => {
+  test("Section Membership uses placement rather than plain membership", async () => {
     const userId = await t.user()
-    const choirId = await t.groupId("MK")
-    const team = expectSuccess(
-      await import("./appointments").then(({ createOrganisationGroup }) =>
-        createOrganisationGroup(t.db, { name: "Membership rodd", type: GroupType.EquipmentTeam, choirId }, "4000-10-22")
-      )
-    ).id
-    expect(await startMembership(t.db, { userId, groupId: team, startDate: "2026-09-01" })).toEqual({
-      success: false,
-      error: "not-a-choir-member"
-    })
     expect(await startMembership(t.db, { userId, groupId: await t.groupId("MKB1"), startDate: "2026-09-01" })).toEqual({
       success: false,
       error: "section-requires-placement"
     })
-    expectSuccess(await addDirectMembership(t.db, { userId, groupId: choirId, startDate: "2026-09-01" }))
-    expectSuccess(await startMembership(t.db, { userId, groupId: team, startDate: "2026-09-01" }))
-    expect(await listDirectMembersAt(t.db, team, "2026-09-01")).toMatchObject([{ userId }])
   })
 
   test("Voice placement finds the matching Section and creates Choir coverage", async () => {

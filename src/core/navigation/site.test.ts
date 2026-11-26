@@ -17,7 +17,8 @@ describe("route hierarchy", () => {
 
   test("nested routes list their ancestors from the top", () => {
     expect(routeTrail("newsCompose")).toEqual(["news", "newsCompose"])
-    expect(routeTrail("adminOrgStructureGroups")).toEqual(["admin", "adminOrgStructureGroups"])
+    expect(routeTrail("adminCommittees")).toEqual(["admin", "adminCommittees"])
+    expect(routeTrail("adminChoirPositions")).toEqual(["admin", "adminChoirPositions"])
   })
 
   test("every parent is a known route", () => {

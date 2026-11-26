@@ -19,7 +19,6 @@ const member: NonNullable<Awaited<ReturnType<typeof service.getMemberProfile>>> 
   capabilities: [],
   choirs: [],
   groups: [],
-  otherGroups: [],
   positions: []
 }
 
