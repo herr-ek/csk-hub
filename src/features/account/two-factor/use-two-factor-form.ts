@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation"
 import { useRef, useState } from "react"
 import { authClient } from "@/core/auth/auth-client"
-import { getOAuthResumePath } from "@/core/auth/oauth-continuation"
+import { getOAuthResumePath } from "@/core/auth/oauth/continuation"
 import { useTranslations } from "@/core/i18n/translations"
 import { getPostLoginPath } from "@/core/navigation/navigation-utils"
 import { getAvailableMethods, sendTwoFactorOtp, type TwoFactorMethod, verifyTwoFactorMethod } from "./service"

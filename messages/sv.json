@@ -1344,6 +1344,27 @@
     "name": "Namn",
     "redirectUrls": "Omdirigeringsadresser",
     "redirectHelp": "En exakt callback-adress per rad. HTTPS krävs i produktion.",
+    "signIn": "Användare loggar in via den här klienten",
+    "readAboutUser": "Kan läsa detta om användaren",
+    "resourcesOnBehalf": "Kan hämta dessa resurser för användarens räkning",
+    "apiResources": "Kan komma åt dessa API-resurser",
+    "apiWarning": "Dessa scopes ger klienten data utan någon av användarens begränsningar.",
+    "noResources": "Inga resurser finns tillgängliga ännu.",
+    "accessRequired": "Tillåt inloggning eller välj minst en API-resurs.",
+    "scopes": {
+      "profile": "Grundläggande profiluppgifter",
+      "email": "E-postadress"
+    },
+    "claimGroups": {
+      "website-access": {
+        "title": "Behörighet för webbplatsen",
+        "description": "Administratör för Hub-administratörer och nuvarande medlemmar i Webmästeriet."
+      },
+      "bookie-access": {
+        "title": "Behörighet för Bookie",
+        "description": "Arrangör för aktiva Hub-administratörer och nuvarande förste och kör-konsertmästare."
+      }
+    },
     "save": "Spara",
     "error": "Åtgärden kunde inte slutföras. Kontrollera värdena och försök igen.",
     "rotateWarning": "Den nuvarande hemligheten slutar fungera direkt. Uppdatera applikationen med den nya hemligheten.",

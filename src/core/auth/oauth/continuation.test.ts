@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getOAuthResumePath, isOAuthRedirect, withOAuthQuery } from "./oauth-continuation"
+import { getOAuthResumePath, isOAuthRedirect, withOAuthQuery } from "./continuation"
 
 test("two-factor navigation preserves repeated signed parameters and excludes Hub-only parameters", () => {
   const query =
