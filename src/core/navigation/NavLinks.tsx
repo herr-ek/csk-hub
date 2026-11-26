@@ -5,14 +5,13 @@ import { usePathname } from "next/navigation"
 import { Suspense } from "react"
 import { buttonVariants } from "@/shared/ui/base/button"
 import { cn } from "@/shared/utils"
+import type { DestinationId } from "./destinations"
 import { isActiveRoute } from "./navigation-utils"
 
-export type NavLinkItem = { id: string; href: string; label: string; badge?: React.ReactNode }
+export type NavLinkItem = { id: DestinationId; href: string; label: string; badge?: React.ReactNode }
 
 export interface NavLinksProps {
   items: NavLinkItem[]
-  orientation?: "horizontal" | "vertical"
-  onNavigate?: () => void
 }
 
 /** The primary nav links, with the current section marked. Renders unmarked links until the pathname is known. */
@@ -29,15 +28,9 @@ function CurrentNavLinks(props: NavLinksProps) {
   return <NavLinkList {...props} pathname={pathname} />
 }
 
-function NavLinkList({
-  items,
-  orientation = "horizontal",
-  onNavigate,
-  pathname
-}: NavLinksProps & { pathname: string | null }) {
-  const vertical = orientation === "vertical"
+function NavLinkList({ items, pathname }: NavLinksProps & { pathname: string | null }) {
   return (
-    <ul className={cn("flex gap-1.5", vertical ? "flex-col" : "items-center")}>
+    <ul className="flex items-center gap-1.5">
       {items.map((item) => {
         const active = pathname !== null && isActiveRoute(pathname, item.href)
         return (
@@ -45,11 +38,9 @@ function NavLinkList({
             <Link
               href={item.href}
               aria-current={active ? "page" : undefined}
-              onClick={onNavigate}
               className={cn(
-                buttonVariants({ variant: "ghost", size: vertical ? "lg" : "sm" }),
+                buttonVariants({ variant: "ghost", size: "sm" }),
                 "rounded-xl px-5 py-4",
-                vertical && "w-full justify-start text-base",
                 active && "bg-muted text-foreground"
               )}
             >

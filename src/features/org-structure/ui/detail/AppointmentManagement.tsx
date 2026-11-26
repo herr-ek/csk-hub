@@ -126,7 +126,6 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
               defaultValue={assignmentDates?.startDate}
               min={assignmentDates?.min}
               max={assignmentDates?.max}
-             
               required
             />
             <DateField
@@ -136,7 +135,6 @@ export function AppointmentManagement({ detail, today }: { detail: GroupDetail; 
               defaultValue={assignmentDates?.lastDay}
               min={assignmentDates?.min}
               max={assignmentDates?.max}
-             
               required
             />
           </GroupCommandDialog>
@@ -380,7 +378,6 @@ function AppointmentCorrectionDialog({
         label={t("startDate")}
         name="startDate"
         defaultValue={startDate}
-       
         required
         min={bounds.startDate}
         max={shiftDate(bounds.endDate, -1)}
@@ -390,7 +387,6 @@ function AppointmentCorrectionDialog({
         label={t("endDate")}
         name="lastDay"
         defaultValue={lastDay}
-       
         required
         min={bounds.startDate}
         max={shiftDate(bounds.endDate, -1)}

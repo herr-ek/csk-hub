@@ -95,7 +95,10 @@ export function DatePicker({
           locale={CALENDAR_LOCALES[locale] ?? enGB}
           selected={selected}
           defaultMonth={selected ?? toLocalDate(defaultMonth) ?? toLocalDate(min)}
-          disabled={[...(min ? [{ before: toLocalDate(min) as Date }] : []), ...(max ? [{ after: toLocalDate(max) as Date }] : [])]}
+          disabled={[
+            ...(min ? [{ before: toLocalDate(min) as Date }] : []),
+            ...(max ? [{ after: toLocalDate(max) as Date }] : [])
+          ]}
           onSelect={(day) => {
             if (!day) return
             onValueChange(toIsoDate(day))

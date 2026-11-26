@@ -102,7 +102,6 @@ export function DirectMembershipRow({
           <DateField
             label={t("management.lastDay")}
             name="lastDay"
-           
             required
             min={member.startDate}
             max={member.endDate ? shiftDate(member.endDate, -1) : undefined}
@@ -199,7 +198,6 @@ function MembershipFields({
       <DateField
         label={t(change ? "management.effectiveDate" : "detail.startDate")}
         name="startDate"
-       
         required
         defaultValue={start}
         min={bounds?.startDate}
@@ -209,7 +207,6 @@ function MembershipFields({
         label={t("management.lastDay")}
         description={t("management.noLastDay")}
         name="lastDay"
-       
         defaultValue={lastDay}
         required={bounds !== null}
         min={bounds?.startDate}

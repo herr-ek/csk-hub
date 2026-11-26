@@ -4,6 +4,50 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The floating header's height from `md` up. Its spacer, the blur behind it and the page's scroll padding follow it. */
+:root {
+  --header-height: 4.75rem;
+}
+
+/* The colour that marks the current section in both navigation bars. */
+:root {
+  --nav-current: var(--primary);
+}
+.dark {
+  --nav-current: color-mix(in oklab, var(--primary), white 55%);
+}
+
+/* The ring of glass around the avatar in the header from `md` up. The account button wears it, so it morphs with the menu. */
+@utility avatar-ring {
+  @apply glass rounded-full bg-neutral-200/40;
+}
+
+/* The glowing line under the current section. Size and place it where it is used. */
+@utility nav-mark {
+  @apply rounded-full bg-(--nav-current) shadow-[0_0_8px_var(--nav-current)];
+}
+
+/*
+ * The header's links as icons: always below `lg`, and from `lg` while the header is collapsed (`CollapsingHeader` sets
+ * `data-collapsed`).
+ */
+@custom-variant compact-nav {
+  @media (width < 64rem) {
+    @slot;
+  }
+  :where([data-navigation][data-collapsed]) & {
+    @slot;
+  }
+}
+
+/*
+ * Liquid Glass material: a clear grey tint (darkening light pages, lightening dark ones) with a light blur, a rim lit top
+ * and bottom, a soft shadow, and a faint top-down sheen. Position the element.
+ */
+@utility glass {
+  @apply border border-white/50 shadow-[inset_0_1px_0_rgb(255_255_255/0.7),inset_0_-1px_0_rgb(255_255_255/0.2),0_8px_24px_rgb(0_0_0/0.12)] backdrop-blur-sm backdrop-saturate-[1.1] before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-linear-to-b before:from-white/15 before:to-transparent before:to-60% dark:border-white/15 dark:bg-neutral-700/25 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.18),inset_0_-1px_0_rgb(255_255_255/0.06),0_8px_24px_rgb(0_0_0/0.4)] dark:before:from-white/8;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

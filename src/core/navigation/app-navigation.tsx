@@ -1,44 +1,20 @@
-import Link from "next/link"
 import { Suspense } from "react"
 import { getRequestSession } from "@/core/auth/session.server"
 import { can } from "@/core/authz"
-import { app } from "@/core/config/app"
 import { useTranslations } from "@/core/i18n/translations"
-import { type NavigationRouteId, ROUTES } from "@/core/navigation/site"
-import { cn } from "@/shared/utils"
+import { Skeleton } from "@/shared/ui/base/skeleton"
 import { ThemeSwitch } from "../theme/ThemeSwitch"
 import { AccountMenu } from "./AccountMenu"
+import { CollapsingHeader } from "./CollapsingHeader"
+import { DESTINATIONS, type DestinationId, MENUS, visibleDestinations } from "./destinations"
 import { MobileNavigation } from "./MobileNavigation"
-import { NavLinks } from "./NavLinks"
+import { NavigationFrame } from "./NavigationFrame"
+import { type NavLinkItem, NavLinks } from "./NavLinks"
 import { QuickAccessBar } from "./QuickAccessBar"
 import { RefreshOnReturn } from "./RefreshOnReturn"
+import { TopNavigation } from "./TopNavigation"
 import { UnreadBadge, UnreadIndicator } from "./UnreadBadge"
 import type { UnreadSources } from "./unread-sources"
-
-export type NavigationRoute = {
-  id: NavigationRouteId
-  section: "member" | "admin"
-  label: string
-}
-
-export function getNavigationItems(
-  config: NavigationConfig | null,
-  t: (key: "admin" | "events" | "messages" | "members" | "myAccount" | "login" | "news") => string
-): NavigationRoute[] {
-  const authenticatedRoutes = [
-    { id: "news" as const, section: "member" as const, label: t("news") },
-    { id: "events" as const, section: "member" as const, label: t("events") },
-    { id: "messages" as const, section: "member" as const, label: t("messages") },
-    { id: "members" as const, section: "member" as const, label: t("members") },
-    { id: "admin" as const, section: "admin" as const, label: t("admin") }
-  ]
-  const loginRoute = { id: "login" as const, section: "member" as const, label: t("login") }
-
-  const routes = config
-    ? authenticatedRoutes.filter((route) => route.section !== "admin" || config.showAdmin)
-    : [loginRoute]
-  return routes
-}
 
 export type NavigationConfig = {
   showAdmin: boolean
@@ -49,51 +25,63 @@ export interface AppNavigationTemplateProps {
   config: NavigationConfig | null
   unreadSources?: UnreadSources
 }
+
 export function AppNavigationTemplate({ config, unreadSources = {} }: AppNavigationTemplateProps) {
   const t = useTranslations("Navigation")
-  const items = getNavigationItems(config, t).map((item) => ({
-    id: item.id,
-    href: ROUTES[item.id],
-    label: item.label,
-    // Only render unread badge when not in suspense fallback.
-    badge: config ? <UnreadBadge count={unreadSources[item.id]} /> : undefined
-  }))
+  const itemsOf = (menu: readonly DestinationId[]): NavLinkItem[] =>
+    visibleDestinations(menu, config).map((id) => ({
+      id,
+      href: DESTINATIONS[id].href,
+      label: t(DESTINATIONS[id].label),
+      badge: config ? <UnreadBadge count={unreadSources[id]} /> : undefined
+    }))
+
+  if (!config) {
+    return (
+      <NavigationFrame
+        end={
+          <nav aria-label={t("primary")} className="flex items-center gap-1.5">
+            <NavLinks items={itemsOf(MENUS.topBar)} />
+            <ThemeSwitch />
+          </nav>
+        }
+      />
+    )
+  }
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        {/*
-          On small screens the title is centred, with the avatar to its left and the menu to its right. From `md` up the
-          title leads and the links and avatar follow at the far end.
-        */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:flex md:gap-2">
-          <Link
-            href={ROUTES.home}
-            className="col-start-2 row-start-1 font-semibold text-base tracking-normal md:mr-auto"
-          >
-            {app.name}
-          </Link>
-          <div className="col-start-3 row-start-1 flex items-center justify-end gap-2">
-            {/* Signed out there is only the login link, which fits on every screen. */}
-            <nav aria-label={t("primary")} className={cn("items-center gap-1.5", config ? "hidden md:flex" : "flex")}>
-              <NavLinks items={items} />
-              <ThemeSwitch />
-            </nav>
-            {config ? (
-              <div className="md:hidden">
-                <MobileNavigation items={items} indicator={<UnreadIndicator counts={Object.values(unreadSources)} />} />
-              </div>
-            ) : null}
-            {config ? <RefreshOnReturn /> : null}
+    <>
+      <CollapsingHeader
+        links={<TopNavigation items={itemsOf(MENUS.topBar)} />}
+        end={
+          <div className="md:hidden">
+            <MobileNavigation
+              items={itemsOf(MENUS.sheet)}
+              indicator={<UnreadIndicator counts={Object.values(unreadSources)} />}
+            />
           </div>
-          {config ? (
-            <div className="col-start-1 row-start-1 flex">
-              <AccountMenu user={config.user} />
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </header>
+        }
+        // One menu for every screen size: a second would share its Motion layoutIds and break the morph.
+        account={<AccountMenu user={config.user} />}
+      />
+      <RefreshOnReturn />
+    </>
+  )
+}
+
+/** The header before it is known who is looking: the shapes of what a signed-in User sees. */
+function NavigationPlaceholder() {
+  return (
+    <NavigationFrame
+      aria-busy
+      links={<Skeleton className="h-5 w-80 lg:w-120" />}
+      account={
+        <>
+          <span aria-hidden="true" className="absolute inset-0 md:avatar-ring" />
+          <Skeleton className="relative size-9 rounded-full" />
+        </>
+      }
+    />
   )
 }
 
@@ -104,7 +92,7 @@ export interface AppNavigationProps {
 
 export function AppNavigation({ unreadSources }: AppNavigationProps) {
   return (
-    <Suspense fallback={<AppNavigationTemplate config={null} />}>
+    <Suspense fallback={<NavigationPlaceholder />}>
       <RuntimeAppNavigation unreadSources={unreadSources} />
     </Suspense>
   )

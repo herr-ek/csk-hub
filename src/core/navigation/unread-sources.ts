@@ -1,4 +1,4 @@
-import type { NavigationRouteId } from "./site"
+import type { DestinationId } from "./destinations"
 
 /**
  * How many things are unread for a User at a navigation destination. Wrap it in React
@@ -11,4 +11,4 @@ export type UnreadCount = (userId: string) => Promise<number>
  * features, so the app layout, which composes them, passes this map in; a destination missing
  * from it shows no badge.
  */
-export type UnreadSources = Partial<Record<NavigationRouteId, UnreadCount>>
+export type UnreadSources = Partial<Record<DestinationId, UnreadCount>>
