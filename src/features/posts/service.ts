@@ -53,6 +53,7 @@ export type EditablePost = {
   revision: number
   identityFixed: boolean
   recalled: boolean
+  canRepublish: boolean
 }
 const postIdSchema = z.uuid()
 export function isPostId(value: string): boolean {
@@ -316,6 +317,7 @@ export async function getEditablePost(
           .select({ groupId: postTarget.groupId, voiceFamily: postTarget.voiceFamily })
           .from(postTarget)
           .where(eq(postTarget.postId, postId))
+        const recalled = row.firstPublishedAt !== null && row.publisherGroupId !== null && row.publishedAt === null
         return {
           id: row.id,
           title: row.title,
@@ -327,7 +329,8 @@ export async function getEditablePost(
           targets,
           revision: row.revision,
           identityFixed: row.firstPublishedAt !== null || row.publishedAt !== null,
-          recalled: row.firstPublishedAt !== null && row.publisherGroupId !== null && row.publishedAt === null
+          recalled,
+          canRepublish: recalled && access.can({ action: "post.publish", context: { post: row, relationships } })
         }
       },
       database,

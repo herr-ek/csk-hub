@@ -255,7 +255,7 @@ export function endAppointment(database: OrgStructureDatabase, input: { appointm
  * Naming a holder in `replaces` whose tenure would have begun on that boundary, today or later, swaps
  * them out entirely; without it, such a holder refuses the command so one Admin never silently undoes another.
  */
-export function replaceAppointmentHolder(
+export async function replaceAppointmentHolder(
   database: OrgStructureDatabase,
   input: {
     userId: string
@@ -268,7 +268,8 @@ export function replaceAppointmentHolder(
   },
   today: IsoDate = cskToday()
 ) {
-  return runOrgStructureCommand(database, async (tx) => {
+  let predecessorChanged = false
+  async function replace(tx: OrgStructureTransaction) {
     const startDate = requireDate(input.startDate)
     const [candidate] = await tx
       .select()
@@ -281,10 +282,8 @@ export function replaceAppointmentHolder(
           or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, startDate))
         )
       )
-    for (const userId of [
-      ...new Set([input.userId, candidate?.userId].filter((id): id is string => Boolean(id)))
-    ].sort())
-      await lockUser(tx, userId)
+    const userIds = [...new Set([input.userId, candidate?.userId].filter((id): id is string => Boolean(id)))].sort()
+    for (const userId of userIds) await lockUser(tx, userId)
     await lockPositions(tx, [input])
     const [predecessor] = await tx
       .select()
@@ -299,6 +298,11 @@ export function replaceAppointmentHolder(
       )
       .for("update")
     if (predecessor) {
+      if (!userIds.includes(predecessor.userId)) {
+        // Retry from a fresh savepoint so User locks still precede the Position lock.
+        predecessorChanged = true
+        throw new RuleViolation("position-taken")
+      }
       if (predecessor.startDate === startDate) {
         if (startDate < today || input.replaces !== predecessor.id) throw new RuleViolation("period-conflict")
         await deletePreparedAppointment(tx, predecessor.id, today)
@@ -312,7 +316,9 @@ export function replaceAppointmentHolder(
     if (!result.success) throw new RuleViolation(result.error)
     if (predecessor && predecessor.userId !== input.userId) await validateUserParticipation(tx, predecessor.userId)
     return result.data
-  })
+  }
+  const result = await runOrgStructureCommand(database, replace)
+  return predecessorChanged ? runOrgStructureCommand(database, replace) : result
 }
 
 /** Removes an appointment that has not begun, or began today, without rewriting earlier history. */

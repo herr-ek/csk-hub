@@ -26,6 +26,7 @@ export async function EditPostScreen({ postId }: { postId: string }) {
         key={post.id}
         action={draft ? saveDraft.bind(null, post.id) : editPublishedPost.bind(null, post.id)}
         stage={post.recalled ? "recalled" : post.state}
+        canPublish={!post.recalled || post.canRepublish}
         discardAction={draft && !post.recalled ? discardDraft.bind(null, post.id) : undefined}
         header={
           <div>

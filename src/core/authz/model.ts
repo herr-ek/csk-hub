@@ -78,7 +78,7 @@ export type PermissionContext = {
   "post.unpublish": PostContext
   "post.discard": PostContext
   "post.address": PostContext & Readonly<{ proposed: PostAddress; publishing: boolean }>
-  "group.publishPost": GroupWorkContext
+  "group.publishPost": GroupWorkContext & Readonly<{ today?: string }>
   "group.manageContent": GroupWorkContext
   "group.manageEvents": GroupWorkContext
   "group.manageMemberships": GroupContext

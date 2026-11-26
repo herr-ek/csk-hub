@@ -25,6 +25,7 @@ type PostFormProps = {
   action: (state: PostFormState, formData: FormData) => Promise<PostFormState>
   /** A draft can be saved or published; a published Post can only be saved as it is. */
   stage: "draft" | "published" | "recalled"
+  canPublish?: boolean
   /** What the Post says now, when it already exists. */
   initial?: UnsavedPost & { revision?: number; identityFixed?: boolean }
   header?: ReactNode
@@ -43,6 +44,7 @@ const NOTHING_WRITTEN = { title: "", body: undefined, publisherGroupId: null, au
 export function PostForm({
   action: submit,
   stage,
+  canPublish = true,
   initial: latestInitial,
   header,
   discardAction,
@@ -162,11 +164,12 @@ export function PostForm({
           ) : null}
         </FieldGroup>
         <div className="flex flex-wrap items-center gap-3">
-          <SubmitButtons stage={stage} />
+          <SubmitButtons stage={stage} canPublish={canPublish} />
           <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
             {common("cancel")}
           </Link>
         </div>
+        {!canPublish ? <p className="text-sm text-muted-foreground">{t("cannotRepublish")}</p> : null}
       </form>
     </>
   )
@@ -176,7 +179,7 @@ export function PostForm({
  * Pressing Enter in the title submits through the first button, so for a draft that is
  * Save draft: publishing only ever happens from the Publish button itself.
  */
-function SubmitButtons({ stage }: { stage: PostFormProps["stage"] }) {
+function SubmitButtons({ stage, canPublish }: { stage: PostFormProps["stage"]; canPublish: boolean }) {
   const t = useTranslations("Posts")
   const { pending, data } = useFormStatus()
   const pendingIntent = pending ? data?.get("intent") : undefined
@@ -194,9 +197,11 @@ function SubmitButtons({ stage }: { stage: PostFormProps["stage"] }) {
       <Button type="submit" name="intent" value="draft" variant="outline" disabled={pending}>
         {pendingIntent === "draft" ? t("savingDraft") : t(stage === "recalled" ? "saveRecalled" : "saveDraft")}
       </Button>
-      <Button type="submit" name="intent" value="publish" disabled={pending}>
-        {pendingIntent === "publish" ? t("publishing") : t("publish")}
-      </Button>
+      {canPublish ? (
+        <Button type="submit" name="intent" value="publish" disabled={pending}>
+          {pendingIntent === "publish" ? t("publishing") : t("publish")}
+        </Button>
+      ) : null}
     </>
   )
 }

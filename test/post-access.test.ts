@@ -6,6 +6,8 @@ import { Pool } from "pg"
 import { createAuthorization } from "@/core/authz/authorization"
 import type { PostAddress } from "@/core/authz/model"
 import { evaluatePermission } from "@/core/authz/policy-registry"
+import { env } from "@/core/config/env"
+import { activityDelivery } from "@/core/db/schema/activity"
 import * as authSchema from "@/core/db/schema/auth"
 import { user } from "@/core/db/schema/auth"
 import { choir, directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
@@ -148,6 +150,50 @@ describe("Group Post access end to end", () => {
       .update(directMembership)
       .set({ endDate: null })
       .where(and(eq(directMembership.userId, singer), eq(directMembership.groupId, kk)))
+  })
+
+  test("published Post refreshes reach readers before or after the change", async () => {
+    const newReader = await member()
+    const banned = await member()
+    await membership(newReader, mk)
+    await membership(banned, kk)
+    await db.update(user).set({ banned: true }).where(eq(user.id, banned))
+    const address = { ...personal(), publisherGroupId: publisherGroup }
+    const newAddress = { ...address, targets: personal([mk]).targets }
+
+    async function expectRefreshes(readers: string[]) {
+      const deliveries = await db.select().from(activityDelivery)
+      expect(deliveries.map(({ userId }) => userId).sort()).toEqual(readers.sort())
+      for (const delivery of deliveries) {
+        expect(delivery.change).toEqual({ kind: "posts.changed" })
+        expect(delivery.href).toBeNull()
+        expect(delivery.body).toBeNull()
+      }
+      await db.delete(activityDelivery)
+    }
+
+    const redisUrl = env.REDIS_URL
+    // Only inspect the durable outbox. No dispatcher or broker is needed.
+    env.REDIS_URL = "redis://localhost:6379"
+    try {
+      await db.delete(activityDelivery)
+      const id = await publish(alice, address)
+      await expectRefreshes([alice, admin, singer])
+      expect(await commands.editPublishedPostCommand(id, content(newAddress), 0, dependencies(alice))).toMatchObject({
+        status: "success"
+      })
+      await expectRefreshes([alice, admin, singer, newReader])
+      expect(await commands.unpublishPostCommand(id, 1, dependencies(alice))).toMatchObject({ status: "success" })
+      await expectRefreshes([alice, admin, newReader])
+      expect(await commands.saveDraftCommand(id, content(address), true, 2, dependencies(alice))).toMatchObject({
+        status: "success"
+      })
+      await expectRefreshes([alice, admin, singer])
+    } finally {
+      env.REDIS_URL = redisUrl
+      await db.delete(activityDelivery)
+      await db.delete(user).where(inArray(user.id, [newReader, banned]))
+    }
   })
 
   test("cannot smuggle another audience or publishing group, including as Admin Choir publisher", async () => {
@@ -440,6 +486,10 @@ describe("Group Post access end to end", () => {
       "success"
     )
     expect((await commands.unpublishPostCommand(id, 1, dependencies(admin))).status).toBe("success")
+    expect(await reads.getEditablePost(id, db, dependencies(admin).withAccess)).toMatchObject({
+      recalled: true,
+      canRepublish: false
+    })
     expect((await commands.saveDraftCommand(id, content(retargeted), true, 2, dependencies(admin))).status).toBe(
       "unauthorized"
     )

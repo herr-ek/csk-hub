@@ -17,7 +17,8 @@ export function canRepresentPostGroup(
 ): boolean {
   return groupPolicies["group.publishPost"](actor, {
     group: group ?? null,
-    positionAppointments: relationships?.positionAppointments ?? []
+    positionAppointments: relationships?.positionAppointments ?? [],
+    today: relationships?.today
   })
 }
 

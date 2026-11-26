@@ -117,7 +117,8 @@ Sections. Compose options are presentation hints.
 Post reads take no locks: each runs in one read-only, repeatable-read transaction, so the actor, their
 relationships, the Posts and the targets all come from one committed state. A page load never queues
 behind a membership change or a save, and a save never queues behind page loads. Readership is
-rechecked by policy after the SQL filter. Writing a read marker rechecks visibility after locking the Post. Post commands
+rechecked by policy after the SQL filter. Writing a read marker locks the reader's status and Post
+relationship facts before locking the Post, then checks visibility against its current audience. Post commands
 take `FOR UPDATE` on the Post before authorizing and writing. The guard and persistence predicates
 both enforce the lifecycle rules.
 

@@ -39,6 +39,7 @@ export {
   getCurrentPositionHolder,
   getGroupAuthorizationFacts,
   getPostAuthorizationFacts,
+  getPostRefreshFacts,
   listActiveGroups,
   listChoirMembersByVoiceFamily,
   listCurrentChoirAffiliationsOfUsers,

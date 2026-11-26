@@ -135,6 +135,10 @@ Existing read markers survive edits, recall and republication. A new audience Me
 unread if they have no marker and the Post falls within the existing 30-day unread window.
 A new announcement should be a new Post.
 
+Publishing, editing or recalling a published Post sends a content-free refresh to active
+Members allowed to read it before or after the change. Readers who lose access still refresh
+so the Post disappears from their open feed.
+
 Memberships and appointments use Stockholm calendar dates. A term starts on its
 start date and ends before its end date. An annual Group can be newly selected as
 publisher or audience during its organisational year.

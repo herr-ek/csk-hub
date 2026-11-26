@@ -1,7 +1,8 @@
 import "server-only"
 
-import { type AnyColumn, and, asc, eq, gt, inArray, isNull, lte, or, type SQL, sql } from "drizzle-orm"
+import { type AnyColumn, and, asc, eq, gt, inArray, isNull, lte, or, type SQL, type SQLWrapper, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import { user } from "@/core/db/schema/auth"
 import { directMembership, group, positionAppointment, section } from "@/core/db/schema/org-structure"
 import { currentOrganisationYear, GroupType, type IsoDate, type PositionCode } from "@/core/org-structure"
 import { divisionsOf, type VoiceFamily } from "@/features/voice/model"
@@ -98,42 +99,49 @@ export async function listMembershipsOnDate(database: OrgStructureDatabase, date
 }
 
 /** Direct and appointment-derived Memberships, optionally of one User, whose period `within` accepts. */
-async function datedMemberships(
+function datedMembershipQuery(
   database: OrgStructureDatabase,
   userId: string | undefined,
   within: (period: { startDate: AnyColumn; endDate: AnyColumn }) => SQL | undefined
 ) {
   const derived = appointmentMemberships(database)
-  const [direct, granted] = await Promise.all([
-    database
-      .select({
-        userId: directMembership.userId,
-        groupId: group.id,
-        groupType: group.type,
-        choirId: group.choirId,
-        voice: directMembership.voice,
-        startDate: directMembership.startDate,
-        endDate: directMembership.endDate
-      })
-      .from(directMembership)
-      .innerJoin(group, eq(group.id, directMembership.groupId))
-      .where(and(userId ? eq(directMembership.userId, userId) : undefined, within(directMembership))),
-    database
-      .select({
-        userId: positionAppointment.userId,
-        groupId: group.id,
-        groupType: group.type,
-        choirId: group.choirId,
-        voice: sql<null>`NULL`,
-        startDate: positionAppointment.startDate,
-        endDate: positionAppointment.endDate
-      })
-      .from(derived)
-      .innerJoin(group, eq(group.id, derived.groupId))
-      .innerJoin(positionAppointment, eq(positionAppointment.id, derived.appointmentId))
-      .where(and(userId ? eq(positionAppointment.userId, userId) : undefined, within(positionAppointment)))
-  ])
-  return [...direct, ...granted].sort(
+  return database
+    .select({
+      userId: directMembership.userId,
+      groupId: group.id,
+      groupType: group.type,
+      choirId: group.choirId,
+      voice: directMembership.voice,
+      startDate: directMembership.startDate,
+      endDate: directMembership.endDate
+    })
+    .from(directMembership)
+    .innerJoin(group, eq(group.id, directMembership.groupId))
+    .where(and(userId ? eq(directMembership.userId, userId) : undefined, within(directMembership)))
+    .unionAll(
+      database
+        .select({
+          userId: positionAppointment.userId,
+          groupId: group.id,
+          groupType: group.type,
+          choirId: group.choirId,
+          voice: sql<null>`NULL`.as("voice"),
+          startDate: positionAppointment.startDate,
+          endDate: positionAppointment.endDate
+        })
+        .from(derived)
+        .innerJoin(group, eq(group.id, derived.groupId))
+        .innerJoin(positionAppointment, eq(positionAppointment.id, derived.appointmentId))
+        .where(and(userId ? eq(positionAppointment.userId, userId) : undefined, within(positionAppointment)))
+    )
+}
+
+async function datedMemberships(
+  database: OrgStructureDatabase,
+  userId: string | undefined,
+  within: (period: { startDate: AnyColumn; endDate: AnyColumn }) => SQL | undefined
+) {
+  return (await datedMembershipQuery(database, userId, within)).sort(
     (a, b) => a.startDate.localeCompare(b.startDate) || a.groupId.localeCompare(b.groupId)
   )
 }
@@ -239,6 +247,53 @@ export async function getPostAuthorizationFacts(database: OrgStructureDatabase, 
   const facts = await getPostRelationshipFacts(database, userId)
   const groups = await database.select(postGroupColumns).from(group)
   return { ...facts, groups: postGroupsAt(groups, facts.today) }
+}
+
+/** Current facts for Post refresh recipients, read together in one statement inside the Post write. */
+export async function getPostRefreshFacts(database: OrgStructureDatabase) {
+  const today = cskToday()
+  const users = database
+    .select({ id: user.id, role: user.role })
+    .from(user)
+    .where(or(eq(user.banned, false), isNull(user.banned)))
+  const groups = database.select(postGroupColumns).from(group)
+  const memberships = datedMembershipQuery(database, undefined, ({ startDate, endDate }) =>
+    and(lte(startDate, today), or(isNull(endDate), gt(endDate, today)))
+  )
+  const appointments = database
+    .select({
+      userId: positionAppointment.userId,
+      contextGroupId: positionAppointment.contextGroupId,
+      positionCode: positionAppointment.positionCode,
+      startDate: positionAppointment.startDate,
+      endDate: positionAppointment.endDate
+    })
+    .from(positionAppointment)
+    .where(
+      and(
+        lte(positionAppointment.startDate, today),
+        or(isNull(positionAppointment.endDate), gt(positionAppointment.endDate, today))
+      )
+    )
+  const [snapshot] = await database
+    .select({
+      users: snapshotRows<Awaited<typeof users>>(users, sql`"id", "role"`),
+      groups: snapshotRows<Awaited<typeof groups>>(groups, sql`"id", "type", "active", "choirId", "organisationYear"`),
+      memberships: snapshotRows<Awaited<typeof memberships>>(
+        memberships,
+        sql`"userId", "groupId", "groupType", "choirId", "voice", "startDate", "endDate"`
+      ),
+      positionAppointments: snapshotRows<Awaited<typeof appointments>>(
+        appointments,
+        sql`"userId", "contextGroupId", "positionCode", "startDate", "endDate"`
+      )
+    })
+    .from(sql`(values (1)) as snapshot`)
+  return { ...snapshot, today, groups: postGroupsAt(snapshot.groups, today) }
+}
+
+function snapshotRows<Rows>(query: SQLWrapper, columns: SQL) {
+  return sql<Rows>`(select coalesce(jsonb_agg(facts), '[]'::jsonb) from (${query}) as facts(${columns}))`
 }
 
 /**

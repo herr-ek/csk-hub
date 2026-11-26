@@ -43,9 +43,7 @@ export function PostAddressFields({
     change({ ...address, targets: next.map(({ groupId, voiceFamily }) => ({ groupId, voiceFamily })) })
   }
   const allowed = options.audiencesByPublisher[address.publisherGroupId ?? ""] ?? []
-  const visibleGroups = options.groups.filter(
-    (g) => allowed.includes(g.id) || initial.targets.some((target) => target.groupId === g.id)
-  )
+  const selectableGroups = options.groups.filter((g) => allowed.includes(g.id))
   // A draft's publisher can stop being one the Member may represent. Keep it visible so the
   // select shows the Group, and say it must change before the Post can be saved.
   const lostPublisherId =
@@ -118,6 +116,10 @@ export function PostAddressFields({
           <legend className="mb-2 text-sm font-medium">{t("audienceTargets")}</legend>
           <p className="text-sm text-muted-foreground">{t("targetsDescription")}</p>
           {rows.map((row, index) => {
+            const unavailable =
+              row.groupId && !allowed.includes(row.groupId)
+                ? options.groups.find((group) => group.id === row.groupId)
+                : undefined
             const invalid = Boolean(targetErrors?.includes(index) && row.groupId === null && row.voiceFamily === null)
             const errorId = `${errorPrefix}-${row.key}`
             return (
@@ -135,10 +137,18 @@ export function PostAddressFields({
                     value={row.groupId ?? ""}
                     options={[
                       { value: "", label: t("allCsk") },
-                      ...visibleGroups.map((g) => ({
-                        value: g.id,
-                        label: g.active ? g.name : t("archivedGroup", { name: g.name })
-                      }))
+                      ...selectableGroups.map((g) => ({ value: g.id, label: g.name })),
+                      ...(unavailable
+                        ? [
+                            {
+                              value: unavailable.id,
+                              label: t(unavailable.active ? "targetNoLongerAvailable" : "archivedGroup", {
+                                name: unavailable.name
+                              }),
+                              disabled: true
+                            }
+                          ]
+                        : [])
                     ]}
                     onValueChange={(id) =>
                       changeRows(rows.map((r) => (r.key === row.key ? { ...r, groupId: id || null } : r)))
@@ -149,6 +159,7 @@ export function PostAddressFields({
                     invalid={invalid}
                     name={`target.${row.key}.voiceFamily`}
                     value={row.voiceFamily ?? ""}
+                    disabled={Boolean(unavailable)}
                     options={[
                       { value: "", label: t("anyVoice") },
                       ...(["S", "A", "T", "B"] as const).map((voice) => ({ value: voice, label: voice }))
