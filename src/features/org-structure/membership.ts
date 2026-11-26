@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, eq, gt, gte, inArray, isNull, lte, or } from "drizzle-orm"
 import { directMembership, group, section } from "@/core/db/schema/org-structure"
-import { GROUP_POLICIES, GroupType, type IsoDate } from "@/core/org-structure"
+import { GROUP_POLICIES, GroupType, type IsoDate, shiftDate } from "@/core/org-structure"
 import { contains, familyOf, type VoiceDivision } from "@/features/voice/model"
 import {
   addDirectMembership,
@@ -140,7 +140,8 @@ type EndMembershipInput = {
   endAppointments?: boolean
 }
 
-/** Ends direct membership; leaving a Choir atomically ends its Section periods too.
+/** Ends direct membership at the exclusive `endDate`. Leaving a Choir uses participation on the
+ * last day in the Choir and atomically ends its Section periods too.
  * With `endAppointments`, the Choir's later planned periods are dropped and appointments that lose
  * their prerequisite end as well; without it they refuse the departure.
  */
@@ -169,6 +170,8 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
       if (endDate <= selected.startDate || (selected.endDate !== null && endDate > selected.endDate))
         throw new RuleViolation("period-conflict")
     }
+    const isChoir = target.type === GroupType.Choir
+    const membershipDate = isChoir ? shiftDate(endDate, -1) : endDate
     const currentPeriods = await tx
       .select({ id: directMembership.id, startDate: directMembership.startDate, endDate: directMembership.endDate })
       .from(directMembership)
@@ -176,19 +179,17 @@ export function endMembership(database: OrgStructureDatabase, input: EndMembersh
       .where(
         and(
           eq(directMembership.userId, input.userId),
-          target.type === GroupType.Choir
-            ? or(eq(group.id, input.groupId), eq(group.choirId, input.groupId))
-            : eq(group.id, input.groupId),
-          lte(directMembership.startDate, endDate),
-          or(isNull(directMembership.endDate), gt(directMembership.endDate, endDate))
+          isChoir ? or(eq(group.id, input.groupId), eq(group.choirId, input.groupId)) : eq(group.id, input.groupId),
+          lte(directMembership.startDate, membershipDate),
+          or(isNull(directMembership.endDate), gt(directMembership.endDate, membershipDate))
         )
       )
       .for("update", { of: directMembership })
     if (!currentPeriods.length && selectedAlreadyEnded) return
     if (!currentPeriods.length) throw new RuleViolation("not-a-member")
     for (const row of currentPeriods) {
-      if (endDate <= row.startDate || (row.endDate !== null && endDate > row.endDate))
-        throw new RuleViolation("period-conflict")
+      if (endDate <= row.startDate) throw new RuleViolation("period-conflict")
+      if (endDate === row.endDate) continue
       await tx.update(directMembership).set({ endDate }).where(eq(directMembership.id, row.id))
     }
     if (input.endAppointments) {

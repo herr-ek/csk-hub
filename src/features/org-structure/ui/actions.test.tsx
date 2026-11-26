@@ -26,7 +26,7 @@ const { correctMembershipAction, correctTenureAction, recordMembershipAction, re
 const { appointPosition, createOrganisationGroup, listAppointmentsOfUser, listEffectiveMembersAt } = await import(
   "../appointments"
 )
-const { listDirectMembersAt, listDirectMemberships } = await import("../direct-membership")
+const { addDirectMembership, listDirectMembersAt, listDirectMemberships } = await import("../direct-membership")
 const { listOrganisationGroups, prepareOrganisationYear } = await import("../group-management")
 const IDLE = { status: "idle" } as const
 function form(values: Record<string, string | string[]>) {
@@ -356,9 +356,25 @@ describe.skipIf(!database)("admin organisation Server Actions", () => {
     expect(await listAppointmentsOfUser(t.db, userId)).toMatchObject([{ endDate: "2025-06-02" }])
   })
 
+  test("leaving a Choir accepts the last day of an already bounded membership", async () => {
+    const userId = await t.user()
+    const choirId = await t.groupId("MK")
+    const sectionId = await t.groupId("MKB1")
+    const lastDay = "2053-10-22"
+    const endDate = "2053-10-23"
+    expectSuccess(
+      await addDirectMembership(t.db, { userId, groupId: sectionId, voice: "B1", startDate: "2053-10-01", endDate })
+    )
+
+    expect(await leaveChoirAction(IDLE, form({ choirId, userId, lastDay }))).toMatchObject({ status: "success" })
+    for (const groupId of [choirId, sectionId]) {
+      expect(await listDirectMembersAt(t.db, groupId, lastDay)).toContainEqual(expect.objectContaining({ userId }))
+      expect(await listDirectMembersAt(t.db, groupId, endDate)).not.toContainEqual(expect.objectContaining({ userId }))
+    }
+  })
+
   test("historical corrections offer archived sibling Sections but future corrections remain refused", async () => {
     setSystemTime(new Date("2026-10-22T12:00:00Z"))
-    const { addDirectMembership } = await import("../direct-membership")
     const choirId = await t.groupId("KK")
     const sourceSection = await t.groupId("KKS")
     const archivedDestination = await t.groupId("KKB")
