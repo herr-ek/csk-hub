@@ -606,7 +606,7 @@ describe("Group Post access end to end", () => {
 
   test("only the selected Board publisher grants Board audience authority in the picker and command", async () => {
     const holder = await member()
-    const [target] = await db.insert(group).values({ type: GroupType.EquipmentTeam, choirId: mk }).returning()
+    const [target] = await db.insert(group).values({ name: "Audience Group", type: GroupType.Other }).returning()
     if (!target) throw new Error("Missing audience fixture")
     await holding(holder, PositionCode.PublicRelationsOfficer)
     await membership(holder, gigGroup)
